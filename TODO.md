@@ -1,7 +1,7 @@
 # Berb - Implementation TODO
 
 **Last Updated:** 2026-03-27  
-**Version:** 1.0.0 (P4+P5 Complete, Reasoning Methods Planned)  
+**Version:** 1.0.0 (P4+P5 Complete, Multiple Enhancements Planned)  
 **Priority:** P0 (Critical) | P1 (High) | P2 (Medium) | P3 (Low)
 
 ---
@@ -20,7 +20,9 @@
 | **Enhancements (P5)** | 5 | 5 | ✅ 100% (5/5) | +60-80% capability |
 | **Reasoning Methods** | 4 | 9 | 📋 Planned | +35-45% quality |
 | **OpenRouter Models** | 3 | 10 | 📋 Planned | -60% cost |
-| **TOTAL** | **24** | **84** | **~95% Complete** | **Market leader** |
+| **Physics Domain** | 4 | 10 | 📋 Planned | +58% chaos detection |
+| **Claude Scholar Enhancements** | 5 | 19 | 📋 Planned | +50-70% quality |
+| **TOTAL** | **28** | **103** | **~93% Complete** | **Market leader** |
 
 ---
 
@@ -155,6 +157,167 @@ Week 5: Testing & benchmarking
 
 ---
 
+### **Physics Domain Optimizations (0/10 - 0%)**
+
+**Priority:** P1 (High)
+**Timeline:** Weeks 1-8
+**Expected Impact:** +58% chaos detection, 100x better Hamiltonian stability
+**Documentation:** `docs/PHYSICS_DOMAIN_OPTIMIZATIONS.md`
+
+#### **Phase 1: Core Chaos Detection (Week 1-2)**
+
+| # | Module | Priority | Functionality | Effort | Status |
+|---|--------|----------|---------------|--------|--------|
+| 1 | **lyapunov.py** | P0 | Lyapunov exponent computation | ~400 lines | ⏳ Pending |
+| 2 | **bifurcation.py** | P0 | Bifurcation diagram generation | ~300 lines | ⏳ Pending |
+| 3 | **poincare.py** | P0 | Poincaré section computation | ~300 lines | ⏳ Pending |
+
+#### **Phase 2: Hamiltonian Tools (Week 3-4)**
+
+| # | Module | Priority | Functionality | Effort | Status |
+|---|--------|----------|---------------|--------|--------|
+| 4 | **integrators.py** | P1 | Symplectic integrators (Verlet, Yoshida) | ~350 lines | ⏳ Pending |
+| 5 | **templates.py** | P1 | 10 pre-built Hamiltonian systems | ~250 lines | ⏳ Pending |
+| 6 | **phase_space.py** | P1 | Phase space analysis tools | ~200 lines | ⏳ Pending |
+
+#### **Phase 3: Advanced Chaos Indices (Week 5-6)**
+
+| # | Module | Priority | Functionality | Effort | Status |
+|---|--------|----------|---------------|--------|--------|
+| 7 | **entropy.py** | P2 | KS entropy, correlation dimension | ~300 lines | ⏳ Pending |
+| 8 | **recurrence.py** | P2 | Recurrence plots & RQA metrics | ~300 lines | ⏳ Pending |
+| 9 | **test_01.py** | P2 | 0-1 test for chaos | ~200 lines | ⏳ Pending |
+
+#### **Phase 4: Pipeline Integration (Week 7-8)**
+
+| # | Task | Priority | Target | Status |
+|---|------|----------|--------|--------|
+| 10 | Stage integration | P1 | `_chaos_detection.py` | ⏳ Pending |
+| 11 | Literature enhancement | P1 | `chaos_keywords.py` | ⏳ Pending |
+| 12 | Domain profiles | P1 | `physics_chaos.yaml`, `physics_hamiltonian.yaml` | ⏳ Pending |
+
+**Benchmark Systems:**
+- [ ] Lorenz-63 (λ₁ ≈ 0.9056)
+- [ ] Hénon-Heiles (transition at E = 1/6)
+- [ ] Double Pendulum (chaotic)
+- [ ] Standard Map (K > 0.9716)
+
+**Expected Impact:**
+- +58% chaos detection accuracy (60% → 95%)
+- 100x better Hamiltonian integration stability
+- +100% literature coverage
+- -83% experiment setup time
+- +600% chaos indices computed (0-1 → 5-7)
+
+---
+
+### **Claude Scholar Enhancements (0/19 - 0%)**
+
+**Priority:** P1-P3 (Mixed)
+**Timeline:** Weeks 1-10
+**Expected Impact:** +50-70% overall research quality
+**Documentation:** `docs/CLAUDE_SCHOLAR_ENHANCEMENTS.md`
+
+#### **Category 1: Knowledge Base Integration (HIGH - Week 1-2)**
+
+| # | Feature | Priority | Module | Effort | Status |
+|---|---------|----------|--------|--------|--------|
+| 1 | **Obsidian Export** | P1 | `berb/knowledge/obsidian_export.py` | ~400 lines | ⏳ Pending |
+| 2 | **Zotero MCP Client** | P1 | `berb/literature/zotero_integration.py` | ~300 lines | ⏳ Pending |
+
+**Integration Points:**
+- [ ] Stage 6: Export knowledge cards to `Knowledge/`
+- [ ] Stage 12-13: Export experiment reports to `Results/Reports/`
+- [ ] Stage 17: Export paper draft to `Writing/`
+- [ ] Stage 21: Export final archive to `Papers/`
+
+**Configuration:**
+```yaml
+# config.berb.yaml
+knowledge_base:
+  obsidian:
+    enabled: true
+    vault_path: "~/Obsidian Vault"
+    auto_export: true
+  zotero:
+    enabled: true
+    mcp_url: "http://localhost:8765"
+    auto_import: true
+```
+
+#### **Category 2: Writing Enhancements (HIGH - Week 3-4)**
+
+| # | Feature | Priority | Module | Effort | Status |
+|---|---------|----------|--------|--------|--------|
+| 3 | **Anti-AI Encoder** | P1 | `berb/writing/anti_ai.py` | ~250 lines | ⏳ Pending |
+| 4 | **Enhanced Citation Verifier** | P1 | `berb/pipeline/citation_verification.py` | ~350 lines | ⏳ Pending |
+
+**Features:**
+- [ ] Detect AI phrases (bilingual EN/CN)
+- [ ] Human alternatives
+- [ ] 4-layer verification: Format → API → Info → Content
+- [ ] Claim-citation alignment checking
+
+#### **Category 3: Skill/Agent System (MEDIUM - Week 5-6)**
+
+| # | Feature | Priority | Module | Effort | Status |
+|---|---------|----------|--------|--------|--------|
+| 5 | **Skill Structure** | P2 | `berb/skills/` (4 skills) | ~800 lines | ⏳ Pending |
+| 6 | **Specialized Agents** | P2 | `berb/agents/specialized/` (4 agents) | ~1,000 lines | ⏳ Pending |
+
+**Skills to Create:**
+- [ ] `literature-review/` - SKILL.md, references, examples
+- [ ] `experiment-analysis/` - Statistical methods, visualization
+- [ ] `paper-writing/` - Venue requirements, writing patterns
+- [ ] `citation-verification/` - Verification layers, APIs
+
+**Agents to Create:**
+- [ ] `LiteratureReviewerAgent` - Search, classify, synthesize
+- [ ] `ExperimentAnalystAgent` - Statistics, figures, ablation
+- [ ] `PaperWritingAgent` - Structure, write, verify citations
+- [ ] `RebuttalWriterAgent` - Classify comments, evidence-based response
+
+#### **Category 4: Command System (MEDIUM - Week 7-8)**
+
+| # | Feature | Priority | Module | Effort | Status |
+|---|---------|----------|--------|--------|--------|
+| 7 | **Command Structure** | P2 | `berb/cli/commands/` (10 commands) | ~600 lines | ⏳ Pending |
+
+**Commands to Create:**
+- [ ] `/research-init` - Start Zotero-integrated research
+- [ ] `/zotero-review` - Review Zotero collection
+- [ ] `/zotero-notes` - Batch-read papers → notes
+- [ ] `/obsidian-ingest` - Ingest Markdown files
+- [ ] `/analyze-results` - Experiment analysis + report
+- [ ] `/rebuttal` - Generate rebuttal from reviews
+- [ ] `/mine-writing-patterns` - Extract writing patterns
+- [ ] `/verify-citations` - Verify citation accuracy
+- [ ] `/anti-ai-editing` - Remove AI phrasing
+- [ ] `/obsidian-init` - Bootstrap Obsidian knowledge base
+
+#### **Category 5: Hook System (LOW - Week 9-10)**
+
+| # | Feature | Priority | Module | Effort | Status |
+|---|---------|----------|--------|--------|--------|
+| 8 | **Auto-Triggered Hooks** | P3 | `berb/hooks/` (4 hooks) | ~400 lines | ⏳ Pending |
+
+**Hooks to Create:**
+- [ ] `SessionStartHook` - Show Git status, todos, commands
+- [ ] `SkillEvaluationHook` - Evaluate applicable skills
+- [ ] `SessionEndHook` - Generate work log, reminders
+- [ ] `SecurityGuardHook` - Security validation
+
+**Expected Impact:**
+- +100% knowledge persistence (files + database)
+- +50% literature organization quality
+- +35% writing quality (human-like)
+- +4% citation accuracy (95% → 99%)
+- +40% UX quality
+- +25% agent performance
+- +20% workflow enforcement
+
+---
+
 ## 🗂️ Module Structure
 
 ### **Completed Modules**
@@ -238,7 +401,7 @@ berb/
 
 ## 📅 Implementation Roadmap
 
-### **Week 1-2: Foundation + Reasoning Methods Phase 1**
+### **Week 1-2: Reasoning Methods Foundation + Physics Domain Phase 1**
 - [ ] Create `berb/reasoning/` module structure
 - [ ] Implement `base.py` - Common interface
 - [ ] Implement `router.py` - Enhanced model router
@@ -247,30 +410,65 @@ berb/
 - [ ] Add DeepSeek V3.2, Qwen3-Max, Qwen3-Turbo, GLM-4.5
 - [ ] Implement `multi_perspective.py`
 - [ ] Implement `pre_mortem.py`
-- [ ] Write tests for reasoning methods
+- [ ] Create `berb/domains/chaos/` module
+- [ ] Implement `lyapunov.py` - Lyapunov exponent computation
+- [ ] Implement `bifurcation.py` - Bifurcation diagrams
+- [ ] Implement `poincare.py` - Poincaré sections
+- [ ] Write tests for reasoning methods and chaos detection
 
-### **Week 3-4: Reasoning Methods Phase 2 + Integration**
+### **Week 3-4: Reasoning Methods Phase 2 + Physics Domain Phase 2**
 - [ ] Implement `bayesian.py`
 - [ ] Implement `debate.py`
 - [ ] Implement `dialectical.py`
 - [ ] Integrate with Stage 8 (HYPOTHESIS_GEN)
 - [ ] Integrate with Stage 9 (EXPERIMENT_DESIGN)
 - [ ] Integrate with Stage 15 (RESEARCH_DECISION)
+- [ ] Create `berb/domains/hamiltonian/` module
+- [ ] Implement `integrators.py` - Symplectic integrators
+- [ ] Implement `templates.py` - 10 Hamiltonian templates
+- [ ] Implement `phase_space.py` - Phase space analysis
 - [ ] Write integration tests
 
-### **Week 5: Testing & Benchmarking**
+### **Week 5: Reasoning Methods Testing + Physics Domain Phase 3**
 - [ ] Create benchmark suite (`tests/benchmarks/reasoning_benchmark.py`)
 - [ ] Run benchmarks on all reasoning methods
 - [ ] Document performance metrics
-- [ ] Update documentation
+- [ ] Implement `entropy.py` - KS entropy, correlation dimension
+- [ ] Implement `recurrence.py` - Recurrence plots & RQA
+- [ ] Implement `test_01.py` - 0-1 test for chaos
+- [ ] Validate with benchmark systems (Lorenz-63, Hénon-Heiles)
 
-### **Week 6-7: OpenRouter Models Phase 2-3**
+### **Week 6-7: OpenRouter Models Phase 2-3 + Physics Integration**
 - [ ] Add Claude Sonnet 4.6, Gemini 2.5 Flash, Sonar Pro
 - [ ] Add Mistral Large 3, DeepSeek R1, Minimax M2.5
 - [ ] Create presets (berb-max-quality, berb-budget, berb-research, berb-eu-sovereign)
 - [ ] Test all presets end-to-end
+- [ ] Integrate chaos detection with pipeline (`_chaos_detection.py`)
+- [ ] Create domain profiles (`physics_chaos.yaml`, `physics_hamiltonian.yaml`)
+- [ ] Enhance literature search with chaos keywords
 
-### **Week 8: Final Testing & Documentation**
+### **Week 8-9: Claude Scholar Enhancements Phase 1-2**
+- [ ] Implement `ObsidianExporter` class
+- [ ] Integrate with Stage 6, 12-13, 17, 21
+- [ ] Implement `ZoteroMCPClient` class
+- [ ] Integrate with Stage 4-6, 22
+- [ ] Implement `AntiAIEncoder` class
+- [ ] Integrate with Stage 17, 19
+- [ ] Enhance `CitationVerifier` with 4-layer checking
+- [ ] Integrate with Stage 23
+
+### **Week 10-11: Claude Scholar Enhancements Phase 3-4**
+- [ ] Create skill directory structure
+- [ ] Implement 4 skills (literature-review, experiment-analysis, paper-writing, citation-verification)
+- [ ] Implement 4 specialized agents
+- [ ] Integrate agents with pipeline stages
+- [ ] Implement 10 core commands
+- [ ] Integrate with CLI
+- [ ] Write tests for skills, agents, and commands
+
+### **Week 12: Claude Scholar Enhancements Phase 5 + Final Testing**
+- [ ] Implement 4 auto-triggered hooks
+- [ ] Integrate with CLI lifecycle
 - [ ] Run full test suite
 - [ ] Update all documentation
 - [ ] Create migration guide for existing users
@@ -330,6 +528,8 @@ berb/
 - **[docs/REASONER_IMPLEMENTATION_PLAN.md](REASONER_IMPLEMENTATION_PLAN.md)** — Reasoning methods plan
 - **[docs/REASONING_METHODS_FOR_BERB.md](REASONING_METHODS_FOR_BERB.md)** — Reasoning methods analysis
 - **[docs/OPENROUTER_MODEL_SELECTION.md](OPENROUTER_MODEL_SELECTION.md)** — Model selection plan
+- **[docs/PHYSICS_DOMAIN_OPTIMIZATIONS.md](PHYSICS_DOMAIN_OPTIMIZATIONS.md)** — Physics domain enhancements
+- **[docs/CLAUDE_SCHOLAR_ENHANCEMENTS.md](CLAUDE_SCHOLAR_ENHANCEMENTS.md)** — Claude Scholar integration plan
 - **[docs/HOW_BERB_WORKS.md](HOW_BERB_WORKS.md)** — Greek language guide
 
 ---
