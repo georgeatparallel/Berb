@@ -11,7 +11,7 @@ from berb.llm.openrouter_adapter import (
     OpenRouterModel,
     OPENROUTER_MODELS,
 )
-from berb.llm.base import LLMResponse
+from berb.llm.client import LLMResponse
 
 
 class TestOpenRouterModel:

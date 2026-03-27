@@ -34,6 +34,7 @@ Usage:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 from dataclasses import dataclass, field
@@ -41,7 +42,8 @@ from typing import Any
 
 import httpx
 
-from berb.llm.base import BaseLLMProvider, LLMResponse
+# Use existing LLMResponse from client module
+from berb.llm.client import LLMResponse
 
 logger = logging.getLogger(__name__)
 
@@ -248,7 +250,7 @@ OPENROUTER_MODELS: dict[str, OpenRouterModel] = {
 }
 
 
-class OpenRouterProvider(BaseLLMProvider):
+class OpenRouterProvider:
     """OpenRouter API provider.
     
     Provides unified access to 100+ LLM models with competitive pricing
@@ -279,8 +281,6 @@ class OpenRouterProvider(BaseLLMProvider):
             timeout: Request timeout in seconds
             max_retries: Maximum retry attempts
         """
-        super().__init__(model=model, max_retries=max_retries)
-        
         self.api_key = api_key or os.environ.get("OPENROUTER_API_KEY", "")
         if not self.api_key:
             raise ValueError(
@@ -288,8 +288,10 @@ class OpenRouterProvider(BaseLLMProvider):
                 "Set OPENROUTER_API_KEY environment variable or pass api_key parameter."
             )
         
+        self.model = model
         self.base_url = base_url
         self.timeout = timeout
+        self.max_retries = max_retries
         self._client = httpx.AsyncClient(
             base_url=base_url,
             timeout=timeout,
