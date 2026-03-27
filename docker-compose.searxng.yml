@@ -1,0 +1,63 @@
+# SearXNG Docker Compose for Berb
+# Privacy-focused metasearch engine with 100+ search engines
+# Self-hosted for zero cost and unlimited searches
+#
+# Usage:
+#   docker compose -f docker-compose.searxng.yml up -d
+#   docker compose -f docker-compose.searxng.yml ps
+#   docker compose -f docker-compose.searxng.yml down
+#
+# Access: http://localhost:8080
+# API: http://localhost:8080/search?q=query&format=json
+
+version: '3.8'
+
+services:
+  searxng:
+    image: searxng/searxng:latest
+    container_name: berb-searxng
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./searxng:/etc/searxng:rw
+    environment:
+      - SEARXNG_BASE_URL=http://localhost:8080
+      - SEARXNG_SECRET_KEY=${SEARXNG_SECRET_KEY:-CHANGEME_SECRET_KEY}
+      - SEARXNG_PORT=8080
+      - SEARXNG_HTTP_PROTOCOL_VERSION=http1.0
+    depends_on:
+      - redis
+    networks:
+      - berb-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  redis:
+    image: redis:alpine
+    container_name: berb-redis-searxng
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-searxng-data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - berb-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  redis-searxng-data:
+    driver: local
+
+networks:
+  berb-network:
+    driver: bridge
