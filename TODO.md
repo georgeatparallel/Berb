@@ -22,7 +22,8 @@
 | **OpenRouter Models** | 3 | 10 | 📋 Planned | -60% cost |
 | **Physics Domain** | 4 | 10 | 📋 Planned | +58% chaos detection |
 | **Claude Scholar Enhancements** | 5 | 19 | 📋 Planned | +50-70% quality |
-| **TOTAL** | **28** | **103** | **~93% Complete** | **Market leader** |
+| **SearXNG + Firecrawl** | 3 | 9 | 📋 Planned | +3300% coverage, -80% cost |
+| **TOTAL** | **31** | **112** | **~92% Complete** | **Market leader** |
 
 ---
 
@@ -318,6 +319,68 @@ knowledge_base:
 
 ---
 
+### **SearXNG + Firecrawl Integration (0/9 - 0%)**
+
+**Priority:** P0-P2 (Mixed)
+**Timeline:** Weeks 1-3
+**Expected Impact:** +3300% search coverage, -80% cost
+**Documentation:** `docs/SEARXNG_FIRECRAWL_INTEGRATION.md`
+
+#### **Phase 1: SearXNG Integration (Week 1)**
+
+| # | Feature | Priority | Module | Effort | Status |
+|---|---------|----------|--------|--------|--------|
+| 1 | **SearXNG Client** | P0 | `berb/web/searxng_client.py` | ~200 lines | ⏳ Pending |
+| 2 | **Docker Compose** | P0 | `docker-compose.searxng.yml` | ~30 lines | ⏳ Pending |
+| 3 | **SearXNG Config** | P0 | `searxng/settings.yml` | ~100 lines | ⏳ Pending |
+| 4 | **Search Integration** | P0 | Enhanced `berb/web/search.py` | ~50 lines | ⏳ Pending |
+
+**Features:**
+- [ ] 100+ search engines (Google, Bing, DuckDuckGo, arXiv, Wikipedia, PubMed)
+- [ ] Search syntax support (`!arxiv`, `!wp`, `!images`, etc.)
+- [ ] Self-hosted via Docker (zero cost, unlimited searches)
+- [ ] Privacy-first (no tracking, no profiling)
+- [ ] Replace Tavily paid tier ($25/month → $0)
+
+#### **Phase 2: Firecrawl Integration (Week 2)**
+
+| # | Feature | Priority | Module | Effort | Status |
+|---|---------|----------|--------|--------|--------|
+| 5 | **Firecrawl Client** | P0 | `berb/web/scraper.py` | ~350 lines | ⏳ Pending |
+| 6 | **Full-Text Extractor** | P0 | `berb/literature/full_text.py` | ~150 lines | ⏳ Pending |
+| 7 | **Docker Compose** | P1 | `docker-compose.firecrawl.yml` | ~50 lines | ⏳ Pending |
+
+**Features:**
+- [ ] Scrape: Single URL → markdown/HTML/JSON/screenshot
+- [ ] Crawl: Entire website (100s of pages)
+- [ ] Map: Discover all URLs on website
+- [ ] Search: Web search + full page content
+- [ ] Extract: Structured data (JSON schema)
+- [ ] JavaScript rendering (dynamic content)
+
+#### **Phase 3: Pipeline Integration (Week 3)**
+
+| # | Task | Priority | Target | Status |
+|---|------|----------|--------|--------|
+| 8 | Stage 4 integration | P0 | Full-text from crawled pages | ⏳ Pending |
+| 9 | Stage 6 integration | P0 | Knowledge from web sources | ⏳ Pending |
+
+**CLI Commands:**
+- [ ] `/scrape` - Scrape single URL
+- [ ] `/crawl` - Crawl entire website
+- [ ] `/map` - Discover all URLs
+
+**Expected Impact:**
+- +3300% search coverage (3 → 100+ engines)
+- Unlimited full-text access (any website)
+- JavaScript sites support (rendering)
+- Structured data extraction (JSON schema)
+- -80% cost ($300/year → $0-60/year)
+- 100% privacy (no tracking)
+- Unlimited rate limits (10K/month → unlimited)
+
+---
+
 ## 🗂️ Module Structure
 
 ### **Completed Modules**
@@ -393,49 +456,64 @@ berb/
 │   ├── jury.py             ⏳ Orchestrated multi-agent
 │   ├── presets.py          ⏳ PipelinePreset definitions
 │   └── router.py           ⏳ Enhanced model router
-└── llm/
-    └── openrouter_adapter.py ⏳ OpenRouter API adapter
+├── web/                    ⏳ Web search & scraping (Weeks 1-3)
+│   ├── searxng_client.py   ⏳ SearXNG integration (~200 lines)
+│   ├── scraper.py          ⏳ Firecrawl client (~350 lines)
+│   └── search.py           ⏳ Enhanced with SearXNG
+├── literature/
+│   └── full_text.py        ⏳ Full-text extraction (~150 lines)
+├── llm/
+│   └── openrouter_adapter.py ⏳ OpenRouter API adapter
+└── docker/
+    ├── docker-compose.searxng.yml   ⏳ SearXNG setup
+    └── docker-compose.firecrawl.yml ⏳ Firecrawl setup
 ```
 
 ---
 
 ## 📅 Implementation Roadmap
 
-### **Week 1-2: Reasoning Methods Foundation + Physics Domain Phase 1**
+### **Week 1: SearXNG Integration + Reasoning Methods Foundation**
+- [ ] Create `SearXNGClient` class
+- [ ] Add Docker Compose for SearXNG
+- [ ] Configure SearXNG engines (arXiv, PubMed, Wikipedia, etc.)
+- [ ] Integrate with `WebSearchClient`
 - [ ] Create `berb/reasoning/` module structure
 - [ ] Implement `base.py` - Common interface
 - [ ] Implement `router.py` - Enhanced model router
 - [ ] Implement `presets.py` - Preset definitions
-- [ ] Add OpenRouter adapter (`openrouter_adapter.py`)
+- [ ] Add OpenRouter adapter
 - [ ] Add DeepSeek V3.2, Qwen3-Max, Qwen3-Turbo, GLM-4.5
+- [ ] Write tests for SearXNG and reasoning methods
+
+### **Week 2: Firecrawl Integration + Reasoning Methods Phase 2**
+- [ ] Create `FirecrawlClient` class
+- [ ] Add `FullTextExtractor` class
+- [ ] Add Docker Compose for Firecrawl
 - [ ] Implement `multi_perspective.py`
 - [ ] Implement `pre_mortem.py`
+- [ ] Implement `bayesian.py`
+- [ ] Integrate with Stage 8 (HYPOTHESIS_GEN)
+- [ ] Integrate with Stage 9 (EXPERIMENT_DESIGN)
+- [ ] Write integration tests
+
+### **Week 3: Pipeline Integration + Physics Domain Phase 1**
+- [ ] Integrate SearXNG with pipeline (Stage 4, 6)
+- [ ] Integrate Firecrawl with pipeline (Stage 4, 6, 23)
+- [ ] Add CLI commands (`/scrape`, `/crawl`, `/map`)
 - [ ] Create `berb/domains/chaos/` module
 - [ ] Implement `lyapunov.py` - Lyapunov exponent computation
 - [ ] Implement `bifurcation.py` - Bifurcation diagrams
 - [ ] Implement `poincare.py` - Poincaré sections
-- [ ] Write tests for reasoning methods and chaos detection
+- [ ] Benchmark performance (SearXNG, Firecrawl, chaos detection)
 
-### **Week 3-4: Reasoning Methods Phase 2 + Physics Domain Phase 2**
-- [ ] Implement `bayesian.py`
-- [ ] Implement `debate.py`
-- [ ] Implement `dialectical.py`
-- [ ] Integrate with Stage 8 (HYPOTHESIS_GEN)
-- [ ] Integrate with Stage 9 (EXPERIMENT_DESIGN)
+### **Week 4-5: Reasoning Methods Phase 3-5 + Physics Domain Phase 2-3**
+- [ ] Implement `debate.py`, `dialectical.py`
 - [ ] Integrate with Stage 15 (RESEARCH_DECISION)
-- [ ] Create `berb/domains/hamiltonian/` module
-- [ ] Implement `integrators.py` - Symplectic integrators
-- [ ] Implement `templates.py` - 10 Hamiltonian templates
-- [ ] Implement `phase_space.py` - Phase space analysis
-- [ ] Write integration tests
-
-### **Week 5: Reasoning Methods Testing + Physics Domain Phase 3**
-- [ ] Create benchmark suite (`tests/benchmarks/reasoning_benchmark.py`)
+- [ ] Create benchmark suite
 - [ ] Run benchmarks on all reasoning methods
-- [ ] Document performance metrics
-- [ ] Implement `entropy.py` - KS entropy, correlation dimension
-- [ ] Implement `recurrence.py` - Recurrence plots & RQA
-- [ ] Implement `test_01.py` - 0-1 test for chaos
+- [ ] Implement Hamiltonian tools (`integrators.py`, `templates.py`, `phase_space.py`)
+- [ ] Implement advanced chaos indices (`entropy.py`, `recurrence.py`, `test_01.py`)
 - [ ] Validate with benchmark systems (Lorenz-63, Hénon-Heiles)
 
 ### **Week 6-7: OpenRouter Models Phase 2-3 + Physics Integration**
@@ -443,9 +521,8 @@ berb/
 - [ ] Add Mistral Large 3, DeepSeek R1, Minimax M2.5
 - [ ] Create presets (berb-max-quality, berb-budget, berb-research, berb-eu-sovereign)
 - [ ] Test all presets end-to-end
-- [ ] Integrate chaos detection with pipeline (`_chaos_detection.py`)
+- [ ] Integrate chaos detection with pipeline
 - [ ] Create domain profiles (`physics_chaos.yaml`, `physics_hamiltonian.yaml`)
-- [ ] Enhance literature search with chaos keywords
 
 ### **Week 8-9: Claude Scholar Enhancements Phase 1-2**
 - [ ] Implement `ObsidianExporter` class
@@ -530,28 +607,34 @@ berb/
 - **[docs/OPENROUTER_MODEL_SELECTION.md](OPENROUTER_MODEL_SELECTION.md)** — Model selection plan
 - **[docs/PHYSICS_DOMAIN_OPTIMIZATIONS.md](PHYSICS_DOMAIN_OPTIMIZATIONS.md)** — Physics domain enhancements
 - **[docs/CLAUDE_SCHOLAR_ENHANCEMENTS.md](CLAUDE_SCHOLAR_ENHANCEMENTS.md)** — Claude Scholar integration plan
+- **[docs/SEARXNG_FIRECRAWL_INTEGRATION.md](SEARXNG_FIRECRAWL_INTEGRATION.md)** — SearXNG + Firecrawl integration
 - **[docs/HOW_BERB_WORKS.md](HOW_BERB_WORKS.md)** — Greek language guide
 
 ---
 
-## 🎯 Current Sprint: Week 1 (Reasoning Methods Foundation)
+## 🎯 Current Sprint: Week 1 (SearXNG + Reasoning Methods)
 
-**Focus:** Core reasoning methods infrastructure
+**Focus:** Web search enhancement + reasoning methods foundation
 
 ### **P0 Tasks (This Week)**
+- [ ] Create `SearXNGClient` class (`berb/web/searxng_client.py`)
+- [ ] Add Docker Compose for SearXNG (`docker-compose.searxng.yml`)
+- [ ] Configure SearXNG engines (arXiv, PubMed, Wikipedia, DuckDuckGo)
+- [ ] Integrate with `WebSearchClient`
 - [ ] Create `berb/reasoning/` module structure
 - [ ] Implement `base.py` - Common interface for all methods
 - [ ] Implement `router.py` - Enhanced model router with preset support
 - [ ] Implement `presets.py` - PipelinePreset definitions
 - [ ] Add OpenRouter adapter
-- [ ] Add DeepSeek V3.2 model integration
-- [ ] Write unit tests for base classes
+- [ ] Add DeepSeek V3.2, Qwen3-Max, Qwen3-Turbo, GLM-4.5
+- [ ] Write unit tests for SearXNG and reasoning base classes
 
 **Sprint Goals:**
-1. ✅ All reasoning method base classes implemented
-2. ✅ Model router supports preset-based routing
-3. ✅ OpenRouter adapter working
-4. ✅ Unit tests passing
+1. ✅ SearXNG integration complete (self-hosted, 100+ engines)
+2. ✅ All reasoning method base classes implemented
+3. ✅ Model router supports preset-based routing
+4. ✅ OpenRouter adapter working
+5. ✅ Unit tests passing
 
 ---
 
