@@ -415,8 +415,19 @@ def execute_pipeline(
     stop_on_gate: bool = False,
     skip_noncritical: bool = False,
     kb_root: Path | None = None,
+    _pivot_depth: int = 0,
 ) -> list[StageResult]:
     """Execute pipeline stages sequentially from `from_stage` and write summary."""
+    # Guard against unbounded recursion independent of the file-based pivot counter.
+    # Each PIVOT/REFINE decision recurses; without this a hung inner stage propagates
+    # to all outer frames and the process never terminates.
+    if _pivot_depth > MAX_DECISION_PIVOTS:
+        logger.error(
+            "execute_pipeline recursion depth %d exceeds MAX_DECISION_PIVOTS (%d); aborting.",
+            _pivot_depth,
+            MAX_DECISION_PIVOTS,
+        )
+        return []
 
     results: list[StageResult] = []
     started = False
@@ -557,6 +568,7 @@ def execute_pipeline(
                     stop_on_gate=stop_on_gate,
                     skip_noncritical=skip_noncritical,
                     kb_root=kb_root,
+                    _pivot_depth=_pivot_depth + 1,
                 )
                 results.extend(pivot_results)
                 # BUG-211: Promote best stage-14 after REFINE completes so

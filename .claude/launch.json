@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "berb-server",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "berb", "serve", "--config", "config.arc.yaml"],
+      "port": 8080
+    },
+    {
+      "name": "berb-dashboard",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "berb", "dashboard", "--config", "config.arc.yaml"],
+      "port": 8080
+    },
+    {
+      "name": "mnemo-cortex",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "agentb.server"],
+      "port": 50001
+    }
+  ]
+}

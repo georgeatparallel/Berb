@@ -7,6 +7,7 @@ import math
 import os
 import re
 import subprocess
+import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -254,10 +255,9 @@ def detect_nan_divergence(stdout: str, stderr: str) -> str | None:
             if re.search(r"\bnan\b", lower):
                 issues.append("Possible NaN detected in output")
 
-    # Check for Inf indicators
-    if "inf" in lower:
-        if re.search(r"\binf\b", lower) and "info" not in lower.split("inf")[0][-4:]:
-            issues.append("Possible Inf value detected in output")
+    # Check for Inf indicators. Negative lookahead excludes "info", "infolog", etc.
+    if re.search(r"\binf(?!o\b)\b", lower):
+        issues.append("Possible Inf value detected in output")
 
     # Check for divergence (loss > 100 is a common fast-fail threshold)
     for line in stdout.splitlines():
@@ -306,6 +306,9 @@ class ExperimentSandbox:
         self.workdir: Path = workdir.resolve()
         self.workdir.mkdir(parents=True, exist_ok=True)
         self._run_counter: int = 0
+        # Both run() and run_project() increment this counter; protect against
+        # concurrent callers sharing one sandbox instance.
+        self._counter_lock: threading.Lock = threading.Lock()
 
     def run(self, code: str, *, timeout_sec: int = 300) -> SandboxResult:
         script_path = self._next_script_path()
@@ -358,9 +361,10 @@ class ExperimentSandbox:
         """
         import shutil
 
-        # BUG-DA8-06: Use unique dir name to prevent races under concurrent calls
-        self._run_counter += 1
-        sandbox_project = self.workdir / f"_project_{self._run_counter}"
+        with self._counter_lock:
+            self._run_counter += 1
+            counter = self._run_counter
+        sandbox_project = self.workdir / f"_project_{counter}"
         if sandbox_project.exists():
             shutil.rmtree(sandbox_project)
         sandbox_project.mkdir(parents=True, exist_ok=True)
@@ -450,8 +454,10 @@ class ExperimentSandbox:
             logger.warning("Harness template not found at %s", harness_src)
 
     def _next_script_path(self) -> Path:
-        self._run_counter += 1
-        return self.workdir / f"_experiment_{self._run_counter}.py"
+        with self._counter_lock:
+            self._run_counter += 1
+            counter = self._run_counter
+        return self.workdir / f"_experiment_{counter}.py"
 
     @staticmethod
     def _write_script(script_path: Path, code: str) -> None:
@@ -488,6 +494,15 @@ class ExperimentSandbox:
         timeout_sec: int,
         elapsed_sec: float,
     ) -> SandboxResult:
+        # Kill the child so it does not hold the stdout/stderr pipe write-ends open.
+        # Without this, the next subprocess.run(capture_output=True) blocks forever
+        # waiting for EOF that the zombie process will never send.
+        if exc.process is not None:
+            try:
+                exc.process.kill()
+                exc.process.communicate(timeout=5)
+            except Exception:  # noqa: BLE001
+                pass
         stdout = _to_text(exc.stdout)
         stderr = _to_text(exc.stderr)
         metrics = parse_metrics(stdout)

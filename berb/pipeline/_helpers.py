@@ -669,6 +669,7 @@ def _chat_with_prompt(
     max_tokens: int | None = None,
     retries: int = 0,
     strip_thinking: bool = True,
+    call_timeout_sec: int = 300,
 ) -> Any:
     """Send a chat request with optional retry on timeout/transient errors.
 
@@ -681,20 +682,41 @@ def _chat_with_prompt(
         If True (default for pipeline usage), strip ``<think>`` tags from
         the LLM response.  This prevents chain-of-thought leakage from
         breaking YAML / JSON / LaTeX parsers downstream.
+    call_timeout_sec:
+        Wall-clock deadline for a single LLM call.  A silent TCP stall
+        (connection open but no data arriving) would otherwise block the
+        pipeline thread forever because the retry loop only catches raised
+        exceptions.  Defaults to 300 s; set to 0 to disable.
     """
+    import concurrent.futures
     import time
 
     messages = [{"role": "user", "content": user}]
     last_exc: Exception | None = None
     for attempt in range(1 + retries):
         try:
-            if json_mode and max_tokens is not None:
-                return llm.chat(messages, system=system, json_mode=True, max_tokens=max_tokens, strip_thinking=strip_thinking)
-            if json_mode:
-                return llm.chat(messages, system=system, json_mode=True, strip_thinking=strip_thinking)
-            if max_tokens is not None:
-                return llm.chat(messages, system=system, max_tokens=max_tokens, strip_thinking=strip_thinking)
-            return llm.chat(messages, system=system, strip_thinking=strip_thinking)
+            def _call() -> Any:
+                if json_mode and max_tokens is not None:
+                    return llm.chat(messages, system=system, json_mode=True, max_tokens=max_tokens, strip_thinking=strip_thinking)
+                if json_mode:
+                    return llm.chat(messages, system=system, json_mode=True, strip_thinking=strip_thinking)
+                if max_tokens is not None:
+                    return llm.chat(messages, system=system, max_tokens=max_tokens, strip_thinking=strip_thinking)
+                return llm.chat(messages, system=system, strip_thinking=strip_thinking)
+
+            if call_timeout_sec > 0:
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                    future = pool.submit(_call)
+                    return future.result(timeout=call_timeout_sec)
+            else:
+                return _call()
+        except concurrent.futures.TimeoutError as exc:
+            last_exc = TimeoutError(
+                f"LLM call exceeded wall-clock limit of {call_timeout_sec}s"
+            )
+            logger.warning(str(last_exc))
+            if attempt >= retries:
+                raise last_exc from exc
         except Exception as exc:  # noqa: BLE001
             last_exc = exc
             if attempt < retries:

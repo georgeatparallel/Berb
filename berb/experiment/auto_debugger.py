@@ -133,7 +133,7 @@ class AutomatedDebugger:
                     "description": "Define missing variable or import",
                 },
                 {
-                    "pattern": r"TypeError:\s*'(\w+)'s+object\s+is\s+not\s+subscriptable",
+                    "pattern": r"TypeError:\s*'(\w+)'\s+object\s+is\s+not\s+subscriptable",
                     "strategy": "fix_subscript",
                     "description": "Convert to subscriptable type or fix access",
                 },

@@ -26,6 +26,7 @@ Author: Georgios-Chrysovalantis Chatzivantsidis
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from dataclasses import dataclass, field
@@ -102,7 +103,9 @@ class CascadingLLMClient:
         self._config = config
         self._evaluator = quality_evaluator or self._default_evaluator
         
-        # Statistics
+        # Statistics — protected by a lock because chat() is async and multiple
+        # coroutines may share one CascadingLLMClient instance.
+        self._stats_lock: asyncio.Lock = asyncio.Lock()
         self._total_requests = 0
         self._cascade_exits: dict[int, int] = {}  # step -> count
         self._total_saved = 0.0
@@ -123,7 +126,8 @@ class CascadingLLMClient:
         Returns:
             LLM response from first acceptable model in cascade
         """
-        self._total_requests += 1
+        async with self._stats_lock:
+            self._total_requests += 1
         start_time = time.time()
         
         # Get cascade config for this stage
@@ -158,8 +162,9 @@ class CascadingLLMClient:
                             f"{step.model} (score={score:.2f} >= {step.min_score:.2f})"
                         )
                         
-                        self._record_cascade_exit(step_idx)
-                        
+                        async with self._stats_lock:
+                            self._record_cascade_exit(step_idx)
+
                         return response
                     
                     # Continue to next model in cascade
@@ -172,7 +177,13 @@ class CascadingLLMClient:
                 
                 last_response = response
                 
-            except Exception as e:  # noqa: BLE001
+            except BaseException as e:
+                # Re-raise asyncio.CancelledError and other non-Exception BaseExceptions
+                # so that task cancellation is not silently swallowed by the cascade loop.
+                # On Python 3.7 CancelledError inherits from Exception; on 3.8+ it does not,
+                # but catching BaseException here is correct for both.
+                if not isinstance(e, Exception):
+                    raise
                 logger.warning(f"Cascade step {step_idx + 1} ({step.model}) failed: {e}")
                 last_error = e
                 continue
@@ -186,9 +197,28 @@ class CascadingLLMClient:
             )
             return last_response
         
+        # Try the configured fallback model before giving up entirely.
+        # Without this the fallback_model field in CascadeConfig was dead code.
+        if self._config.fallback_model is not None:
+            logger.warning(
+                "All cascade steps failed/rejected; trying fallback model: %s",
+                self._config.fallback_model,
+            )
+            try:
+                return await self._base_client.chat(
+                    messages=messages,
+                    model=self._config.fallback_model,
+                    **kwargs,
+                )
+            except Exception as e:  # noqa: BLE001
+                raise RuntimeError(
+                    f"All cascade steps and fallback model ({self._config.fallback_model}) "
+                    f"failed. Last error: {e}"
+                ) from e
+
         if last_error is not None:
             raise RuntimeError(f"All cascade steps failed: {last_error}")
-        
+
         raise RuntimeError("Cascade produced no response")
     
     def _get_cascade_for_stage(self, stage: Any | None) -> list[CascadeStep]:

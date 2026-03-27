@@ -7,6 +7,7 @@ dist/
 build/
 workspaces/
 .claude/*
+!.claude/launch.json
 !.claude/agents/
 !.claude/agents/*.md
 !.claude/skills/
