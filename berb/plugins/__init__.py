@@ -9,7 +9,7 @@ Features:
 - Plugin manifest validation
 - Example plugins included
 
-Author: Georgios-Chrysovalantis Chatzivantsidis
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 
 Usage:
     from berb.plugins import PluginManager

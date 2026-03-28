@@ -321,11 +321,14 @@ class ImprovementLoop:
             Summary dictionary
         """
         total_improvements = sum(len(v.evaluation_results) > 0 for v in self.variants)
-        
+        # Cache once to avoid non-atomic reads: a concurrent store_variant() call
+        # could sort/prune self.variants between calls, making variant_id and
+        # performance_score refer to different variants.
+        best = self.get_best_variant()
         return {
             "total_iterations": self.current_iteration,
             "total_variants": len(self.variants),
             "total_improvements": total_improvements,
-            "best_variant": self.get_best_variant().variant_id if self.get_best_variant() else None,
-            "best_performance": self.get_best_variant().performance_score if self.get_best_variant() else 0.0,
+            "best_variant": best.variant_id if best else None,
+            "best_performance": best.performance_score if best else 0.0,
         }

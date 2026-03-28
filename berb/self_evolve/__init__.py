@@ -4,7 +4,7 @@ This module implements the SelfEvolve architecture based on Facebook AI
 Research's Hyperagents paper (arXiv:2603.19461v1), enabling continuous
 self-improvement through experience collection, analysis, and policy updates.
 
-Author: Georgios-Chrysovalantis Chatzivantsidis
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 
 Key Features:
 - Experience collection from research runs

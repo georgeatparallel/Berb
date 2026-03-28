@@ -11,7 +11,7 @@ Enhancements to existing paper_verifier.py:
 
 This is the CRITICAL P4-OPT-007 enhancement for 100% citation accuracy.
 
-Author: Georgios-Chrysovalantis Chatzivantsidis
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 
 Usage:
     from berb.pipeline.hallucination_detector import HallucinationDetector

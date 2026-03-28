@@ -14,7 +14,7 @@ Features:
 - Self-healing for failed branches
 - Workshop paper generation capability
 
-Author: Georgios-Chrysovalantis Chatzivantsidis
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 
 Usage:
     from berb.research.open_ended_discovery import OpenEndedDiscoveryAgent

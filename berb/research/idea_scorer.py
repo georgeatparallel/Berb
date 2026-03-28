@@ -11,7 +11,7 @@ Scores research ideas on 5 dimensions:
 
 Ranks ideas and pursues top-k, tracking score vs actual outcome for learning.
 
-Author: Georgios-Chrysovalantis Chatzivantsidis
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 
 Usage:
     from berb.research.idea_scorer import IdeaQualityScorer

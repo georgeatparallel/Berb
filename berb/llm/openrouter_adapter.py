@@ -17,7 +17,7 @@ Features:
 - Cost tracking and optimization
 - Model ranking based on performance
 
-Author: Georgios-Chrysovalantis Chatzivantsidis
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 
 Usage:
     from berb.llm.openrouter_adapter import OpenRouterProvider

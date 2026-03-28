@@ -3,7 +3,7 @@
 This module defines the common interface that all reasoning methods must implement,
 along with shared data structures and utilities.
 
-Author: Georgios-Chrysovalantis Chatzivantsidis
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 """
 
 from __future__ import annotations

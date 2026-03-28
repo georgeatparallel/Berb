@@ -17,7 +17,7 @@ Key Features:
 Based on: Bayesian epistemology (Jaynes 2003)
 Applications: Clinical trials, intelligence analysis, model selection
 
-Author: Georgios-Chrysovalantis Chatzivantsidis
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 
 Usage:
     from berb.reasoning import BayesianMethod

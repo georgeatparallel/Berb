@@ -22,7 +22,7 @@ Usage:
     response = await client.chat(messages, stage="HYPOTHESIS_GEN")
 """
 
-Author: Georgios-Chrysovalantis Chatzivantsidis
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 
 from __future__ import annotations
 

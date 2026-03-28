@@ -9,7 +9,7 @@ Features:
 - Support for 6+ languages (Greek, Chinese, Japanese, German, French, Spanish)
 - Multilingual literature search
 
-Author: Georgios-Chrysovalantis Chatzivantsidis
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 
 Usage:
     from berb.i18n import LanguageDetector, PromptTranslator

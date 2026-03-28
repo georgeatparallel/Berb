@@ -21,7 +21,7 @@ Usage:
     # Returns cheap response if quality >= 0.85, else premium
 """
 
-Author: Georgios-Chrysovalantis Chatzivantsidis
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 
 from __future__ import annotations
 

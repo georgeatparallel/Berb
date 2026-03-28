@@ -13,7 +13,7 @@ Features:
 - Table structure parsing
 - Multimodal embedding search
 
-Author: Georgios-Chrysovalantis Chatzivantsidis
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 
 Usage:
     from berb.literature.multimodal_search import MultimodalLiteratureAgent

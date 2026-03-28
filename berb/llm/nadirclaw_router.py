@@ -17,7 +17,7 @@ Example:
     >>> print(f"Selected: {selection['model']} ({selection['tier']} tier)")
 """
 
-Author: Georgios-Chrysovalantis Chatzivantsidis
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 
 from __future__ import annotations
 

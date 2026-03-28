@@ -9,7 +9,7 @@ Features:
 - Enable long-horizon coherence
 - Agent communication bus
 
-Author: Georgios-Chrysovalantis Chatzivantsidis
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 
 Usage:
     from berb.memory.shared_memory import SharedResearchMemory
@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -87,12 +88,19 @@ class SharedResearchMemory:
         self._storage_path = Path(storage_path) if storage_path else None
         self._max_trajectory = max_trajectory_length
         
+        # Lock protecting all mutable state.  All write paths (store, send_message,
+        # record_code_snapshot, record_error_fix, record_clarification,
+        # record_execution_trace, _update_agent_activity) acquire this lock so
+        # that concurrent callers from multiple threads or async tasks running on
+        # a thread-pool executor cannot corrupt the data structures.
+        self._lock = threading.RLock()
+
         # Core memory structures
         self._entries: list[MemoryEntry] = []
         self._key_value_store: dict[str, Any] = {}
         self._agent_states: dict[str, AgentState] = {}
         self._message_queue: deque = deque(maxlen=100)
-        
+
         # Specialized stores
         self._code_snapshots: dict[str, str] = {}  # version → code
         self._error_fix_mappings: dict[str, str] = {}  # error_pattern → fix
@@ -132,22 +140,27 @@ class SharedResearchMemory:
             entry_type=entry_type,
             metadata=metadata or {},
         )
-        
-        # Add to entries list (trajectory)
-        self._entries.append(entry)
-        if len(self._entries) > self._max_trajectory:
-            self._entries = self._entries[-self._max_trajectory:]
-        
-        # Update key-value store
-        self._key_value_store[key] = value
-        
-        # Update agent state
-        self._update_agent_activity(agent_id)
-        
-        # Persist if configured
-        if self._storage_path:
-            self._save_to_disk()
-        
+        # Acquire the RLock for the full compound mutation so that concurrent
+        # callers (e.g. multiple async tasks running on a thread-pool executor)
+        # cannot interleave the append, trajectory-prune, kv-update, and disk
+        # persist steps.  RLock allows the same thread to re-enter (e.g. when
+        # store_execution_trace() holds the lock and then calls store()).
+        with self._lock:
+            # Add to entries list (trajectory)
+            self._entries.append(entry)
+            if len(self._entries) > self._max_trajectory:
+                self._entries = self._entries[-self._max_trajectory:]
+
+            # Update key-value store
+            self._key_value_store[key] = value
+
+            # Update agent state
+            self._update_agent_activity(agent_id)
+
+            # Persist if configured
+            if self._storage_path:
+                self._save_to_disk()
+
         logger.debug(f"Stored {key} ({entry_type}) from agent {agent_id}")
     
     def get(self, key: str, default: Any = None) -> Any:
@@ -294,14 +307,18 @@ class SharedResearchMemory:
         if metadata:
             trace.update(metadata)
         
-        self._execution_traces.append(trace)
-        
-        # Keep last N traces
-        if len(self._execution_traces) > self._max_trajectory:
-            self._execution_traces = self._execution_traces[-self._max_trajectory:]
-        
+        # Protect the compound append+prune with the same RLock used in store().
+        # This prevents a concurrent store_execution_trace() from interleaving its
+        # append with the length-check and list-rebind, which would corrupt the
+        # trace index used in the store() key below.
+        with self._lock:
+            self._execution_traces.append(trace)
+            if len(self._execution_traces) > self._max_trajectory:
+                self._execution_traces = self._execution_traces[-self._max_trajectory:]
+            trace_index = len(self._execution_traces)
+
         self.store(
-            f"trace:{stage}:{len(self._execution_traces)}",
+            f"trace:{stage}:{trace_index}",
             trace,
             agent_id,
             entry_type="execution",

@@ -23,7 +23,7 @@ Usage:
     test_cases = await builder.load_test_cases(stage="HYPOTHESIS_GEN")
 """
 
-Author: Georgios-Chrysovalantis Chatzivantsidis
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 
 from __future__ import annotations
 

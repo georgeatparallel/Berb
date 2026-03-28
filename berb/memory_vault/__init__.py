@@ -9,7 +9,7 @@ This module provides integration with MemoryVault memory system, enabling:
 Architecture: Adapter + Async Proxy patterns
 Paradigm: Functional + Event-Driven
 
-Author: Georgios-Chrysovalantis Chatzivantsidis
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 
 Example:
     >>> bridge = MemoryVaultBridge(config)

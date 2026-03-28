@@ -6,7 +6,7 @@ Lyapunov exponents quantify the rate at which nearby trajectories diverge.
 - λ₁ > 0: Chaotic system (exponential divergence)
 - λ₁ ≤ 0: Regular system (convergence or neutral stability)
 
-Author: Georgios-Chrysovalantis Chatzivantsidis
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 
 Usage:
     from berb.domains.chaos.lyapunov import LyapunovExponentCalculator

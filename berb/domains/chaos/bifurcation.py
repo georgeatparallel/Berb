@@ -6,7 +6,7 @@ They reveal:
 - Period-doubling cascades to chaos
 - Windows of periodicity within chaotic regions
 
-Author: Georgios-Chrysovalantis Chatzivantsidis
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 
 Usage:
     from berb.domains.chaos.bifurcation import BifurcationDiagram

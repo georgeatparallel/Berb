@@ -11,7 +11,7 @@ Features:
 - Literature source quality by domain
 - Automatic insight injection into routing
 
-Author: Georgios-Chrysovalantis Chatzivantsidis
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 
 Usage:
     from berb.learning.cross_project_learning import CrossProjectLearning

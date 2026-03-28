@@ -17,7 +17,7 @@ Usage:
     context = builder.build_context_for_task("task_3", dependencies=["task_1", "task_2"])
 """
 
-Author: Georgios-Chrysovalantis Chatzivantsidis
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 
 from __future__ import annotations
 
