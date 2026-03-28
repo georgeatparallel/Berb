@@ -23,11 +23,15 @@ Usage:
     
     # Multi-perspective analysis
     method = MultiPerspectiveMethod(router)
-    result = await method.execute(stage, context)
+    result = await method.execute(context)
     
     # Pre-mortem failure analysis
     pm = PreMortemMethod()
-    result = await pm.execute(proposed_design, context)
+    result = await pm.execute(context)
+    
+    # Bayesian reasoning
+    bayesian = BayesianMethod(router)
+    result = await bayesian.execute(context)
 
 Author: Georgios-Chrysovalantis Chatzivantsidis
 """
@@ -36,10 +40,51 @@ from berb.reasoning.base import (
     ReasoningMethod,
     ReasoningResult,
     ReasoningContext,
+    MethodType,
+    create_context,
+)
+from berb.reasoning.multi_perspective import (
+    MultiPerspectiveMethod,
+    PerspectiveType,
+    PerspectiveCandidate,
+    PerspectiveScore,
+)
+from berb.reasoning.pre_mortem import (
+    PreMortemMethod,
+    FailureNarrative,
+    RootCause,
+    EarlySignal,
+)
+from berb.reasoning.bayesian import (
+    BayesianMethod,
+    Hypothesis,
+    Evidence,
+    BayesianResult,
 )
 
 __all__ = [
+    # Base classes
     "ReasoningMethod",
     "ReasoningResult",
     "ReasoningContext",
+    "MethodType",
+    "create_context",
+    
+    # Multi-Perspective
+    "MultiPerspectiveMethod",
+    "PerspectiveType",
+    "PerspectiveCandidate",
+    "PerspectiveScore",
+    
+    # Pre-Mortem
+    "PreMortemMethod",
+    "FailureNarrative",
+    "RootCause",
+    "EarlySignal",
+    
+    # Bayesian
+    "BayesianMethod",
+    "Hypothesis",
+    "Evidence",
+    "BayesianResult",
 ]
