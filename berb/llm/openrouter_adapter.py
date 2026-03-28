@@ -360,16 +360,14 @@ class OpenRouterProvider:
                 
                 elapsed = time.monotonic() - t0
                 
+                # FIX-001a: Removed 'cost' parameter (not in LLMResponse dataclass)
+                # Cost tracking can be added in future PR with full cost tracking system
                 return LLMResponse(
                     content=content,
                     model=data.get("model", self.model),
                     prompt_tokens=usage.get("prompt_tokens", 0),
                     completion_tokens=usage.get("completion_tokens", 0),
                     total_tokens=usage.get("total_tokens", 0),
-                    cost=self._calculate_cost(
-                        usage.get("prompt_tokens", 0),
-                        usage.get("completion_tokens", 0),
-                    ),
                     duration=elapsed,
                 )
                 

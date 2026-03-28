@@ -76,11 +76,21 @@ class TaskAgentState:
 class TaskAgent:
     """Task-solving agent with editable code.
     
+    ⚠️ SECURITY WARNING: This is a FOUNDATION implementation.
+    Code execution is NOT sandboxed. DO NOT use in production environments
+    or with untrusted code modifications.
+    
     The Task Agent:
     1. Executes research tasks (literature search, experiment design, etc.)
     2. Has editable code that can be modified by Meta Agent
     3. Tracks performance metrics for evaluation
     4. Can be versioned and compared against variants
+    
+    TODO: Implement safe code execution with:
+    - Sandboxing (docker, seccomp, etc.)
+    - Resource limits (time, memory, CPU)
+    - Import restrictions
+    - Output validation
     
     Attributes:
         config: Task agent configuration
@@ -187,25 +197,56 @@ def execute_task(task: str, **kwargs) -> dict:
             )
     
     async def _execute_task_code(self, task: str, **kwargs: Any) -> Any:
-        """Execute task using the editable code."""
+        """Execute task using the editable code.
+        
+        FIX-002a: Basic execution with timeout protection.
+        ⚠️ NOT production-ready — lacks full sandboxing.
+        
+        TODO: Implement safe code execution with:
+        - Sandboxing (docker, seccomp, etc.)
+        - Resource limits (time, memory, CPU)
+        - Import restrictions
+        - Output validation
+        """
         from berb.hyperagent.base import TaskResult
+        import asyncio
         
-        # In production, this would safely execute the editable code
-        # For now, we use a simplified approach
+        # FIX-002a: Add execution timeout to prevent resource exhaustion
+        timeout = self.task_config.max_execution_time
         
-        # TODO: Implement safe code execution with:
-        # - Sandboxing (docker, seccomp, etc.)
-        # - Resource limits (time, memory, CPU)
-        # - Import restrictions
-        # - Output validation
-        
-        # Placeholder implementation
-        return TaskResult(
-            task_id=task,
-            success=True,
-            output={"message": f"Task '{task}' executed (placeholder)"},
-            metrics={"execution_time": 0.1},
-        )
+        try:
+            # Execute with timeout
+            # In production, this would safely execute the editable code
+            # For now, we use a simplified approach with timeout protection
+            async def execute_with_timeout():
+                # Placeholder implementation
+                # TODO: Replace with actual code execution in sandbox
+                await asyncio.sleep(0.1)  # Simulate execution
+                return TaskResult(
+                    task_id=task,
+                    success=True,
+                    output={"message": f"Task '{task}' executed (placeholder)"},
+                    metrics={"execution_time": 0.1},
+                )
+            
+            result = await asyncio.wait_for(execute_with_timeout(), timeout=timeout)
+            return result
+            
+        except asyncio.TimeoutError:
+            logger.error("Task execution timeout exceeded: %ds", timeout)
+            return TaskResult(
+                task_id=task,
+                success=False,
+                error=f"Execution timeout after {timeout}s",
+                metrics={"timeout": True},
+            )
+        except Exception as e:
+            logger.error("Task execution failed: %s", e)
+            return TaskResult(
+                task_id=task,
+                success=False,
+                error=str(e),
+            )
     
     def _update_performance(self, result: Any) -> None:
         """Update performance metrics based on result."""
@@ -260,10 +301,27 @@ def execute_task(task: str, **kwargs) -> dict:
         return diff if diff.strip() else code
     
     def _validate_code(self, code: str) -> bool:
-        """Validate code syntax and safety."""
+        """Validate code syntax and safety.
+        
+        FIX-002a: Basic validation for development use.
+        ⚠️ NOT production-ready — does not prevent all attack vectors.
+        
+        Validates:
+        - Syntax correctness
+        - Dangerous import patterns
+        - Dangerous function calls (eval, exec)
+        - Unicode normalization
+        
+        Returns:
+            True if code passes basic validation
+        """
         try:
             # Syntax check
             compile(code, "<string>", "exec")
+            
+            # Normalize unicode to prevent unicode bombs
+            import unicodedata
+            normalized = unicodedata.normalize("NFKC", code)
             
             # Safety checks (no dangerous imports, etc.)
             dangerous_patterns = [
@@ -272,17 +330,29 @@ def execute_task(task: str, **kwargs) -> dict:
                 "__import__('os')",
                 "eval(",
                 "exec(",
+                "compile(",
+                "__import__('subprocess')",
+                "os.popen",
+                "os.spawn",
             ]
             
             for pattern in dangerous_patterns:
-                if pattern in code:
+                if pattern in normalized:
                     logger.warning("Dangerous pattern detected: %s", pattern)
                     return False
+            
+            # Check for excessive line length (potential DoS)
+            if any(len(line) > 10000 for line in normalized.splitlines()):
+                logger.warning("Excessive line length detected (potential DoS)")
+                return False
             
             return True
             
         except SyntaxError as e:
             logger.warning("Code syntax validation failed: %s", e)
+            return False
+        except Exception as e:
+            logger.error("Code validation error: %s", e)
             return False
     
     def get_code(self) -> str:
