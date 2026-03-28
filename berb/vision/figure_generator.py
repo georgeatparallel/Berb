@@ -10,7 +10,7 @@ Features:
 - Iterative refinement with critic feedback
 - VLM-based figure quality critique (AI Scientist P4-OPT-003)
 
-Author: Georgios-Chrysovalantis Chatzivantsidis
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 
 Usage:
     from berb.vision.figure_generator import FigureGenerator, FigureCritic

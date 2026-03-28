@@ -11,7 +11,7 @@ Each reviewer has distinct focus:
 
 Area Chair aggregates reviews and provides acceptance recommendation.
 
-Author: Georgios-Chrysovalantis Chatzivantsidis
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 
 Usage:
     from berb.review import AutomatedReviewerEnsemble

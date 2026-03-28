@@ -14,7 +14,7 @@ Features:
 - Converges in ≤5 iterations
 - Prevents regressions via shared memory
 
-Author: Georgios-Chrysovalantis Chatzivantsidis
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 
 Usage:
     from berb.experiment.self_correcting import SelfCorrectingExecutor

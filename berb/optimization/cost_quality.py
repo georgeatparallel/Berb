@@ -9,7 +9,7 @@ Features:
 - Auto-adjust model selection per stage
 - Budget-aware quality optimization
 
-Author: Georgios-Chrysovalantis Chatzivantsidis
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 
 Usage:
     from berb.optimization.cost_quality import CostQualityOptimizer

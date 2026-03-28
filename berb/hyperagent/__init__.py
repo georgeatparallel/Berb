@@ -8,7 +8,7 @@ Key Innovation:
 - Meta-level modification procedure is ITSELF editable (metacognitive)
 - Improvements accumulate across runs and transfer across domains
 
-Author: Georgios-Chrysovalantis Chatzivantsidis
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 
 Usage:
     from berb.hyperagent import Hyperagent

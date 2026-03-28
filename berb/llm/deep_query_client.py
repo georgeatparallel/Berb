@@ -4,7 +4,7 @@ This module provides clients for DeepQuery (Perplexity Sonar) and DeepMind AI
 (xAI Grok) models, enabling enhanced search capabilities and large context
 processing for comprehensive literature analysis.
 
-Author: Georgios-Chrysovalantis Chatzivantsidis
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 
 DeepQuery (Perplexity) Models:
 - sonar: Quick factual queries

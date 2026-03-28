@@ -494,15 +494,9 @@ class ExperimentSandbox:
         timeout_sec: int,
         elapsed_sec: float,
     ) -> SandboxResult:
-        # Kill the child so it does not hold the stdout/stderr pipe write-ends open.
-        # Without this, the next subprocess.run(capture_output=True) blocks forever
-        # waiting for EOF that the zombie process will never send.
-        if exc.process is not None:
-            try:
-                exc.process.kill()
-                exc.process.communicate(timeout=5)
-            except Exception:  # noqa: BLE001
-                pass
+        # subprocess.run() kills the child process and waits for it before raising
+        # TimeoutExpired, so no additional process cleanup is needed here.
+        # (TimeoutExpired from subprocess.run does not carry a .process attribute.)
         stdout = _to_text(exc.stdout)
         stderr = _to_text(exc.stderr)
         metrics = parse_metrics(stdout)

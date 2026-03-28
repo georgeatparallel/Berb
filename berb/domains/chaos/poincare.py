@@ -6,7 +6,7 @@ intersections with a surface of section. They reveal:
 - Quasiperiodic motion (closed curves)
 - Chaotic motion (scattered points)
 
-Author: Georgios-Chrysovalantis Chatzivantsidis
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 
 Usage:
     from berb.domains.chaos.poincare import PoincareSection
@@ -311,7 +311,7 @@ class PoincareSection:
             for r in radii:
                 count = 0
                 for i in range(min(100, len(points))):
-                    distances = np.sqrt((x - x[i])**2 + **(y - y[i])2)
+                    distances = np.sqrt((x - x[i])**2 + (y - y[i])**2)
                     count += np.sum(distances < r)
                 counts.append(count / len(points))
             

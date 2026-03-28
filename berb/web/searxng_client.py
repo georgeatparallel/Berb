@@ -3,7 +3,7 @@
 Privacy-focused metasearch engine integration with 100+ search engines.
 Self-hosted via Docker for zero cost and unlimited searches.
 
-Author: Georgios-Chrysovalantis Chatzivantsidis
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 
 Usage:
     from berb.web.searxng_client import SearXNGClient, SearXNGConfig

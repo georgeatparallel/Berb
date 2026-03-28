@@ -12,7 +12,7 @@ Features:
 - Domain-specific benchmarks
 - Confidence scoring
 
-Author: Georgios-Chrysovalantis Chatzivantsidis
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 
 Usage:
     from berb.validation.finding_reproduction import FindingReproducer

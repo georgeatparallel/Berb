@@ -4,7 +4,7 @@ This module provides access to grey literature sources including preprints,
 theses, clinical trials, and technical reports, achieving +100% literature
 coverage compared to traditional sources alone.
 
-Author: Georgios-Chrysovalantis Chatzivantsidis
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 
 Sources:
 - bioRxiv (biology preprints)

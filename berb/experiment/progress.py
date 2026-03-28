@@ -10,7 +10,7 @@ Implements structured 4-stage experiment progression:
 
 Each stage has entry/exit criteria, max iterations, and go/no-go decisions.
 
-Author: Georgios-Chrysovalantis Chatzivantsidis
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 
 Usage:
     from berb.experiment.progress import ExperimentProgressManager

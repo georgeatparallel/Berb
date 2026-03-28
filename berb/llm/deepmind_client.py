@@ -1,6 +1,6 @@
 """DeepMind AI (xAI) client - separate module.
 
-Author: Georgios-Chrysovalantis Chatzivantsidis
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 
 This is a re-export of the DeepMindAIClient from deep_query_client.py
 for backwards compatibility and cleaner imports.

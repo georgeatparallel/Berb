@@ -11,7 +11,7 @@ Key Features:
 - Score and prune low-performing branches
 - Merge best findings into final paper
 
-Author: Georgios-Chrysovalantis Chatzivantsidis
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 
 Usage:
     from berb.research import ParallelizedTreeSearch

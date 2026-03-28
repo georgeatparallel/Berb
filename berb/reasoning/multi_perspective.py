@@ -14,7 +14,7 @@ Key Features:
 - Top-k selection
 - Steel-man arguments for weakest candidates
 
-Author: Georgios-Chrysovalantis Chatzivantsidis
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 
 Usage:
     from berb.reasoning.multi_perspective import MultiPerspectiveMethod

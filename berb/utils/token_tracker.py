@@ -18,7 +18,7 @@ Example:
     >>> summary = tracker.get_summary()
     >>> print(f"Saved {summary['total_saved_tokens']:,} tokens")
 
-Author: Georgios-Chrysovalantis Chatzivantsidis
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 """
 
 from __future__ import annotations
@@ -352,16 +352,32 @@ class TokenTracker:
             >>> summary = tracker.get_summary(days=7)
             >>> print(f"Saved {summary.total_saved_tokens:,} tokens")
         """
+        # days=0 means "last 0 days" → always empty.  Short-circuit before querying
+        # because SQLite's datetime('now', '-0 days') = now, so a >= comparison
+        # would still match records inserted in the same moment.
+        if days == 0:
+            return TokenSummary(
+                total_commands=0,
+                total_input_tokens=0,
+                total_output_tokens=0,
+                total_saved_tokens=0,
+                avg_savings_pct=0.0,
+                total_execution_time_ms=0,
+                avg_execution_time_ms=0,
+            )
+
         conn = self.connection
-        
+
         # Build query with optional date filter
         where_clause = ""
         params: list[Any] = [str(self.project_path)]
-        
-        if days:
+
+        # Use `is not None` not truthiness: days=0 is handled above; negative or
+        # positive integers are valid filters.
+        if days is not None:
             where_clause = "AND timestamp >= datetime('now', ?)"
             params.append(f"-{days} days")
-        
+
         query = f"""
         SELECT
             COUNT(*) as total_commands,
@@ -467,7 +483,10 @@ class TokenTracker:
         where_clause = ""
         params: list[Any] = [str(self.project_path)]
         
-        if days:
+        # Use `is not None` not truthiness: days=0 is a valid filter (last 0 days →
+        # empty result) but `if days:` treats 0 as False, bypassing the WHERE clause
+        # and returning all rows instead.
+        if days is not None:
             where_clause = "AND timestamp >= datetime('now', ?)"
             params.append(f"-{days} days")
         

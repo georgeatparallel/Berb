@@ -33,7 +33,7 @@ Usage:
     bayesian = BayesianMethod(router)
     result = await bayesian.execute(context)
 
-Author: Georgios-Chrysovalantis Chatzivantsidis
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 """
 
 from berb.reasoning.base import (

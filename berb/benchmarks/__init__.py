@@ -9,7 +9,7 @@ Features:
 - Public report generation
 - Competitive comparison
 
-Author: Georgios-Chrysovalantis Chatzivantsidis
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 
 Usage:
     from berb.benchmarks.runner import BenchmarkRunner

@@ -13,7 +13,7 @@ Usage:
     # Returns: 2000
 """
 
-Author: Georgios-Chrysovalantis Chatzivantsidis
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 
 from enum import IntEnum
 

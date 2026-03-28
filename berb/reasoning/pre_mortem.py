@@ -16,7 +16,7 @@ Key Features:
 - Early warning signal detection
 - Hardened solution design
 
-Author: Georgios-Chrysovalantis Chatzivantsidis
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 
 Usage:
     from berb.reasoning.pre_mortem import PreMortemMethod

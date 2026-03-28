@@ -8,7 +8,7 @@ Features:
 - Error-fix knowledge base
 - Learning from successful fixes across runs
 
-Author: Georgios-Chrysovalantis Chatzivantsidis
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 
 Usage:
     from berb.experiment.auto_debugger import AutomatedDebugger
