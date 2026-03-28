@@ -1,0 +1,173 @@
+# SearXNG Configuration for Berb
+# Optimized for academic research with 100+ search engines
+#
+# Documentation: https://docs.searxng.org/admin/settings/index.html
+
+use_default_settings: true
+
+general:
+  debug: false
+  instance_name: "Berb Search"
+  donation_url: null
+  contact_url: null
+  enable_metrics: true
+  open_metrics: ""
+
+search:
+  safe_search: 0
+  autocomplete: "google"
+  default_lang: "en"
+  formats:
+    - html
+    - json
+  
+  # Enable specific engines for academic research
+  engines:
+    # Academic sources
+    - name: arxiv
+      engine: arxiv
+      shortcut: !arxiv
+      categories: science
+      timeout: 30
+    
+    - name: google scholar
+      engine: google_scholar
+      shortcut: !gs
+      categories: science
+      timeout: 30
+    
+    - name: pubmed
+      engine: pubmed
+      shortcut: !pm
+      categories: science
+      timeout: 30
+    
+    - name: semantic scholar
+      engine: semantic_scholar
+      shortcut: !ss
+      categories: science
+      timeout: 30
+    
+    - name: zenodo
+      engine: json_engine
+      shortcut: !zen
+      categories: science
+      search_url: https://zenodo.org/api/records/
+      results_parameter: hits.hits
+      timeout: 30
+    
+    - name: clinicaltrials
+      engine: json_engine
+      shortcut: !ct
+      categories: science
+      search_url: https://clinicaltrials.gov/api/query/
+      timeout: 30
+    
+    # General search engines
+    - name: duckduckgo
+      engine: duckduckgo
+      shortcut: !ddg
+      categories: general
+      timeout: 20
+    
+    - name: google
+      engine: google
+      shortcut: !g
+      categories: general
+      timeout: 20
+    
+    - name: bing
+      engine: bing
+      shortcut: !bing
+      categories: general
+      timeout: 20
+    
+    - name: wikipedia
+      engine: wikipedia
+      shortcut: !wp
+      categories: general
+      timeout: 20
+    
+    - name: qwant
+      engine: qwant
+      shortcut: !q
+      categories: general
+      timeout: 20
+    
+    # Code/Technical
+    - name: github
+      engine: github
+      shortcut: !gh
+      categories: it
+      timeout: 20
+    
+    - name: stackoverflow
+      engine: stackoverflow
+      shortcut: !so
+      categories: it
+      timeout: 20
+    
+    # News
+    - name: google news
+      engine: google_news
+      shortcut: !gn
+      categories: news
+      timeout: 20
+
+server:
+  secret_key: "${SEARXNG_SECRET_KEY:-CHANGEME_SECRET_KEY}"
+  limiter: false
+  image_proxy: true
+  http_protocol_version: "1.0"
+  method: "POST"
+  default_http_headers:
+    X-Content-Type-Options: nosniff
+    X-Download-Options: noopen
+    X-Robots-Tag: noindex, nofollow
+    Referrer-Policy: no-referrer
+
+outgoing:
+  request_timeout: 30.0
+  max_request_timeout: 60.0
+  useragent_suffix: "Berb/1.0"
+  pool_connections: 10
+  pool_maxsize: 20
+  enable_http2: true
+  
+  # Network settings for privacy
+  verify: true
+  max_redirects: 30
+  
+  # Proxy support (optional)
+  # proxies:
+  #   http: socks5://proxy.example.com:1080
+  #   https: socks5://proxy.example.com:1080
+
+ui:
+  default_theme: simple
+  default_locale: en
+  query_in_title: true
+  infinite_scroll: true
+  center_alignment: true
+  autocomplete_min: 4
+  
+  # Custom CSS (optional)
+  # custom_css: true
+  
+  # Default interface locale
+  default_locale: en
+
+# Plugins
+plugins:
+  - plugin: self_info
+  - plugin: hash_plugin
+  - plugin: tracker_url_remover
+
+# Checker (optional - for monitoring engine health)
+# checker:
+#   off_the_bridge: true
+#   search:
+#     - query: "sun"
+#       categories: general
+#     - query: "quantum physics"
+#       categories: science
