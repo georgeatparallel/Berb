@@ -358,17 +358,16 @@ class OpenRouterProvider:
                 content = data["choices"][0]["message"]["content"]
                 usage = data.get("usage", {})
                 
-                elapsed = time.monotonic() - t0
-                
-                # FIX-001a: Removed 'cost' parameter (not in LLMResponse dataclass)
-                # Cost tracking can be added in future PR with full cost tracking system
+                # FIX-001a: Match LLMResponse dataclass fields exactly
+                # LLMResponse only has: content, model, prompt_tokens, completion_tokens, total_tokens, finish_reason, truncated, raw
+                # Cost and duration tracking deferred to future PR
                 return LLMResponse(
                     content=content,
                     model=data.get("model", self.model),
                     prompt_tokens=usage.get("prompt_tokens", 0),
                     completion_tokens=usage.get("completion_tokens", 0),
                     total_tokens=usage.get("total_tokens", 0),
-                    duration=elapsed,
+                    finish_reason=data.get("choices", [{}])[0].get("finish_reason", ""),
                 )
                 
             except httpx.HTTPStatusError as e:
