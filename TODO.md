@@ -46,7 +46,8 @@
 | **Physics Domain** | 4 | 10 | 📋 Planned | +58% chaos detection |
 | **Claude Scholar Enhancements** | 5 | 19 | 📋 Planned | +50-70% quality |
 | **SearXNG + Firecrawl** | 3 | 9 | 📋 Planned | +3300% coverage, -80% cost |
-| **TOTAL** | **31** | **112** | **~92% Complete** | **Market leader** |
+| **Google Scholar Hardening** | 2 | 5 | 📋 Planned | Σταθερό scraping / fallback |
+| **TOTAL** | **31** | **117** | **~92% Complete** | **Market leader** |
 
 ---
 
@@ -401,6 +402,34 @@ knowledge_base:
 - -80% cost ($300/year → $0-60/year)
 - 100% privacy (no tracking)
 - Unlimited rate limits (10K/month → unlimited)
+
+---
+
+### **Google Scholar Hardening (0/5 - 0%)**
+
+**Priority:** P1-P2
+**Timeline:** Week 2-3
+**Context:** Το Google Scholar δεν έχει official API. Η υπάρχουσα υλοποίηση
+(`berb/web/scholar.py`) χρησιμοποιεί `scholarly` (web scraping) — αξιόπιστο
+μόνο με proxy rotation. Χωρίς proxy, το Google μπλοκάρει γρήγορα.
+
+| # | Task | Priority | Module | Effort | Status |
+|---|------|----------|--------|--------|--------|
+| 1 | **Proxy rotation pool** — ScraperAPI / Bright Data / free-proxy-list fallback | P1 | `berb/web/scholar.py` | ~80 lines | ⏳ |
+| 2 | **Retry + exponential backoff** όταν το Google επιστρέφει CAPTCHA / 429 | P1 | `berb/web/scholar.py` | ~40 lines | ⏳ |
+| 3 | **SearXNG engine fallback** — αν το `scholarly` αποτύχει, χρησιμοποίει `!google_scholar` μέσω SearXNG | P1 | `berb/web/search.py` | ~30 lines | ⏳ |
+| 4 | **Citation graph μέσω Semantic Scholar** — χρησιμοποίει το S2 `citations` endpoint ως κύρια πηγή αντί `scholarly.citedby()` | P2 | `berb/literature/citation_graph.py` | ~120 lines | ⏳ |
+| 5 | **Health-check flag** — αν το Scholar scraping αποτυγχάνει 3 φορές, disable αυτόματα και log warning | P2 | `berb/web/scholar.py` | ~20 lines | ⏳ |
+
+**Σημειώσεις:**
+- Αξιόπιστες εναλλακτικές χωρίς scraping: OpenAlex (επικαλύπτει ~85% Google Scholar), Semantic Scholar (citations graph), arXiv API
+- Προτεινόμενη στρατηγική: Scholar scraping = **supplementary** μόνο, όχι primary source
+- SearXNG με `google_scholar` engine = καλύτερη επιλογή για production (rotation built-in)
+
+**Expected Impact:**
+- Scraping reliability: ~30% → ~85%
+- Graceful degradation αντί hard failure
+- Citation graph coverage χωρίς εξάρτηση από Scholar scraping
 
 ---
 
