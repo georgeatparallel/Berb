@@ -46,7 +46,7 @@
 | **Physics Domain** | 4 | 10 | 📋 Planned | +58% chaos detection |
 | **Claude Scholar Enhancements** | 5 | 19 | 📋 Planned | +50-70% quality |
 | **SearXNG + Firecrawl** | 3 | 9 | 📋 Planned | +3300% coverage, -80% cost |
-| **Google Scholar Hardening** | 2 | 5 | 📋 Planned | Σταθερό scraping / fallback |
+| **Google Scholar Hardening** | 2 | 5 | ✅ Complete | Σταθερό scraping / fallback |
 | **TOTAL** | **31** | **117** | **~92% Complete** | **Market leader** |
 
 ---
@@ -415,11 +415,11 @@ knowledge_base:
 
 | # | Task | Priority | Module | Effort | Status |
 |---|------|----------|--------|--------|--------|
-| 1 | **Proxy rotation pool** — ScraperAPI / Bright Data / free-proxy-list fallback | P1 | `berb/web/scholar.py` | ~80 lines | ⏳ |
-| 2 | **Retry + exponential backoff** όταν το Google επιστρέφει CAPTCHA / 429 | P1 | `berb/web/scholar.py` | ~40 lines | ⏳ |
-| 3 | **SearXNG engine fallback** — αν το `scholarly` αποτύχει, χρησιμοποίει `!google_scholar` μέσω SearXNG | P1 | `berb/web/search.py` | ~30 lines | ⏳ |
-| 4 | **Citation graph μέσω Semantic Scholar** — χρησιμοποίει το S2 `citations` endpoint ως κύρια πηγή αντί `scholarly.citedby()` | P2 | `berb/literature/citation_graph.py` | ~120 lines | ⏳ |
-| 5 | **Health-check flag** — αν το Scholar scraping αποτυγχάνει 3 φορές, disable αυτόματα και log warning | P2 | `berb/web/scholar.py` | ~20 lines | ⏳ |
+| 1 | **Proxy rotation pool** — ScraperAPI / Bright Data / free-proxy-list fallback | P1 | `berb/web/scholar.py` | ~80 lines | ✅ |
+| 2 | **Retry + exponential backoff** όταν το Google επιστρέφει CAPTCHA / 429 | P1 | `berb/web/scholar.py` | ~40 lines | ✅ |
+| 3 | **SearXNG engine fallback** — αν το `scholarly` αποτύχει, χρησιμοποίει `!google_scholar` μέσω SearXNG | P1 | `berb/web/search.py` | ~30 lines | ✅ |
+| 4 | **Citation graph μέσω Semantic Scholar** — χρησιμοποίει το S2 `citations` endpoint ως κύρια πηγή αντί `scholarly.citedby()` | P2 | `berb/literature/citation_graph.py` | ~120 lines | ✅ |
+| 5 | **Health-check flag** — αν το Scholar scraping αποτυγχάνει 3 φορές, disable αυτόματα και log warning | P2 | `berb/web/scholar.py` | ~20 lines | ✅ |
 
 **Σημειώσεις:**
 - Αξιόπιστες εναλλακτικές χωρίς scraping: OpenAlex (επικαλύπτει ~85% Google Scholar), Semantic Scholar (citations graph), arXiv API
