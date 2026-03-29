@@ -119,6 +119,8 @@ MODEL_ALTERNATIVES = {
         Provider.XAI: "x-ai/grok-4.20-beta",
         Provider.KIMI: "moonshotai/kimi-k2-thinking",
         Provider.ANTHROPIC: "anthropic/claude-sonnet-4.6",
+        Provider.MINIMAX: "minimax/minimax-m2.7",  # Added for coverage
+        Provider.GLM: "z-ai/glm-5",  # Added for coverage
     },
 }
 

@@ -44,6 +44,14 @@ class MockProvider:
     
     async def chat(self, messages: list[dict], **kwargs) -> any:
         """Mock chat that returns valid JSON."""
+        return await self._mock_response(messages)
+    
+    async def complete(self, prompt: str, **kwargs) -> any:
+        """Mock complete (for methods using this API)."""
+        return await self._mock_response([{"role": "user", "content": prompt}])
+    
+    async def _mock_response(self, messages: list[dict]) -> any:
+        """Generate mock response based on prompt content."""
         self.call_count += 1
         
         # Extract what type of response is needed from prompt

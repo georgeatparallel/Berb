@@ -140,9 +140,10 @@ class PreMortemMethod(ReasoningMethod):
     ):
         """
         Initialize pre-mortem method.
-        
+
         Args:
             router: LLM model router (provides get_provider_for_role)
+            llm_client: LLM client for direct API calls (backward compatibility)
             num_scenarios: Number of failure scenarios (default: 3)
             name: Human-readable name
             description: Description of the method
@@ -155,6 +156,7 @@ class PreMortemMethod(ReasoningMethod):
             ),
         )
         self.router = router
+        self.llm_client = llm_client
         self.num_scenarios = num_scenarios
         self._run_id: str | None = None  # For cost tracking
 

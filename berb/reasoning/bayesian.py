@@ -148,9 +148,10 @@ class BayesianMethod(ReasoningMethod):
     ):
         """
         Initialize Bayesian reasoning method.
-        
+
         Args:
             router: LLM model router (provides get_provider_for_role)
+            llm_client: LLM client for direct API calls (backward compatibility)
             name: Human-readable name
             description: Description of the method
         """
@@ -161,6 +162,7 @@ class BayesianMethod(ReasoningMethod):
             ),
         )
         self.router = router
+        self.llm_client = llm_client
     
     async def execute(self, context: ReasoningContext) -> ReasoningResult:
         """

@@ -144,6 +144,7 @@ class MultiPerspectiveMethod(ReasoningMethod):
     def __init__(
         self,
         router: Any | None = None,
+        llm_client: Any | None = None,  # Backward compatibility
         parallel: bool = True,
         top_k: int = 2,
         name: str | None = None,
@@ -155,6 +156,7 @@ class MultiPerspectiveMethod(ReasoningMethod):
         Args:
             router: LLM model router (provides get_provider_for_role).
                     Use ExtendedNadirClawRouter for cost-optimized routing.
+            llm_client: LLM client for direct API calls (backward compatibility)
             parallel: Run perspectives in parallel (default: True)
             top_k: Number of top candidates to return (default: 2)
             name: Human-readable name
@@ -168,6 +170,7 @@ class MultiPerspectiveMethod(ReasoningMethod):
             ),
         )
         self.router = router
+        self.llm_client = llm_client
         self.parallel = parallel
         self.top_k = top_k
         self._run_id: str | None = None  # For cost tracking
