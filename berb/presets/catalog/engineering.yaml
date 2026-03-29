@@ -1,0 +1,82 @@
+# Engineering / Applied CS Preset
+# Systems engineering, distributed systems, databases, networking
+
+name: engineering
+description: "Systems engineering, distributed systems, databases, networking"
+tags:
+  - engineering
+  - distributed-systems
+  - databases
+  - networking
+  - systems
+
+# Literature search
+primary_sources:
+  - semantic_scholar
+  - openalex
+  - arxiv
+  - ieee
+search_engines:
+  - google_scholar
+  - ieee_xplore
+  - acm_dl
+  - arxiv
+grey_sources:
+  - arxiv_preprints
+  - rfc_documents
+  - github
+  - company_blogs
+full_text_access:
+  - arxiv
+  - acm_open
+
+# Model routing
+primary_model: "claude-sonnet-4-6"
+fallback_models:
+  - deepseek-v3.2
+  - gpt-4o
+reasoning_model: "claude-opus-4-6"
+budget_model: "qwen3-turbo"
+
+# Pipeline behavior
+enabled_stages:
+  - 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23
+stage_overrides:
+  9:  # EXPERIMENT_DESIGN
+    require_system_architecture_diagram: true
+    require_failure_mode_analysis: true
+  12: # EXPERIMENT_RUN
+    reproducible_environment: "docker-compose"
+    require_benchmarks: true
+  17: # PAPER_DRAFT
+    require_system_diagram: true
+    require_performance_table: true
+
+# Experiment execution
+experiment_mode: "docker"
+experiment_frameworks:
+  - pytest
+  - locust
+  - docker_compose
+  - kubernetes
+validation_methods:
+  - benchmark_comparison
+  - load_testing
+  - fault_injection
+  - latency_analysis
+
+# Paper writing
+paper_format: "acm"
+target_venue: null
+max_pages: 12
+style_profile: "auto"
+citation_style: "numeric"
+
+# Quality thresholds
+min_literature_papers: 30
+min_quality_score: 8.0
+min_novelty_score: 7.0
+
+# Budget
+max_budget_usd: 1.50
+cost_optimization: "balanced"

@@ -19,11 +19,16 @@ Key Features:
 # Author: Georgios-Chrysovalantis Chatzivantsidis
 
 Usage:
+    # Option 1: Direct import (for one-off usage)
     from berb.reasoning.pre_mortem import PreMortemMethod
-    
     method = PreMortemMethod()
     result = await method.execute(context)
-    
+
+    # Option 2: Registry singleton (recommended for reuse)
+    from berb.reasoning.registry import get_reasoner
+    method = get_reasoner("pre_mortem")
+    result = await method.execute(context)
+
     # Access results
     failure_narratives = result.output["failure_narratives"]
     root_causes = result.output["root_causes"]
@@ -43,6 +48,7 @@ from berb.reasoning.base import (
     ReasoningMethod,
     ReasoningResult,
 )
+from berb.reasoning.registry import ReasonerRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -150,11 +156,14 @@ class PreMortemMethod(ReasoningMethod):
         )
         self.router = router
         self.num_scenarios = num_scenarios
-    
+        self._run_id: str | None = None  # For cost tracking
+
     async def execute(self, context: ReasoningContext) -> ReasoningResult:
         """Execute pre-mortem analysis."""
         import time
+        import uuid
         t0 = time.monotonic()
+        self._run_id = f"pm-{uuid.uuid4().hex[:8]}"
         
         # Validate context
         if not self.validate_context(context):
@@ -206,8 +215,8 @@ class PreMortemMethod(ReasoningMethod):
             )
             
             elapsed = time.monotonic() - t0
-            
-            return ReasoningResult.success_result(
+
+            result = ReasoningResult.success_result(
                 method_type=self.method_type,
                 output={
                     "failure_narratives": [n.to_dict() for n in failure_narratives],
@@ -221,8 +230,14 @@ class PreMortemMethod(ReasoningMethod):
                     "num_root_causes": len(root_causes),
                     "num_signals": len(early_signals),
                     "duration_sec": elapsed,
+                    "run_id": self._run_id,
                 },
             )
+            
+            # Track cost if router supports it
+            self._track_cost(elapsed)
+            
+            return result
             
         except Exception as e:
             self._logger.error("Pre-mortem analysis failed: %s", e)
@@ -522,21 +537,48 @@ Severity: {signal.severity}"""
                 pass
         
         return []
+    
+    def _track_cost(self, duration_sec: float) -> None:
+        """Track cost for pre-mortem execution."""
+        if self.router is None or self._run_id is None:
+            return
+        
+        if hasattr(self.router, 'track_cost'):
+            # Estimate tokens for pre-mortem (4 phases)
+            estimated_input = 800 * self.num_scenarios
+            estimated_output = 600 * self.num_scenarios
+            
+            self.router.track_cost(
+                method="pre_mortem",
+                phase="all",
+                model=self.router.role_models.get("narrative", self.router.complex_model),
+                input_tokens=estimated_input,
+                output_tokens=estimated_output,
+                duration_ms=int(duration_sec * 1000),
+                run_id=self._run_id,
+            )
 
 
 class _FallbackProvider:
     """Fallback LLM provider when router is not configured."""
-    
+
     model = "fallback"
-    
+
     async def complete(self, prompt: str) -> Any:
         """Return mock response."""
         from dataclasses import dataclass
-        
+
         @dataclass
         class MockResponse:
             content: str = '{"narratives": []}'
             tokens: int = 0
             cost: float = 0.0
-        
+
         return MockResponse()
+
+
+# Auto-register with the reasoner registry
+ReasonerRegistry.register(
+    MethodType.PRE_MORTEM,
+    PreMortemMethod,
+)

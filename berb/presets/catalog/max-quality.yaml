@@ -1,0 +1,81 @@
+# Maximum Quality Preset
+# Best possible output — cost is secondary
+
+name: max-quality
+description: "Best possible output — cost is secondary"
+tags:
+  - max-quality
+  - premium
+  - high-impact
+
+# Literature search - comprehensive
+primary_sources:
+  - semantic_scholar
+  - openalex
+  - pubmed
+  - arxiv
+search_engines:
+  - google_scholar
+  - arxiv
+  - pubmed
+  - dblp
+grey_sources:
+  - arxiv_preprints
+  - openreview
+  - ssrn
+  - github
+full_text_access:
+  - arxiv
+  - openreview
+  - pmc
+
+# Model routing - premium models
+primary_model: "claude-opus-4-6"
+fallback_models:
+  - gpt-4o
+  - claude-sonnet-4-6
+reasoning_model: "claude-opus-4-6"
+budget_model: "claude-sonnet-4-6"
+
+# Pipeline behavior
+enabled_stages:
+  - 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23
+stage_overrides:
+  8:  # HYPOTHESIS_GEN
+    reasoning_method: "multi_perspective"
+    num_hypotheses: 8
+  12: # EXPERIMENT_RUN
+    max_iterations: 10
+    self_correcting_enabled: true
+  18: # PEER_REVIEW
+    num_reviewers: 7
+    review_rounds: 2
+
+# Experiment execution
+experiment_mode: "docker"
+experiment_frameworks:
+  - pytorch
+  - jax
+  - scipy
+  - numpy
+validation_methods:
+  - statistical
+  - ablation
+  - baseline_comparison
+  - sensitivity_analysis
+
+# Paper writing
+paper_format: "nature"
+target_venue: null
+max_pages: 15
+style_profile: "auto"
+citation_style: "numeric"
+
+# Quality thresholds - highest
+min_literature_papers: 80
+min_quality_score: 9.0
+min_novelty_score: 8.0
+
+# Budget - generous
+max_budget_usd: 5.00
+cost_optimization: "quality-first"

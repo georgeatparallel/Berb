@@ -1,0 +1,57 @@
+# Rapid Prototype / Quick Draft Preset
+# Fast, cheap first draft for brainstorming — not publication-ready
+
+name: rapid-draft
+description: "Fast, cheap first draft for brainstorming — not publication-ready"
+tags:
+  - rapid-prototype
+  - draft
+  - brainstorming
+  - budget
+
+# Literature search - minimal
+primary_sources:
+  - semantic_scholar
+search_engines:
+  - google_scholar
+grey_sources: []
+full_text_access:
+  - arxiv
+
+# Model routing - budget models
+primary_model: "deepseek-v3.2"
+fallback_models:
+  - qwen3-turbo
+reasoning_model: "deepseek-v3.2"
+budget_model: "qwen3-turbo"
+
+# Pipeline behavior - skip experiment and review stages
+enabled_stages:
+  - 1, 2, 3, 4, 5, 6, 7, 8, 16, 17, 22
+stage_overrides:
+  4:  # LITERATURE_COLLECT
+    max_papers: 15
+  17: # PAPER_DRAFT
+    draft_quality: "exploratory"
+    skip_revision: true
+
+# Experiment execution - simulated only
+experiment_mode: "simulated"
+experiment_frameworks: []
+validation_methods: []
+
+# Paper writing
+paper_format: "markdown"
+target_venue: null
+max_pages: 6
+style_profile: "auto"
+citation_style: "author-year"
+
+# Quality thresholds - relaxed
+min_literature_papers: 10
+min_quality_score: 5.0
+min_novelty_score: 3.0
+
+# Budget - minimal
+max_budget_usd: 0.15
+cost_optimization: "aggressive"

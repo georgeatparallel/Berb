@@ -1,24 +1,24 @@
-"""Internationalization (i18n) for Berb.
+"""Internationalization module for Berb.
 
-Multi-language support with language detection and translation.
+38-language academic writing support.
 """
 
-from .multilingual import (
-    LanguageDetector,
-    LanguageDetectionResult,
-    PromptTranslator,
-    MultilingualPipelineAdapter,
-    SupportedLanguage,
-    LANGUAGE_NAMES,
-    get_multilingual_adapter,
+from berb.i18n.academic_languages import (
+    AcademicLanguageProfile,
+    MultilingualWritingAssistant,
+    WritingDirection,
+    LANGUAGE_PROFILES,
+    get_language_profile,
+    list_supported_languages,
+    detect_language_from_text,
 )
 
 __all__ = [
-    "LanguageDetector",
-    "LanguageDetectionResult",
-    "PromptTranslator",
-    "MultilingualPipelineAdapter",
-    "SupportedLanguage",
-    "LANGUAGE_NAMES",
-    "get_multilingual_adapter",
+    "AcademicLanguageProfile",
+    "MultilingualWritingAssistant",
+    "WritingDirection",
+    "LANGUAGE_PROFILES",
+    "get_language_profile",
+    "list_supported_languages",
+    "detect_language_from_text",
 ]

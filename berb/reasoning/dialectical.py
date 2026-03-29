@@ -10,6 +10,24 @@ The dialectical method:
 4. Produces a higher-level understanding that preserves truths from both
 
 Author: Georgios-Chrysovalantis Chatzivantsidis
+
+Usage:
+    # Option 1: Direct import (backward compatible)
+    from berb.reasoning import DialecticalMethod
+    method = DialecticalMethod(llm_client)
+    result = await method.execute(context)
+
+    # Option 2: With router (recommended for cost optimization)
+    from berb.reasoning import DialecticalMethod
+    from berb.llm.extended_router import ExtendedNadirClawRouter
+    router = ExtendedNadirClawRouter(...)
+    method = DialecticalMethod(router=router)
+    result = await method.execute(context)
+
+    # Option 3: Registry singleton (recommended)
+    from berb.reasoning.registry import get_reasoner
+    method = get_reasoner("dialectical", router)
+    result = await method.execute(context)
 """
 
 from __future__ import annotations
@@ -25,6 +43,7 @@ from .base import (
     ReasoningResult,
     MethodType,
 )
+from .registry import ReasonerRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +77,12 @@ class DialecticalMethod(ReasoningMethod):
     Implements Hegelian dialectic: Thesis → Antithesis → Aufhebung
 
     Usage:
-        dialectic = DialecticalMethod(llm_client)
+        # With router (recommended)
+        dialectic = DialecticalMethod(router=router)
+        result = await dialectic.execute(context)
+
+        # Backward compatible (llm_client fallback)
+        dialectic = DialecticalMethod(llm_client=llm_client)
         result = await dialectic.execute(context)
 
         # Access results
@@ -71,14 +95,16 @@ class DialecticalMethod(ReasoningMethod):
 
     def __init__(
         self,
-        llm_client: Any = None,
+        router: Any = None,      # NEW: Primary (ExtendedNadirClawRouter)
+        llm_client: Any = None,  # DEPRECATED: Fallback only
         **kwargs: Any,
     ):
         """
         Initialize dialectical method.
 
         Args:
-            llm_client: LLM client for generating positions
+            router: LLM router for cost-optimized model selection (recommended)
+            llm_client: LLM client for generating positions (fallback)
             **kwargs: Additional arguments for ReasoningMethod
         """
         super().__init__(
@@ -86,7 +112,9 @@ class DialecticalMethod(ReasoningMethod):
             description="Hegelian dialectic: Thesis → Antithesis → Aufhebung (Synthesis)",
             **kwargs,
         )
+        self.router = router
         self.llm_client = llm_client
+        self._run_id: str | None = None  # For cost tracking
 
     async def execute(self, context: ReasoningContext) -> ReasoningResult:
         """
@@ -101,7 +129,10 @@ class DialecticalMethod(ReasoningMethod):
         Raises:
             Exception: If dialectic fails
         """
+        import uuid
+        
         start_time = time.time()
+        self._run_id = f"dialectic-{uuid.uuid4().hex[:8]}"
 
         try:
             if not self.validate_context(context):
@@ -142,7 +173,7 @@ class DialecticalMethod(ReasoningMethod):
 
             duration = time.time() - start_time
 
-            return ReasoningResult.success_result(
+            dialectic_result = ReasoningResult.success_result(
                 MethodType.DIALECTICAL,
                 output={
                     "topic": topic,
@@ -168,6 +199,11 @@ class DialecticalMethod(ReasoningMethod):
                 duration_sec=duration,
                 model_used=context.metadata.get("model", "unknown"),
             )
+            
+            # Track cost if router supports it
+            self._track_cost(duration)
+            
+            return dialectic_result
 
         except Exception as e:
             logger.exception("Dialectical reasoning failed")
@@ -379,3 +415,30 @@ Respond in JSON format:
                 "Truth from antithesis",
             ],
         )
+    
+    def _track_cost(self, duration_sec: float) -> None:
+        """Track cost for dialectical execution."""
+        if self.router is None or self._run_id is None:
+            return
+        
+        if hasattr(self.router, 'track_cost'):
+            # Estimate tokens for dialectical (thesis + antithesis + synthesis)
+            estimated_input = 800 + 1000 + 1200  # thesis + antithesis + synthesis
+            estimated_output = 600 + 800 + 1000
+            
+            self.router.track_cost(
+                method="dialectical",
+                phase="all",
+                model=self.router.role_models.get("thesis", self.router.mid_model),
+                input_tokens=estimated_input,
+                output_tokens=estimated_output,
+                duration_ms=int(duration_sec * 1000),
+                run_id=self._run_id,
+            )
+
+
+# Auto-register with the reasoner registry
+ReasonerRegistry.register(
+    MethodType.DIALECTICAL,
+    DialecticalMethod,
+)

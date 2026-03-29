@@ -1,0 +1,85 @@
+# Systematic Review / Meta-Analysis Preset
+# PRISMA-compliant systematic reviews and meta-analyses
+
+name: systematic-review
+description: "PRISMA-compliant systematic reviews and meta-analyses"
+tags:
+  - systematic-review
+  - meta-analysis
+  - prisma
+  - clinical
+
+# Literature search
+primary_sources:
+  - pubmed
+  - semantic_scholar
+  - openalex
+  - cochrane
+search_engines:
+  - pubmed
+  - cochrane
+  - embase
+  - google_scholar
+  - web_of_science
+grey_sources:
+  - clinicaltrials
+  - who_ictrp
+  - opengrey
+  - conference_proceedings
+full_text_access:
+  - pmc
+  - unpaywall
+
+# Model routing
+primary_model: "claude-sonnet-4-6"
+fallback_models:
+  - gpt-4o
+reasoning_model: "claude-opus-4-6"
+budget_model: "gemini-2.5-flash"
+
+# Pipeline behavior - skip hypothesis and experiment stages
+enabled_stages:
+  - 1, 2, 3, 4, 5, 6, 7, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23
+stage_overrides:
+  3:  # SEARCH_STRATEGY
+    require_prisma_protocol: true
+    require_boolean_queries: true
+    min_databases: 3
+  5:  # LITERATURE_SCREEN
+    dual_screening: true
+    require_kappa_agreement: true
+  6:  # KNOWLEDGE_EXTRACT
+    structured_extraction_form: true
+    risk_of_bias_tool: "rob2"
+  14: # RESULT_ANALYSIS
+    require_forest_plot: true
+    require_heterogeneity_test: true
+    require_subgroup_analysis: true
+
+# Experiment execution
+experiment_mode: "sandbox"
+experiment_frameworks:
+  - metafor_r
+  - meta_python
+  - scipy
+validation_methods:
+  - risk_of_bias
+  - funnel_plot
+  - sensitivity_analysis
+  - leave_one_out
+
+# Paper writing
+paper_format: "prisma"
+target_venue: null
+max_pages: 20
+style_profile: "auto"
+citation_style: "numeric"
+
+# Quality thresholds
+min_literature_papers: 100
+min_quality_score: 9.0
+min_novelty_score: 5.0
+
+# Budget
+max_budget_usd: 3.00
+cost_optimization: "quality-first"

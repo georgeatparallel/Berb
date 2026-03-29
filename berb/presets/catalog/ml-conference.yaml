@@ -1,0 +1,82 @@
+# Machine Learning Conference Preset
+# Optimized for top ML venues (NeurIPS, ICML, ICLR, AAAI)
+
+name: ml-conference
+description: "Optimized for top ML venues (NeurIPS, ICML, ICLR, AAAI)"
+tags:
+  - machine-learning
+  - conference
+  - deep-learning
+  - ai
+
+# Literature search
+primary_sources:
+  - semantic_scholar
+  - openalex
+  - arxiv
+search_engines:
+  - arxiv
+  - google_scholar
+  - dblp
+grey_sources:
+  - arxiv_preprints
+  - openreview
+  - github
+full_text_access:
+  - arxiv
+  - openreview
+
+# Model routing
+primary_model: "claude-sonnet-4-6"
+fallback_models:
+  - gpt-4o
+  - deepseek-v3.2
+reasoning_model: "claude-opus-4-6"
+budget_model: "gemini-2.5-flash"
+
+# Pipeline behavior
+enabled_stages:
+  - 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23
+stage_overrides:
+  8:  # HYPOTHESIS_GEN
+    reasoning_method: "multi_perspective"
+    num_hypotheses: 5
+  9:  # EXPERIMENT_DESIGN
+    require_ablation: true
+    require_baselines:
+      - random
+      - simple_heuristic
+      - sota
+  12: # EXPERIMENT_RUN
+    max_runtime_hours: 4
+    gpu_required: true
+  18: # PEER_REVIEW
+    review_format: "neurips"
+    num_reviewers: 5
+
+# Experiment execution
+experiment_mode: "docker"
+experiment_frameworks:
+  - pytorch
+  - jax
+  - numpy
+validation_methods:
+  - statistical
+  - ablation
+  - baseline_comparison
+
+# Paper writing
+paper_format: "neurips"
+target_venue: null
+max_pages: 10
+style_profile: "auto"
+citation_style: "numeric"
+
+# Quality thresholds
+min_literature_papers: 40
+min_quality_score: 8.0
+min_novelty_score: 7.0
+
+# Budget
+max_budget_usd: 1.50
+cost_optimization: "balanced"

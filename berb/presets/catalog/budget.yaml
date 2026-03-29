@@ -1,0 +1,60 @@
+# Budget-Optimized Preset
+# Maximum quality per dollar — $0.15-0.25 per paper
+
+name: budget
+description: "Maximum quality per dollar — $0.15-0.25 per paper"
+tags:
+  - budget
+  - cost-optimized
+  - economical
+
+# Literature search
+primary_sources:
+  - semantic_scholar
+  - openalex
+search_engines:
+  - google_scholar
+  - arxiv
+full_text_access:
+  - arxiv
+
+# Model routing - budget models
+primary_model: "deepseek-v3.2"
+fallback_models:
+  - qwen3-turbo
+  - glm-4.5
+reasoning_model: "deepseek-v3.2"
+budget_model: "qwen3-turbo"
+
+# Pipeline behavior
+enabled_stages:
+  - 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23
+stage_overrides:
+  4:  # LITERATURE_COLLECT
+    max_papers: 30
+  8:  # HYPOTHESIS_GEN
+    num_hypotheses: 3
+
+# Experiment execution
+experiment_mode: "sandbox"
+experiment_frameworks:
+  - scipy
+  - numpy
+validation_methods:
+  - statistical
+
+# Paper writing
+paper_format: "article"
+target_venue: null
+max_pages: 8
+style_profile: "auto"
+citation_style: "author-year"
+
+# Quality thresholds
+min_literature_papers: 20
+min_quality_score: 7.0
+min_novelty_score: 5.0
+
+# Budget - minimal
+max_budget_usd: 0.25
+cost_optimization: "aggressive"

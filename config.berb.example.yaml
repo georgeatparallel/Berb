@@ -35,21 +35,138 @@ openclaw_bridge:
   use_browser: false
 
 llm:
-  provider: "openai-compatible"
-  base_url: "https://api.openai.com/v1"
-  wire_api: "chat_completions"  # Set to "responses" for Responses-only gateways
-  api_key_env: "OPENAI_API_KEY"
-  api_key: ""
-  primary_model: "gpt-4o"
-  fallback_models:
-    - "gpt-4.1"
-    - "gpt-4o-mini"
-  # --- MiniMax provider example ---
+  # ============================================================================
+  # PROVIDER SELECTION
+  # ============================================================================
+  # Option 1: OpenRouter (Recommended - Single key for 100+ models)
+  provider: "openrouter"
+  base_url: "https://openrouter.ai/api/v1"
+  api_key_env: "OPENROUTER_API_KEY"
+  
+  # Option 2: Direct provider (for higher rate limits)
   # provider: "minimax"
+  # base_url: "https://api.minimax.io/v1"
   # api_key_env: "MINIMAX_API_KEY"
-  # primary_model: "MiniMax-M2.5"
-  # fallback_models:
-  #   - "MiniMax-M2.5-highspeed"
+  
+  wire_api: "chat_completions"  # Set to "responses" for Responses-only gateways
+  api_key: ""
+  
+  # Optimized defaults (97% cost savings vs premium)
+  primary_model: "qwen/qwen3.5-flash"
+  fallback_models:
+    - "minimax/minimax-m2.5:free"
+    - "z-ai/glm-4.5-air:free"
+    - "qwen/qwen3-coder-480b-a35b:free"
+  
+  # --- Provider-specific examples ---
+  # MiniMax (best budget):
+  #   primary_model: "minimax/minimax-m2.5"
+  #   fallback_models: ["minimax/minimax-m2.5:free"]
+  # Qwen (best value):
+  #   primary_model: "qwen/qwen3.5-flash"
+  #   fallback_models: ["qwen/qwen3.5-9b"]
+  # MiMo (best coding value):
+  #   primary_model: "xiaomi/mimo-v2-flash"
+  #   fallback_models: ["qwen/qwen3-coder-next"]
+
+# ============================================================================
+# REASONING METHODS - Optimized Model Routing (97% Cost Savings)
+# ============================================================================
+# Configure per-method, per-phase model routing for all 9 reasoning methods.
+# Uses 27 unique roles across all methods with provider diversity.
+#
+# Provider Diversity Targets (no single provider >40%):
+#   MiniMax: 25% | Qwen: 25% | MiMo: 15% | GLM: 10% | xAI: 10% |
+#   Kimi: 5% | Perplexity: 5% | DeepSeek: 3% | Google: 2%
+#
+# Cost Budget: $6.00 per full reasoning run (all 9 methods)
+# ============================================================================
+
+reasoning:
+  # Global defaults
+  default_model: "minimax/minimax-m2.5:free"
+  fallback_models:
+    - "qwen/qwen3.5-flash"
+    - "z-ai/glm-4.7-flash"
+  
+  # Provider diversity weights (target % of calls)
+  provider_weights:
+    minimax: 0.25
+    qwen: 0.25
+    mimo: 0.15
+    glm: 0.10
+    xai: 0.10
+    kimi: 0.05
+    perplexity: 0.05
+    deepseek: 0.03
+    google: 0.02
+  
+  # Cost budget (max $6 per full reasoning run)
+  cost_budget_usd: 6.00
+  
+  # Per-method optimized routing (27 roles total)
+  methods:
+    # Multi-Perspective Analysis (5 roles)
+    multi_perspective:
+      constructive: "xiaomi/mimo-v2-pro"          # Premium value ($1/$3)
+      destructive: "qwen/qwen3.5-397b-a17b"       # Elite performance ($0.39/$2.34)
+      systemic: "z-ai/glm-5"                       # Agent workflows ($0.72/$2.30)
+      minimalist: "minimax/minimax-m2.5:free"     # FREE
+      scoring: "qwen/qwen3-coder-next"            # Coding value ($0.12/$0.75)
+    
+    # Pre-Mortem Failure Analysis (4 roles)
+    pre_mortem:
+      narrative: "qwen/qwen3-max-thinking"        # Complex reasoning ($0.78/$3.90)
+      root_cause: "qwen/qwen3-coder-next"         # Debugging ($0.12/$0.75)
+      early_warning: "minimax/minimax-m2.5:free"  # FREE
+      hardened: "xiaomi/mimo-v2-pro"              # Premium value ($1/$3)
+    
+    # Bayesian Reasoning (3 roles)
+    bayesian:
+      prior: "z-ai/glm-4.5"                       # Value ($0.60/$2.20)
+      likelihood: "minimax/minimax-m2.5:free"     # FREE
+      sensitivity: "qwen/qwen3.5-flash"           # Long-context ($0.065/$0.26)
+    
+    # Debate Method (3 roles)
+    debate:
+      pro: "qwen/qwen3.5-397b-a17b"               # Elite value ($0.39/$2.34)
+      con: "qwen/qwen3-max-thinking"              # Complex reasoning ($0.78/$3.90)
+      judge: "x-ai/grok-4.20-beta"                # Low hallucination ($2/$6)
+    
+    # Dialectical Method (3 roles)
+    dialectical:
+      thesis: "z-ai/glm-5"                        # Agent flagship ($0.72/$2.30)
+      antithesis: "qwen/qwen3.5-397b-a17b"        # Elite value ($0.39/$2.34)
+      synthesis: "moonshotai/kimi-k2-thinking"    # Reasoning ($0.47/$2.00)
+    
+    # Research Method (4 roles)
+    research:
+      query: "perplexity/sonar-pro-search"        # Built-in search ($3/$15 + search)
+      synthesis: "qwen/qwen3.5-plus"              # Balanced ($0.26/$1.56)
+      gap: "minimax/minimax-m2.5:free"            # FREE
+      final: "xiaomi/mimo-v2-pro"                 # Premium value ($1/$3)
+    
+    # Socratic Method (5 roles)
+    socratic:
+      clarification: "z-ai/glm-4.5-air:free"      # FREE
+      assumption: "z-ai/glm-4.7-flash"            # Budget ($0.06/$0.40)
+      evidence: "minimax/minimax-m2.5:free"       # FREE
+      perspective: "qwen/qwen3.5-35b-a3b"         # Value ($0.16/$1.30)
+      meta: "moonshotai/kimi-k2-thinking"         # Reasoning ($0.47/$2.00)
+    
+    # Scientific Method (5 roles)
+    scientific:
+      observation: "z-ai/glm-4.7"                 # Value ($0.39/$1.75)
+      hypothesis: "qwen/qwen3-max-thinking"       # Complex reasoning ($0.78/$3.90)
+      prediction: "qwen/qwen3-coder-next"         # Coding value ($0.12/$0.75)
+      experiment: "moonshotai/kimi-k2.5"          # Visual coding ($0.42/$2.20)
+      analysis: "minimax/minimax-m2.5:free"       # FREE
+    
+    # Jury Method (3 roles)
+    jury:
+      juror: "x-ai/grok-4.20-multi-agent-beta"    # Multi-agent ($2/$6)
+      foreman: "qwen/qwen3.5-plus"                # Balanced ($0.26/$1.56)
+      verdict: "z-ai/glm-5"                       # Agent flagship ($0.72/$2.30)
 
 security:
   hitl_required_stages: [5, 9, 20]

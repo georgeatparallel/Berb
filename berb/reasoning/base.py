@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
@@ -56,8 +56,8 @@ class ReasoningContext:
     metadata: dict[str, Any] = field(default_factory=dict)
     """Additional metadata (topic, domain, constraints, etc.)"""
     
-    created_at: datetime = field(default_factory=datetime.now)
-    """Timestamp when context was created"""
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    """Timestamp when context was created (UTC)"""
     
     def get(self, key: str, default: Any = None) -> Any:
         """Get value from input_data."""
@@ -79,14 +79,71 @@ class ReasoningContext:
     
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ReasoningContext:
-        """Create from dictionary."""
+        """Create from dictionary.
+
+        BUG-R003 FIX: Ensures created_at is always timezone-aware UTC.
+        """
         return cls(
             stage_id=data.get("stage_id", "UNKNOWN"),
             stage_name=data.get("stage_name", "Unknown Stage"),
             input_data=data.get("input_data", {}),
             metadata=data.get("metadata", {}),
-            created_at=datetime.fromisoformat(data["created_at"]) if "created_at" in data else datetime.now(),
+            created_at=cls._parse_datetime(data.get("created_at")),
         )
+
+    @staticmethod
+    def _parse_datetime(value: str | None) -> datetime:
+        """Parse datetime string, ensuring timezone-aware UTC result.
+
+        BUG-R003 FIX: Handles naive datetimes by assuming UTC.
+        BUG-NEW-003 FIX: Adds fallback parsing for common non-ISO formats.
+
+        Args:
+            value: ISO format datetime string or None
+
+        Returns:
+            Timezone-aware datetime in UTC
+
+        Note:
+            If value is None, returns current UTC time.
+            If value is naive (no timezone), assumes UTC.
+            If value is invalid, returns current UTC time with warning.
+        """
+        if value is None:
+            return datetime.now(timezone.utc)
+
+        # BUG-R003 FIX: Try ISO format first (preferred)
+        try:
+            dt = datetime.fromisoformat(value)
+        except (ValueError, TypeError):
+            # BUG-NEW-003 FIX: Try common alternative formats
+            # Format: "2026-03-29 12:00:00+05:30" (space separator with TZ)
+            # Format: "2026-03-29 12:00:00" (space separator, naive)
+            dt = None
+            for fmt in ["%Y-%m-%d %H:%M:%S%z", "%Y-%m-%d %H:%M:%S"]:
+                try:
+                    dt = datetime.strptime(value, fmt)
+                    logger.debug(f"Parsed datetime with fallback format: {fmt}")
+                    break
+                except ValueError:
+                    continue
+
+            if dt is None:
+                # All formats failed
+                logger.warning(
+                    f"Invalid datetime format '{value}': unable to parse. "
+                    f"Using current time as fallback."
+                )
+                return datetime.now(timezone.utc)
+
+        # BUG-R003 FIX: Ensure timezone-aware (assume UTC if naive)
+        if dt.tzinfo is None:
+            logger.debug(
+                f"Naive datetime detected '{value}', assuming UTC"
+            )
+            dt = dt.replace(tzinfo=timezone.utc)
+
+        return dt.astimezone(timezone.utc)
 
 
 @dataclass

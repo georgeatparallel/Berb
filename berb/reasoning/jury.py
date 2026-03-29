@@ -8,6 +8,24 @@ This module implements jury-style orchestrated multi-agent evaluation:
 5. Unanimous/majority decision with reasoning
 
 Author: Georgios-Chrysovalantis Chatzivantsidis
+
+Usage:
+    # Option 1: Direct import (backward compatible)
+    from berb.reasoning import JuryMethod
+    method = JuryMethod(llm_client)
+    result = await method.execute(context)
+
+    # Option 2: With router (recommended for cost optimization)
+    from berb.reasoning import JuryMethod
+    from berb.llm.extended_router import ExtendedNadirClawRouter
+    router = ExtendedNadirClawRouter(...)
+    method = JuryMethod(router=router)
+    result = await method.execute(context)
+
+    # Option 3: Registry singleton (recommended)
+    from berb.reasoning.registry import get_reasoner
+    method = get_reasoner("jury", router)
+    result = await method.execute(context)
 """
 
 from __future__ import annotations
@@ -24,6 +42,7 @@ from .base import (
     ReasoningResult,
     MethodType,
 )
+from .registry import ReasonerRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +114,8 @@ class JuryMethod(ReasoningMethod):
 
     def __init__(
         self,
-        llm_client: Any = None,
+        router: Any = None,      # NEW: Primary (ExtendedNadirClawRouter)
+        llm_client: Any = None,  # DEPRECATED: Fallback only
         jury_size: int = 6,
         require_unanimous: bool = False,
         **kwargs: Any,
@@ -104,7 +124,8 @@ class JuryMethod(ReasoningMethod):
         Initialize jury method.
 
         Args:
-            llm_client: LLM client for juror simulation
+            router: LLM router for cost-optimized model selection (recommended)
+            llm_client: LLM client for juror simulation (fallback)
             jury_size: Number of jurors (default: 6)
             require_unanimous: Require unanimous verdict (default: False)
             **kwargs: Additional arguments for ReasoningMethod
@@ -114,9 +135,11 @@ class JuryMethod(ReasoningMethod):
             description="Multi-agent jury deliberation for balanced evaluation",
             **kwargs,
         )
+        self.router = router
         self.llm_client = llm_client
         self.jury_size = jury_size
         self.require_unanimous = require_unanimous
+        self._run_id: str | None = None  # For cost tracking
 
     async def execute(self, context: ReasoningContext) -> ReasoningResult:
         """
@@ -131,7 +154,10 @@ class JuryMethod(ReasoningMethod):
         Raises:
             Exception: If deliberation fails
         """
+        import uuid
+        
         start_time = time.time()
+        self._run_id = f"jury-{uuid.uuid4().hex[:8]}"
 
         try:
             if not self.validate_context(context):
@@ -179,7 +205,7 @@ class JuryMethod(ReasoningMethod):
 
             duration = time.time() - start_time
 
-            return ReasoningResult.success_result(
+            jury_result = ReasoningResult.success_result(
                 MethodType.JURY,
                 output={
                     "case": case,
@@ -205,6 +231,11 @@ class JuryMethod(ReasoningMethod):
                 duration_sec=duration,
                 model_used=context.metadata.get("model", "unknown"),
             )
+            
+            # Track cost if router supports it
+            self._track_cost(duration)
+            
+            return jury_result
 
         except Exception as e:
             logger.exception("Jury deliberation failed")
@@ -425,3 +456,30 @@ Respond in JSON format:
         majority_bonus = (majority_size / len(jurors)) * 0.2
 
         return min(1.0, unanimity_bonus + (avg_confidence * 0.6) + majority_bonus)
+    
+    def _track_cost(self, duration_sec: float) -> None:
+        """Track cost for jury execution."""
+        if self.router is None or self._run_id is None:
+            return
+        
+        if hasattr(self.router, 'track_cost'):
+            # Estimate tokens for jury (6 jurors + foreman synthesis)
+            estimated_input = 500 * self.jury_size + 1000  # jurors + synthesis
+            estimated_output = 400 * self.jury_size + 800
+            
+            self.router.track_cost(
+                method="jury",
+                phase="all",
+                model=self.router.role_models.get("juror", self.router.simple_model),
+                input_tokens=estimated_input,
+                output_tokens=estimated_output,
+                duration_ms=int(duration_sec * 1000),
+                run_id=self._run_id,
+            )
+
+
+# Auto-register with the reasoner registry
+ReasonerRegistry.register(
+    MethodType.JURY,
+    JuryMethod,
+)

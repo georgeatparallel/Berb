@@ -9,6 +9,24 @@ The debate method:
 4. Provides a balanced conclusion based on the debate
 
 Author: Georgios-Chrysovalantis Chatzivantsidis
+
+Usage:
+    # Option 1: Direct import (backward compatible)
+    from berb.reasoning import DebateMethod
+    method = DebateMethod(llm_client)
+    result = await method.execute(context)
+
+    # Option 2: With router (recommended for cost optimization)
+    from berb.reasoning import DebateMethod
+    from berb.llm.extended_router import ExtendedNadirClawRouter
+    router = ExtendedNadirClawRouter(...)
+    method = DebateMethod(router=router)
+    result = await method.execute(context)
+
+    # Option 3: Registry singleton (recommended)
+    from berb.reasoning.registry import get_reasoner
+    method = get_reasoner("debate", router)
+    result = await method.execute(context)
 """
 
 from __future__ import annotations
@@ -24,6 +42,7 @@ from .base import (
     ReasoningResult,
     MethodType,
 )
+from .registry import ReasonerRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +76,12 @@ class DebateMethod(ReasoningMethod):
     Implements structured debate with Pro/Con arguments and Judge evaluation.
 
     Usage:
-        debate = DebateMethod(llm_client)
+        # With router (recommended)
+        debate = DebateMethod(router=router)
+        result = await debate.execute(context)
+
+        # Backward compatible (llm_client fallback)
+        debate = DebateMethod(llm_client=llm_client)
         result = await debate.execute(context)
 
         # Access results
@@ -69,7 +93,8 @@ class DebateMethod(ReasoningMethod):
 
     def __init__(
         self,
-        llm_client: Any = None,
+        router: Any = None,      # NEW: Primary (ExtendedNadirClawRouter)
+        llm_client: Any = None,  # DEPRECATED: Fallback only
         num_arguments: int = 3,
         **kwargs: Any,
     ):
@@ -77,7 +102,8 @@ class DebateMethod(ReasoningMethod):
         Initialize debate method.
 
         Args:
-            llm_client: LLM client for generating arguments
+            router: LLM router for cost-optimized model selection (recommended)
+            llm_client: LLM client for generating arguments (fallback)
             num_arguments: Number of arguments per side (default: 3)
             **kwargs: Additional arguments for ReasoningMethod
         """
@@ -86,8 +112,10 @@ class DebateMethod(ReasoningMethod):
             description="Structured debate with Pro/Con arguments and Judge evaluation",
             **kwargs,
         )
+        self.router = router
         self.llm_client = llm_client
         self.num_arguments = num_arguments
+        self._run_id: str | None = None  # For cost tracking
 
     async def execute(self, context: ReasoningContext) -> ReasoningResult:
         """
@@ -103,8 +131,10 @@ class DebateMethod(ReasoningMethod):
             Exception: If debate fails
         """
         import time
+        import uuid
 
         start_time = time.time()
+        self._run_id = f"debate-{uuid.uuid4().hex[:8]}"
 
         try:
             if not self.validate_context(context):
@@ -146,7 +176,7 @@ class DebateMethod(ReasoningMethod):
 
             duration = time.time() - start_time
 
-            return ReasoningResult.success_result(
+            result = ReasoningResult.success_result(
                 MethodType.DEBATE,
                 output={
                     "topic": topic,
@@ -168,6 +198,11 @@ class DebateMethod(ReasoningMethod):
                 duration_sec=duration,
                 model_used=context.metadata.get("model", "unknown"),
             )
+            
+            # Track cost if router supports it
+            self._track_cost(duration)
+            
+            return result
 
         except Exception as e:
             logger.exception("Debate failed")
@@ -183,28 +218,40 @@ class DebateMethod(ReasoningMethod):
         side: str,
         context: ReasoningContext,
     ) -> list[Argument]:
-        """Generate arguments for one side of the debate."""
+        """Generate arguments for one side of the debate.
+        
+        Uses router if available (recommended for cost optimization),
+        otherwise falls back to llm_client.
+        """
         arguments = []
+        
+        # Determine role name for router
+        role = f"debate_{side}"  # "debate_pro" or "debate_con"
 
-        if self.llm_client:
-            # Use LLM to generate arguments
-            prompt = f"""Consider the following position:
-
-{position}
-
-Generate {self.num_arguments} strong arguments for the {side.upper()} side.
-For each argument, provide:
-1. A clear claim
-2. Supporting evidence or reasoning
-
-Respond in JSON format:
-{{
-    "arguments": [
-        {{"claim": "...", "evidence": "..."}},
-        ...
-    ]
-}}
-"""
+        if self.router and hasattr(self.router, 'get_provider_for_role'):
+            # Use router for cost-optimized model selection
+            try:
+                provider = self.router.get_provider_for_role(role)
+                prompt = self._build_argument_prompt(position, side)
+                response = await provider.chat([{"role": "user", "content": prompt}])
+                
+                import json
+                data = json.loads(response.content)
+                for arg_data in data.get("arguments", []):
+                    arguments.append(
+                        Argument(
+                            side=side,
+                            claim=arg_data.get("claim", ""),
+                            evidence=arg_data.get("evidence", ""),
+                            strength=0.7,
+                        )
+                    )
+            except Exception as e:
+                logger.warning(f"Router argument generation failed: {e}, using fallback")
+                arguments = self._generate_fallback_arguments(side, position)
+        elif self.llm_client:
+            # Fallback to llm_client (backward compatible)
+            prompt = self._build_argument_prompt(position, side)
             try:
                 response = self.llm_client.chat(
                     [{"role": "user", "content": prompt}],
@@ -230,6 +277,26 @@ Respond in JSON format:
             arguments = self._generate_fallback_arguments(side, position)
 
         return arguments
+    
+    def _build_argument_prompt(self, position: str, side: str) -> str:
+        """Build prompt for argument generation."""
+        return f"""Consider the following position:
+
+{position}
+
+Generate {self.num_arguments} strong arguments for the {side.upper()} side.
+For each argument, provide:
+1. A clear claim
+2. Supporting evidence or reasoning
+
+Respond in JSON format:
+{{
+    "arguments": [
+        {{"claim": "...", "evidence": "..."}},
+        ...
+    ]
+}}
+"""
 
     def _generate_fallback_arguments(self, side: str, position: str) -> list[Argument]:
         """Generate fallback arguments without LLM."""
@@ -329,3 +396,30 @@ Respond in JSON format:
             "conclusion": f"The debate favors the {winner} side based on argument strength." if winner != "undecided" else "The debate is too close to call.",
             "confidence": abs(pro_strength - con_strength),
         }
+    
+    def _track_cost(self, duration_sec: float) -> None:
+        """Track cost for debate execution."""
+        if self.router is None or self._run_id is None:
+            return
+        
+        if hasattr(self.router, 'track_cost'):
+            # Estimate tokens for debate (pro + con + judge)
+            estimated_input = 600 * self.num_arguments * 2 + 800  # pro + con + judge
+            estimated_output = 400 * self.num_arguments * 2 + 500
+            
+            self.router.track_cost(
+                method="debate",
+                phase="all",
+                model=self.router.role_models.get("pro", self.router.complex_model),
+                input_tokens=estimated_input,
+                output_tokens=estimated_output,
+                duration_ms=int(duration_sec * 1000),
+                run_id=self._run_id,
+            )
+
+
+# Auto-register with the reasoner registry
+ReasonerRegistry.register(
+    MethodType.DEBATE,
+    DebateMethod,
+)

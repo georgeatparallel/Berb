@@ -72,29 +72,42 @@ def _write_pipeline_summary(run_dir: Path, summary: dict[str, object]) -> None:
 
 def _write_checkpoint(run_dir: Path, stage: Stage, run_id: str) -> None:
     """Write checkpoint atomically via temp file + rename to prevent corruption.
-    
+
     P1 FIX: Includes SHA-256 checksum for integrity validation.
+    P1 FIX: Adds fsync() for durability against power failure/crashes.
     """
     import hashlib
-    
+
     checkpoint = {
         "last_completed_stage": int(stage),
         "last_completed_name": stage.name,
         "run_id": run_id,
         "timestamp": _utcnow_iso(),
     }
-    
+
     # P1 FIX: Compute checksum of core fields
     checksum_data = f"{int(stage)}:{stage.name}:{run_id}"
     checkpoint["checksum"] = hashlib.sha256(checksum_data.encode()).hexdigest()[:16]
-    
+
     target = run_dir / "checkpoint.json"
     fd, tmp_path = tempfile.mkstemp(dir=run_dir, suffix=".tmp", prefix="checkpoint_")
     os.close(fd)
     try:
         with open(tmp_path, "w", encoding="utf-8") as fh:
             fh.write(json.dumps(checkpoint, indent=2))
+            fh.flush()  # Flush Python buffers
+            os.fsync(fh.fileno())  # Force write to disk
+        
+        # Atomic rename
         Path(tmp_path).replace(target)
+        
+        # BUG-003 FIX: Also fsync the directory to ensure rename is durable
+        # This prevents the case where rename is cached and lost on crash
+        dir_fd = os.open(run_dir, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(dir_fd)
+        finally:
+            os.close(dir_fd)
     except BaseException:
         Path(tmp_path).unlink(missing_ok=True)
         raise

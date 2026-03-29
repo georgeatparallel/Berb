@@ -9,6 +9,24 @@ This module implements iterative research reasoning:
 6. Final synthesis
 
 Author: Georgios-Chrysovalantis Chatzivantsidis
+
+Usage:
+    # Option 1: Direct import (backward compatible)
+    from berb.reasoning import ResearchMethod
+    method = ResearchMethod(llm_client, search_client)
+    result = await method.execute(context)
+
+    # Option 2: With router (recommended for cost optimization)
+    from berb.reasoning import ResearchMethod
+    from berb.llm.extended_router import ExtendedNadirClawRouter
+    router = ExtendedNadirClawRouter(...)
+    method = ResearchMethod(router=router, search_client=search_client)
+    result = await method.execute(context)
+
+    # Option 3: Registry singleton (recommended)
+    from berb.reasoning.registry import get_reasoner
+    method = get_reasoner("research", router, search_client=search_client)
+    result = await method.execute(context)
 """
 
 from __future__ import annotations
@@ -24,6 +42,7 @@ from .base import (
     ReasoningResult,
     MethodType,
 )
+from .registry import ReasonerRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +76,12 @@ class ResearchMethod(ReasoningMethod):
     Implements iterative search-synthesis-gap identification loop.
 
     Usage:
-        research = ResearchMethod(llm_client, search_client)
+        # With router (recommended)
+        research = ResearchMethod(router=router, search_client=search_client)
+        result = await research.execute(context)
+
+        # Backward compatible (llm_client fallback)
+        research = ResearchMethod(llm_client=llm_client, search_client=search_client)
         result = await research.execute(context)
 
         # Access results
@@ -69,7 +93,8 @@ class ResearchMethod(ReasoningMethod):
 
     def __init__(
         self,
-        llm_client: Any = None,
+        router: Any = None,      # NEW: Primary (ExtendedNadirClawRouter)
+        llm_client: Any = None,  # DEPRECATED: Fallback only
         search_client: Any = None,
         max_iterations: int = 3,
         **kwargs: Any,
@@ -78,7 +103,8 @@ class ResearchMethod(ReasoningMethod):
         Initialize research method.
 
         Args:
-            llm_client: LLM client for analysis
+            router: LLM router for cost-optimized model selection (recommended)
+            llm_client: LLM client for analysis (fallback)
             search_client: Search client for information gathering
             max_iterations: Maximum research iterations (default: 3)
             **kwargs: Additional arguments for ReasoningMethod
@@ -88,9 +114,11 @@ class ResearchMethod(ReasoningMethod):
             description="Iterative research: search → analyze → identify gaps → refine",
             **kwargs,
         )
+        self.router = router
         self.llm_client = llm_client
         self.search_client = search_client
         self.max_iterations = max_iterations
+        self._run_id: str | None = None  # For cost tracking
 
     async def execute(self, context: ReasoningContext) -> ReasoningResult:
         """
@@ -105,7 +133,10 @@ class ResearchMethod(ReasoningMethod):
         Raises:
             Exception: If research fails
         """
+        import uuid
+        
         start_time = time.time()
+        self._run_id = f"research-{uuid.uuid4().hex[:8]}"
 
         try:
             if not self.validate_context(context):
@@ -155,7 +186,7 @@ class ResearchMethod(ReasoningMethod):
 
             duration = time.time() - start_time
 
-            return ReasoningResult.success_result(
+            research_result = ReasoningResult.success_result(
                 MethodType.RESEARCH,
                 output={
                     "topic": topic,
@@ -169,6 +200,11 @@ class ResearchMethod(ReasoningMethod):
                 duration_sec=duration,
                 model_used=context.metadata.get("model", "unknown"),
             )
+            
+            # Track cost if router supports it
+            self._track_cost(duration)
+            
+            return research_result
 
         except Exception as e:
             logger.exception("Iterative research failed")
@@ -343,3 +379,30 @@ Respond with the synthesis text only.
 
         # Fallback
         return f"Research synthesis for {topic}: {len(findings)} findings collected. {'Remaining gaps: ' + ', '.join(gaps) if gaps else 'No significant gaps identified.'}"
+    
+    def _track_cost(self, duration_sec: float) -> None:
+        """Track cost for research execution."""
+        if self.router is None or self._run_id is None:
+            return
+        
+        if hasattr(self.router, 'track_cost'):
+            # Estimate tokens for research (multiple iterations)
+            estimated_input = 1000 * self.max_iterations + 1500  # queries + synthesis
+            estimated_output = 800 * self.max_iterations + 2000
+            
+            self.router.track_cost(
+                method="research",
+                phase="all",
+                model=self.router.role_models.get("query", self.router.mid_model),
+                input_tokens=estimated_input,
+                output_tokens=estimated_output,
+                duration_ms=int(duration_sec * 1000),
+                run_id=self._run_id,
+            )
+
+
+# Auto-register with the reasoner registry
+ReasonerRegistry.register(
+    MethodType.RESEARCH,
+    ResearchMethod,
+)
