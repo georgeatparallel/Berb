@@ -343,20 +343,34 @@ def generate_modification(analysis: dict, current_code: str) -> str:
             return False
     
     def _generate_error_handling_improvement(self, current_code: str) -> str:
-        """Generate code improvement for error handling."""
-        # TODO: Implement proper code generation
-        # For now, return placeholder
-        return current_code + "\n# Improved error handling added"
-    
+        """Generate code improvement for error handling.
+
+        Not yet implemented — requires LLM-based code generation.
+        """
+        raise NotImplementedError(
+            "LLM-based code generation is not yet implemented for MetaAgent. "
+            "This method requires integration with berb.llm to produce real diffs."
+        )
+
     def _generate_performance_optimization(self, current_code: str) -> str:
-        """Generate code improvement for performance."""
-        # TODO: Implement proper code generation
-        return current_code + "\n# Performance optimization added"
-    
+        """Generate code improvement for performance.
+
+        Not yet implemented — requires LLM-based code generation.
+        """
+        raise NotImplementedError(
+            "LLM-based code generation is not yet implemented for MetaAgent. "
+            "This method requires integration with berb.llm to produce real diffs."
+        )
+
     def _generate_meta_improvement(self) -> str:
-        """Generate metacognitive improvement to modification procedure."""
-        # TODO: Implement proper meta-improvement generation
-        return self.modification_code + "\n# Meta-improvement added"
+        """Generate metacognitive improvement to modification procedure.
+
+        Not yet implemented — requires LLM-based code generation.
+        """
+        raise NotImplementedError(
+            "LLM-based meta-improvement generation is not yet implemented. "
+            "This method requires integration with berb.llm to produce real diffs."
+        )
     
     def _validate_modification_code(self, code: str) -> bool:
         """Validate modification procedure code."""

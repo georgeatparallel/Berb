@@ -198,40 +198,36 @@ def execute_task(task: str, **kwargs) -> dict:
     
     async def _execute_task_code(self, task: str, **kwargs: Any) -> Any:
         """Execute task using the editable code.
-        
-        FIX-002a: Basic execution with timeout protection.
-        ⚠️ NOT production-ready — lacks full sandboxing.
-        
-        TODO: Implement safe code execution with:
-        - Sandboxing (docker, seccomp, etc.)
-        - Resource limits (time, memory, CPU)
-        - Import restrictions
-        - Output validation
+
+        Not yet implemented — sandboxed code execution requires Docker integration.
+        Use berb.experiment.docker_sandbox.DockerSandbox for real execution.
         """
+        raise NotImplementedError(
+            "TaskAgent._execute_task_code is not implemented. "
+            "Real task execution requires a Docker sandbox. "
+            "See berb/experiment/docker_sandbox.py."
+        )
+
+    async def _execute_task_code_UNREACHABLE(self, task: str, **kwargs: Any) -> Any:
+        """Dead code retained for reference only — not called."""
         from berb.hyperagent.base import TaskResult
         import asyncio
-        
-        # FIX-002a: Add execution timeout to prevent resource exhaustion
+
         timeout = self.task_config.max_execution_time
-        
+
         try:
-            # Execute with timeout
-            # In production, this would safely execute the editable code
-            # For now, we use a simplified approach with timeout protection
             async def execute_with_timeout():
-                # Placeholder implementation
-                # TODO: Replace with actual code execution in sandbox
-                await asyncio.sleep(0.1)  # Simulate execution
+                await asyncio.sleep(0.1)
                 return TaskResult(
                     task_id=task,
                     success=True,
                     output={"message": f"Task '{task}' executed (placeholder)"},
                     metrics={"execution_time": 0.1},
                 )
-            
+
             result = await asyncio.wait_for(execute_with_timeout(), timeout=timeout)
             return result
-            
+
         except asyncio.TimeoutError:
             logger.error("Task execution timeout exceeded: %ds", timeout)
             return TaskResult(

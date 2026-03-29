@@ -1,8 +1,31 @@
 # Berb - Implementation TODO
 
-**Last Updated:** 2026-03-27  
-**Version:** 1.0.0 (P4+P5 Complete, Multiple Enhancements Planned)  
+**Last Updated:** 2026-03-29
+**Version:** 1.0.0 (P4+P5 Complete, Production Hardening Complete)
 **Priority:** P0 (Critical) | P1 (High) | P2 (Medium) | P3 (Low)
+
+---
+
+## 🔒 Production Hardening (2026-03-29) — ✅ COMPLETE
+
+| # | Fix | Priority | Status |
+|---|-----|----------|--------|
+| 1 | Strip `*_API_KEY`/`*_TOKEN` from subprocess env | P0 | ✅ |
+| 2 | Server default host `127.0.0.1` (was `0.0.0.0`) | P0 | ✅ |
+| 3 | CORS credentials disabled unless explicit allowlist | P0 | ✅ |
+| 4 | SSRF guard on DuckDuckGo redirect URLs | P0 | ✅ |
+| 5 | `experiment.mode` defaults to `"docker"` | P0 | ✅ |
+| 6 | HyperAgent stubs raise `NotImplementedError` | P0 | ✅ |
+| 7 | SQLite schema versioning (`token_tracker`) | P0 | ✅ |
+| 8 | `SharedResearchMemory` read-path locking | P1 | ✅ |
+| 9 | `datetime.now(timezone.utc)` everywhere | P1 | ✅ |
+| 10 | Shared `RateLimiter` for all literature clients | P1 | ✅ |
+| 11 | `/healthz` liveness probe endpoint | P1 | ✅ |
+| 12 | `berb/pipeline/tracing.py` span infrastructure | P1 | ✅ |
+| 13 | GitHub Actions CI workflow | P1 | ✅ |
+| 14 | 41 tests for `berb/hyperagent/` (was 0) | P1 | ✅ |
+| 15 | Poincaré section O(N²) → cKDTree O(N log N) | P6 | ✅ |
+| 16 | Bare `except` blocks now log exception type | P6 | ✅ |
 
 ---
 

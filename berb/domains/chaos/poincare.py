@@ -30,6 +30,7 @@ from typing import Any, Callable
 import numpy as np
 from scipy.integrate import solve_ivp
 from scipy.optimize import brentq
+from scipy.spatial import cKDTree
 
 logger = logging.getLogger(__name__)
 
@@ -256,14 +257,15 @@ class PoincareSection:
         # Use simple clustering: points within tolerance are same
         tolerance = 0.01 * (np.max(points_arr) - np.min(points_arr))
         
-        unique_points = []
+        # Use cKDTree for O(N log N) unique-point clustering instead of O(N²).
+        unique_points: list[np.ndarray] = []
         for point in points_arr:
-            is_new = True
-            for unique in unique_points:
-                if np.linalg.norm(point - unique) < tolerance:
-                    is_new = False
-                    break
-            if is_new:
+            if not unique_points:
+                unique_points.append(point)
+                continue
+            tree = cKDTree(np.array(unique_points))
+            dist, _ = tree.query(point, k=1)
+            if dist >= tolerance:
                 unique_points.append(point)
         
         # If finite number of unique points, motion is periodic

@@ -364,10 +364,15 @@ class WebSearchClient:
             if "duckduckgo.com" in url:
                 # Extract actual URL from DDG redirect: //duckduckgo.com/l/?uddg=https%3A...
                 from urllib.parse import urlparse as _urlparse, parse_qs as _parse_qs, unquote as _unquote
+                from berb.web._ssrf import is_safe_url
                 _parsed_ddg = _urlparse(url)
                 _uddg = _parse_qs(_parsed_ddg.query).get("uddg")
                 if _uddg:
-                    url = _unquote(_uddg[0])
+                    _candidate = _unquote(_uddg[0])
+                    if not is_safe_url(_candidate):
+                        logger.warning("SSRF: blocked DuckDuckGo redirect to %r", _candidate)
+                        continue
+                    url = _candidate
                 else:
                     continue
             results.append(SearchResult(title=title, url=url, snippet=snippet, source="duckduckgo"))

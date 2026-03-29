@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -230,7 +230,7 @@ class PersistentMemory:
                     confidence=improvement.confidence * 0.9,  # Slight confidence reduction for transfer
                     transferable=improvement.transferable,
                     source_domain=target_domain,
-                    timestamp=datetime.now(),
+                    timestamp=datetime.now(timezone.utc),
                 )
                 transferred.append(transferred_improvement)
         

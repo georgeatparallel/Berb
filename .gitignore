@@ -98,3 +98,4 @@ docs/tasks/
 docs/feature_expansion_analysis.*
 docs/tester_guide_cn.*
 -e "\n# External projects (not part of Berb)\nsearxng-master/\nfirecrawl-main/\n"  
+.berb_cache/

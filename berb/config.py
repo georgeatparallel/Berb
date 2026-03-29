@@ -419,7 +419,7 @@ class CliAgentConfig:
 
 @dataclass(frozen=True)
 class ExperimentConfig:
-    mode: str = "simulated"
+    mode: str = "docker"  # "simulated" produces fake results — only for unit tests
     time_budget_sec: int = 300
     max_iterations: int = 10
     max_refine_duration_sec: int = 0  # 0 = auto (3× time_budget_sec)
@@ -555,9 +555,9 @@ class ServerConfig:
     """Web server configuration."""
 
     enabled: bool = False
-    host: str = "0.0.0.0"
+    host: str = "127.0.0.1"  # Secure default; set BERB_HOST=0.0.0.0 for LAN/Docker
     port: int = 8080
-    cors_origins: tuple[str, ...] = ("*",)
+    cors_origins: tuple[str, ...] = ()  # Empty = deny all cross-origin; configure explicitly
     auth_token: str = ""  # empty = no authentication
     voice_enabled: bool = False
     whisper_model: str = "whisper-1"

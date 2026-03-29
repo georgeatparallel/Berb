@@ -25,7 +25,7 @@ import json
 import logging
 import threading
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from collections import deque
@@ -136,7 +136,7 @@ class SharedResearchMemory:
             key=key,
             value=value,
             agent_id=agent_id,
-            timestamp=datetime.now(),
+            timestamp=datetime.now(timezone.utc),
             entry_type=entry_type,
             metadata=metadata or {},
         )
@@ -164,40 +164,26 @@ class SharedResearchMemory:
         logger.debug(f"Stored {key} ({entry_type}) from agent {agent_id}")
     
     def get(self, key: str, default: Any = None) -> Any:
-        """Get value from shared memory.
-        
-        Args:
-            key: Storage key
-            default: Default value if not found
-            
-        Returns:
-            Stored value or default
-        """
-        value = self._key_value_store.get(key, default)
-        
+        """Get value from shared memory."""
+        with self._lock:
+            value = self._key_value_store.get(key, default)
         if value is not None:
             logger.debug(f"Retrieved {key}")
-        
         return value
-    
+
     def delete(self, key: str) -> bool:
-        """Delete value from shared memory.
-        
-        Args:
-            key: Storage key
-            
-        Returns:
-            True if deleted
-        """
-        if key in self._key_value_store:
-            del self._key_value_store[key]
-            logger.debug(f"Deleted {key}")
-            return True
+        """Delete value from shared memory."""
+        with self._lock:
+            if key in self._key_value_store:
+                del self._key_value_store[key]
+                logger.debug(f"Deleted {key}")
+                return True
         return False
-    
+
     def exists(self, key: str) -> bool:
         """Check if key exists in memory."""
-        return key in self._key_value_store
+        with self._lock:
+            return key in self._key_value_store
     
     # ========== Specialized Stores ==========
     
@@ -228,7 +214,8 @@ class SharedResearchMemory:
     
     def get_code_snapshot(self, version: str) -> str | None:
         """Get code snapshot by version."""
-        return self._code_snapshots.get(version)
+        with self._lock:
+            return self._code_snapshots.get(version)
     
     def store_error_fix(
         self,
@@ -258,15 +245,12 @@ class SharedResearchMemory:
     
     def get_error_fix(self, error_message: str) -> str | None:
         """Get fix for error (pattern matching)."""
-        # Exact match first
-        if error_message in self._error_fix_mappings:
-            return self._error_fix_mappings[error_message]
-        
-        # Pattern match
-        for pattern, fix in self._error_fix_mappings.items():
-            if pattern in error_message or error_message in pattern:
-                return fix
-        
+        with self._lock:
+            if error_message in self._error_fix_mappings:
+                return self._error_fix_mappings[error_message]
+            for pattern, fix in self._error_fix_mappings.items():
+                if pattern in error_message or error_message in pattern:
+                    return fix
         return None
     
     def store_clarification(
@@ -286,7 +270,8 @@ class SharedResearchMemory:
     
     def get_clarification(self, question: str) -> Any:
         """Get stored clarification."""
-        return self._clarifications.get(question)
+        with self._lock:
+            return self._clarifications.get(question)
     
     def store_execution_trace(
         self,
@@ -301,7 +286,7 @@ class SharedResearchMemory:
             "stage": stage,
             "action": action,
             "result": result,
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "agent_id": agent_id,
         }
         if metadata:
@@ -337,7 +322,7 @@ class SharedResearchMemory:
             agent_id=agent_id,
             status=initial_status,
             current_task=None,
-            last_update=datetime.now(),
+            last_update=datetime.now(timezone.utc),
         )
         logger.info(f"Registered agent: {agent_id}")
     
@@ -355,20 +340,22 @@ class SharedResearchMemory:
         state = self._agent_states[agent_id]
         state.status = status
         state.current_task = task
-        state.last_update = datetime.now()
+        state.last_update = datetime.now(timezone.utc)
     
     def _update_agent_activity(self, agent_id: str) -> None:
         """Update agent activity timestamp."""
         if agent_id in self._agent_states:
-            self._agent_states[agent_id].last_update = datetime.now()
+            self._agent_states[agent_id].last_update = datetime.now(timezone.utc)
     
     def get_agent_state(self, agent_id: str) -> AgentState | None:
         """Get agent state."""
-        return self._agent_states.get(agent_id)
-    
+        with self._lock:
+            return self._agent_states.get(agent_id)
+
     def get_all_agent_states(self) -> list[AgentState]:
         """Get all agent states."""
-        return list(self._agent_states.values())
+        with self._lock:
+            return list(self._agent_states.values())
     
     # ========== Message Bus ==========
     
@@ -392,7 +379,7 @@ class SharedResearchMemory:
             "to": to_agent,
             "type": message_type,
             "content": content,
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
         
         self._message_queue.append(message)
@@ -441,45 +428,45 @@ class SharedResearchMemory:
         Returns:
             List of memory entries
         """
-        entries = self._entries
-        
+        with self._lock:
+            entries = list(self._entries)
+
         if entry_type:
             entries = [e for e in entries if e.entry_type == entry_type]
-        
         if agent_id:
             entries = [e for e in entries if e.agent_id == agent_id]
-        
         if limit:
             entries = entries[-limit:]
-        
         return entries
     
     def get_statistics(self) -> dict[str, Any]:
         """Get memory statistics."""
-        entry_types = {}
-        for entry in self._entries:
-            entry_types[entry.entry_type] = entry_types.get(entry.entry_type, 0) + 1
-        
-        return {
-            "project_id": self._project_id,
-            "total_entries": len(self._entries),
-            "key_value_pairs": len(self._key_value_store),
-            "code_snapshots": len(self._code_snapshots),
-            "error_fix_mappings": len(self._error_fix_mappings),
-            "clarifications": len(self._clarifications),
-            "execution_traces": len(self._execution_traces),
-            "registered_agents": len(self._agent_states),
-            "messages_in_queue": len(self._message_queue),
-            "entry_type_distribution": entry_types,
-        }
+        with self._lock:
+            entry_types: dict[str, int] = {}
+            for entry in self._entries:
+                entry_types[entry.entry_type] = entry_types.get(entry.entry_type, 0) + 1
+            return {
+                "project_id": self._project_id,
+                "total_entries": len(self._entries),
+                "key_value_pairs": len(self._key_value_store),
+                "code_snapshots": len(self._code_snapshots),
+                "error_fix_mappings": len(self._error_fix_mappings),
+                "clarifications": len(self._clarifications),
+                "execution_traces": len(self._execution_traces),
+                "registered_agents": len(self._agent_states),
+                "messages_in_queue": len(self._message_queue),
+                "entry_type_distribution": entry_types,
+            }
     
     def find_redundant_computations(self) -> list[dict[str, Any]]:
         """Find potentially redundant computations."""
         redundant = []
-        
+        with self._lock:
+            traces_snapshot = list(self._execution_traces)
+
         # Group execution traces by stage+action
         trace_groups: dict[str, list] = {}
-        for trace in self._execution_traces:
+        for trace in traces_snapshot:
             key = f"{trace.get('stage', 'unknown')}:{trace.get('action', 'unknown')}"
             if key not in trace_groups:
                 trace_groups[key] = []
