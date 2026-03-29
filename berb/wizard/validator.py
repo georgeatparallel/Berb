@@ -52,7 +52,7 @@ def detect_environment() -> EnvironmentReport:
         try:
             result = subprocess.run(
                 ["docker", "--version"],
-                capture_output=True, text=True, timeout=5
+                capture_output=True, text=True, encoding="utf-8", timeout=5
             )
             report.docker_version = result.stdout.strip()
         except Exception:

@@ -18,6 +18,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import threading
 import time
 from pathlib import Path
@@ -89,13 +90,28 @@ _IMPORT_TO_PIP = {
 }
 
 
-def _get_user_id() -> str:
-    """Get user ID for Docker --user flag (cross-platform)."""
-    if hasattr(os, 'getuid'):
+def _get_user_id() -> str | None:
+    """Get user ID for Docker --user flag (cross-platform).
+
+    Returns None on Windows — Docker Desktop runs containers as the image's
+    default user, so passing --user is unnecessary and may fail if the
+    container image doesn't have a matching passwd entry.
+    """
+    if hasattr(os, "getuid"):
         return f"{os.getuid()}:{os.getgid()}"
-    else:
-        # Windows: use default container user
-        return "researcher"
+    return None  # Windows: omit --user, rely on image default
+
+
+def _to_docker_path(path: Path) -> str:
+    """Convert a host filesystem path to Docker-compatible format.
+
+    Docker Desktop on Windows accepts forward-slash paths
+    (e.g. ``C:/Users/foo/bar``) more reliably than backslash paths
+    in volume mount arguments.
+    """
+    if sys.platform == "win32":
+        return str(path).replace("\\", "/")
+    return str(path)
 
 
 class DockerSandbox:
@@ -287,6 +303,8 @@ class DockerSandbox:
                 cmd,
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 timeout=timeout_sec,
                 check=False,
             )
@@ -372,17 +390,20 @@ class DockerSandbox:
             "docker", "run",
             "--name", container_name,
             "--rm",
-            "-v", f"{staging_dir}:/workspace",
+            "-v", f"{_to_docker_path(staging_dir)}:/workspace",
             "-w", "/workspace",
             f"--memory={cfg.memory_limit_mb}m",
             f"--shm-size={cfg.shm_size_mb}m",
         ]
 
+        user_id = _get_user_id()  # None on Windows
+
         # --- Network policy ---
         if cfg.network_policy == "none":
             # Fully isolated — no network at any point
             cmd.extend(["--network", "none"])
-            cmd.extend(["--user", _get_user_id()])
+            if user_id:
+                cmd.extend(["--user", user_id])
         elif cfg.network_policy in ("setup_only", "pip_only"):
             # Network during Phase 0+1, disabled via iptables before Phase 2.
             # Run as host user so experiment can write results.json to volume.
@@ -390,24 +411,27 @@ class DockerSandbox:
             # the user lacks root — network remains available but the code
             # has already been validated by the pipeline security check.
             cmd.extend(["-e", "RC_SETUP_ONLY_NETWORK=1"])
-            cmd.extend(["--user", _get_user_id()])
+            if user_id:
+                cmd.extend(["--user", user_id])
             cmd.extend(["--cap-add=NET_ADMIN"])
         elif cfg.network_policy == "full":
             # Full network throughout — for development/debugging
-            cmd.extend(["--user", _get_user_id()])
+            if user_id:
+                cmd.extend(["--user", user_id])
 
-        # Mount pre-cached datasets
-        # Priority: /opt/datasets (system) > ~/.cache/datasets (user)
+        # Mount pre-cached datasets.
+        # On Linux: /opt/datasets (system-wide) takes priority.
+        # On Windows/macOS: skip /opt/datasets (doesn't exist), use user cache.
         datasets_host = Path("/opt/datasets")
         user_datasets = Path.home() / ".cache" / "datasets"
         if datasets_host.is_dir():
-            cmd.extend(["-v", f"{datasets_host}:/workspace/data:ro"])
+            cmd.extend(["-v", f"{_to_docker_path(datasets_host)}:/workspace/data:ro"])
         elif user_datasets.is_dir():
-            cmd.extend(["-v", f"{user_datasets}:/workspace/data:rw"])
+            cmd.extend(["-v", f"{_to_docker_path(user_datasets)}:/workspace/data:rw"])
         else:
             # Create user-level cache so containers can download datasets
             user_datasets.mkdir(parents=True, exist_ok=True)
-            cmd.extend(["-v", f"{user_datasets}:/workspace/data:rw"])
+            cmd.extend(["-v", f"{_to_docker_path(user_datasets)}:/workspace/data:rw"])
 
         # Mount HuggingFace model cache (read-only for model weights).
         # BUG-103 fix: Don't set HF_HOME to the read-only mount — the
@@ -420,13 +444,13 @@ class DockerSandbox:
         if hf_home_env:
             xdg_hf = Path(hf_home_env).resolve()
             if xdg_hf.is_dir():
-                cmd.extend(["-v", f"{xdg_hf}:{_hf_hub_cache}:ro"])
+                cmd.extend(["-v", f"{_to_docker_path(xdg_hf)}:{_hf_hub_cache}:ro"])
                 cmd.extend(["-e", f"HF_HUB_CACHE={_hf_hub_cache}"])
                 hf_mounted = True
         if not hf_mounted:
             hf_cache_host = Path.home() / ".cache" / "huggingface"
             if hf_cache_host.is_dir():
-                cmd.extend(["-v", f"{hf_cache_host}:{_hf_hub_cache}:ro"])
+                cmd.extend(["-v", f"{_to_docker_path(hf_cache_host)}:{_hf_hub_cache}:ro"])
                 cmd.extend(["-e", f"HF_HUB_CACHE={_hf_hub_cache}"])
 
         # BUG-107 fix: Set TORCH_HOME to writable location so torchvision

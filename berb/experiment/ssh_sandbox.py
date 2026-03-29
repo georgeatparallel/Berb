@@ -134,7 +134,7 @@ class SshRemoteSandbox:
         cmd.append("echo berb-ssh-ok")
         try:
             cp = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=15, check=False,
+                cmd, capture_output=True, text=True, encoding="utf-8", timeout=15, check=False,
             )
             if cp.returncode == 0 and "berb-ssh-ok" in cp.stdout:
                 return True, f"SSH connection to {config.host} OK"
@@ -324,6 +324,8 @@ class SshRemoteSandbox:
                 cmd,
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 timeout=timeout_sec,
                 check=False,
             )
@@ -374,8 +376,8 @@ class SshRemoteSandbox:
 
         try:
             cp = subprocess.run(
-                cmd, capture_output=True, text=True,
-                timeout=cfg.scp_timeout_sec, check=False,
+                cmd, capture_output=True, text=True, encoding="utf-8",
+                errors="replace", timeout=cfg.scp_timeout_sec, check=False,
             )
             if cp.returncode != 0:
                 logger.error("scp upload failed: %s", cp.stderr.strip())

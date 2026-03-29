@@ -34,7 +34,7 @@ def _is_opencode_installed() -> bool:
     try:
         r = subprocess.run(
             [opencode_cmd, "--version"],
-            capture_output=True, text=True, timeout=15,
+            capture_output=True, text=True, encoding="utf-8", timeout=15,
         )
         return r.returncode == 0
     except Exception:  # noqa: BLE001
@@ -56,7 +56,7 @@ def _install_opencode() -> bool:
     try:
         r = subprocess.run(
             [npm_cmd, "i", "-g", "opencode-ai@latest"],
-            capture_output=True, text=True, timeout=120,
+            capture_output=True, text=True, encoding="utf-8", timeout=120,
         )
         if r.returncode == 0:
             print("  OpenCode installed successfully!")
@@ -663,7 +663,7 @@ def cmd_setup(args: argparse.Namespace) -> int:
             opencode_cmd = shutil.which("opencode") or "opencode"
             r = subprocess.run(
                 [opencode_cmd, "--version"],
-                capture_output=True, text=True, timeout=15,
+                capture_output=True, text=True, encoding="utf-8", timeout=15,
             )
             ver = r.stdout.strip() or "unknown"
         except Exception:  # noqa: BLE001

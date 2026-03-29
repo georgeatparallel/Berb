@@ -137,6 +137,7 @@ class OverleafSync:
             cmd,
             capture_output=True,
             text=True,
+            encoding="utf-8",
             timeout=60,
         )
         if result.returncode != 0 and "conflict" not in result.stderr.lower():
@@ -149,6 +150,7 @@ class OverleafSync:
             ["git", "clone", "-b", self.branch, self.git_url, str(self.local_dir)],
             capture_output=True,
             text=True,
+            encoding="utf-8",
             timeout=120,
         )
         if result.returncode != 0:

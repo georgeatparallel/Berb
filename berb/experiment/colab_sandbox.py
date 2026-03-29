@@ -86,7 +86,7 @@ while True:
                 cp = subprocess.run(
                     ["python3", "-u", str(entry)],
                     cwd=str(run_dir),
-                    capture_output=True, text=True,
+                    capture_output=True, text=True, encoding="utf-8", errors="replace",
                     timeout=1800,  # 30 min max per experiment
                 )
                 result = {

@@ -146,6 +146,8 @@ class SessionStartHook(BaseHook):
                 ["git", "rev-parse", "--abbrev-ref", "HEAD"],
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 timeout=5,
             )
             branch = branch_result.stdout.strip() if branch_result.returncode == 0 else "unknown"
@@ -155,6 +157,8 @@ class SessionStartHook(BaseHook):
                 ["git", "status", "--porcelain"],
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 timeout=5,
             )
             uncommitted = len([

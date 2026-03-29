@@ -441,6 +441,8 @@ class PytestRunner:
             ["python", "-m", "pytest", test_path, "-v", "--tb=short"],
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=self._timeout,
             cwd=str(Path(test_path).parent),
         )

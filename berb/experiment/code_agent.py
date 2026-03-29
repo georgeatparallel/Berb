@@ -22,6 +22,7 @@ import os
 import shutil
 import signal
 import subprocess
+import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -419,31 +420,49 @@ class _CliAgentBase:
         workdir.mkdir(parents=True, exist_ok=True)
         start = time.monotonic()
         timed_out = False
-        proc = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            cwd=workdir,
-            env={**os.environ},
-            start_new_session=True,
-        )
+
+        popen_kwargs: dict[str, Any] = {
+            "stdout": subprocess.PIPE,
+            "stderr": subprocess.PIPE,
+            "cwd": workdir,
+            "env": {**os.environ},
+        }
+        if sys.platform == "win32":
+            # On Windows, create a new process group so we can send
+            # CTRL_BREAK_EVENT to terminate the subtree on timeout.
+            popen_kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+        else:
+            # On Unix, start a new session so we can kill the whole
+            # process group via os.killpg on timeout.
+            popen_kwargs["start_new_session"] = True
+
+        proc = subprocess.Popen(cmd, **popen_kwargs)
         try:
             stdout_bytes, stderr_bytes = proc.communicate(timeout=timeout_sec)
         except subprocess.TimeoutExpired:
             timed_out = True
-            # Kill entire process group
-            try:
-                os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
-            except OSError:
-                pass
-            try:
-                stdout_bytes, stderr_bytes = proc.communicate(timeout=5)
-            except subprocess.TimeoutExpired:
+            if sys.platform == "win32":
+                # Windows: terminate then forcibly kill the process tree.
+                proc.terminate()
                 try:
-                    os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+                    stdout_bytes, stderr_bytes = proc.communicate(timeout=5)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+                    stdout_bytes, stderr_bytes = proc.communicate(timeout=5)
+            else:
+                # Unix: send SIGTERM to the entire process group, then SIGKILL.
+                try:
+                    os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
                 except OSError:
                     pass
-                stdout_bytes, stderr_bytes = proc.communicate(timeout=5)
+                try:
+                    stdout_bytes, stderr_bytes = proc.communicate(timeout=5)
+                except subprocess.TimeoutExpired:
+                    try:
+                        os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+                    except OSError:
+                        pass
+                    stdout_bytes, stderr_bytes = proc.communicate(timeout=5)
 
         elapsed = time.monotonic() - start
         return (

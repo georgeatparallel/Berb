@@ -84,6 +84,7 @@ def _detect_nvidia() -> HardwareProfile | None:
             ],
             capture_output=True,
             text=True,
+            encoding="utf-8",
             timeout=10,
             check=False,
         )
@@ -140,6 +141,7 @@ def _detect_mps() -> HardwareProfile | None:
             ["sysctl", "-n", "machdep.cpu.brand_string"],
             capture_output=True,
             text=True,
+            encoding="utf-8",
             timeout=5,
             check=False,
         )
@@ -179,6 +181,7 @@ def ensure_torch_available(python_path: str, gpu_type: str) -> bool:
             [str(python), "-c", "import torch; print(torch.__version__)"],
             capture_output=True,
             text=True,
+            encoding="utf-8",
             timeout=30,
             check=False,
         )
@@ -202,6 +205,7 @@ def ensure_torch_available(python_path: str, gpu_type: str) -> bool:
             pip_cmd,
             capture_output=True,
             text=True,
+            encoding="utf-8",
             timeout=300,
             check=False,
         )

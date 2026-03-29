@@ -293,6 +293,7 @@ class OpenCodeBridge:
                 [opencode_cmd, "--version"],
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
                 timeout=15,
             )
             return result.returncode == 0
@@ -479,6 +480,8 @@ class OpenCodeBridge:
                 cwd=str(workspace),
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 timeout=self._timeout_sec,
                 env=env,
             )
