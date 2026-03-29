@@ -27,6 +27,16 @@ from berb.utils.sanitize import sanitize_figure_id
 
 logger = logging.getLogger(__name__)
 
+
+def _get_docker_user_id() -> str:
+    """Get user ID for Docker --user flag (cross-platform)."""
+    if hasattr(os, 'getuid'):
+        return f"{os.getuid()}:{os.getgid()}"
+    else:
+        # Windows: use default container user
+        return "1000:1000"
+
+
 # Minimum acceptable file size (bytes) — filters out corrupt/empty PNGs
 _MIN_FILE_SIZE = 1024  # 1 KB
 
@@ -317,7 +327,7 @@ class RendererAgent(BaseAgent):
             "-v", f"{script_path.resolve()}:/workspace/script.py:ro",
             "-v", f"{output_dir.resolve()}:/workspace/output:rw",
             "-w", "/workspace/output",  # BUG-60: CWD = output dir so relative paths work
-            "--user", f"{os.getuid()}:{os.getgid()}",
+            "--user", _get_docker_user_id(),
             "--entrypoint", "python3",
             self._docker_image,
             "/workspace/script.py",

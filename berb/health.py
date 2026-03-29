@@ -558,6 +558,82 @@ def check_docker_runtime(config: RCConfig) -> CheckResult:
     return CheckResult(name="docker_runtime", status="pass", detail=detail)
 
 
+def check_disk_space(
+    path: Path | str = ".",
+    min_free_gb: float = 10.0,
+    warn_threshold_gb: float = 20.0,
+) -> CheckResult:
+    """P1 FIX: Check available disk space.
+
+    Args:
+        path: Path to check disk space for (default: current directory)
+        min_free_gb: Minimum required free space in GB (default: 10 GB)
+        warn_threshold_gb: Warning threshold in GB (default: 20 GB)
+
+    Returns:
+        CheckResult with disk space status.
+    """
+    try:
+        path = Path(path).resolve()
+        total, used, free = shutil.disk_usage(path)
+
+        free_gb = free / (1024**3)
+        total_gb = total / (1024**3)
+        used_percent = (used / total) * 100 if total > 0 else 0
+
+        if free_gb < min_free_gb:
+            return CheckResult(
+                name="disk_space",
+                status="fail",
+                detail=f"Low disk space: {free_gb:.1f} GB free ({used_percent:.0f}% used of {total_gb:.0f} GB)",
+                fix=f"Free up at least {min_free_gb - free_gb:.1f} GB of disk space",
+            )
+
+        if free_gb < warn_threshold_gb:
+            return CheckResult(
+                name="disk_space",
+                status="warn",
+                detail=f"Disk space warning: {free_gb:.1f} GB free ({used_percent:.0f}% used of {total_gb:.0f} GB)",
+                fix=f"Consider freeing up disk space (recommended: >{warn_threshold_gb:.0f} GB free)",
+            )
+
+        return CheckResult(
+            name="disk_space",
+            status="pass",
+            detail=f"Disk space OK: {free_gb:.1f} GB free ({used_percent:.0f}% used of {total_gb:.0f} GB)",
+        )
+    except OSError as exc:
+        return CheckResult(
+            name="disk_space",
+            status="fail",
+            detail=f"Cannot check disk space: {exc}",
+            fix="Ensure the path exists and is accessible",
+        )
+
+
+def get_disk_space_status(path: Path | str = ".") -> dict[str, float]:
+    """P1 FIX: Get disk space metrics for monitoring.
+
+    Returns dict with total_gb, used_gb, free_gb, used_percent.
+    """
+    try:
+        path = Path(path).resolve()
+        total, used, free = shutil.disk_usage(path)
+        return {
+            "total_gb": total / (1024**3),
+            "used_gb": used / (1024**3),
+            "free_gb": free / (1024**3),
+            "used_percent": (used / total) * 100 if total > 0 else 0,
+        }
+    except OSError:
+        return {
+            "total_gb": 0,
+            "used_gb": 0,
+            "free_gb": 0,
+            "used_percent": 0,
+        }
+
+
 def run_doctor(config_path: str | Path) -> DoctorReport:
     """Run all health checks and return report."""
     checks: list[CheckResult] = []
@@ -612,6 +688,22 @@ def run_doctor(config_path: str | Path) -> DoctorReport:
                     fix="Ensure Docker is installed and the daemon is running",
                 )
             )
+
+    # P1 FIX: Add disk space check
+    try:
+        # Check disk space in the project directory
+        project_dir = Path(path).parent.resolve()
+        checks.append(check_disk_space(project_dir))
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("Disk space check failed: %s", exc)
+        checks.append(
+            CheckResult(
+                name="disk_space",
+                status="warn",
+                detail=f"Could not check disk space: {exc}",
+                fix="Ensure the project directory is accessible",
+            )
+        )
 
     overall = "fail" if any(c.status == "fail" for c in checks) else "pass"
     return DoctorReport(

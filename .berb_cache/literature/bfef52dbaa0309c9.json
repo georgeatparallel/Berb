@@ -1,0 +1,429 @@
+{
+  "query": "Test research topic",
+  "source": "arxiv",
+  "limit": 15,
+  "timestamp": 1774735283.7608736,
+  "papers": [
+    {
+      "paper_id": "arxiv-1806.02690",
+      "title": "Guest Editorial: Special Topic on Data-enabled Theoretical Chemistry",
+      "authors": [
+        {
+          "name": "Matthias Rupp",
+          "affiliation": ""
+        },
+        {
+          "name": "O. Anatole von Lilienfeld",
+          "affiliation": ""
+        },
+        {
+          "name": "Kieron Burke",
+          "affiliation": ""
+        }
+      ],
+      "year": 2018,
+      "abstract": "A survey of the contributions to the Special Topic on Data-enabled Theoretical Chemistry is given, including a glossary of relevant machine learning terms.",
+      "venue": "physics.chem-ph",
+      "citation_count": 0,
+      "doi": "10.1063/1.5043213",
+      "arxiv_id": "1806.02690",
+      "url": "https://arxiv.org/abs/1806.02690",
+      "source": "arxiv",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "arxiv-1101.4081",
+      "title": "A simple way to speedup Gauss Elimination",
+      "authors": [
+        {
+          "name": "Sivaram Ambikasaran",
+          "affiliation": ""
+        }
+      ],
+      "year": 2011,
+      "abstract": "This article looks at a simple modification to speedup the conventional Gauss Elimination. The proposed modification speeds up the conventional Gauss Elimination by a factor of nearly 9/7 (in the asymptotic limit).",
+      "venue": "math.NA",
+      "citation_count": 0,
+      "doi": "",
+      "arxiv_id": "1101.4081",
+      "url": "https://arxiv.org/abs/1101.4081",
+      "source": "arxiv",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "arxiv-2103.00498",
+      "title": "Topic Modelling Meets Deep Neural Networks: A Survey",
+      "authors": [
+        {
+          "name": "He Zhao",
+          "affiliation": ""
+        },
+        {
+          "name": "Dinh Phung",
+          "affiliation": ""
+        },
+        {
+          "name": "Viet Huynh",
+          "affiliation": ""
+        },
+        {
+          "name": "Yuan Jin",
+          "affiliation": ""
+        },
+        {
+          "name": "Lan Du",
+          "affiliation": ""
+        },
+        {
+          "name": "Wray Buntine",
+          "affiliation": ""
+        }
+      ],
+      "year": 2021,
+      "abstract": "Topic modelling has been a successful technique for text analysis for almost twenty years. When topic modelling met deep neural networks, there emerged a new and increasingly popular research area, neural topic models, with over a hundred models developed and a wide range of applications in neural language understanding such as text generation, summarisation and language models. There is a need to summarise research developments and discuss open problems and future directions. In this paper, we provide a focused yet comprehensive overview of neural topic models for interested researchers in the AI community, so as to facilitate them to navigate and innovate in this fast-growing research area. To the best of our knowledge, ours is the first review focusing on this specific topic.",
+      "venue": "cs.LG",
+      "citation_count": 0,
+      "doi": "",
+      "arxiv_id": "2103.00498",
+      "url": "https://arxiv.org/abs/2103.00498",
+      "source": "arxiv",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "arxiv-1709.09373",
+      "title": "A Bimodal Network Approach to Model Topic Dynamics",
+      "authors": [
+        {
+          "name": "Luigi Di Caro",
+          "affiliation": ""
+        },
+        {
+          "name": "Marco Guerzoni",
+          "affiliation": ""
+        },
+        {
+          "name": "Massimiliano Nuccio",
+          "affiliation": ""
+        },
+        {
+          "name": "Giovanni Siragusa",
+          "affiliation": ""
+        }
+      ],
+      "year": 2017,
+      "abstract": "This paper presents an intertemporal bimodal network to analyze the evolution of the semantic content of a scientific field within the framework of topic modeling, namely using the Latent Dirichlet Allocation (LDA). The main contribution is the conceptualization of the topic dynamics and its formalization and codification into an algorithm. To benchmark the effectiveness of this approach, we propose three indexes which track the transformation of topics over time, their rate of birth and death, and the novelty of their content. Applying the LDA, we test the algorithm both on a controlled experiment and on a corpus of several thousands of scientific papers over a period of more than 100 years which account for the history of the economic thought.",
+      "venue": "cs.CL",
+      "citation_count": 0,
+      "doi": "",
+      "arxiv_id": "1709.09373",
+      "url": "https://arxiv.org/abs/1709.09373",
+      "source": "arxiv",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "arxiv-2405.11965",
+      "title": "No Free Lunch: Research Software Testing in Teaching",
+      "authors": [
+        {
+          "name": "Michael Dorner",
+          "affiliation": ""
+        },
+        {
+          "name": "Andreas Bauer",
+          "affiliation": ""
+        },
+        {
+          "name": "Florian Angermeir",
+          "affiliation": ""
+        }
+      ],
+      "year": 2024,
+      "abstract": "Software is at the core of most scientific discoveries today. Therefore, the quality of research results highly depends on the quality of the research software. Rigorous testing, as we know it from software engineering in the industry, could ensure the quality of the research software but it also requires a substantial effort that is often not rewarded in academia. Therefore, this research explores the effects of research software testing integrated into teaching on research software. In an in-vivo experiment, we integrated the engineering of a test suite for a large-scale network simulation as group projects into a course on software testing at the Blekinge Institute of Technology, Sweden, and qualitatively measured the effects of this integration on the research software. We found that the research software benefited from the integration through substantially improved documentation and fewer hardware and software dependencies. However, this integration was effortful and although the student teams developed elegant and thoughtful test suites, no code by students went directly into the research software since we were not able to make the integration back into the research software obligatory or even remunerative. Although we strongly believe that integrating research software engineering such as testing into teaching is not only valuable for the research software itself but also for students, the research of the next generation, as they get in touch with research software engineering and bleeding-edge research in their field as part of their education, the uncertainty about the intellectual properties of students' code substantially limits the potential of integrating research software testing into teaching.",
+      "venue": "cs.SE",
+      "citation_count": 0,
+      "doi": "",
+      "arxiv_id": "2405.11965",
+      "url": "https://arxiv.org/abs/2405.11965",
+      "source": "arxiv",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "arxiv-1405.6886",
+      "title": "A Topic Model Approach to Multi-Modal Similarity",
+      "authors": [
+        {
+          "name": "Rasmus Troelsg\u00e5rd",
+          "affiliation": ""
+        },
+        {
+          "name": "Bj\u00f8rn Sand Jensen",
+          "affiliation": ""
+        },
+        {
+          "name": "Lars Kai Hansen",
+          "affiliation": ""
+        }
+      ],
+      "year": 2014,
+      "abstract": "Calculating similarities between objects defined by many heterogeneous data modalities is an important challenge in many multimedia applications. We use a multi-modal topic model as a basis for defining such a similarity between objects. We propose to compare the resulting similarities from different model realizations using the non-parametric Mantel test. The approach is evaluated on a music dataset.",
+      "venue": "cs.IR",
+      "citation_count": 0,
+      "doi": "",
+      "arxiv_id": "1405.6886",
+      "url": "https://arxiv.org/abs/1405.6886",
+      "source": "arxiv",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "arxiv-1602.07396",
+      "title": "Concentration of research funding leads to decreasing marginal returns",
+      "authors": [
+        {
+          "name": "Philippe Mongeon",
+          "affiliation": ""
+        },
+        {
+          "name": "Christine Brodeur",
+          "affiliation": ""
+        },
+        {
+          "name": "Catherine Beaudry",
+          "affiliation": ""
+        },
+        {
+          "name": "Vincent Lariviere",
+          "affiliation": ""
+        }
+      ],
+      "year": 2016,
+      "abstract": "In most countries, basic research is supported by research councils that select, after peer review, the individuals or teams that are to receive funding. Unfortunately, the number of grants these research councils can allocate is not infinite and, in most cases, a minority of the researchers receive the majority of the funds. However, evidence as to whether this is an optimal way of distributing available funds is mixed. The purpose of this study is to measure the relation between the amount of funding provided to 12,720 researchers in Quebec over a fifteen year period (1998-2012) and their scientific output and impact from 2000 to 2013. Our results show that both in terms of the quantity of papers produced and of their scientific impact, the concentration of research funding in the hands of a so-called \"elite\" of researchers generally produces diminishing marginal returns. Also, we find that the most funded researchers do not stand out in terms of output and scientific impact.",
+      "venue": "cs.DL",
+      "citation_count": 0,
+      "doi": "10.1093/reseval/rvw007",
+      "arxiv_id": "1602.07396",
+      "url": "https://arxiv.org/abs/1602.07396",
+      "source": "arxiv",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "arxiv-1403.6397",
+      "title": "Evaluating topic coherence measures",
+      "authors": [
+        {
+          "name": "Frank Rosner",
+          "affiliation": ""
+        },
+        {
+          "name": "Alexander Hinneburg",
+          "affiliation": ""
+        },
+        {
+          "name": "Michael R\u00f6der",
+          "affiliation": ""
+        },
+        {
+          "name": "Martin Nettling",
+          "affiliation": ""
+        },
+        {
+          "name": "Andreas Both",
+          "affiliation": ""
+        }
+      ],
+      "year": 2014,
+      "abstract": "Topic models extract representative word sets - called topics - from word counts in documents without requiring any semantic annotations. Topics are not guaranteed to be well interpretable, therefore, coherence measures have been proposed to distinguish between good and bad topics. Studies of topic coherence so far are limited to measures that score pairs of individual words. For the first time, we include coherence measures from scientific philosophy that score pairs of more complex word subsets and apply them to topic scoring.",
+      "venue": "cs.LG",
+      "citation_count": 0,
+      "doi": "",
+      "arxiv_id": "1403.6397",
+      "url": "https://arxiv.org/abs/1403.6397",
+      "source": "arxiv",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "arxiv-2401.15351",
+      "title": "A Survey on Neural Topic Models: Methods, Applications, and Challenges",
+      "authors": [
+        {
+          "name": "Xiaobao Wu",
+          "affiliation": ""
+        },
+        {
+          "name": "Thong Nguyen",
+          "affiliation": ""
+        },
+        {
+          "name": "Anh Tuan Luu",
+          "affiliation": ""
+        }
+      ],
+      "year": 2024,
+      "abstract": "Topic models have been prevalent for decades to discover latent topics and infer topic proportions of documents in an unsupervised fashion. They have been widely used in various applications like text analysis and context recommendation. Recently, the rise of neural networks has facilitated the emergence of a new research field -- Neural Topic Models (NTMs). Different from conventional topic models, NTMs directly optimize parameters without requiring model-specific derivations. This endows NTMs with better scalability and flexibility, resulting in significant research attention and plentiful new methods and applications. In this paper, we present a comprehensive survey on neural topic models concerning methods, applications, and challenges. Specifically, we systematically organize current NTM methods according to their network structures and introduce the NTMs for various scenarios like short texts and bilingual documents. We also discuss a wide range of popular applications built on NTMs. Finally, we highlight the challenges confronted by NTMs to inspire future research. We accompany this survey with a repository for easier access to the mentioned paper resources: https://github.com/bobxwu/Paper-Neural-Topic-Models.",
+      "venue": "cs.CL",
+      "citation_count": 0,
+      "doi": "10.1007/s10462-023-10661-7",
+      "arxiv_id": "2401.15351",
+      "url": "https://arxiv.org/abs/2401.15351",
+      "source": "arxiv",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "arxiv-2204.10189",
+      "title": "Neural Topic Modeling of Psychotherapy Sessions",
+      "authors": [
+        {
+          "name": "Baihan Lin",
+          "affiliation": ""
+        },
+        {
+          "name": "Djallel Bouneffouf",
+          "affiliation": ""
+        },
+        {
+          "name": "Guillermo Cecchi",
+          "affiliation": ""
+        },
+        {
+          "name": "Ravi Tejwani",
+          "affiliation": ""
+        }
+      ],
+      "year": 2022,
+      "abstract": "In this work, we compare different neural topic modeling methods in learning the topical propensities of different psychiatric conditions from the psychotherapy session transcripts parsed from speech recordings. We also incorporate temporal modeling to put this additional interpretability to action by parsing out topic similarities as a time series in a turn-level resolution. We believe this topic modeling framework can offer interpretable insights for the therapist to optimally decide his or her strategy and improve psychotherapy effectiveness.",
+      "venue": "cs.CL",
+      "citation_count": 0,
+      "doi": "",
+      "arxiv_id": "2204.10189",
+      "url": "https://arxiv.org/abs/2204.10189",
+      "source": "arxiv",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "arxiv-1709.00661",
+      "title": "Topic Independent Identification of Agreement and Disagreement in Social Media Dialogue",
+      "authors": [
+        {
+          "name": "Amita Misra",
+          "affiliation": ""
+        },
+        {
+          "name": "Marilyn Walker",
+          "affiliation": ""
+        }
+      ],
+      "year": 2017,
+      "abstract": "Research on the structure of dialogue has been hampered for years because large dialogue corpora have not been available. This has impacted the dialogue research community's ability to develop better theories, as well as good off the shelf tools for dialogue processing. Happily, an increasing amount of information and opinion exchange occur in natural dialogue in online forums, where people share their opinions about a vast range of topics. In particular we are interested in rejection in dialogue, also called disagreement and denial, where the size of available dialogue corpora, for the first time, offers an opportunity to empirically test theoretical accounts of the expression and inference of rejection in dialogue. In this paper, we test whether topic-independent features motivated by theoretical predictions can be used to recognize rejection in online forums in a topic independent way. Our results show that our theoretically motivated features achieve 66% accuracy, an improvement over a unigram baseline of an absolute 6%.",
+      "venue": "cs.AI",
+      "citation_count": 0,
+      "doi": "",
+      "arxiv_id": "1709.00661",
+      "url": "https://arxiv.org/abs/1709.00661",
+      "source": "arxiv",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "arxiv-1006.3863",
+      "title": "Normalization of peer-evaluation measures of group research quality across academic disciplines",
+      "authors": [
+        {
+          "name": "Ralph Kenna",
+          "affiliation": ""
+        },
+        {
+          "name": "Bertrand Berche",
+          "affiliation": ""
+        }
+      ],
+      "year": 2010,
+      "abstract": "Peer-evaluation based measures of group research quality such as the UK's Research Assessment Exercise (RAE), which do not employ bibliometric analyses, cannot directly avail of such methods to normalize research impact across disciplines. This is seen as a conspicuous flaw of such exercises and calls have been made to find a remedy. Here a simple, systematic solution is proposed based upon a mathematical model for the relationship between research quality and group quantity. This model manifests both the Matthew effect and a phenomenon akin to the Ringelmann effect and reveals the existence of two critical masses for each academic discipline: a lower value, below which groups are vulnerable, and an upper value beyond which the dependency of quality on quantity reduces and plateaus appear when the critical masses are large. A possible normalization procedure is then to pitch these plateaus at similar levels. We examine the consequences of this procedure at RAE for a multitude of academic disciplines, corresponding to a range of critical masses.",
+      "venue": "physics.soc-ph",
+      "citation_count": 0,
+      "doi": "10.3152/095820211X12941371876625",
+      "arxiv_id": "1006.3863",
+      "url": "https://arxiv.org/abs/1006.3863",
+      "source": "arxiv",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "arxiv-1408.4440",
+      "title": "Are topic-specific search term, journal name and author name recommendations relevant for researchers?",
+      "authors": [
+        {
+          "name": "Philipp Mayr",
+          "affiliation": ""
+        }
+      ],
+      "year": 2014,
+      "abstract": "In this paper we describe a case study where researchers in the social sciences (n=19) assess topical relevance for controlled search terms, journal names and author names which have been compiled automatically by bibliometric-enhanced information retrieval (IR) services. We call these bibliometric-enhanced IR services Search Term Recommender (STR), Journal Name Recommender (JNR) and Author Name Recommender (ANR) in this paper. The researchers in our study (practitioners, PhD students and postdocs) were asked to assess the top n pre-processed recommendations from each recommender for specific research topics which have been named by them in an interview before the experiment. Our results show clearly that the presented search term, journal name and author name recommendations are highly relevant to the researchers' topic and can easily be integrated for search in Digital Libraries. The average precision for top ranked recommendations is 0.75 for author names, 0.74 for search terms and 0.73 for journal names. The relevance distribution differs largely across topics and researcher types. Practitioners seem to favor author name recommendations while postdocs have rated author name recommendations the lowest. In the experiment the small postdoc group (n=3) favor journal name recommendations.",
+      "venue": "cs.DL",
+      "citation_count": 0,
+      "doi": "",
+      "arxiv_id": "1408.4440",
+      "url": "https://arxiv.org/abs/1408.4440",
+      "source": "arxiv",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "arxiv-2311.03834",
+      "title": "Universal productivity patterns in research careers",
+      "authors": [
+        {
+          "name": "Andre S. Sunahara",
+          "affiliation": ""
+        },
+        {
+          "name": "Matjaz Perc",
+          "affiliation": ""
+        },
+        {
+          "name": "Haroldo V. Ribeiro",
+          "affiliation": ""
+        }
+      ],
+      "year": 2023,
+      "abstract": "A common expectation is that career productivity peaks rather early and then gradually declines with seniority. But whether this holds true is still an open question. Here we investigate the productivity trajectories of almost 8,500 scientists from over fifty disciplines using methods from time series analysis, dimensionality reduction, and network science, showing that there exist six universal productivity patterns in research. Based on clusters of productivity trajectories and network representations where researchers with similar productivity patterns are connected, we identify constant, u-shaped, decreasing, periodic-like, increasing, and canonical productivity patterns, with the latter two describing almost three-fourths of researchers. In fact, we find that canonical curves are the most prevalent, but contrary to expectations, productivity peaks occur much more frequently around mid-career rather than early. These results outline the boundaries of possible career paths in science and caution against the adoption of stereotypes in tenure and funding decisions.",
+      "venue": "physics.soc-ph",
+      "citation_count": 0,
+      "doi": "10.1103/PhysRevResearch.5.043203",
+      "arxiv_id": "2311.03834",
+      "url": "https://arxiv.org/abs/2311.03834",
+      "source": "arxiv",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "arxiv-2601.07629",
+      "title": "Fifteen Years of Learning Analytics Research: Topics, Trends, and Challenges",
+      "authors": [
+        {
+          "name": "Valdemar \u0160v\u00e1bensk\u00fd",
+          "affiliation": ""
+        },
+        {
+          "name": "Conrad Borchers",
+          "affiliation": ""
+        },
+        {
+          "name": "Elvin Fortuna",
+          "affiliation": ""
+        },
+        {
+          "name": "Elizabeth B. Cloude",
+          "affiliation": ""
+        },
+        {
+          "name": "Dragan Ga\u0161evi\u0107",
+          "affiliation": ""
+        }
+      ],
+      "year": 2026,
+      "abstract": "The learning analytics (LA) community has recently reached two important milestones: celebrating the 15th LAK conference and updating the 2011 definition of LA to reflect the 15 years of changes in the discipline. However, despite LA's growth, little is known about how research topics, funding, and collaboration, as well as the relationships among them, have developed within the community over time. This study addressed this gap by analyzing all 936 full and short papers published at LAK over a 15-year period using unsupervised machine learning, natural language processing, and network analytics. The analysis revealed a stable core of prolific authors alongside high turnover of newcomers, systematic links between funding sources and research directions, and six enduring topical centers that remain globally shared but vary in prominence across countries. These six topical centers, which encompass LA research, are: self-regulated learning, dashboards and theory, social learning, automated feedback, multimodal analytics, and outcome prediction. Our findings highlight key challenges for the future: widening participation, reducing dependency on a narrow set of funders, and ensuring that emerging research trajectories remain responsive to educational practice and societal needs.",
+      "venue": "cs.CY",
+      "citation_count": 0,
+      "doi": "10.1145/3785022.3785131",
+      "arxiv_id": "2601.07629",
+      "url": "https://arxiv.org/abs/2601.07629",
+      "source": "arxiv",
+      "_bibtex_override": ""
+    }
+  ]
+}

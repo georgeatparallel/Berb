@@ -20,24 +20,48 @@ def create_sandbox(config: ExperimentConfig, workdir: Path) -> SandboxProtocol:
 
     - ``"sandbox"`` → :class:`ExperimentSandbox` (subprocess)
     - ``"docker"``  → :class:`DockerSandbox`  (Docker container)
+
+    P0 FIX: Automatic fallback to sandbox when Docker is unavailable.
+    Controlled by `config.docker.fallback_to_sandbox` (default: True).
     """
     if config.mode == "docker":
         from berb.experiment.docker_sandbox import DockerSandbox
 
         docker_cfg = config.docker
+        fallback_enabled = docker_cfg.fallback_to_sandbox
 
+        # Check 1: Docker daemon availability
         if not DockerSandbox.check_docker_available():
-            logger.warning(
-                "Docker daemon is not reachable — "
-                "falling back to subprocess sandbox."
-            )
-            return ExperimentSandbox(config.sandbox, workdir)
+            if fallback_enabled:
+                logger.warning(
+                    "Docker daemon is not reachable — "
+                    "AUTOMATIC FALLBACK to subprocess sandbox. "
+                    "To disable fallback, set docker.fallback_to_sandbox: false"
+                )
+                return ExperimentSandbox(config.sandbox, workdir)
+            else:
+                raise RuntimeError(
+                    "Docker daemon is not reachable and fallback_to_sandbox is disabled. "
+                    "Start Docker or enable fallback_to_sandbox: true"
+                )
 
+        # Check 2: Docker image availability
         if not DockerSandbox.ensure_image(docker_cfg.image):
-            raise RuntimeError(
-                f"Docker image '{docker_cfg.image}' not found locally. "
-                f"Build it: docker build -t {docker_cfg.image} berb/docker/"
-            )
+            if fallback_enabled:
+                logger.warning(
+                    "Docker image '%s' not found locally — "
+                    "AUTOMATIC FALLBACK to subprocess sandbox. "
+                    "To use Docker, build the image: docker build -t %s berb/docker/",
+                    docker_cfg.image,
+                    docker_cfg.image,
+                )
+                return ExperimentSandbox(config.sandbox, workdir)
+            else:
+                raise RuntimeError(
+                    f"Docker image '{docker_cfg.image}' not found locally and "
+                    f"fallback_to_sandbox is disabled. "
+                    f"Build it: docker build -t {docker_cfg.image} berb/docker/"
+                )
 
         if docker_cfg.gpu_enabled:
             logger.info("Docker sandbox: GPU passthrough enabled")

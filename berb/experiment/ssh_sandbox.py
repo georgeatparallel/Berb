@@ -357,7 +357,9 @@ class SshRemoteSandbox:
         cfg = self.config
         target = f"{_ssh_target(cfg)}:{remote_dir}/"
 
-        cmd = ["scp", "-r", "-o", "StrictHostKeyChecking=no"]
+        # P1 FIX: Use configurable host key checking
+        host_key_checking = getattr(cfg, 'strict_host_key_checking', 'accept-new')
+        cmd = ["scp", "-r", "-o", f"StrictHostKeyChecking={host_key_checking}"]
         if cfg.port != 22:
             cmd.extend(["-P", str(cfg.port)])
         if cfg.key_path:
@@ -418,10 +420,14 @@ def _build_ssh_base(
 
     *extra_opts* are inserted **before** the hostname so that SSH
     interprets them as SSH options, not as part of the remote command.
+    
+    P1 FIX: Uses configurable strict_host_key_checking (default: accept-new).
     """
+    # P1 FIX: Use configurable host key checking (default: accept-new)
+    host_key_checking = getattr(cfg, 'strict_host_key_checking', 'accept-new')
     cmd = [
         "ssh",
-        "-o", "StrictHostKeyChecking=no",
+        "-o", f"StrictHostKeyChecking={host_key_checking}",
         "-o", "BatchMode=yes",
     ]
     if cfg.port != 22:

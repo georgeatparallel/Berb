@@ -1,11 +1,15 @@
-"""Dynamic skills library for Berb.
+"""Skill system for Berb autonomous research pipeline."""
 
-Provides a registry of reusable research/engineering/writing skills
-that can be automatically matched to pipeline stages and injected
-into LLM prompts.
-"""
+from berb.skills.registry import (
+    Skill,
+    SkillRegistry,
+    apply_skills,
+    export_skills_for_metaclaw,
+)
 
-from berb.skills.schema import Skill
-from berb.skills.registry import SkillRegistry
-
-__all__ = ["Skill", "SkillRegistry"]
+__all__ = [
+    "Skill",
+    "SkillRegistry",
+    "apply_skills",
+    "export_skills_for_metaclaw",
+]

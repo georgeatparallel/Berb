@@ -1,0 +1,433 @@
+{
+  "query": "Integration test",
+  "source": "openalex",
+  "limit": 15,
+  "timestamp": 1774735668.4878218,
+  "papers": [
+    {
+      "paper_id": "oalex-W2110603299",
+      "title": "Co-Integration and Error Correction: Representation, Estimation, and Testing",
+      "authors": [
+        {
+          "name": "Robert F. Engle",
+          "affiliation": "University of California, San Diego"
+        },
+        {
+          "name": "C. W. J. Granger",
+          "affiliation": "University of California, San Diego"
+        }
+      ],
+      "year": 1987,
+      "abstract": "The relationship between co-integration and error correction models, first suggested in Granger (1981), is here extended and used to develop estimation procedures, tests, and empirical examples. If each element of a vector of time series x first achieves stationarity after differencing, but a linear combination a'x is already stationary, the time series x are said to be co-integrated with co-integrating vector a. There may be several such co-integrating vectors so that a becomes a matrix. Interpreting a'x,= 0 as a long run equilibrium, co-integration implies that deviations from equilibrium are stationary, with finite variance, even though the series themselves are nonstationary and have infinite variance. The paper presents a representation theorem based on Granger (1983), which connects the moving average, autoregressive, and error correction representations for co-integrated systems. A vector autoregression in differenced variables is incompatible with these representations. Estimation of these models is discussed and a simple but asymptotically efficient two-step estimator is proposed. Testing for co-integration combines the problems of unit root tests and tests with parameters unidentified under the null. Seven statistics are formulated and analyzed. The critical values of these statistics are calculated based on a Monte Carlo simulation. Using these critical values, the power properties of the tests are examined and one test procedure is recommended for application. In a series of examples it is found that consumption and income are co-integrated, wages and prices are not, short and long interest rates are, and nominal GNP is co-integrated with M2, but not M1, M3, or aggregate liquid assets.",
+      "venue": "Econometrica",
+      "citation_count": 31689,
+      "doi": "10.2307/1913236",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.2307/1913236",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2141316441",
+      "title": "Purpose in Life as a System that Creates and Sustains Health and Well-Being: An Integrative, Testable Theory",
+      "authors": [
+        {
+          "name": "Patrick E. McKnight",
+          "affiliation": "George Mason University"
+        },
+        {
+          "name": "Todd B. Kashdan",
+          "affiliation": "George Mason University"
+        }
+      ],
+      "year": 2009,
+      "abstract": "Purpose\u2014a cognitive process that defines life goals and provides personal meaning\u2014may help explain disparate empirical social science findings. Devoting effort and making progress toward life goals provides a significant, renewable source of engagement and meaning. Purpose offers a testable, causal system that synthesizes outcomes including life expectancy, satisfaction, and mental and physical health. These outcomes may be explained best by considering the motivation of the individual\u2014a motivation that comes from having a purpose. We provide a detailed definition with specific hypotheses derived from a synthesis of relevant findings from social, behavioral, biological, and cognitive literatures. To illustrate the uniqueness of the purpose model, we compared purpose with competing contemporary models that offer similar predictions. Addressing the structural features unique to purpose opens opportunities to build upon existing causal models of \u201chow and why\u201d health and well-being develop and change over time.",
+      "venue": "Review of General Psychology",
+      "citation_count": 914,
+      "doi": "10.1037/a0017152",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1037/a0017152",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2136593250",
+      "title": "Interface Mutation: an approach for integration testing",
+      "authors": [
+        {
+          "name": "M\u00e1rcio Eduardo Delamaro",
+          "affiliation": "Universidade Estadual de Maring\u00e1"
+        },
+        {
+          "name": "J.C. Maidonado",
+          "affiliation": "Universidade Federal de S\u00e3o Carlos"
+        },
+        {
+          "name": "Aditya P. Mathur",
+          "affiliation": "Purdue University West Lafayette"
+        }
+      ],
+      "year": 2001,
+      "abstract": "The need for test adequacy criteria is widely recognized. Several criteria have been proposed for the assessment of adequacy of tests at the unit level. However, there remains a lack of criteria for the assessment of the adequacy of tests generated during integration testing. We present a mutation based interprocedural criterion, named Interface Mutation (IM), suitable for use during integration testing. A case study to evaluate the proposed criterion is reported. In the study, the UNIX sort utility was seeded with errors and Interface Mutation evaluated by measuring the cost of its application and its error revealing effectiveness. Alternative IM criteria using different sets of Interface Mutation operators were also evaluated. While comparing the error revealing effectiveness of these Interface Mutation-based test sets with same size randomly generated test sets, we observed that in most cases Interface Mutation based test sets are superior. The results suggest that Interface Mutation offers a viable test adequacy criteria for use at the integration level.",
+      "venue": "IEEE Transactions on Software Engineering",
+      "citation_count": 242,
+      "doi": "10.1109/32.910859",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1109/32.910859",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2126590950",
+      "title": "UML-Based integration testing",
+      "authors": [
+        {
+          "name": "Jean Hartmann",
+          "affiliation": "Siemens (United States)"
+        },
+        {
+          "name": "Claudio Imoberdorf",
+          "affiliation": "Siemens (United States)"
+        },
+        {
+          "name": "Michael Meisinger",
+          "affiliation": "Technical University of Munich"
+        }
+      ],
+      "year": 2000,
+      "abstract": "Increasing numbers of software developers are using the Unified Modeling Language (UML) and associated visual modeling tools as a basis for the design and implementation of their distributed, component-based applications. At the same time, it is necessary to test these components, especially during unit and integration testing. At Siemens Corporate Research, we have addressed the issue of testing components by integrating test generation and test execution technology with commercial UML modeling tools such as Rational Rose; the goal being a design-based testing environment. In order to generate test cases automatically, developers first define the dynamic behavior of their components via UML Statecharts, specify the interactions amongst them and finally annotate them with test requirements. Test cases are then derived from these annotated Statecharts using our test generation engine and executed with the help of our test execution tool. The latter tool was developed specifically for interfacing to components based on COM/DCOM and CORBA middleware.",
+      "venue": "",
+      "citation_count": 172,
+      "doi": "10.1145/347324.348872",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1145/347324.348872",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W1984647091",
+      "title": "Object-oriented integration testing",
+      "authors": [
+        {
+          "name": "Paul C. Jorgensen",
+          "affiliation": "Grand Valley State University"
+        },
+        {
+          "name": "Carl Erickson",
+          "affiliation": "Grand Valley State University"
+        }
+      ],
+      "year": 1994,
+      "abstract": "article Free AccessObject-oriented integration testing Authors: Paul C. Jorgensen Grand Valley State Univ., Allendale, MI Grand Valley State Univ., Allendale, MIView Profile , Carl Erickson Grand Valley State Univ., Allendale, MI Grand Valley State Univ., Allendale, MIView Profile Authors Info & Claims Communications of the ACMVolume 37Issue 9Sept. 1994 pp 30\u201338https://doi.org/10.1145/182987.182989Published:01 September 1994Publication History 111citation4,300DownloadsMetricsTotal Citations111Total Downloads4,300Last 12 Months775Last 6 weeks73 Get Citation AlertsNew Citation Alert added!This alert has been successfully added and will be sent to:You will be notified whenever a record that you have chosen has been cited.To manage your alert preferences, click on the button below.Manage my AlertsNew Citation Alert!Please log in to your account Save to BinderSave to BinderCreate a New BinderNameCancelCreateExport CitationPublisher SiteeReaderPDF",
+      "venue": "Communications of the ACM",
+      "citation_count": 164,
+      "doi": "10.1145/182987.182989",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1145/182987.182989",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2111990314",
+      "title": "A study of integration testing and software regression at the integration level",
+      "authors": [
+        {
+          "name": "Hareton Leung",
+          "affiliation": ""
+        },
+        {
+          "name": "Lee White",
+          "affiliation": "Case Western Reserve University"
+        }
+      ],
+      "year": 2002,
+      "abstract": "The authors identify the common errors and faults in combining modules into a working unit. They also make practical recommendations on test selection for integration testing and utilize these recommendations for regression testing at the integration level. With emphasis on reusing the previous test cases and retesting only the parts that are modified, one can reduce the testing expenses. The concept of 'firewall' is proposed to assist the tester in focusing on that part of the system where new errors may have been introduced by a correction or a design change. An experiment is presented in which an application of strategy is compared with the 'retest-all' strategy. By applying the approach for test selection, it is possible to discover all errors found by the retest-all strategy by executing only 35% of the total number of test cases.< <ETX xmlns:mml=\"http://www.w3.org/1998/Math/MathML\" xmlns:xlink=\"http://www.w3.org/1999/xlink\">&gt;</ETX>",
+      "venue": "",
+      "citation_count": 192,
+      "doi": "10.1109/icsm.1990.131377",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1109/icsm.1990.131377",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2014643128",
+      "title": "Developing and Testing an Integrative Model of the Work\u2013Family Interface",
+      "authors": [
+        {
+          "name": "Michael R. Frone",
+          "affiliation": ""
+        },
+        {
+          "name": "John K. Yardley",
+          "affiliation": "Brock University"
+        },
+        {
+          "name": "Karen S. Markel",
+          "affiliation": ""
+        }
+      ],
+      "year": 1997,
+      "abstract": "",
+      "venue": "Journal of Vocational Behavior",
+      "citation_count": 1522,
+      "doi": "10.1006/jvbe.1996.1577",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1006/jvbe.1996.1577",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2014806198",
+      "title": "Coupling-based criteria for integration testing",
+      "authors": [
+        {
+          "name": "Zhenyi Jin",
+          "affiliation": "George Mason University"
+        },
+        {
+          "name": "A. Jefferson Offutt",
+          "affiliation": "George Mason University"
+        }
+      ],
+      "year": 1998,
+      "abstract": "Integration testing is an important part of the testing process, but few integration testing techniques have been systematically studied or defined. The goal of this research is to develop practical, effective, formalizable, automatable techniques for testing of connections between components during software integration. This paper presents an integration testing technique that is based on couplings between software components. This technique can be used to support integration testing of software components, and satisfies part of the USA's Federal Aviation Authority's requirements for structural coverage analysis of software. The coupling-based testing technique is described, and the coverage criteria for three types of couplings are defined. Techniques and algorithms for developing coverage analysers to measure the extent to which a test set satisfies the criteria are presented, and results from a comparative case study are presented. \u00a9 1998 John Wiley & Sons, Ltd.",
+      "venue": "Software Testing Verification and Reliability",
+      "citation_count": 87,
+      "doi": "10.1002/(sici)1099-1689(1998090)8:3<133::aid-stvr162>3.0.co;2-m",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1002/(sici)1099-1689(1998090)8:3<133::aid-stvr162>3.0.co;2-m",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2043129788",
+      "title": "The oculomotor integrator: testing of a neural network model",
+      "authors": [
+        {
+          "name": "Donald B. Arnold",
+          "affiliation": "Johns Hopkins University"
+        },
+        {
+          "name": "David A. Robinson",
+          "affiliation": "Johns Hopkins Medicine"
+        }
+      ],
+      "year": 1997,
+      "abstract": "",
+      "venue": "Experimental Brain Research",
+      "citation_count": 131,
+      "doi": "10.1007/bf02454142",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1007/bf02454142",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2138201395",
+      "title": "An investigation of graph-based class integration test order strategies",
+      "authors": [
+        {
+          "name": "Lionel Briand",
+          "affiliation": "Carleton University"
+        },
+        {
+          "name": "Yvan Labiche",
+          "affiliation": "Carleton University"
+        },
+        {
+          "name": "Yihong Wang",
+          "affiliation": "Carleton University"
+        }
+      ],
+      "year": 2003,
+      "abstract": "The issue of ordering class integration in the context of integration testing has been discussed by a number of researchers. More specifically, strategies have been proposed to generate a test order while minimizing stubbing. Recent papers have addressed the problem of deriving an integration order in the presence of dependency cycles in the class diagram. Such dependencies represent a practical problem as they make any topological ordering of classes impossible. Three main approaches, aimed at \"breaking\" cycles, have been proposed. The first one was proposed by Tai and Daniels (1999) and is based on assigning a higher-level order according to aggregation and inheritance relationships and a lower-level order according to associations. The second one was proposed by Le Traon et al. (2000) and is based on identifying strongly connected components in the dependency graph. The third one was proposed by Briand et al. (2000); it combines some of the principles of the two previous approaches and addresses some of their shortcomings (e.g., the first approach may result into unnecessary stubbing whereas the second may lead to breaking cycles by \"removing\" aggregation or inheritance dependencies, thus leading to complex stubbing). This paper reviews these strategies (principles are described, advantages and drawbacks are precisely investigated) and provides both analytical and empirical comparisons based on five case studies.",
+      "venue": "IEEE Transactions on Software Engineering",
+      "citation_count": 116,
+      "doi": "10.1109/tse.2003.1214324",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1109/tse.2003.1214324",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W4388076604",
+      "title": "Co-integration and Error Correction: Representation, Estimation, and Testing",
+      "authors": [
+        {
+          "name": "Robert F. Engle",
+          "affiliation": ""
+        },
+        {
+          "name": "Clive W. J. Granger",
+          "affiliation": ""
+        }
+      ],
+      "year": 1991,
+      "abstract": "Abstract The relationship between co-integration and error correction models, first suggested in Granger (1981), is here extended and used to develop estimation procedures, tests, and empirical examples. If each element of a vector of time series x,tfirst achieves stationarity after differencing, but a linear combination \u03b1 \u2032x, is already stationary, the time series x,tare said to be co-integrated with co-integrating vector \u03b1. There may be several such co-integrating vectors so that \u03b1 becomes a matrix. Interpreting \u03b1 \u2032x,t = 0 as a long run equilibrium, co-integration implies that deviations from equilibrium are stationary, with finite variance, even though the series themselves are nonstationary and have infinite variance.",
+      "venue": "",
+      "citation_count": 951,
+      "doi": "10.1093/oso/9780198283393.003.0005",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1093/oso/9780198283393.003.0005",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2016079676",
+      "title": "Selecting and using data for integration testing",
+      "authors": [
+        {
+          "name": "Mary Jean Harrold",
+          "affiliation": ""
+        },
+        {
+          "name": "Mary Lou Soffa",
+          "affiliation": "University of Pittsburgh"
+        }
+      ],
+      "year": 1991,
+      "abstract": "The extension of dataflow testing to interprocedural testing is described. This was done by developing both an analysis technique that computes the required interprocedural definition-use information, for both direct and indirect dependencies and a testing technique that uses this information in selecting and executing the subpaths across procedure boundaries. A testing tool that implements this technique is presented. For the interprocedural dataflow analysis, the technique summarizes the individual procedures' definition and use information at call sites and then propagates this information throughout the interacting procedures. By efficiently computing the interprocedural data dependencies before testing, the approach lets the testing tool use existing path-selection techniques based on dataflow for interprocedural testing. To track the execution path, the technique recognizes the calls to and returns from procedures and handles the association of various names with a definition as the execution path is being inspected. The technique handles recursive procedures and supports separate compilation of procedures.< <ETX xmlns:mml=\"http://www.w3.org/1998/Math/MathML\" xmlns:xlink=\"http://www.w3.org/1999/xlink\">&gt;</ETX>",
+      "venue": "IEEE Software",
+      "citation_count": 97,
+      "doi": "10.1109/52.73750",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1109/52.73750",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2122575334",
+      "title": "Determinants of Entrepreneurial Intent: A Meta\u2013Analytic Test and Integration of Competing Models",
+      "authors": [
+        {
+          "name": "Christopher Schlaegel",
+          "affiliation": "Otto-von-Guericke University Magdeburg"
+        },
+        {
+          "name": "Michael Koenig",
+          "affiliation": "Leuphana University of L\u00fcneburg"
+        }
+      ],
+      "year": 2013,
+      "abstract": "Increasing interest in the development of entrepreneurial intentions has elevated the importance of theories that predict and explain individuals\u2019 propensity to start a firm. The purpose of this study is to meta\u2013analytically test and integrate the theory of planned behavior and the entrepreneurial event model. We summarize the findings of 98 studies (123 samples, n = 114,007) and utilize meta\u2013analytic structural equation modeling to examine the empirical fit of the competing theories and the integrated model. Our results demonstrate support for the competing theories and indicate the moderating role of contextual boundary conditions in the development of entrepreneurial intent. Furthermore, our findings suggest that the integrated model provides additional explanatory power and a fuller understanding of the process through which entrepreneurial intent develops.",
+      "venue": "Entrepreneurship Theory and Practice",
+      "citation_count": 1159,
+      "doi": "10.1111/etap.12087",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1111/etap.12087",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W1969486543",
+      "title": "3D copper TSV integration, testing and reliability",
+      "authors": [
+        {
+          "name": "Mukta Farooq",
+          "affiliation": "IBM (United States)"
+        },
+        {
+          "name": "Troy Graves-Abe",
+          "affiliation": "IBM (United States)"
+        },
+        {
+          "name": "W. Landers",
+          "affiliation": "IBM (United States)"
+        },
+        {
+          "name": "C. Kothandaraman",
+          "affiliation": "IBM (United States)"
+        },
+        {
+          "name": "Ben Himmel",
+          "affiliation": "IBM (United States)"
+        },
+        {
+          "name": "Paul Andry",
+          "affiliation": "IBM (United States)"
+        },
+        {
+          "name": "Cornelia Tsang",
+          "affiliation": "IBM (United States)"
+        },
+        {
+          "name": "E. Sprogis",
+          "affiliation": "IBM (United States)"
+        },
+        {
+          "name": "R. Volant",
+          "affiliation": "IBM (United States)"
+        },
+        {
+          "name": "K. Petrarca",
+          "affiliation": "IBM (United States)"
+        },
+        {
+          "name": "Kevin Winstel",
+          "affiliation": "IBM (United States)"
+        },
+        {
+          "name": "John Safran",
+          "affiliation": "IBM (United States)"
+        },
+        {
+          "name": "Timothy D. Sullivan",
+          "affiliation": "IBM (United States)"
+        },
+        {
+          "name": "F. Chen",
+          "affiliation": "IBM (United States)"
+        },
+        {
+          "name": "M. J. Shapiro",
+          "affiliation": "IBM (United States)"
+        },
+        {
+          "name": "R. Hannon",
+          "affiliation": "IBM (United States)"
+        },
+        {
+          "name": "R. W. Liptak",
+          "affiliation": "IBM (United States)"
+        },
+        {
+          "name": "D. Berger",
+          "affiliation": "IBM (United States)"
+        },
+        {
+          "name": "Subramanian S. Iyer",
+          "affiliation": "IBM (United States)"
+        }
+      ],
+      "year": 2011,
+      "abstract": "Node-agnostic Cu TSVs integrated with high-K/metal gate and embedded DRAM were used in functional 3D modules. Thermal cycling and stress results show no degradation of TSV or BEOL structures, and device and functional data indicate that there is no significant impact from TSV processing and/or proximity.",
+      "venue": "",
+      "citation_count": 106,
+      "doi": "10.1109/iedm.2011.6131504",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1109/iedm.2011.6131504",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W4249237114",
+      "title": "Co-Integration and Error-Correction: Representation, Estimation, and Testing",
+      "authors": [
+        {
+          "name": "Robert F. Engle",
+          "affiliation": ""
+        }
+      ],
+      "year": 2008,
+      "abstract": "",
+      "venue": "Cambridge University Press eBooks",
+      "citation_count": 1167,
+      "doi": "10.1017/ccol052179207x.009",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1017/ccol052179207x.009",
+      "source": "openalex",
+      "_bibtex_override": ""
+    }
+  ]
+}

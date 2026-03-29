@@ -71,13 +71,23 @@ def _write_pipeline_summary(run_dir: Path, summary: dict[str, object]) -> None:
 
 
 def _write_checkpoint(run_dir: Path, stage: Stage, run_id: str) -> None:
-    """Write checkpoint atomically via temp file + rename to prevent corruption."""
+    """Write checkpoint atomically via temp file + rename to prevent corruption.
+    
+    P1 FIX: Includes SHA-256 checksum for integrity validation.
+    """
+    import hashlib
+    
     checkpoint = {
         "last_completed_stage": int(stage),
         "last_completed_name": stage.name,
         "run_id": run_id,
         "timestamp": _utcnow_iso(),
     }
+    
+    # P1 FIX: Compute checksum of core fields
+    checksum_data = f"{int(stage)}:{stage.name}:{run_id}"
+    checkpoint["checksum"] = hashlib.sha256(checksum_data.encode()).hexdigest()[:16]
+    
     target = run_dir / "checkpoint.json"
     fd, tmp_path = tempfile.mkstemp(dir=run_dir, suffix=".tmp", prefix="checkpoint_")
     os.close(fd)
@@ -90,29 +100,62 @@ def _write_checkpoint(run_dir: Path, stage: Stage, run_id: str) -> None:
         raise
 
 
-def _write_heartbeat(run_dir: Path, stage: Stage, run_id: str) -> None:
-    """Write heartbeat file for sentinel watchdog monitoring."""
-    import os
-
-    heartbeat = {
-        "pid": os.getpid(),
-        "last_stage": int(stage),
-        "last_stage_name": stage.name,
-        "run_id": run_id,
-        "timestamp": _utcnow_iso(),
-    }
-    (run_dir / "heartbeat.json").write_text(
-        json.dumps(heartbeat, indent=2), encoding="utf-8"
-    )
+def _validate_checkpoint_checksum(data: dict) -> bool:
+    """Validate checkpoint checksum.
+    
+    P1 FIX: Returns True if checksum is valid or missing (for backward compat).
+    """
+    import hashlib
+    
+    # Backward compatibility: old checkpoints without checksum are accepted
+    if "checksum" not in data:
+        logger.debug("Checkpoint has no checksum (legacy format), accepting")
+        return True
+    
+    expected = data["checksum"]
+    stage = data.get("last_completed_stage")
+    stage_name = data.get("last_completed_name")
+    run_id = data.get("run_id")
+    
+    if None in (stage, stage_name, run_id):
+        logger.warning("Checkpoint missing required fields for checksum validation")
+        return False
+    
+    checksum_data = f"{stage}:{stage_name}:{run_id}"
+    actual = hashlib.sha256(checksum_data.encode()).hexdigest()[:16]
+    
+    if actual != expected:
+        logger.error(
+            "Checkpoint checksum mismatch! Expected %s, got %s. "
+            "Checkpoint may be corrupted or tampered with.",
+            expected,
+            actual,
+        )
+        return False
+    
+    return True
 
 
 def read_checkpoint(run_dir: Path) -> Stage | None:
-    """Read checkpoint and return the NEXT stage to execute, or None if no checkpoint."""
+    """Read checkpoint and return the NEXT stage to execute, or None if no checkpoint.
+    
+    P1 FIX: Validates checksum before returning. Returns None if corrupted.
+    """
     cp_path = run_dir / "checkpoint.json"
     if not cp_path.exists():
         return None
     try:
         data = json.loads(cp_path.read_text(encoding="utf-8"))
+        
+        # P1 FIX: Validate checksum
+        if not _validate_checkpoint_checksum(data):
+            logger.error(
+                "Checkpoint at %s failed checksum validation. "
+                "File may be corrupted. Consider deleting and restarting.",
+                cp_path,
+            )
+            return None
+        
         last_num = data.get("last_completed_stage")
         if last_num is None:
             return None
@@ -122,7 +165,8 @@ def read_checkpoint(run_dir: Path) -> Stage | None:
                     return STAGE_SEQUENCE[i + 1]
                 return None
         return None
-    except (json.JSONDecodeError, TypeError, ValueError):
+    except (json.JSONDecodeError, TypeError, ValueError) as e:
+        logger.error("Failed to parse checkpoint: %s", e)
         return None
 
 

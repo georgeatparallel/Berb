@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     from berb.llm.acp_client import ACPClient
     from berb.llm.client import LLMClient
     from berb.llm.smart_client import SmartLLMClient
+    from berb.llm.presets import PresetConfig, ModelConfig
 
 # Provider presets for common LLM services
 PROVIDER_PRESETS = {
@@ -37,6 +38,21 @@ PROVIDER_PRESETS = {
         "base_url": None,  # Use user-provided base_url
     },
 }
+
+# Re-export preset functions for convenience
+from berb.llm.presets import (
+    get_preset,
+    list_presets,
+    get_model,
+    list_models,
+    get_models_for_stage,
+    to_llm_config,
+    print_preset_info,
+    PRESETS,
+    MODELS,
+    PresetConfig,
+    ModelConfig,
+)
 
 
 def create_llm_client(config: RCConfig) -> LLMClient | ACPClient | SmartLLMClient:

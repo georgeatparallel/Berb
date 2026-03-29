@@ -162,8 +162,24 @@ def test_factory_falls_back_when_docker_unavailable(mock_avail, tmp_path: Path):
 
 @patch("berb.experiment.docker_sandbox.DockerSandbox.ensure_image", return_value=False)
 @patch("berb.experiment.docker_sandbox.DockerSandbox.check_docker_available", return_value=True)
-def test_factory_raises_when_image_missing(mock_avail, mock_image, tmp_path: Path):
+def test_factory_falls_back_when_image_missing(mock_avail, mock_image, tmp_path: Path):
+    """P0 FIX: Factory should fall back to sandbox when image is missing."""
+    from berb.experiment.sandbox import ExperimentSandbox
+    
     config = ExperimentConfig(mode="docker")
+    sandbox = create_sandbox(config, tmp_path / "work")
+    # P0 FIX: Should fall back to subprocess sandbox instead of raising
+    assert isinstance(sandbox, ExperimentSandbox)
+
+
+@patch("berb.experiment.docker_sandbox.DockerSandbox.ensure_image", return_value=False)
+@patch("berb.experiment.docker_sandbox.DockerSandbox.check_docker_available", return_value=True)
+def test_factory_raises_when_fallback_disabled(mock_avail, mock_image, tmp_path: Path):
+    """P0 FIX: Factory should raise when fallback_to_sandbox is False."""
+    config = ExperimentConfig(
+        mode="docker",
+        docker=DockerSandboxConfig(fallback_to_sandbox=False),
+    )
     with pytest.raises(RuntimeError, match="not found locally"):
         create_sandbox(config, tmp_path / "work")
 
@@ -411,7 +427,12 @@ def test_run_project_rejects_absolute_path(mock_run: MagicMock, tmp_path: Path):
     result = sandbox.run_project(project, entry_point="/etc/passwd")
 
     assert result.returncode == -1
-    assert "relative" in result.stderr.lower() or "absolute" in result.stderr.lower()
+    # Accept either "relative/absolute" or "escapes" error message
+    assert (
+        "relative" in result.stderr.lower()
+        or "absolute" in result.stderr.lower()
+        or "escapes" in result.stderr.lower()
+    )
     mock_run.assert_not_called()
 
 

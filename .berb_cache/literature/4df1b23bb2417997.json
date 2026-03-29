@@ -1,0 +1,1409 @@
+{
+  "query": "hypotheses increasing protocol control integration",
+  "source": "openalex",
+  "limit": 15,
+  "timestamp": 1774735680.9369967,
+  "papers": [
+    {
+      "paper_id": "oalex-W3022903699",
+      "title": "The PRISMA Statement for Reporting Systematic Reviews and Meta-Analyses of Studies That Evaluate Health Care Interventions: Explanation and Elaboration",
+      "authors": [
+        {
+          "name": "Alessandro Liberati",
+          "affiliation": "University of Modena and Reggio Emilia"
+        },
+        {
+          "name": "Douglas G. Altman",
+          "affiliation": "University of Oxford"
+        },
+        {
+          "name": "Jennifer Tetzlaff",
+          "affiliation": "Ottawa Hospital"
+        },
+        {
+          "name": "Cynthia D. Mulrow",
+          "affiliation": ""
+        },
+        {
+          "name": "Peter C G\u00f8tzsche",
+          "affiliation": "Cochrane"
+        },
+        {
+          "name": "John P. A. Ioannidis",
+          "affiliation": "University of Ioannina"
+        },
+        {
+          "name": "Mike Clarke",
+          "affiliation": "Trinity College Dublin"
+        },
+        {
+          "name": "P.J. Devereaux",
+          "affiliation": "McMaster University"
+        },
+        {
+          "name": "Jos Kleijnen",
+          "affiliation": "Maastricht University"
+        },
+        {
+          "name": "David Moher",
+          "affiliation": "Ottawa Hospital"
+        }
+      ],
+      "year": 2009,
+      "abstract": "Systematic reviews and meta-analyses are essential to summarize evidence relating to efficacy and safety of health care interventions accurately and reliably. The clarity and transparency of these reports, however, is not optimal. Poor reporting of systematic reviews diminishes their value to clinicians, policy makers, and other users.Since the development of the QUOROM (QUality Of Reporting Of Meta-analysis) Statement--a reporting guideline published in 1999--there have been several conceptual, methodological, and practical advances regarding the conduct and reporting of systematic reviews and meta-analyses. Also, reviews of published systematic reviews have found that key information about these studies is often poorly reported. Realizing these issues, an international group that included experienced authors and methodologists developed PRISMA (Preferred Reporting Items for Systematic reviews and Meta-Analyses) as an evolution of the original QUOROM guideline for systematic reviews and meta-analyses of evaluations of health care interventions.The PRISMA Statement consists of a 27-item checklist and a four-phase flow diagram. The checklist includes items deemed essential for transparent reporting of a systematic review. In this Explanation and Elaboration document, we explain the meaning and rationale for each checklist item. For each item, we include an example of good reporting and, where possible, references to relevant empirical studies and methodological literature. The PRISMA Statement, this document, and the associated Web site (http://www.prisma-statement.org/) should be helpful resources to improve reporting of systematic reviews and meta-analyses.",
+      "venue": "PLoS Medicine",
+      "citation_count": 27700,
+      "doi": "10.1371/journal.pmed.1000100",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1371/journal.pmed.1000100",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2056279562",
+      "title": "phyloseq: An R Package for Reproducible Interactive Analysis and Graphics of Microbiome Census Data",
+      "authors": [
+        {
+          "name": "Paul J. McMurdie",
+          "affiliation": "Stanford University"
+        },
+        {
+          "name": "Susan Holmes",
+          "affiliation": "Stanford University"
+        }
+      ],
+      "year": 2013,
+      "abstract": "The phyloseq project for R is a new open-source software package, freely available on the web from both GitHub and Bioconductor.",
+      "venue": "PLoS ONE",
+      "citation_count": 21750,
+      "doi": "10.1371/journal.pone.0061217",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1371/journal.pone.0061217",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2018838463",
+      "title": "The Genotype-Tissue Expression (GTEx) project.",
+      "authors": [
+        {
+          "name": "John T. Lonsdale",
+          "affiliation": ""
+        }
+      ],
+      "year": 2013,
+      "abstract": "Genome-wide association studies have identified thousands of loci for common diseases, but, for the majority of these, the mechanisms underlying disease susceptibility remain unknown. Most associated variants are not correlated with protein-coding changes, suggesting that polymorphisms in regulatory regions probably contribute to many disease phenotypes. Here we describe the Genotype-Tissue Expression (GTEx) project, which will establish a resource database and associated tissue bank for the scientific community to study the relationship between genetic variation and gene expression in human tissues.",
+      "venue": "PubMed",
+      "citation_count": 9850,
+      "doi": "10.1038/ng.2653",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1038/ng.2653",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2134833483",
+      "title": "The PRISMA statement for reporting systematic reviews and meta-analyses of studies that evaluate healthcare interventions: explanation and elaboration",
+      "authors": [
+        {
+          "name": "A. Liberati",
+          "affiliation": "Mario Negri Institute for Pharmacological Research"
+        },
+        {
+          "name": "Doug Altman",
+          "affiliation": "University of Oxford"
+        },
+        {
+          "name": "Jennifer Tetzlaff",
+          "affiliation": "Ottawa Hospital Research Institute"
+        },
+        {
+          "name": "Cynthia D. Mulrow",
+          "affiliation": ""
+        },
+        {
+          "name": "Peter C G\u00f8tzsche",
+          "affiliation": "Cochrane"
+        },
+        {
+          "name": "John P. A. Ioannidis",
+          "affiliation": "University of Ioannina"
+        },
+        {
+          "name": "Mike Clarke",
+          "affiliation": "Cochrane"
+        },
+        {
+          "name": "P.J. Devereaux",
+          "affiliation": "McMaster University"
+        },
+        {
+          "name": "Jos Kleijnen",
+          "affiliation": "Maastricht University"
+        },
+        {
+          "name": "David Moher",
+          "affiliation": "Ottawa Hospital"
+        }
+      ],
+      "year": 2009,
+      "abstract": "Systematic reviews and meta-analyses are essential to summarise evidence relating to efficacy and safety of healthcare interventions accurately and reliably. The clarity and transparency of these reports, however, are not optimal. Poor reporting of systematic reviews diminishes their value to clinicians, policy makers, and other users. Since the development of the QUOROM (quality of reporting of meta-analysis) statement-a reporting guideline published in 1999-there have been several conceptual, methodological, and practical advances regarding the conduct and reporting of systematic reviews and meta-analyses. Also, reviews of published systematic reviews have found that key information about these studies is often poorly reported. Realising these issues, an international group that included experienced authors and methodologists developed PRISMA (preferred reporting items for systematic reviews and meta-analyses) as an evolution of the original QUOROM guideline for systematic reviews and meta-analyses of evaluations of health care interventions. The PRISMA statement consists of a 27-item checklist and a four-phase flow diagram. The checklist includes items deemed essential for transparent reporting of a systematic review. In this explanation and elaboration document, we explain the meaning and rationale for each checklist item. For each item, we include an example of good reporting and, where possible, references to relevant empirical studies and methodological literature. The PRISMA statement, this document, and the associated website (www.prisma-statement.org/) should be helpful resources to improve reporting of systematic reviews and meta-analyses.",
+      "venue": "BMJ",
+      "citation_count": 17429,
+      "doi": "10.1136/bmj.b2700",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1136/bmj.b2700",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2117131162",
+      "title": "Integrative Genomics Viewer (IGV): high-performance genomics data visualization and exploration",
+      "authors": [
+        {
+          "name": "Helga Thorvaldsd\u00f3ttir",
+          "affiliation": "Broad Institute"
+        },
+        {
+          "name": "James Robinson",
+          "affiliation": "Broad Institute"
+        },
+        {
+          "name": "Jill P. Mesirov",
+          "affiliation": "Broad Institute"
+        }
+      ],
+      "year": 2012,
+      "abstract": "Data visualization is an essential component of genomic data analysis. However, the size and diversity of the data sets produced by today's sequencing and array-based profiling methods present major challenges to visualization tools. The Integrative Genomics Viewer (IGV) is a high-performance viewer that efficiently handles large heterogeneous data sets, while providing a smooth and intuitive user experience at all levels of genome resolution. A key characteristic of IGV is its focus on the integrative nature of genomic studies, with support for both array-based and next-generation sequencing data, and the integration of clinical and phenotypic data. Although IGV is often used to view genomic data from public sources, its primary emphasis is to support researchers who wish to visualize and explore their own data sets or those from colleagues. To that end, IGV supports flexible loading of local and remote data sets, and is optimized to provide high-performance data visualization and exploration on standard desktop systems. IGV is freely available for download from http://www.broadinstitute.org/igv, under a GNU LGPL open-source license.",
+      "venue": "Briefings in Bioinformatics",
+      "citation_count": 9620,
+      "doi": "10.1093/bib/bbs017",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1093/bib/bbs017",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2085001923",
+      "title": "Process evaluation of complex interventions: Medical Research Council guidance",
+      "authors": [
+        {
+          "name": "Gary F. Moore",
+          "affiliation": "Cardiff University"
+        },
+        {
+          "name": "Suzanne Audrey",
+          "affiliation": "University of Bristol"
+        },
+        {
+          "name": "Mary Barker",
+          "affiliation": "MRC Lifecourse Epidemiology Unit"
+        },
+        {
+          "name": "Lyndal Bond",
+          "affiliation": ""
+        },
+        {
+          "name": "Chris Bonell",
+          "affiliation": "University of London"
+        },
+        {
+          "name": "Wendy Hardeman",
+          "affiliation": "University of Cambridge"
+        },
+        {
+          "name": "Laurence Moore",
+          "affiliation": "University of Glasgow"
+        },
+        {
+          "name": "Alicia O\u2019Cathain",
+          "affiliation": "University of Sheffield"
+        },
+        {
+          "name": "Tannaze Tinati",
+          "affiliation": "University of Southampton"
+        },
+        {
+          "name": "Daniel Wight",
+          "affiliation": "MRC/CSO Social and Public Health Sciences Unit"
+        },
+        {
+          "name": "Janis Baird",
+          "affiliation": "University of Southampton"
+        }
+      ],
+      "year": 2015,
+      "abstract": "Process evaluation is an essential part of designing and testing complex interventions. New MRC guidance provides a framework for conducting and reporting process evaluation studies",
+      "venue": "BMJ",
+      "citation_count": 6357,
+      "doi": "10.1136/bmj.h1258",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1136/bmj.h1258",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2103317434",
+      "title": "EFFECTS OF BIODIVERSITY ON ECOSYSTEM FUNCTIONING: A CONSENSUS OF CURRENT KNOWLEDGE",
+      "authors": [
+        {
+          "name": "David U. Hooper",
+          "affiliation": "Western Washington University"
+        },
+        {
+          "name": "F. Stuart Chapin",
+          "affiliation": "University of Alaska Fairbanks"
+        },
+        {
+          "name": "John J. Ewel",
+          "affiliation": "US Forest Service"
+        },
+        {
+          "name": "Andy Hector",
+          "affiliation": "ZHAW Zurich University of Applied Sciences"
+        },
+        {
+          "name": "Pablo Inchausti",
+          "affiliation": "Centre d'Etudes Biologiques de Chiz\u00e9"
+        },
+        {
+          "name": "Sandra Lavorel",
+          "affiliation": "Universit\u00e9 Joseph Fourier"
+        },
+        {
+          "name": "John H. Lawton",
+          "affiliation": "Natural Environment Research Council"
+        },
+        {
+          "name": "David M. Lodge",
+          "affiliation": "University of Notre Dame"
+        },
+        {
+          "name": "Michel Loreau",
+          "affiliation": "\u00c9cole Normale Sup\u00e9rieure"
+        },
+        {
+          "name": "Shahid Naeem",
+          "affiliation": "Columbia University"
+        },
+        {
+          "name": "Bernhard Schmid",
+          "affiliation": "ZHAW Zurich University of Applied Sciences"
+        },
+        {
+          "name": "Heikki Set\u00e4l\u00e4",
+          "affiliation": "University of Helsinki"
+        },
+        {
+          "name": "Amy J. Symstad",
+          "affiliation": "United States Geological Survey"
+        },
+        {
+          "name": "John Vandermeer",
+          "affiliation": "University of Michigan"
+        },
+        {
+          "name": "David A. Wardle",
+          "affiliation": "Manaaki Whenua \u2013 Landcare Research"
+        }
+      ],
+      "year": 2005,
+      "abstract": "Humans are altering the composition of biological communities through a variety of activities that increase rates of species invasions and species extinctions, at all scales, from local to global. These changes in components of the Earth's biodiversity cause concern for ethical and aesthetic reasons, but they also have a strong potential to alter ecosystem properties and the goods and services they provide to humanity. Ecological experiments, observations, and theoretical developments show that ecosystem properties depend greatly on biodiversity in terms of the functional characteristics of organisms present in the ecosystem and the distribution and abundance of those organisms over space and time. Species effects act in concert with the effects of climate, resource availability, and disturbance regimes in influencing ecosystem properties. Human activities can modify all of the above factors; here we focus on modification of these biotic controls. The scientific community has come to a broad consensus on many aspects of the relationship between biodiversity and ecosystem functioning, including many points relevant to management of ecosystems. Further progress will require integration of knowledge about biotic and abiotic controls on ecosystem properties, how ecological communities are structured, and the forces driving species extinctions and invasions. To strengthen links to policy and management, we also need to integrate our ecological knowledge with understanding of the social and economic constraints of potential management practices. Understanding this complexity, while taking strong steps to minimize current losses of species, is necessary for responsible management of Earth's ecosystems and the diverse biota they contain. Based on our review of the scientific literature, we are certain of the following conclusions: 1) Species' functional characteristics strongly influence ecosystem properties. Functional characteristics operate in a variety of contexts, including effects of dominant species, keystone species, ecological engineers, and interactions among species (e.g., competition, facilitation, mutualism, disease, and predation). Relative abundance alone is not always a good predictor of the ecosystem-level importance of a species, as even relatively rare species (e.g., a keystone predator) can strongly influence pathways of energy and material flows. 2) Alteration of biota in ecosystems via species invasions and extinctions caused by human activities has altered ecosystem goods and services in many well-documented cases. Many of these changes are difficult, expensive, or impossible to reverse or fix with technological solutions. 3) The effects of species loss or changes in composition, and the mechanisms by which the effects manifest themselves, can differ among ecosystem properties, ecosystem types, and pathways of potential community change. 4) Some ecosystem properties are initially insensitive to species loss because (a) ecosystems may have multiple species that carry out similar functional roles, (b) some species may contribute relatively little to ecosystem properties, or (c) properties may be primarily controlled by abiotic environmental conditions. 5) More species are needed to insure a stable supply of ecosystem goods and services as spatial and temporal variability increases, which typically occurs as longer time periods and larger areas are considered. We have high confidence in the following conclusions: 1) Certain combinations of species are complementary in their patterns of resource use and can increase average rates of productivity and nutrient retention. At the same time, environmental conditions can influence the importance of complementarity in structuring communities. Identification of which and how many species act in a complementary way in complex communities is just beginning. 2) Susceptibility to invasion by exotic species is strongly influenced by species composition and, under similar environmental conditions, generally decreases with increasing species richness. However, several other factors, such as propagule pressure, disturbance regime, and resource availability also strongly influence invasion success and often override effects of species richness in comparisons across different sites or ecosystems. 3) Having a range of species that respond differently to different environmental perturbations can stabilize ecosystem process rates in response to disturbances and variation in abiotic conditions. Using practices that maintain a diversity of organisms of different functional effect and functional response types will help preserve a range of management options. Uncertainties remain and further research is necessary in the following areas: 1) Further resolution of the relationships among taxonomic diversity, functional diversity, and community structure is important for identifying mechanisms of biodiversity effects. 2) Multiple trophic levels are common to ecosystems but have been understudied in biodiversity/ecosystem functioning research. The response of ecosystem properties to varying composition and diversity of consumer organisms is much more complex than responses seen in experiments that vary only the diversity of primary producers. 3) Theoretical work on stability has outpaced experimental work, especially field research. We need long-term experiments to be able to assess temporal stability, as well as experimental perturbations to assess response to and recovery from a variety of disturbances. Design and analysis of such experiments must account for several factors that covary with species diversity. 4) Because biodiversity both responds to and influences ecosystem properties, understanding the feedbacks involved is necessary to integrate results from experimental communities with patterns seen at broader scales. Likely patterns of extinction and invasion need to be linked to different drivers of global change, the forces that structure communities, and controls on ecosystem properties for the development of effective management and conservation strategies. 5) This paper focuses primarily on terrestrial systems, with some coverage of freshwater systems, because that is where most empirical and theoretical study has focused. While the fundamental principles described here should apply to marine systems, further study of that realm is necessary. Despite some uncertainties about the mechanisms and circumstances under which diversity influences ecosystem properties, incorporating diversity effects into policy and management is essential, especially in making decisions involving large temporal and spatial scales. Sacrificing those aspects of ecosystems that are difficult or impossible to reconstruct, such as diversity, simply because we are not yet certain about the extent and mechanisms by which they affect ecosystem properties, will restrict future management options even further. It is incumbent upon ecologists to communicate this need, and the values that can derive from such a perspective, to those charged with economic and policy decision-making.",
+      "venue": "Ecological Monographs",
+      "citation_count": 7839,
+      "doi": "10.1890/04-0922",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1890/04-0922",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2162739315",
+      "title": "Guidelines for conducting and reporting case study research in software engineering",
+      "authors": [
+        {
+          "name": "Per Runeson",
+          "affiliation": "Lund University"
+        },
+        {
+          "name": "Martin H\u00f6st",
+          "affiliation": "Lund University"
+        }
+      ],
+      "year": 2008,
+      "abstract": "Case study is a suitable research methodology for software engineering research since it studies contemporary phenomena in its natural context. However, the understanding of what constitutes a case study varies, and hence the quality of the resulting studies. This paper aims at providing an introduction to case study methodology and guidelines for researchers conducting case studies and readers studying reports of such studies. The content is based on the authors\u2019 own experience from conducting and reading case studies. The terminology and guidelines are compiled from different methodology handbooks in other research domains, in particular social science and information systems, and adapted to the needs in software engineering. We present recommended practices for software engineering case studies as well as empirically derived and evaluated checklists for researchers and readers of case study research.",
+      "venue": "Empirical Software Engineering",
+      "citation_count": 3730,
+      "doi": "10.1007/s10664-008-9102-8",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1007/s10664-008-9102-8",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2110300022",
+      "title": "Predictive functional profiling of microbial communities using 16S rRNA marker gene sequences",
+      "authors": [
+        {
+          "name": "Morgan G. I. Langille",
+          "affiliation": "Dalhousie University"
+        },
+        {
+          "name": "Jesse Zaneveld",
+          "affiliation": "Oregon State University"
+        },
+        {
+          "name": "J. Gregory Caporaso",
+          "affiliation": "Argonne National Laboratory"
+        },
+        {
+          "name": "Daniel McDonald",
+          "affiliation": "University of Colorado Boulder"
+        },
+        {
+          "name": "Dan Knights",
+          "affiliation": "Biotechnology Institute"
+        },
+        {
+          "name": "Joshua A Reyes",
+          "affiliation": "Harvard University"
+        },
+        {
+          "name": "Jos\u00e9 C. Clemente",
+          "affiliation": "University of Colorado Boulder"
+        },
+        {
+          "name": "Deron E. Burkepile",
+          "affiliation": "Florida International University"
+        },
+        {
+          "name": "Rebecca L. Vega Thurber",
+          "affiliation": "Oregon State University"
+        },
+        {
+          "name": "Rob Knight",
+          "affiliation": "University of Colorado Boulder"
+        },
+        {
+          "name": "Robert G. Beiko",
+          "affiliation": "Dalhousie University"
+        },
+        {
+          "name": "Curtis Huttenhower",
+          "affiliation": "Harvard University"
+        }
+      ],
+      "year": 2013,
+      "abstract": "",
+      "venue": "Nature Biotechnology",
+      "citation_count": 9202,
+      "doi": "10.1038/nbt.2676",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1038/nbt.2676",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W1550344126",
+      "title": "Assessment of ecological effects due to forest harvesting: approaches and statistical issues",
+      "authors": [
+        {
+          "name": "Lauren T. Bennett",
+          "affiliation": "University of Melbourne"
+        },
+        {
+          "name": "Mark A. Adams",
+          "affiliation": "University of Melbourne"
+        }
+      ],
+      "year": 2004,
+      "abstract": "Summary Timber harvesting exemplifies many aspects of experimental manipulation in applied ecology. Evaluation of the research approaches used to assess ecological effects of harvesting thus has relevance to a diverse range of ecological questions that address large\u2010scale and human impacts on the environment. We measured the frequency of approaches, and also design and statistical issues, in assessments of harvesting effects on three response variables (tree regeneration, vertebrates and water) in two major native forests of south\u2010east Australia. Our evaluation was based on 124 documents that contain unique, field\u2010based research and that represent the complete written record (published and unpublished) of relevant research prior to mid\u20102002. The dominant approach was contrasts between manipulated stands, nearly always involving mature and old\u2010growth stands as the reference or control. In studies of tree regeneration, focus on wood\u2010production objectives was apparent in the relatively frequent use of stocking standards, and in the use of between\u2010 and within\u2010stand contrasts without a control condition. Comparatively greater use of models in vertebrate and water studies suggested more frequent integration of generic principles and, in water studies, reflected strong collective knowledge based on the repeated use of BACI\u2010type designs (i.e. before\u2013after, control\u2013impact) or long\u2010term data sets. Statistical issues such as poor reporting of experimental designs and of sample statistics were common. Explicit hypotheses were rare, and there was no evidence of definition of critical effect sizes, use of power analysis or use of non\u2010classical statistical approaches (e.g. Bayesian inference). Lack of treatment replication was widespread in between\u2010stand contrasts and less frequent in within\u2010stand contrasts. Inappropriate interpretation of results from non\u2010replicated experimental designs remains an ongoing issue. Synthesis and applications . The amount of information obtainable from stand\u2010level manipulations of forest would substantially increase through greater attention to data quality and experimental protocols. Studies require broader experimental contexts, including their potential place in meta\u2010replication frameworks. Increasingly, constraints of large\u2010scale manipulations necessitate the integration of data and the acknowledgement of uncertainty in formalized systems (e.g. Bayesian methods and adaptive management frameworks). Our evaluation suggests the alternative is a perpetuation of short\u2010term, isolated studies that repeat errors and have limited potential to refine knowledge on the ecological effects of timber harvesting and other similarly scaled disturbances.",
+      "venue": "Journal of Applied Ecology",
+      "citation_count": 87,
+      "doi": "10.1111/j.0021-8901.2004.00924.x",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1111/j.0021-8901.2004.00924.x",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2121255383",
+      "title": "Wireless integrated network sensors",
+      "authors": [
+        {
+          "name": "Gregory J. Pottie",
+          "affiliation": "University of California, Los Angeles"
+        },
+        {
+          "name": "William J. Kaiser",
+          "affiliation": "University of California, Los Angeles"
+        }
+      ],
+      "year": 2000,
+      "abstract": "For pervasive computing performance, exploit the physical limits of these densely distributed networks of embedded sensors, controls, and processors. W ireless integrated network sensors (WINS) provide distributed network and Internet access to sensors, controls, and processors deeply embedded in equipment, facilities, and the environment. The WINS network represents a new monitoring and control capability for applications in such industries as transportation, manufacturing, health care, environmental oversight, and safety and security. WINS combine microsensor technology and low-power signal processing, computation, and low-cost wireless networking in a compact system.",
+      "venue": "Communications of the ACM",
+      "citation_count": 3219,
+      "doi": "10.1145/332833.332838",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1145/332833.332838",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W3194472989",
+      "title": "A new framework for developing and evaluating complex interventions: update of Medical Research Council guidance",
+      "authors": [
+        {
+          "name": "Kathryn Skivington",
+          "affiliation": "MRC/CSO Social and Public Health Sciences Unit"
+        },
+        {
+          "name": "Lynsay Matthews",
+          "affiliation": "MRC/CSO Social and Public Health Sciences Unit"
+        },
+        {
+          "name": "Sharon Simpson",
+          "affiliation": "MRC/CSO Social and Public Health Sciences Unit"
+        },
+        {
+          "name": "Peter Craig",
+          "affiliation": "MRC/CSO Social and Public Health Sciences Unit"
+        },
+        {
+          "name": "Janis Baird",
+          "affiliation": "MRC Lifecourse Epidemiology Unit"
+        },
+        {
+          "name": "Jane Blazeby",
+          "affiliation": "NIHR Bristol Biomedical Research Centre"
+        },
+        {
+          "name": "Kathleen Boyd",
+          "affiliation": "University of Glasgow"
+        },
+        {
+          "name": "Neil Craig",
+          "affiliation": "Public Health Scotland"
+        },
+        {
+          "name": "David French",
+          "affiliation": "Manchester Academic Health Science Centre"
+        },
+        {
+          "name": "Emma McIntosh",
+          "affiliation": "University of Glasgow"
+        },
+        {
+          "name": "Mark Petticrew",
+          "affiliation": "London School of Hygiene & Tropical Medicine"
+        },
+        {
+          "name": "Jo Rycroft\u2010Malone",
+          "affiliation": "Lancaster University"
+        },
+        {
+          "name": "Martin White",
+          "affiliation": "University of Cambridge"
+        },
+        {
+          "name": "Laurence Moore",
+          "affiliation": "MRC/CSO Social and Public Health Sciences Unit"
+        }
+      ],
+      "year": 2021,
+      "abstract": "The UK Medical Research Council\u2019s widely used guidance for developing and evaluating complex interventions has been replaced by a new framework, commissioned jointly by the Medical Research Council and the National Institute for Health Research, which takes account of recent developments in theory and methods and the need to maximise the efficiency, use, and impact of research.",
+      "venue": "BMJ",
+      "citation_count": 5547,
+      "doi": "10.1136/bmj.n2061",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1136/bmj.n2061",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2570760970",
+      "title": "A manifesto for reproducible science",
+      "authors": [
+        {
+          "name": "Marcus R. Munaf\u00f2",
+          "affiliation": "University of Bristol"
+        },
+        {
+          "name": "Brian A. Nosek",
+          "affiliation": "University of Virginia"
+        },
+        {
+          "name": "Dorothy Bishop",
+          "affiliation": "University of Oxford"
+        },
+        {
+          "name": "Katherine S. Button",
+          "affiliation": "University of Bath"
+        },
+        {
+          "name": "Chris Chambers",
+          "affiliation": "Cardiff University"
+        },
+        {
+          "name": "Nathalie Percie du Sert",
+          "affiliation": "National Centre for the Replacement Refinement and Reduction of Animals in Research"
+        },
+        {
+          "name": "Uri Simonsohn",
+          "affiliation": "University of Pennsylvania"
+        },
+        {
+          "name": "Eric\u2010Jan Wagenmakers",
+          "affiliation": "University of Amsterdam"
+        },
+        {
+          "name": "Jennifer J. Ware",
+          "affiliation": "CHDI Foundation"
+        },
+        {
+          "name": "John P. A. Ioannidis",
+          "affiliation": "Stanford University"
+        }
+      ],
+      "year": 2017,
+      "abstract": "Improving the reliability and efficiency of scientific research will increase the credibility of the published scientific literature and accelerate discovery. Here we argue for the adoption of measures to optimize key elements of the scientific process: methods, reporting and dissemination, reproducibility, evaluation and incentives. There is some evidence from both simulations and empirical studies supporting the likely effectiveness of these measures, but their broad adoption by researchers, institutions, funders and journals will require iterative evaluation and improvement. We discuss the goals of these measures, and how they can be implemented, in the hope that this will facilitate action toward improving the transparency, reproducibility and efficiency of scientific research.",
+      "venue": "Nature Human Behaviour",
+      "citation_count": 3423,
+      "doi": "10.1038/s41562-016-0021",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1038/s41562-016-0021",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2133416234",
+      "title": "2013 ESH/ESC Guidelines for the management of arterial hypertension",
+      "authors": [
+        {
+          "name": "Giuseppe Mancia",
+          "affiliation": "University of Milano-Bicocca"
+        },
+        {
+          "name": "Robert Fagard",
+          "affiliation": ""
+        },
+        {
+          "name": "Krzysztof Narkiewicz",
+          "affiliation": ""
+        },
+        {
+          "name": "Josep Red\u00f3n",
+          "affiliation": ""
+        },
+        {
+          "name": "Alberto Zanchetti",
+          "affiliation": ""
+        },
+        {
+          "name": "Michael B\u00f6hm",
+          "affiliation": ""
+        },
+        {
+          "name": "Thierry Christiaens",
+          "affiliation": ""
+        },
+        {
+          "name": "Renata C\u00edfkov\u00e1",
+          "affiliation": ""
+        },
+        {
+          "name": "Guy De Backer",
+          "affiliation": ""
+        },
+        {
+          "name": "Anna F. Dominiczak",
+          "affiliation": ""
+        },
+        {
+          "name": "Maurizio Galderisi",
+          "affiliation": ""
+        },
+        {
+          "name": "Diederick E. Grobbee",
+          "affiliation": ""
+        },
+        {
+          "name": "Tiny Jaarsma",
+          "affiliation": ""
+        },
+        {
+          "name": "Paulus Kirchhof",
+          "affiliation": ""
+        },
+        {
+          "name": "Sverre E. Kjeldsen",
+          "affiliation": ""
+        },
+        {
+          "name": "St\u00e9phane Laurent",
+          "affiliation": ""
+        },
+        {
+          "name": "Athanasios J Manolis",
+          "affiliation": ""
+        },
+        {
+          "name": "Peter M. Nilsson",
+          "affiliation": ""
+        },
+        {
+          "name": "Lu\u00eds M. Ruilope",
+          "affiliation": ""
+        },
+        {
+          "name": "Roland E Schmieder",
+          "affiliation": ""
+        },
+        {
+          "name": "Per Anton Sirnes",
+          "affiliation": ""
+        },
+        {
+          "name": "Peter Sleight",
+          "affiliation": ""
+        },
+        {
+          "name": "Margus Viigimaa",
+          "affiliation": ""
+        },
+        {
+          "name": "Bernard Waeber",
+          "affiliation": ""
+        },
+        {
+          "name": "Fa\u0131\u0308ez Zannad",
+          "affiliation": ""
+        },
+        {
+          "name": "Josep Redon",
+          "affiliation": ""
+        },
+        {
+          "name": "Anna F. Dominiczak",
+          "affiliation": ""
+        },
+        {
+          "name": "Krzysztof Narkiewicz",
+          "affiliation": ""
+        },
+        {
+          "name": "Peter M. Nilsson",
+          "affiliation": ""
+        },
+        {
+          "name": "Michel Burnier",
+          "affiliation": ""
+        },
+        {
+          "name": "Margus Viigimaa",
+          "affiliation": ""
+        },
+        {
+          "name": "Ettore Ambrosioni",
+          "affiliation": ""
+        },
+        {
+          "name": "Mark Caufield",
+          "affiliation": ""
+        },
+        {
+          "name": "Ant\u00f3nio Coca",
+          "affiliation": ""
+        },
+        {
+          "name": "Michael Hecht Olsen",
+          "affiliation": ""
+        },
+        {
+          "name": "Roland E Schmieder",
+          "affiliation": ""
+        },
+        {
+          "name": "Costas Tsioufis",
+          "affiliation": ""
+        },
+        {
+          "name": "Philippe van de Borne",
+          "affiliation": ""
+        },
+        {
+          "name": "Jose Luis Zamorano",
+          "affiliation": ""
+        },
+        {
+          "name": "Stephan Achenbach",
+          "affiliation": ""
+        },
+        {
+          "name": "Helmut Baumgartner",
+          "affiliation": ""
+        },
+        {
+          "name": "Jeroen J. Bax",
+          "affiliation": ""
+        },
+        {
+          "name": "H\u00e9ctor Bueno",
+          "affiliation": ""
+        },
+        {
+          "name": "Veronica Dean",
+          "affiliation": ""
+        },
+        {
+          "name": "Christi Deaton",
+          "affiliation": "University of Li\u00e8ge"
+        },
+        {
+          "name": "\u00c7etin Erol",
+          "affiliation": ""
+        },
+        {
+          "name": "Robert Fagard",
+          "affiliation": ""
+        },
+        {
+          "name": "Roberto Ferrari",
+          "affiliation": ""
+        },
+        {
+          "name": "David Hasdai",
+          "affiliation": ""
+        },
+        {
+          "name": "Arno W Hoes",
+          "affiliation": ""
+        },
+        {
+          "name": "Paulus Kirchhof",
+          "affiliation": ""
+        },
+        {
+          "name": "Juhani Knuuti",
+          "affiliation": ""
+        },
+        {
+          "name": "Philippe Kolh",
+          "affiliation": ""
+        },
+        {
+          "name": "Patrizio Lancellotti",
+          "affiliation": ""
+        },
+        {
+          "name": "Ale\u0161 Linhart",
+          "affiliation": ""
+        },
+        {
+          "name": "Petros Nihoyannopoulos",
+          "affiliation": ""
+        },
+        {
+          "name": "Massimo Piepoli",
+          "affiliation": ""
+        },
+        {
+          "name": "Piotr Ponikowski",
+          "affiliation": ""
+        },
+        {
+          "name": "Per Anton Sirnes",
+          "affiliation": ""
+        },
+        {
+          "name": "Juan Tamargo",
+          "affiliation": ""
+        },
+        {
+          "name": "Micha\u0142 Tendera",
+          "affiliation": ""
+        },
+        {
+          "name": "Adam Torbicki",
+          "affiliation": ""
+        },
+        {
+          "name": "William Wijns",
+          "affiliation": ""
+        },
+        {
+          "name": "Stephan Windecker",
+          "affiliation": ""
+        },
+        {
+          "name": "Denis Cl\u00e9ment",
+          "affiliation": ""
+        },
+        {
+          "name": "Ant\u00f3nio Coca",
+          "affiliation": ""
+        },
+        {
+          "name": "Thierry Gillebert",
+          "affiliation": ""
+        },
+        {
+          "name": "Micha\u0142 Tendera",
+          "affiliation": ""
+        },
+        {
+          "name": "Enrico Agabiti Rosei",
+          "affiliation": ""
+        },
+        {
+          "name": "Ettore Ambrosioni",
+          "affiliation": ""
+        },
+        {
+          "name": "Stefan D Anker",
+          "affiliation": ""
+        },
+        {
+          "name": "Johann Bauersachs",
+          "affiliation": ""
+        },
+        {
+          "name": "Jana Brguljan Hitij",
+          "affiliation": ""
+        },
+        {
+          "name": "Mark J. Caulfield",
+          "affiliation": ""
+        },
+        {
+          "name": "Marc De Buyzere",
+          "affiliation": ""
+        },
+        {
+          "name": "Sabina De Geest",
+          "affiliation": ""
+        },
+        {
+          "name": "Genevi\u00e8ve D\u00e9rumeaux",
+          "affiliation": ""
+        },
+        {
+          "name": "Serap Erdine",
+          "affiliation": ""
+        },
+        {
+          "name": "Csaba Farsang",
+          "affiliation": ""
+        },
+        {
+          "name": "Christian Funck\u2010Brentano",
+          "affiliation": ""
+        },
+        {
+          "name": "Vjekoslav Gerc",
+          "affiliation": ""
+        },
+        {
+          "name": "Giuseppe German\u00f2",
+          "affiliation": ""
+        },
+        {
+          "name": "Stephan Gielen",
+          "affiliation": ""
+        },
+        {
+          "name": "Herman Haller",
+          "affiliation": ""
+        },
+        {
+          "name": "Arno W Hoes",
+          "affiliation": ""
+        },
+        {
+          "name": "Jens Jordan",
+          "affiliation": ""
+        },
+        {
+          "name": "Thomas Kahan",
+          "affiliation": ""
+        },
+        {
+          "name": "Michel Komajda",
+          "affiliation": ""
+        },
+        {
+          "name": "Dragan Lovi\u0107",
+          "affiliation": ""
+        },
+        {
+          "name": "Heiko Mahrholdt",
+          "affiliation": ""
+        },
+        {
+          "name": "Michael Hecht Olsen",
+          "affiliation": ""
+        },
+        {
+          "name": "Jan Ostergren",
+          "affiliation": ""
+        },
+        {
+          "name": "Gianfranco Parati",
+          "affiliation": ""
+        },
+        {
+          "name": "Joep Perk",
+          "affiliation": ""
+        },
+        {
+          "name": "Jorge Pol\u00f3nia",
+          "affiliation": ""
+        },
+        {
+          "name": "Bogdan A Popescu",
+          "affiliation": ""
+        },
+        {
+          "name": "Zeljko Reiner",
+          "affiliation": ""
+        },
+        {
+          "name": "Lars Ryd\u00e9n",
+          "affiliation": ""
+        },
+        {
+          "name": "Yu.M. S\u0456renko",
+          "affiliation": ""
+        },
+        {
+          "name": "Alice Stanton",
+          "affiliation": ""
+        }
+      ],
+      "year": 2013,
+      "abstract": "The ESH/ESC Guidelines represent the views of the ESH and ESC and were arrived at after careful consideration of the available evidence at the time they were written. Health professionals are encouraged to take them fully into account when exercising their clinical judgement. The guidelines do not, however, override the individual responsibility of health professionals to make appropriate decisions in the circumstances of the individual patients, in consultation with that patient, and where appropriate and necessary the patient's guardian or carer. It is also the health professional's responsibility to verify the rules and regulations applicable to drugs and devices at the time of prescription.",
+      "venue": "European Heart Journal",
+      "citation_count": 13652,
+      "doi": "10.1093/eurheartj/eht151",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1093/eurheartj/eht151",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2761275051",
+      "title": "Genetic effects on gene expression across human tissues",
+      "authors": [
+        {
+          "name": "\u00a0Taru Tukiainen",
+          "affiliation": "Broad Institute"
+        },
+        {
+          "name": "\u00a0Katherine H. Huang",
+          "affiliation": "Broad Institute"
+        },
+        {
+          "name": "Barbara E. Engelhardt",
+          "affiliation": "Broad Institute"
+        },
+        {
+          "name": "Stephen B. Montgomery",
+          "affiliation": "Broad Institute"
+        },
+        {
+          "name": "\u00a0Xiao Li",
+          "affiliation": "Broad Institute"
+        },
+        {
+          "name": "\u00a0Ayellet V. Segr\u00e8",
+          "affiliation": "Broad Institute"
+        },
+        {
+          "name": "\u00a0Hailei Zhang",
+          "affiliation": "Broad Institute"
+        },
+        {
+          "name": "\u00a0Gerald Quon",
+          "affiliation": "Broad Institute"
+        },
+        {
+          "name": "\u00a0Ellen T. Gelfand",
+          "affiliation": "Broad Institute"
+        },
+        {
+          "name": "\u00a0Beryl B. Cummings",
+          "affiliation": "Broad Institute"
+        },
+        {
+          "name": "Fran\u00e7ois Aguet",
+          "affiliation": "Broad Institute"
+        },
+        {
+          "name": "\u00a0Manolis Kellis\u00a0",
+          "affiliation": "Broad Institute"
+        },
+        {
+          "name": "\u00a0Michael S. Noble",
+          "affiliation": "Broad Institute"
+        },
+        {
+          "name": "\u00a0Timothy J. Sullivan",
+          "affiliation": "Broad Institute"
+        },
+        {
+          "name": "\u00a0Gad Getz",
+          "affiliation": "Broad Institute"
+        },
+        {
+          "name": "\u00a0Jared L. Nedzel",
+          "affiliation": "Broad Institute"
+        },
+        {
+          "name": "\u00a0Monkol Lek",
+          "affiliation": "Broad Institute"
+        },
+        {
+          "name": "\u00a0Duyen Y. Nguyen",
+          "affiliation": "Broad Institute"
+        },
+        {
+          "name": "\u00a0Kane Hadley",
+          "affiliation": "Broad Institute"
+        },
+        {
+          "name": "\u00a0Emmanouil T. Dermitzakis",
+          "affiliation": "University of Geneva"
+        },
+        {
+          "name": "\u00a0Olivier Delaneau",
+          "affiliation": "University of Geneva"
+        },
+        {
+          "name": "\u00a0Halit Ongen\u00a0",
+          "affiliation": "University of Geneva"
+        },
+        {
+          "name": "Andrew A. Brown",
+          "affiliation": "University of Geneva"
+        },
+        {
+          "name": "\u00a0Emmanouil T. Dermitzakis",
+          "affiliation": "University of Geneva"
+        },
+        {
+          "name": "\u00a0Olivier Delaneau",
+          "affiliation": "University of Geneva"
+        },
+        {
+          "name": "\u00a0Halit Ongen\u00a0",
+          "affiliation": "University of Geneva"
+        },
+        {
+          "name": "Andrew A. Brown",
+          "affiliation": "University of Geneva"
+        },
+        {
+          "name": "\u00a0Emmanouil T. Dermitzakis",
+          "affiliation": "University of Geneva"
+        },
+        {
+          "name": "\u00a0Olivier Delaneau",
+          "affiliation": "University of Geneva"
+        },
+        {
+          "name": "\u00a0Halit Ongen\u00a0",
+          "affiliation": "University of Geneva"
+        },
+        {
+          "name": "Andrew A. Brown",
+          "affiliation": "University of Geneva"
+        },
+        {
+          "name": "\u00a0Pejman Mohammadi\u00a0",
+          "affiliation": "Columbia University Irving Medical Center"
+        },
+        {
+          "name": "Stephane E. Castel",
+          "affiliation": "Columbia University Irving Medical Center"
+        },
+        {
+          "name": "\u00a0Tuuli Lappalainen",
+          "affiliation": "Columbia University Irving Medical Center"
+        },
+        {
+          "name": "\u00a0Pejman Mohammadi\u00a0",
+          "affiliation": "Columbia University Irving Medical Center"
+        },
+        {
+          "name": "Stephane E. Castel",
+          "affiliation": "Columbia University Irving Medical Center"
+        },
+        {
+          "name": "\u00a0Tuuli Lappalainen",
+          "affiliation": "Columbia University Irving Medical Center"
+        },
+        {
+          "name": "\u00a0Zachary Zappala",
+          "affiliation": "Stanford University"
+        },
+        {
+          "name": "\u00a0Tyler C. Shimko",
+          "affiliation": "Stanford University"
+        },
+        {
+          "name": "\u00a0Stephen B. Montgomery",
+          "affiliation": "Stanford University"
+        },
+        {
+          "name": "\u00a0Carlos D. Bustamante\u00a0",
+          "affiliation": "Stanford University"
+        },
+        {
+          "name": "\u00a0Nicole A. Teran",
+          "affiliation": "Stanford University"
+        },
+        {
+          "name": "Joe R. Davis",
+          "affiliation": "Stanford University"
+        },
+        {
+          "name": "\u00a0Nathan S. Abell",
+          "affiliation": "Stanford University"
+        },
+        {
+          "name": "\u00a0Zachary Zappala",
+          "affiliation": "Stanford University"
+        },
+        {
+          "name": "\u00a0Laure Fr\u00e9sard",
+          "affiliation": "Stanford University"
+        },
+        {
+          "name": "\u00a0Tyler C. Shimko",
+          "affiliation": "Stanford University"
+        },
+        {
+          "name": "\u00a0Stephen B. Montgomery",
+          "affiliation": "Stanford University"
+        },
+        {
+          "name": "\u00a0Brunilda Balliu",
+          "affiliation": "Stanford University"
+        },
+        {
+          "name": "Joe R. Davis",
+          "affiliation": "Stanford University"
+        },
+        {
+          "name": "\u00a0Nicole A. Teran",
+          "affiliation": "Stanford University"
+        },
+        {
+          "name": "\u00a0Boxiang Liu",
+          "affiliation": "Stanford University"
+        },
+        {
+          "name": "\u00a0Michael J. Gloudemans",
+          "affiliation": "Stanford University"
+        },
+        {
+          "name": "\u00a0Nathan S. Abell",
+          "affiliation": "Stanford University"
+        },
+        {
+          "name": "\u00a0Xin Li",
+          "affiliation": "Broad Institute"
+        },
+        {
+          "name": "\u00a0Emily K. Tsang\u00a0",
+          "affiliation": "Stanford University"
+        },
+        {
+          "name": "Yuan He\u00a0",
+          "affiliation": "Johns Hopkins University"
+        },
+        {
+          "name": "\u00a0Benjamin J. Strober",
+          "affiliation": "Johns Hopkins University"
+        },
+        {
+          "name": "Brian Jo\u00a0",
+          "affiliation": "Princeton University"
+        },
+        {
+          "name": "\u00a0Ariel D. H. Gewirtz",
+          "affiliation": "Princeton University"
+        },
+        {
+          "name": "YoSon Park\u00a0",
+          "affiliation": "Broad Institute"
+        },
+        {
+          "name": "\u00a0Christopher D. Brown",
+          "affiliation": "University of Pennsylvania"
+        },
+        {
+          "name": "\u00a0Ashis Saha\u00a0",
+          "affiliation": "Johns Hopkins University"
+        },
+        {
+          "name": "Princy Parsana",
+          "affiliation": "Johns Hopkins University"
+        },
+        {
+          "name": "\u00a0Alexis Battle",
+          "affiliation": "Johns Hopkins University"
+        },
+        {
+          "name": "\u00a0Amy Z. He",
+          "affiliation": "Johns Hopkins University"
+        },
+        {
+          "name": "\u00a0Taru Tukiainen",
+          "affiliation": "Broad Institute"
+        },
+        {
+          "name": "\u00a0Daniel G. MacArthur\u00a0",
+          "affiliation": "Broad Institute"
+        },
+        {
+          "name": "\u00a0Monkol Lek",
+          "affiliation": "Broad Institute"
+        },
+        {
+          "name": "Beryl B. Cummings",
+          "affiliation": "Broad Institute"
+        },
+        {
+          "name": "\u00a0Stephan Ripke",
+          "affiliation": "Broad Institute"
+        },
+        {
+          "name": "Gad Getz",
+          "affiliation": "Broad Institute"
+        },
+        {
+          "name": "Anjene Addington\u00a0",
+          "affiliation": "National Institute of Mental Health"
+        },
+        {
+          "name": "\u00a0Susan Koester",
+          "affiliation": "National Institute of Mental Health"
+        },
+        {
+          "name": "\u00a0Abhi Rao\u00a0",
+          "affiliation": "Specim (Finland)"
+        },
+        {
+          "name": "\u00a0Philip A. Branton",
+          "affiliation": "Specim (Finland)"
+        },
+        {
+          "name": "\u00a0Helen M. Moore",
+          "affiliation": "Specim (Finland)"
+        },
+        {
+          "name": "Ping Guan",
+          "affiliation": "Specim (Finland)"
+        },
+        {
+          "name": "A. Roger Little",
+          "affiliation": "National Institute on Drug Abuse"
+        },
+        {
+          "name": "Nicole C. Lockhart",
+          "affiliation": "National Human Genome Research Institute"
+        },
+        {
+          "name": "\u00a0Simona Volpi",
+          "affiliation": "Human Genome Sciences (United States)"
+        },
+        {
+          "name": "Jeffery P. Struewing\u00a0",
+          "affiliation": "Human Genome Sciences (United States)"
+        },
+        {
+          "name": "Lori E. Brigham",
+          "affiliation": "Capital Meeting Planning"
+        },
+        {
+          "name": "Richard Hasz",
+          "affiliation": "Gift of Life Michigan"
+        },
+        {
+          "name": "\u00a0Kevin Myer\u00a0",
+          "affiliation": "Houston Galveston Institute"
+        },
+        {
+          "name": "\u00a0Bryan Roe",
+          "affiliation": "Houston Galveston Institute"
+        },
+        {
+          "name": "Marcus Hunter",
+          "affiliation": "Houston Galveston Institute"
+        },
+        {
+          "name": "Christopher Johns\u00a0",
+          "affiliation": "Organ Recovery Systems (United States)"
+        },
+        {
+          "name": "\u00a0Joseph Wheeler",
+          "affiliation": "Organ Recovery Systems (United States)"
+        },
+        {
+          "name": "\u00a0Gary Walters\u00a0",
+          "affiliation": "Lifenet Health"
+        },
+        {
+          "name": "\u00a0Michael Washington",
+          "affiliation": "Lifenet Health"
+        },
+        {
+          "name": "Mark Johnson",
+          "affiliation": "Lifenet Health"
+        },
+        {
+          "name": "\u00a0Bernadette Mestichelli",
+          "affiliation": ""
+        },
+        {
+          "name": "\u00a0John T. Lonsdale",
+          "affiliation": ""
+        },
+        {
+          "name": "\u00a0Saboor Shad\u00a0",
+          "affiliation": ""
+        },
+        {
+          "name": "\u00a0Michael Salvatore",
+          "affiliation": ""
+        },
+        {
+          "name": "\u00a0William F. Leinweber",
+          "affiliation": ""
+        },
+        {
+          "name": "\u00a0Jeffrey A. Thomas",
+          "affiliation": ""
+        },
+        {
+          "name": "Gene Kopen",
+          "affiliation": ""
+        },
+        {
+          "name": "\u00a0Alisa McDonald",
+          "affiliation": ""
+        }
+      ],
+      "year": 2017,
+      "abstract": "Characterization of the molecular function of the human genome and its variation across individuals is essential for identifying the cellular mechanisms that underlie human genetic traits and diseases. The Genotype-Tissue Expression (GTEx) project aims to characterize variation in gene expression levels across individuals and diverse tissues of the human body, many of which are not easily accessible. Here we describe genetic effects on gene expression levels across 44 human tissues. We find that local genetic variation affects gene expression levels for the majority of genes, and we further identify inter-chromosomal genetic effects for 93 genes and 112 loci. On the basis of the identified genetic effects, we characterize patterns of tissue specificity, compare local and distal effects, and evaluate the functional properties of the genetic effects. We also demonstrate that multi-tissue, multi-individual data can be used to identify genes and pathways affected by human disease-associated variation, enabling a mechanistic interpretation of gene regulation and the genetic basis of disease.",
+      "venue": "Nature",
+      "citation_count": 4587,
+      "doi": "10.1038/nature24277",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1038/nature24277",
+      "source": "openalex",
+      "_bibtex_override": ""
+    }
+  ]
+}

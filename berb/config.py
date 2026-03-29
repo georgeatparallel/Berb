@@ -188,16 +188,71 @@ class AcpConfig:
 
 @dataclass(frozen=True)
 class LlmConfig:
+    """LLM provider configuration.
+
+    SECURITY FIX #2: API keys must come from environment variables.
+    Plaintext api_key values are rejected during validation.
+    
+    P1 FIX: Multi-provider failover support.
+    """
     provider: str
     base_url: str = ""
     wire_api: str = "chat_completions"
-    api_key_env: str = ""
-    api_key: str = ""
+    api_key_env: str = ""  # Environment variable name (e.g., "OPENAI_API_KEY")
+    api_key: str = ""  # DEPRECATED: Will be rejected if non-empty
     primary_model: str = ""
     fallback_models: tuple[str, ...] = ()
+    # P1 FIX: Multi-provider failover configuration
+    fallback_providers: tuple[str, ...] = ()  # e.g., ("deepseek", "anthropic")
     s2_api_key: str = ""
     notes: str = ""
     acp: AcpConfig = field(default_factory=AcpConfig)
+
+    def get_api_key(self) -> str:
+        """Retrieve API key from environment variable.
+
+        SECURITY FIX #2: Enforces env var usage.
+
+        Returns:
+            API key from environment variable.
+
+        Raises:
+            ValueError: If api_key_env is not set or env var is missing.
+        """
+        import os
+
+        if not self.api_key_env:
+            raise ValueError(
+                "SECURITY: api_key_env is not configured. "
+                "Set the environment variable name (e.g., 'OPENAI_API_KEY') "
+                "in your config file."
+            )
+
+        key = os.environ.get(self.api_key_env, "")
+        if not key:
+            raise ValueError(
+                f"SECURITY: Environment variable '{self.api_key_env}' is not set. "
+                f"Please set it before running Berb."
+            )
+
+        return key
+
+    def validate_no_plaintext_key(self) -> tuple[bool, str]:
+        """Validate that no plaintext API key is stored.
+
+        SECURITY FIX #2: Rejects plaintext keys.
+
+        Returns:
+            Tuple of (is_valid, error_message).
+        """
+        if self.api_key and len(self.api_key.strip()) > 0:
+            return (
+                False,
+                "SECURITY VIOLATION: Plaintext API key detected in config. "
+                "Remove 'api_key' field and use 'api_key_env' instead. "
+                "Example: api_key_env: \"OPENAI_API_KEY\""
+            )
+        return (True, "")
 
 
 @dataclass(frozen=True)
@@ -241,6 +296,10 @@ class SshRemoteConfig:
     timeout_sec: int = 600  # default 10 min for experiment execution
     scp_timeout_sec: int = 300  # default 5 min for file uploads
     setup_timeout_sec: int = 300  # default 5 min for setup commands
+    # P1 FIX: SSH host key verification (security improvement)
+    # Options: "yes" (strict), "accept-new" (accept new keys, verify existing), "no" (insecure)
+    # Default: "accept-new" - more secure than "no" but allows first-time connections
+    strict_host_key_checking: str = "accept-new"
 
 
 @dataclass(frozen=True)
@@ -267,6 +326,8 @@ class DockerSandboxConfig:
     shm_size_mb: int = 2048
     container_python: str = "/usr/bin/python3"
     keep_containers: bool = False
+    # P0 FIX: Automatic fallback to sandbox when Docker unavailable
+    fallback_to_sandbox: bool = True  # Auto-fallback when Docker daemon/image unavailable
 
 
 @dataclass(frozen=True)
@@ -897,6 +958,30 @@ def validate_config(
         if _is_blank(value):
             errors.append(f"Missing required field: {key}")
 
+    # SECURITY FIX #2: Reject plaintext API keys
+    llm_api_key = _get_by_path(data, "llm.api_key")
+    if llm_api_key and len(str(llm_api_key).strip()) > 0:
+        errors.append(
+            "SECURITY VIOLATION: Plaintext API key in llm.api_key. "
+            "Remove this field and use llm.api_key_env instead. "
+            "Example: api_key_env: \"OPENAI_API_KEY\""
+        )
+
+    # Also check for other sensitive keys that should use env vars
+    s2_api_key = _get_by_path(data, "llm.s2_api_key")
+    if s2_api_key and len(str(s2_api_key).strip()) > 0:
+        warnings.append(
+            "SECURITY WARNING: Plaintext s2_api_key detected. "
+            "Consider using an environment variable instead."
+        )
+
+    tavily_api_key = _get_by_path(data, "web_search.tavily_api_key")
+    if tavily_api_key and len(str(tavily_api_key).strip()) > 0:
+        warnings.append(
+            "SECURITY WARNING: Plaintext tavily_api_key detected. "
+            "Consider using tavily_api_key_env instead."
+        )
+
     project_mode = _get_by_path(data, "project.mode")
     if not _is_blank(project_mode) and project_mode not in PROJECT_MODES:
         errors.append(f"Invalid project.mode: {project_mode}")
@@ -964,6 +1049,8 @@ def _parse_llm_config(data: dict[str, Any]) -> LlmConfig:
         api_key=data.get("api_key", ""),
         primary_model=data.get("primary_model", ""),
         fallback_models=tuple(data.get("fallback_models") or ()),
+        # P1 FIX: Multi-provider failover
+        fallback_providers=tuple(data.get("fallback_providers") or ()),
         s2_api_key=data.get("s2_api_key", ""),
         notes=data.get("notes", ""),
         acp=AcpConfig(
@@ -1029,6 +1116,8 @@ def _parse_experiment_config(data: dict[str, Any]) -> ExperimentConfig:
             shm_size_mb=_safe_int(docker_data.get("shm_size_mb"), 2048),
             container_python=docker_data.get("container_python", "/usr/bin/python3"),
             keep_containers=bool(docker_data.get("keep_containers", False)),
+            # P0 FIX: Automatic fallback to sandbox
+            fallback_to_sandbox=bool(docker_data.get("fallback_to_sandbox", True)),
         ),
         ssh_remote=SshRemoteConfig(
             host=ssh_data.get("host", ""),
@@ -1053,6 +1142,8 @@ def _parse_experiment_config(data: dict[str, Any]) -> ExperimentConfig:
             timeout_sec=_safe_int(ssh_data.get("timeout_sec"), 600),
             scp_timeout_sec=_safe_int(ssh_data.get("scp_timeout_sec"), 300),
             setup_timeout_sec=_safe_int(ssh_data.get("setup_timeout_sec"), 300),
+            # P1 FIX: SSH host key verification
+            strict_host_key_checking=ssh_data.get("strict_host_key_checking", "accept-new"),
         ),
         colab_drive=ColabDriveConfig(
             drive_root=colab_data.get("drive_root", ""),

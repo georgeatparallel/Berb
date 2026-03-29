@@ -1,0 +1,92 @@
+# Firecrawl Docker Compose for Berb
+# Self-hosted web scraping and crawling service
+#
+# Usage:
+#   docker-compose -f docker-compose.firecrawl.yml up -d
+#   docker-compose -f docker-compose.firecrawl.yml down
+#
+# Configuration:
+#   - Port 3000: Firecrawl API
+#   - Volume: Persistent data storage
+#   - Resources: 2GB RAM, 1 CPU (adjust as needed)
+#
+# Environment Variables:
+#   FIRECRAWL_BASE_URL=http://localhost:3000
+
+version: '3.8'
+
+services:
+  firecrawl:
+    image: ghcr.io/mendableai/firecrawl:latest
+    container_name: berb-firecrawl
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # Server configuration
+      - PORT=3000
+      - HOST=0.0.0.0
+      
+      # Redis (required for crawl jobs)
+      - REDIS_URL=redis://redis:6379
+      
+      # Optional: API key for authentication
+      # - API_KEY=your-api-key-here
+      
+      # Optional: Rate limiting
+      - RATE_LIMIT_MAX_REQUESTS=100
+      - RATE_LIMIT_WINDOW_MS=60000
+      
+      # Optional: Playwright settings
+      - PLAYWRIGHT_TIMEOUT=60000
+      - PLAYWRIGHT_MAX_PAGES_PER_CRAWL=100
+      
+      # Optional: Logging
+      - LOG_LEVEL=info
+    
+    volumes:
+      - firecrawl_data:/app/data
+    
+    depends_on:
+      redis:
+        condition: service_healthy
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # Resource limits (adjust based on your needs)
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
+
+  redis:
+    image: redis:7-alpine
+    container_name: berb-firecrawl-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  firecrawl_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  default:
+    name: berb-firecrawl-network

@@ -1,0 +1,360 @@
+{
+  "query": "Test",
+  "source": "openalex",
+  "limit": 15,
+  "timestamp": 1774735682.3178167,
+  "papers": [
+    {
+      "paper_id": "oalex-W2110065044",
+      "title": "Controlling the False Discovery Rate: A Practical and Powerful Approach to Multiple Testing",
+      "authors": [
+        {
+          "name": "Yoav Benjamini",
+          "affiliation": "Tel Aviv University"
+        },
+        {
+          "name": "Yosef Hochberg",
+          "affiliation": "Tel Aviv University"
+        }
+      ],
+      "year": 1995,
+      "abstract": "SUMMARY The common approach to the multiplicity problem calls for controlling the familywise error rate (FWER). This approach, though, has faults, and we point out a few. A different approach to problems of multiple significance testing is presented. It calls for controlling the expected proportion of falsely rejected hypotheses \u2014 the false discovery rate. This error rate is equivalent to the FWER when all hypotheses are true but is smaller otherwise. Therefore, in problems where the control of the false discovery rate rather than that of the FWER is desired, there is potential for a gain in power. A simple sequential Bonferronitype procedure is proved to control the false discovery rate for independent test statistics, and a simulation study shows that the gain in power is substantial. The use of the new procedure and the appropriateness of the criterion are illustrated with examples.",
+      "venue": "Journal of the Royal Statistical Society Series B (Statistical Methodology)",
+      "citation_count": 106458,
+      "doi": "10.1111/j.2517-6161.1995.tb02031.x",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1111/j.2517-6161.1995.tb02031.x",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2157823046",
+      "title": "Bias in meta-analysis detected by a simple, graphical test",
+      "authors": [
+        {
+          "name": "Matthias Egger",
+          "affiliation": "University of Bristol"
+        },
+        {
+          "name": "George Davey Smith",
+          "affiliation": "University of Bristol"
+        },
+        {
+          "name": "Martin Schneider",
+          "affiliation": "University of Bern"
+        },
+        {
+          "name": "C. Minder",
+          "affiliation": "Institute of Social and Preventive Medicine"
+        }
+      ],
+      "year": 1997,
+      "abstract": "A simple analysis of funnel plots provides a useful test for the likely presence of bias in meta-analyses, but as the capacity to detect bias will be limited when meta-analyses are based on a limited number of small trials the results from such analyses should be treated with considerable caution.",
+      "venue": "BMJ",
+      "citation_count": 55177,
+      "doi": "10.1136/bmj.315.7109.629",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1136/bmj.315.7109.629",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2159306398",
+      "title": "Coefficient Alpha and the Internal Structure of Tests",
+      "authors": [
+        {
+          "name": "Lee J. Cronbach",
+          "affiliation": "University of Illinois System"
+        }
+      ],
+      "year": 1951,
+      "abstract": "A general formula ( \u03b1 ) of which a special case is the Kuder-Richardson coefficient of equivalence is shown to be the mean of all split-half coefficients resulting from different splittings of a test. \u03b1 is therefore an estimate of the correlation between two random samples of items from a universe of items like those in the test. \u03b1 is found to be an appropriate index of equivalence and, except for very short tests, of the first-factor concentration in the test. Tests divisible into distinct subtests should be so divided before using the formula. The index \\documentclass[12pt]{minimal} \\usepackage{amsmath} \\usepackage{wasysym} \\usepackage{amsfonts} \\usepackage{amssymb} \\usepackage{amsbsy} \\usepackage{mathrsfs} \\usepackage{upgreek} \\setlength{\\oddsidemargin}{-69pt} \\begin{document} $$\\bar r_{ij} $$ \\end{document} , derived from \u03b1 , is shown to be an index of inter-item homogeneity. Comparison is made to the Guttman and Loevinger approaches. Parallel split coefficients are shown to be unnecessary for tests of common types. In designing tests, maximum interpretability of scores is obtained by increasing the first-factor concentration in any separately-scored subtest and avoiding substantial group-factor clusters within a subtest. Scalability is not a requisite.",
+      "venue": "Psychometrika",
+      "citation_count": 42631,
+      "doi": "10.1007/bf02310555",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1007/bf02310555",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2797247465",
+      "title": "Multiple regression: testing and interpreting interactions",
+      "authors": [],
+      "year": 1992,
+      "abstract": "Introduction Interactions between Continuous Predictors in Multiple Regression The Effects of Predictor Scaling on Coefficients of Regression Equations Testing and Probing Three-Way Interactions Structuring Regression Equations to Reflect Higher Order Relationships Model and Effect Testing with Higher Order Terms Interactions between Categorical and Continuous Variables Reliability and Statistical Power Conclusion Some Contrasts Between ANOVA and MR in Practice",
+      "venue": "Choice Reviews Online",
+      "citation_count": 37145,
+      "doi": "10.5860/choice.29-3352",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.5860/choice.29-3352",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2110603299",
+      "title": "Co-Integration and Error Correction: Representation, Estimation, and Testing",
+      "authors": [
+        {
+          "name": "Robert F. Engle",
+          "affiliation": "University of California, San Diego"
+        },
+        {
+          "name": "C. W. J. Granger",
+          "affiliation": "University of California, San Diego"
+        }
+      ],
+      "year": 1987,
+      "abstract": "The relationship between co-integration and error correction models, first suggested in Granger (1981), is here extended and used to develop estimation procedures, tests, and empirical examples. If each element of a vector of time series x first achieves stationarity after differencing, but a linear combination a'x is already stationary, the time series x are said to be co-integrated with co-integrating vector a. There may be several such co-integrating vectors so that a becomes a matrix. Interpreting a'x,= 0 as a long run equilibrium, co-integration implies that deviations from equilibrium are stationary, with finite variance, even though the series themselves are nonstationary and have infinite variance. The paper presents a representation theorem based on Granger (1983), which connects the moving average, autoregressive, and error correction representations for co-integrated systems. A vector autoregression in differenced variables is incompatible with these representations. Estimation of these models is discussed and a simple but asymptotically efficient two-step estimator is proposed. Testing for co-integration combines the problems of unit root tests and tests with parameters unidentified under the null. Seven statistics are formulated and analyzed. The critical values of these statistics are calculated based on a Monte Carlo simulation. Using these critical values, the power properties of the tests are examined and one test procedure is recommended for application. In a series of examples it is found that consumption and income are co-integrated, wages and prices are not, short and long interest rates are, and nominal GNP is co-integrated with M2, but not M1, M3, or aggregate liquid assets.",
+      "venue": "Econometrica",
+      "citation_count": 31689,
+      "doi": "10.2307/1913236",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.2307/1913236",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2112352537",
+      "title": "Specification Tests in Econometrics",
+      "authors": [
+        {
+          "name": "Jerry A. Hausman",
+          "affiliation": ""
+        }
+      ],
+      "year": 1978,
+      "abstract": "Using the result that under the null hypothesis of no misspecification an asymptotically efficient estimator must have zero asymptotic covariance with its difference from a consistent but asymptotically inefficient estimator, specification tests are devised for a number of model specifications in econometrics. Local power is calculated for small departures from the null hypothesis. An instrumental variable test as well as tests for a time series cross section model and the simultaneous equation model are presented. An empirical model provides evidence that unobserved individual factors are present which are not orthogonal to the included right-hand-side variable in a common econometric specification of an individual wage equation.",
+      "venue": "Econometrica",
+      "citation_count": 18128,
+      "doi": "10.2307/1913827",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.2307/1913827",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2072500831",
+      "title": "Statistical power analyses using G*Power 3.1: Tests for correlation and regression analyses",
+      "authors": [
+        {
+          "name": "Franz Faul",
+          "affiliation": "Kiel University"
+        },
+        {
+          "name": "Edgar Erdfelder",
+          "affiliation": "University of Mannheim"
+        },
+        {
+          "name": "Axel Buchner",
+          "affiliation": "Heinrich Heine University D\u00fcsseldorf"
+        },
+        {
+          "name": "Albert-Georg Lang",
+          "affiliation": "Heinrich Heine University D\u00fcsseldorf"
+        }
+      ],
+      "year": 2009,
+      "abstract": "",
+      "venue": "Behavior Research Methods",
+      "citation_count": 34553,
+      "doi": "10.3758/brm.41.4.1149",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.3758/brm.41.4.1149",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2025610165",
+      "title": "Some Tests of Specification for Panel Data: Monte Carlo Evidence and an Application to Employment Equations",
+      "authors": [
+        {
+          "name": "Manuel Arellano",
+          "affiliation": "London School of Economics and Political Science"
+        },
+        {
+          "name": "Stephen Bond",
+          "affiliation": "University of Oxford"
+        }
+      ],
+      "year": 1991,
+      "abstract": "This paper presents specification tests that are applicable after estimating a dynamic model from panel data by the generalized method of moments (GMM), and studies the practical performance of these procedures using both generated and real data. Our GMM estimator optimally exploits all the linear moment restrictions that follow from the assumption of no serial correlation in the errors, in an equation which contains individual effects, lagged dependent variables and no strictly exogenous variables. We propose a test of serial correlation based on the GMM residuals and compare this with Sargan tests of over-identifying restrictions and Hausman specification tests.",
+      "venue": "The Review of Economic Studies",
+      "citation_count": 32283,
+      "doi": "10.2307/2297968",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.2307/2297968",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2121044470",
+      "title": "A Simple Sequentially Rejective Multiple Test Procedure",
+      "authors": [
+        {
+          "name": "Sture Holm",
+          "affiliation": ""
+        }
+      ],
+      "year": 1979,
+      "abstract": "This paper presents a simple and widely ap- plicable multiple test procedure of the sequentially rejective type, i.e. hypotheses are rejected one at a tine until no further rejections can be done. It is shown that the test has a prescribed level of significance protection against error of the first kind for any combination of true hypotheses. The power properties of the test and a number of possible applications are also discussed.",
+      "venue": "Scandinavian Journal of Statistics",
+      "citation_count": 21775,
+      "doi": "10.2307/4615733",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.2307/4615733",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2108818539",
+      "title": "A Heteroskedasticity-Consistent Covariance Matrix Estimator and a Direct Test for Heteroskedasticity",
+      "authors": [
+        {
+          "name": "Halbert White",
+          "affiliation": ""
+        }
+      ],
+      "year": 1980,
+      "abstract": "This paper presents a parameter covariance matrix estimator which is consistent even when the disturbances of a linear regression model are heteroskedastic. This estimator does not depend on a formal model of the structure of the heteroskedasticity. By comparing the elements of the new estimator to those of the usual covariance estimator, one obtains a direct test for heteroskedasticity, since in the absence of heteroskedasticity, the two estimators will be approximately equal, but will generally diverge otherwise. The test has an appealing least squares interpretation.",
+      "venue": "Econometrica",
+      "citation_count": 25941,
+      "doi": "10.2307/1912934",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.2307/1912934",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2092713296",
+      "title": "Multiple Range and Multiple F Tests",
+      "authors": [
+        {
+          "name": "David B. Duncan",
+          "affiliation": ""
+        }
+      ],
+      "year": 1955,
+      "abstract": "",
+      "venue": "Biometrics",
+      "citation_count": 22925,
+      "doi": "10.2307/3001478",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.2307/3001478",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W1966910378",
+      "title": "Bounds testing approaches to the analysis of level relationships",
+      "authors": [
+        {
+          "name": "M. Hashem Pesaran",
+          "affiliation": "Trinity College London"
+        },
+        {
+          "name": "Yongcheol Shin",
+          "affiliation": "University of Edinburgh"
+        },
+        {
+          "name": "Richard J. Smith",
+          "affiliation": "University of Bristol"
+        }
+      ],
+      "year": 2001,
+      "abstract": "Abstract This paper develops a new approach to the problem of testing the existence of a level relationship between a dependent variable and a set of regressors, when it is not known with certainty whether the underlying regressors are trend\u2010 or first\u2010difference stationary. The proposed tests are based on standard F \u2010 and t \u2010statistics used to test the significance of the lagged levels of the variables in a univariate equilibrium correction mechanism. The asymptotic distributions of these statistics are non\u2010standard under the null hypothesis that there exists no level relationship, irrespective of whether the regressors are I (0) or I (1). Two sets of asymptotic critical values are provided: one when all regressors are purely I (1) and the other if they are all purely I (0). These two sets of critical values provide a band covering all possible classifications of the regressors into purely I (0), purely I (1) or mutually cointegrated. Accordingly, various bounds testing procedures are proposed. It is shown that the proposed tests are consistent, and their asymptotic distribution under the null and suitably defined local alternatives are derived. The empirical relevance of the bounds procedures is demonstrated by a re\u2010examination of the earnings equation included in the UK Treasury macroeconometric model. Copyright \u00a9 2001 John Wiley &amp; Sons, Ltd.",
+      "venue": "Journal of Applied Econometrics",
+      "citation_count": 19117,
+      "doi": "10.1002/jae.616",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1002/jae.616",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2147993766",
+      "title": "Development and testing of a general amber force field",
+      "authors": [
+        {
+          "name": "Junmei Wang",
+          "affiliation": ""
+        },
+        {
+          "name": "Romain M. Wolf",
+          "affiliation": "Novartis Institutes for BioMedical Research"
+        },
+        {
+          "name": "James W. Caldwell",
+          "affiliation": ""
+        },
+        {
+          "name": "Peter A. Kollman",
+          "affiliation": ""
+        },
+        {
+          "name": "David A. Case",
+          "affiliation": "Scripps Research Institute"
+        }
+      ],
+      "year": 2004,
+      "abstract": "We describe here a general Amber force field (GAFF) for organic molecules. GAFF is designed to be compatible with existing Amber force fields for proteins and nucleic acids, and has parameters for most organic and pharmaceutical molecules that are composed of H, C, N, O, S, P, and halogens. It uses a simple functional form and a limited number of atom types, but incorporates both empirical and heuristic models to estimate force constants and partial atomic charges. The performance of GAFF in test cases is encouraging. In test I, 74 crystallographic structures were compared to GAFF minimized structures, with a root-mean-square displacement of 0.26 A, which is comparable to that of the Tripos 5.2 force field (0.25 A) and better than those of MMFF 94 and CHARMm (0.47 and 0.44 A, respectively). In test II, gas phase minimizations were performed on 22 nucleic acid base pairs, and the minimized structures and intermolecular energies were compared to MP2/6-31G* results. The RMS of displacements and relative energies were 0.25 A and 1.2 kcal/mol, respectively. These data are comparable to results from Parm99/RESP (0.16 A and 1.18 kcal/mol, respectively), which were parameterized to these base pairs. Test III looked at the relative energies of 71 conformational pairs that were used in development of the Parm99 force field. The RMS error in relative energies (compared to experiment) is about 0.5 kcal/mol. GAFF can be applied to wide range of molecules in an automatic fashion, making it suitable for rational drug design and database searching.",
+      "venue": "Journal of Computational Chemistry",
+      "citation_count": 19024,
+      "doi": "10.1002/jcc.20035",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1002/jcc.20035",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2097580026",
+      "title": "Testing for a unit root in time series regression",
+      "authors": [
+        {
+          "name": "Peter C.B. Phillips",
+          "affiliation": ""
+        },
+        {
+          "name": "Pierre Perr\u00f3n",
+          "affiliation": "Universit\u00e9 de Montr\u00e9al"
+        }
+      ],
+      "year": 1988,
+      "abstract": "This paper proposes new tests for detecting the presence of a unit root in quite general time series models. Our approach is nonparametric with respect to nuisance parameters and thereby allows for a very wide class of weakly dependent and possibly heterogeneously distributed data. The tests accommodate models with a fitted drift and a time trend so that they may be used to discriminate between unit root nonstationarity and stationarity about a deterministic trend. The limiting distributions of the statistics are obtained under both the unit root null and a sequence of local alternatives. The latter noncentral distribution theory yields local asymptotic power functions for the tests and facilitates comparisons with alternative procedures due to Dickey & Fuller. Simulations are reported on the performance of the new tests in finite samples.",
+      "venue": "Biometrika",
+      "citation_count": 17742,
+      "doi": "10.1093/biomet/75.2.335",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1093/biomet/75.2.335",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2774486220",
+      "title": "<b>lmerTest</b> Package: Tests in Linear Mixed Effects Models",
+      "authors": [
+        {
+          "name": "Alexandra Kuznetsova",
+          "affiliation": "Technical University of Denmark"
+        },
+        {
+          "name": "Per B. Brockhoff",
+          "affiliation": "Technical University of Denmark"
+        },
+        {
+          "name": "Rune Haubo Bojesen Christensen",
+          "affiliation": "Technical University of Denmark"
+        }
+      ],
+      "year": 2017,
+      "abstract": "One of the frequent questions by users of the mixed model function lmer of the lme4 package has been: How can I get p values for the F and t tests for objects returned by lmer? The lmerTest package extends the 'lmerMod' class of the lme4 package, by overloading the anova and summary functions by providing p values for tests for fixed effects. We have implemented the Satterthwaite's method for approximating degrees of freedom for the t and F tests. We have also implemented the construction of Type I - III ANOVA tables. Furthermore, one may also obtain the summary as well as the anova table using the Kenward-Roger approximation for denominator degrees of freedom (based on the KRmodcomp function from the pbkrtest package). Some other convenient mixed model analysis tools such as a step method, that performs backward elimination of nonsignificant effects - both random and fixed, calculation of population means and multiple comparison tests together with plot facilities are provided by the package as well.",
+      "venue": "Journal of Statistical Software",
+      "citation_count": 22366,
+      "doi": "10.18637/jss.v082.i13",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.18637/jss.v082.i13",
+      "source": "openalex",
+      "_bibtex_override": ""
+    }
+  ]
+}

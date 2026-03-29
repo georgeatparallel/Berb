@@ -1,0 +1,597 @@
+{
+  "query": "hypotheses increasing protocol control test",
+  "source": "openalex",
+  "limit": 15,
+  "timestamp": 1774735695.121941,
+  "papers": [
+    {
+      "paper_id": "oalex-W2087484885",
+      "title": "G*Power 3: A flexible statistical power analysis program for the social, behavioral, and biomedical sciences",
+      "authors": [
+        {
+          "name": "Franz Faul",
+          "affiliation": "Kiel University"
+        },
+        {
+          "name": "Edgar Erdfelder",
+          "affiliation": "University of Mannheim"
+        },
+        {
+          "name": "Albert-Georg Lang",
+          "affiliation": "Heinrich Heine University D\u00fcsseldorf"
+        },
+        {
+          "name": "Axel Buchner",
+          "affiliation": "Heinrich Heine University D\u00fcsseldorf"
+        }
+      ],
+      "year": 2007,
+      "abstract": "",
+      "venue": "Behavior Research Methods",
+      "citation_count": 61994,
+      "doi": "10.3758/bf03193146",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.3758/bf03193146",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W1602238219",
+      "title": "virtualspecies, an R package to generate virtual species distributions",
+      "authors": [
+        {
+          "name": "Boris Leroy",
+          "affiliation": "Centre National de la Recherche Scientifique"
+        },
+        {
+          "name": "Christine N. Meynard",
+          "affiliation": "Centre de Coop\u00e9ration Internationale en Recherche Agronomique pour le D\u00e9veloppement"
+        },
+        {
+          "name": "C\u00e9line Bellard",
+          "affiliation": "Centre National de la Recherche Scientifique"
+        },
+        {
+          "name": "Franck Courchamp",
+          "affiliation": "Centre National de la Recherche Scientifique"
+        }
+      ],
+      "year": 2015,
+      "abstract": "virtualspecies is a freely available package for R designed to generate virtual species distributions, a procedure increasingly used in ecology to improve species distribution models. This package combines the existing methodological approaches with the objective of generating virtual species distributions with increased ecological realism. The package includes 1) generating the probability of occurrence of a virtual species from a spatial set of environmental conditions (i.e. environmental suitability), with two different approaches; 2) converting the environmental suitability into presence\u2013absence with a probabilistic approach; 3) introducing dispersal limitations in the realised virtual species distributions and 4) sampling occurrences with different biases in the sampling procedure. The package was designed to be extremely flexible, to allow users to simulate their own defined species\u2013environment relationships, as well as to provide a fine control over every simulation parameter. The package also includes a function to generate random virtual species distributions. We provide a simple example in this paper showing how increasing ecological realism of the virtual species impacts the predictive performance of species distribution models. We expect that this new package will be valuable to researchers willing to test techniques and protocols of species distribution models as well as various biogeographical hypotheses.",
+      "venue": "Ecography",
+      "citation_count": 286,
+      "doi": "10.1111/ecog.01388",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1111/ecog.01388",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2042109117",
+      "title": "Damage Control Resuscitation: Directly Addressing the Early Coagulopathy of Trauma",
+      "authors": [
+        {
+          "name": "John B. Holcomb",
+          "affiliation": "United States Army Institute of Surgical Research"
+        },
+        {
+          "name": "D. G. Jenkins",
+          "affiliation": ""
+        },
+        {
+          "name": "Peter Rhee",
+          "affiliation": ""
+        },
+        {
+          "name": "Jay A. Johannigman",
+          "affiliation": ""
+        },
+        {
+          "name": "Peter F. Mahoney",
+          "affiliation": ""
+        },
+        {
+          "name": "Sumeru Mehta",
+          "affiliation": ""
+        },
+        {
+          "name": "Elizabeth Cox",
+          "affiliation": ""
+        },
+        {
+          "name": "Michael J. Gehrke",
+          "affiliation": ""
+        },
+        {
+          "name": "Gregory J. Beilman",
+          "affiliation": ""
+        },
+        {
+          "name": "Martin A. Schreiber",
+          "affiliation": ""
+        },
+        {
+          "name": "Stephen Flaherty",
+          "affiliation": ""
+        },
+        {
+          "name": "Kurt W. Grathwohl",
+          "affiliation": ""
+        },
+        {
+          "name": "Philip C. Spinella",
+          "affiliation": ""
+        },
+        {
+          "name": "Jeremy G. Perkins",
+          "affiliation": ""
+        },
+        {
+          "name": "Alec C. Beekley",
+          "affiliation": ""
+        },
+        {
+          "name": "Neil R. McMullin",
+          "affiliation": ""
+        },
+        {
+          "name": "Myung S. Park",
+          "affiliation": ""
+        },
+        {
+          "name": "Ernest A. Gonzalez",
+          "affiliation": ""
+        },
+        {
+          "name": "Charles E. Wade",
+          "affiliation": ""
+        },
+        {
+          "name": "Michael A. Dubick",
+          "affiliation": ""
+        },
+        {
+          "name": "C. William Schwab",
+          "affiliation": ""
+        },
+        {
+          "name": "Fred A. Moore",
+          "affiliation": ""
+        },
+        {
+          "name": "Howard R. Champion",
+          "affiliation": ""
+        },
+        {
+          "name": "David B. Hoyt",
+          "affiliation": ""
+        },
+        {
+          "name": "John R. Hess",
+          "affiliation": ""
+        }
+      ],
+      "year": 2007,
+      "abstract": "Rapid progress in trauma care occurs when the results of translational research are promptly integrated into clinical practice. Experience with a high volume of severely injured casualties expedites the process.1 Historically, these conditions have converged during times of conflict, improving the care of combat casualties and subsequently that of civilian trauma patients.1,2 In the most severely injured casualties, we know that when the lethal triad of hypothermia, acidosis, and coagulopathy are present, death is imminent.3 Current teaching is to avoid reaching these conditions by using \u201cdamage control surgery.\u201d4\u20136 However, conventional resuscitation practice for damage control focuses on rapid reversal of acidosis and prevention of hypothermia, and surgical techniques focus on controlling hemorrhage and contamination. Direct treatment of coagulopathy has been relatively neglected, viewed as a byproduct of resuscitation, hemodilution, and hypothermia, and delayed by blood banking logistics. Damage control resuscitation addresses the entire lethal triad immediately upon admission to a combat hospital.7,8 By demonstrating that in the severely injured the coagulopathy of trauma is present at admission, recent studies have brought back to light the importance of treating this disorder at an earlier stage.9\u201312 Reports of lactated Ringer's solution and normal saline increasing reperfusion injury and leukocyte adhesion lead one to conclude that the standard crystalloid-based resuscitation guidelines in prehospital trauma life support (PHTLS) and advanced trauma life support (ATLS) may worsen the presenting acidosis and coagulopathy in severely injured trauma patients, and possibly increase ARDS, SIRS, and MOF.13\u201317 The safety of withholding PRBCs in hemodynamically stable patients has been demonstrated,18 and the risks associated with blood transfusion are well described.19,20 Further, massive transfusion in military and civilian casualties has been associated with an increased risk of death.21\u201323 Taken together, these observations suggest that the most severely injured may need a resuscitative approach tailored specifically to their needs. However, even in the largest civilian academic trauma centers, patients with injuries at the outer limits of survivability, such as those massively transfused with more than 10 units of RBCs in the first 24 hours, are uncommon and constitute only 1% to 2% of the patient population, making it difficult to develop and test new resuscitation concepts.21 Because 7% of combat casualties require massive transfusion, we have had just such an opportunity to observe the effects of new resuscitation strategies in the combat hospitals of Iraq and Afghanistan. The military munitions used in Southwest Asia can inflict severe multisystem injuries on both combatants and civilians. These patients frequently present to American military medical personnel shortly after being wounded. Unlike civilian systems, where treatment of coagulopathy is often limited by standard blood bank logistics, in Iraq we frequently have immediate access to PRBCs and thawed AB or A plasma, and rapid access to apheresis platelets, prepooled cryoprecipitate, fresh whole blood, and rFVIIa, as indicated.24\u201329 Thus, the opportunity to formally evaluate the immediate and direct treatment of the coagulopathy of trauma is available. The trauma patients who are most severely injured (approximately 10%) also represent the majority of in-hospital trauma deaths. Considerable attention has been directed toward the technical details of damage control surgery and reversing the acidosis and hypothermia present at admission. Less attention has been directed toward reversing the coagulopathy related to blood loss that is present at the same time. Clinical experience in Operation Iraqi Freedom and Operation Enduring Freedom suggests that coagulopathy may be present at the time of admission before significant resuscitative fluid has been given, as a consequence of acidosis-induced coagulation factor dysfunction, coagulation factor consumption, and hypothermia-induced failure of platelet activation. Failure to recognize and immediately address the coagulopathy found in severely injured patients can be linked to several factors. Most studies of trauma-induced coagulopathy have measured the laboratory changes that happen in the OR or ICU after dilution with crystalloid and PRBCs, and have concluded that the coagulopathy could be fully explained by the resuscitation and/or hypothermia.30 The goal of shock resuscitation efforts in the past has been largely to support blood pressure and urine output and to reverse the metabolic derangements associated with the ischemia associated with acute blood loss.31,32 Although these goals are obviously important, the studies supporting this concept were based on controlled animal hemorrhage studies, and the results were not evaluated in randomized human trials.33\u201335 Additionally, the potential benefits of mitigating ischemia-induced reperfusion injury after standard crystalloid resuscitation were not fully recognized.14,36 Furthermore, recent resuscitation studies have overlooked the importance of an integrated and coherent prehospital, ED, OR, and ICU shock resuscitation plan that incorporates intravascular treatment of coagulopathy.32,37 Finally, the current generation of clinicians has been taught to not use plasma as a resuscitation fluid.38 We agree that current standard resuscitation methods are appropriate policy for the approximately 90% of trauma patients who are not in shock and are hypercoagulable after injury.39\u201342 However, for the approximately 10% of casualties who constitute the most seriously injured, are in shock and coagulopathic, and represent the potentially preventable hemorrhagic deaths, liquid plasma may be the optimal resuscitation fluid currently available.43\u201350 Based on (1) previous civilian clinical studies, (2) the recommendations of an international consensus conference on early massive transfusion for trauma,51 and (3) considerable experience in the current war, we think patients at high risk for coagulopathy can be readily identified at admission and prompt simultaneous treatment of hypothermia, acidosis, and coagulopathy initiated. Hypothermia, an independent factor for increased mortality in trauma patients, was an earlier focus for active prevention and treatment,52\u201354 but application of training and equipment recommendations of the Committee on Tactical Combat Casualty Care and the Joint Theater Trauma System has made it an uncommon finding.55 Acidosis significantly impairs the thrombin generation rates, critical to optimal coagulation function56 and is thus aggressively managed by use of THAM and volume loading with blood components once hemostasis is obtained, with restoration of a normal blood lactate, base deficit, or pH as the ultimate goal. Damage control resuscitation as a structured intervention begins immediately after rapid initial assessment in the ED and progresses through the OR into the ICU. All efforts are directed toward this goal by repeated point of care testing and the use of multiple blood products and drugs readily available in theater, albeit in new ratios and amounts. Compared with civilian practice, damage control resuscitation efforts are largely completed in the OR, with little resuscitation required in the ICU. Achieving this goal quickly in the OR may allow a shift from limited damage control surgery to earlier definitive surgical interventions, including sophisticated limb salvage techniques, and improved outcomes. In the severely injured casualty, damage control resuscitation consists of two parts and is initiated within minutes of arrival in the ED. First, resuscitation is limited to keep blood pressure at approximately 90 mm Hg, preventing renewed bleeding from recently clotted vessels.15,17,39,57\u201362 Second, intravascular volume restoration is accomplished by using thawed plasma as a primary resuscitation fluid in at least a 1:1 or 1:2 ratio with PRBCs.8,10,48\u201350 Our initial clinical experience shows these ratios decrease mortality in similarly injured casualties (Borgman MA, et al. unpublished data). Recombinant FVIIa is occasionally used along with the early units of red cells and as required throughout the resuscitation. For casualties who will require continued resuscitation, the blood bank is notified to activate the massive transfusion protocol and deliver to the operating room 6 units of plasma, 6 units of PRBCs, 6 packs of platelets, and 10 units of cryoprecipitate stored in individual coolers.50 The most severely injured of this group also receive fresh warm whole blood as a resuscitative fluid.47,63 Additional coolers, containing the same mix of blood products, are provided as needed until the massive transfusion order is cancelled. Crystalloid use is minimized and serves mainly as a drug carrier and to keep lines open between the units of blood products. In combat casualties requiring major resuscitation (10\u201340 units of blood products), we have found as little as 5 L to 8 L of crystalloid are utilized during the first 24 hours, representing a decrease of at least 50% when compared with current standard resuscitation practices. Using the damage control resuscitation approach, the lack of intraoperative coagulopathic bleeding has been remarkable, allowing surgeons to focus on surgical bleeding. Patients treated in this fashion almost always arrive in the ICU warm, euvolemic, and non-acidotic, with a normal INR and minimal edema. In the majority of patients the abnormalities of the lethal triad are absent. These patients appear to be easily ventilated and more quickly extubated than patients with similar blood loss treated with the standard crystalloid resuscitation volumes and blood component ratios. These admittedly anecdotal yet compelling observations cause us to question further the use of excessive crystalloid resuscitation and to begin to formulate hypotheses that can be tested to demonstrate beneficial effects of pre-emptive control of coagulopathy.14 For the first time in US warfare, data for all admitted trauma casualties in the current conflict in Southwest Asia are entered into a joint theater trauma registry (JTTR).64 A deployed combat research team is being sent into theater for the first time since Vietnam, operating under the same standards of IRB approval as practiced in the United States. Data collected by this team, along with outcome data from the JTTR, will allow an analysis of the effects of resuscitation with thawed plasma, fresh whole blood, administration of rFVIIa, and limited crystalloid. Additionally, focused effort will be required to describe the mechanisms causing the early coagulopathy of trauma present at admission. The clinical effects and consequences of damage control resuscitation will be measurable in patient outcomes. We will know if we are saving more severely injured soldiers, if reducing coagulopathy and edema leads to better outcomes, and, ultimately, whether we are creating more blood exposure or less. We will soon have sufficient data to assess the full benefits of damage control resuscitation in the population of critically injured for whom it matters most. As in the past, perceptive observation, thoughtful discussion, and insightful analysis concerning medical care during war from experienced military medics, surgeons, and scientists, in concert with our civilian colleagues, will generate recommendations for new and improved medical practice, with continuous modification as further experience, research, and development produce new and relevant information.1,2",
+      "venue": "The Journal of Trauma: Injury, Infection, and Critical Care",
+      "citation_count": 1364,
+      "doi": "10.1097/ta.0b013e3180324124",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1097/ta.0b013e3180324124",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W1580457945",
+      "title": "The Ethics of Childhood Obesity Treatment - from the Childhood Obesity Task Force (COTF) of European Association for the Study of Obesity (EASO)",
+      "authors": [
+        {
+          "name": "Jens\u2010Christian Holm",
+          "affiliation": "Copenhagen University Hospital"
+        },
+        {
+          "name": "Paulina Nowicka",
+          "affiliation": "Karolinska Institutet"
+        },
+        {
+          "name": "Nathalie J. Farpour\u2010Lambert",
+          "affiliation": "University Hospital of Geneva"
+        },
+        {
+          "name": "Grace O\u2019Malley",
+          "affiliation": "Temple Street Children's University Hospital"
+        },
+        {
+          "name": "Maria Hassapidou",
+          "affiliation": "Alexander Technological Educational Institute of Thessaloniki"
+        },
+        {
+          "name": "Ram Weiss",
+          "affiliation": "Hebrew University of Jerusalem"
+        },
+        {
+          "name": "Jennifer L. Baker",
+          "affiliation": "Novo Nordisk Foundation"
+        }
+      ],
+      "year": 2014,
+      "abstract": "With the American Medical Association's recent declaration that obesity is a serious disease [1], a critical consideration of the ethics of treating childhood obesity is especially timely. Although data suggest that the childhood obesity epidemic has stabilized in some countries [2], the levels remain too high; 18-49% of European children are overweight [3]. Consequently there is an immense and urgent need for the effective treatment of this complex disease. Unfortunately, the most recent Cochrane review concludes that, although family-based interventions can reduce excess weight in children and adolescents, long-term, effective and sustainable interventions for childhood obesity have yet to be identified [4]. Childhood obesity is a complex disease caused by a multitude of factors and it is associated with a wide range of co-morbidities. This complexity makes it challenging to design interventions and test the treatment approaches - particularly with regard to which outcome(s) should be used as the criteria for success. Most childhood obesity treatments occur in healthcare settings. As such, the randomized controlled trial (RCT), which is the \u2018gold standard' of the medical/clinical research tradition, has been used to evaluate whether a given obesity treatment protocol is safe and effective. It is questionable however, if the RCT is the optimal study design to address this complex issue.Researchers investigating childhood obesity treatments face difficulties in deciding which outcomes best reflect the impact of treatment and, if a RCT is conducted, what type of treatment should it be randomized against. In light of the widespread childhood obesity epidemic, this paper will explore the ethical implications of these issues. Pediatric obesity research is conducted in a vulnerable group of patients and families. Many children who are obese suffer from significant psychological problems including anxiety, depression, attention-deficit hyperactivity as well as emotional and eating disorders [5,6]. Added to this, obesity carries a social stigma that adversely affects children as well as their families. There has been - and still is - considerable debate as to who bears the responsibility for the development of excess weight in the child and who bears the responsibility for alleviating the condition at the individual and the societal levels [7,8]. In recognition of these issues, there are discussions surrounding the ethics of community-based approaches of treating childhood obesity [9] and about mechanistic clinical studies aimed at understanding the pathophysiology of morbid obesity in children without a direct aim of reducing weight or the degree of obesity [10]. Less attention, however, has been given to the ethics of studying the individual treatment of the condition.The vast majority of childhood obesity therapy research is conducted at hospitals and their associated clinics or at universities. In this framework, treatment protocols are examined and approved by ethical review committees; thus it can be assumed that the basic premises of these studies are ethically acceptable. Nonetheless, investigators are obliged to ensure that their research fulfils the four basic principles of ethical research: respect for autonomy, beneficence, non-maleficence, and justice [11]. In the context of childhood obesity research, this can be challenging. Children who are obese and their families are often desperate for treatment because existing programs can have long waiting lists or be out of reach due to cost, time, and transportation factors.Given these circumstances, investigators must carefully consider if their protocol provides a situation in which they can scientifically test their hypotheses and balance this with creating a situation in which children and families freely make the choice to enter the study (autonomy), that the child receives a net benefit through participation in a timely manner (beneficence and non-maleficence), and that the exclusion criteria for participation are reasonable (justice). With these principles in mind, it becomes apparent that the development of treatment protocols must recognize the need for effective treatment along with consideration for the well-being of the child and his or her parent(s). The majority of childhood obesity treatments use the reduction of weight, BMI (kg/m2), waist circumference, and/or body composition as the primary outcome. These studies usually evaluate the change over a period of a few months to a maximum of a couple of years. Although weight loss or stabilization represents a reasonable target, it may be overly simplistic since childhood obesity is a complex phenotype that is associated with multiple concurrent co-morbidities. Clinical studies suggest that almost 50% of children who are obese exhibit pre- or grade 1 or 2 hypertension [12,13], another 29% have dyslipidemia [14], 44% have more than 5% fat in their livers [15], and 74% exhibit more than 5% fat in their muscles [16]. Additionally, children who are obese are at risk of serious cardiovascular [17,18], endocrinological [17,19], orthopedic [20,21] and psychological [5,6] complications that are present or not yet clinically apparent. Other complications progress silently and appear during late adolescence and young adulthood. Furthermore, future health risks loom, and a significantly increased risk of coronary heart disease [22], metabolic disease [23], and cancer [24,25] is non-ignorable in adulthood.Thus given the wide range of these co-morbidities and their potential for current and future harm to the child's health, addressing these problems individually without reducing the degree of obesity may be an acceptable and positive outcome of an obesity treatment. The reversal of adverse cardiovascular risk markers, such as increased blood pressure or dyslipidemia, is a clinical success, even without a reduction of obesity. Focusing the definition of \u2018success' on the isolated outcome of a statistically significant reduction in some aspect of body size ignores the patient's well-being, emotional status, and the plethora of other obesity-associated problems that are relevant for the health of the child. In biomedical research, study designs can be ranked according to the strength of the evidence they can provide. Depending on the purpose - whether it is providing rapid treatment to a patient or to guiding a systematic review - there are different guidelines available [26]. One commonly used hierarchy ranks study designs based upon their internal validity [27]. Often depicted as a pyramid, RCTs are at the top, cohort studies are in the middle, and at the bottom are case reports [27]. In this scheme, controlled prospective trials in which subjects are not randomly allocated to the intervention but are compared with a control group fit somewhere just below RCTs. Although hierarchies of evidence are convenient groupings of types of studies, they can be overly simplistic and cannot be applied to all situations. For example, it has been shown that well designed observational studies can achieve the same results as a RCT aimed at answering the same question, yet at a lower cost and with faster data collection and analysis [28]. Further, no matter how strong a study design is, the conclusions drawn from it arise from the scientific rigor applied to examining and ruling out other potential causes of the intervention effect. Similarly, even though these hierarchies are useful, they do not imply that the RCT is the best design for all research questions from scientific, practical or even ethical points of view. In biomedical research and for validation purposes before regulatory authorities, the RCT study design is viewed as the superior approach to establish whether an intervention is efficacious or not. Most commonly, one group is assigned to receive the intervention in question, whereas the other group receives a placebo or another treatment modality available in a common setting representing the current \u2018standard of care.' The RCT is well suited to studies of readily identifiable end points, such as pharmaceutical testing and surgical procedures. The design has high internal validity as well as the advantages of minimizing confounding, information and selection bias, and ruling out chance in the findings. Another advantage of this design is that it enhances the comparability of study results, especially if they are reported according to guidelines such as the CONSORT 2010 statement [29]. Inherent to the RCT design, however, is a limited generalizability of the results; a successful study in one setting does not guarantee that it can be replicated under normal conditions in another setting. Despite randomization, this study design does not eliminate confounding, but rather it allows for the measurement of the probability of confounding and thus an assessment of its effect on the outcomes of interest. Further, the RCT is a costly study design, which often limits the number of patients that can be included. This limitation has two consequences. First, a limited number of patients may be insufficient to actually test the effect of the intervention, and second, the inclusion of relatively small numbers of patients reduces the likelihood of observing side effects or complications of the treatment. Consequently, large-scale RCTs are difficult to finance. These limitations of the RCT design are especially relevant in the area of childhood obesity treatment where both the disease and its treatment are complex. In the case of testing childhood obesity treatment programs, the traditional RCT study design is not optimal and may even fail. Allocation into simple treatment modalities does not reflect clinical practice or the true effects of treatment. Childhood obesity is a chronic disease without a well-defined clinical endpoint to evaluate; simply moving from a classification of obese to overweight, reducing BMI z-score, or losing some weight does not represent the end of a treatment requirement by the child. The RCT is not well suited for assessing this type of long-term outcome. In terms of generalizability, there are methodological problems regarding eligibility criteria since most children and youth selected for RCT-based childhood obesity treatment are highly motivated and thus are not comparable to the general population of children and youth who are obese. In addition, recruitment into such studies may be limited by cultural and societal beliefs as well as the level of education of parents [30,31]. Moreover, these studies are typically performed in referral centers that treat children who are severely obese and may not be representative of the typical child who is \u2018mildly obese' or without a myriad of co-morbidities. Aside from the limitations of the traditional RCT design in testing the efficacy of childhood obesity treatment protocols, it also presents an ethical dilemma of what care the control group should receive. In many childhood obesity interventions, the control group receives no treatment, is registered on a waiting list, or receives the standard care that is available at a given time (if indeed such a standard exists). From an ethical perspective, these approaches are problematic. In the era of the childhood obesity epidemic, it is questionable if randomization to no treatment is acceptable. The Helsinki declaration of 2008 states that \u2018\u2026 The benefits, risks burdens and effectiveness of a new intervention must be tested against those of the best current proven intervention except in the following circumstances: The use of placebo, or no treatment, is acceptable in studies where no current proven intervention exists \u2026' [32]. Narrowly interpreted, as there are not yet proven long-term, effective and sustainable interventions for the treatment of childhood obesity [33], a non-treatment control group could be considered as acceptable. Viewed from a broader perspective, however, as there are interventions which produce the target outcome of weight loss or maintenance, even if it is not sustained for the long-term [4], the use of a non-treatment group is not acceptable. If one considers traditional diseases, most ethical committees would object to studies that randomize patients with diseases with known beneficial treatment options (such as cancer, diabetes, tuberculosis etc.) to no treatment. Yet, somehow, these standards are often not applied to childhood obesity. However, in recent years, given the extensive scope of the obesity epidemic and that children are becoming obese at progressively younger ages, many clinicians find this increasingly unethical and thus a violation of the Oath of Hippocrates. As an alternative, subjects in the non-treatment arm of a childhood obesity treatment study should receive, at a minimum, standard care. In this context, since a universally accepted treatment has not been developed, providing it is a challenge. A justifiable approach to treating childhood obesity can consist of a familial approach, using behavior changing techniques, as well as simple advice concerning healthy nutrition and physical activity or inactivity [4,34,35]. The behavioral approach must be accompanied by medical intervention(s) for specific obesity-related co-morbidities, where appropriate. Nonetheless, the definition of standard care remains vague as these elements are often delivered in varying combinations and intensities and in different settings (personal, group, familial approach, or separation of the treatment modalities between patient and family etc.). Further compounding the problem is that in many settings even a minimal level of care for the obese child does not exist - in developed, let alone developing countries. In the evaluation of childhood obesity treatments, an implicit assumption is made that if an intervention is to be declared successful, it should result in a sustained treatment effect. In contrast, this requirement is not met by treatments given for nearly all other pediatric chronic diseases such as asthma, diabetes, or epilepsy. Patients with these serious chronic diseases tend to have relapses, which occur even with continuous medical care, but more rapidly without. Additionally, another challenge in the evaluation of chronic care models is that patients receive complex and individually tailored treatment designs (with varying visit intervals, focus of attention, use of different types of health professionals etc.) that are difficult to evaluate using current designs. Moreover, interventions designed for clinical trials may be much more intensive and costly than what is possible and attainable in normal clinical settings, particularly with regard to time, usage, and funding. The success of interventions such as these, due to their lack of \u2018real life' practicality, can result in frustration for practitioners who are unable to use these methods in their own setting. Unlike typical chronic medical conditions (such as hypertension or type 2 diabetes), the concept of childhood obesity may have cultural elements that should be incorporated and adapted into country-specific treatment and prevention programs - yet this significantly limits head-to-head evaluation of such interventions across Europe in empiric clinical trials. When considering what standard care should consist of, it is worthwhile to remember that childhood obesity is a long-term condition with associated co-morbidities, many of which are not always readily identifiable. It is clear that children with chronic diseases need a relevant diagnosis followed by regular visits to monitor the progression, the emergence of complications, and the treatment responses alongside the continuous treatment given. Such standards are fundamental in good clinical practice. Chronic diseases demand chronic treatment models and need to be evaluated using study designs that can accommodate the complexity of both the disease and its treatment. These prerogatives are obvious and universally accepted in terms of chronic diseases in pediatrics, but not so in relation childhood obesity per se. Therefore, just as with the intervention arm of a trial, the care provided to these children should address these co-morbidities in addition to weight loss or maintenance.If we are to move beyond viewing the traditional RCT as the \u2018gold standard' in the evaluation of childhood obesity treatment programs, other designs must be explored. Such studies do not utilize a traditional RCT design, but rather employ a controlled trial design in which the comparison group is not randomly assigned and is often drawn from a source outside of the study. In this design, the most common sources of control subjects are: i) waiting lists, ii) usual care patients, and iii) a non-treatment group. Although appealing, many of these designs may not yield the comparison group that is expected by the researcher and each has ethical concerns, primarily that children who need treatment do not receive it. Another alternative is \u2018The large simple trial' [36]. In this design, many institutions/doctors join together in different settings so that thousands of patients can be included in a study at a lower cost and with better coverage of potential side effects (than compared with studies of hundreds of patients) [36]. In this case, a detailed recording of the therapeutic approaches, the duration and frequency of visits, health personals involved, and measurement methods have to be performed in order to compare treatments. Thus, to move forward in an ethically responsible manner, RCT trials testing childhood obesity treatments should be based upon comparisons between different therapeutic modalities.Multiple observational studies have been published regarding childhood obesity interventions. Despite the known limitations and biases of such studies, large observational sample evaluations can be used to analyze the effectiveness of pre-defined interventions for specific populations. Based on investigations in other medical fields, using this approach prudently can yield conclusions that are quite similar to those derived from large RCTs [28]Given the ethical considerations, the diversity in the obesity phenotypes that require complex and individualized treatment strategies as well as the long-term follow-up, the traditional RCT is not ideally suited for testing the efficacy of childhood obesity treatments. It is timely that the research community shift towards accepting study designs that demonstrate the plausibility of an intervention rather than just a probability statement derived from a RCT. \u2018Plausibility' refers to whether the intervention had an effect beyond what can be attributed to other external factors [37]. To make a strong plausibility statement, a control group still is required for comparison, but there is not a requirement that subjects are randomized to it. The commonly used sources (e.g. historical cohorts, waiting lists) can be used. A weaker statement can be made even if a control group is not used. Plausibility statements arise from the scientific rigor applied to examining and ruling out other potential causes for the treatment effect. Equally, the transparency of reports must increase, and the use of the CONSORT 2010 statement [29] would achieve this. Childhood obesity is a complex condition with a multitude of causes and complications (some of which are not readily identifiable); thus relying only upon tests of probability as the sole criteria for establishing that an intervention was successful is not reasonable. It is time that results derived from adequately designed studies that use observational designs aimed at making causal statements are accepted. Given these constraints, this study design may be the only practical and ethical design option to answer clinical questions relevant to specific populations in obesity is a chronic condition with late clinical many of are to the effectiveness of interventions in This can be using RCTs and is unethical for the arm of such In the evaluation of childhood obesity treatments it is time to move beyond viewing the RCT as the study design in terms of treatment of clinically relevant childhood obesity. It is not well suited to test the complex and chronic care required to treat these and if the control group is randomized to no treatment at it is The time has to standard care to all children who are obese and to evaluate treatment protocols by in terms of their children and who are obese both need and care. of to",
+      "venue": "Obesity Facts",
+      "citation_count": 593,
+      "doi": "10.1159/000365773",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1159/000365773",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2150075335",
+      "title": "STUDENT RETENTION OF COURSE CONTENT IS IMPROVED BY COLLABORATIVE-GROUP TESTING",
+      "authors": [
+        {
+          "name": "Ronald N. Cortright",
+          "affiliation": "East Carolina University"
+        },
+        {
+          "name": "Heidi L. Collins",
+          "affiliation": "Wayne State University"
+        },
+        {
+          "name": "David W. Rodenbaugh",
+          "affiliation": "Wayne State University"
+        },
+        {
+          "name": "Stephen E. DiCarlo",
+          "affiliation": "Wayne State University"
+        }
+      ],
+      "year": 2003,
+      "abstract": "We recently reported that collaborative testing (i.e., group test taking) increased student performance on quizzes. It is unknown, however, whether collaborative testing improves student retention of course content. Therefore, this study was designed to test the hypotheses that collaborative-group testing improves student retention of course content. To test this hypothesis, our undergraduate exercise physiology class of 38 students was randomly divided into two groups: group A (n = 19) and group B (n = 19). During exam 1, students from both groups answered questions in the traditional format as individuals. Immediately after completing the exam as individuals, students from group A answered a randomly selected subset of questions from exam 1 in groups of two (1 group had 3 students) to test the effectiveness of collaborative-group testing on test performance and level of student retention. On the next exam (exam 2, 4 wk later), students from both groups answered questions in the traditional format as individuals and responded to the same subset of questions from exam 1. The subset of questions was analyzed to determine the level of retention of the original test material. In addition, immediately after completing the exam as individuals, students from group B answered a randomly selected subset of questions from exam 2 in groups of two (1 group had 3 students). Finally, on the next exam (exam 3, 4 wk later), students from both groups answered questions in the traditional format as individuals and responded to the same subset of questions from exam 2. This protocol followed a randomized crossover design to control for time and order effects. Student retention of course content was reduced when students completed the original examinations individually. In sharp contrast, student retention was improved (P < 0.05) when students completed the original examinations in groups. Results suggest that collaborative testing is an effective strategy to enhance learning and increase student retention of course content.",
+      "venue": "AJP Advances in Physiology Education",
+      "citation_count": 215,
+      "doi": "10.1152/advan.00041.2002",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1152/advan.00041.2002",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W3022903699",
+      "title": "The PRISMA Statement for Reporting Systematic Reviews and Meta-Analyses of Studies That Evaluate Health Care Interventions: Explanation and Elaboration",
+      "authors": [
+        {
+          "name": "Alessandro Liberati",
+          "affiliation": "University of Modena and Reggio Emilia"
+        },
+        {
+          "name": "Douglas G. Altman",
+          "affiliation": "University of Oxford"
+        },
+        {
+          "name": "Jennifer Tetzlaff",
+          "affiliation": "Ottawa Hospital"
+        },
+        {
+          "name": "Cynthia D. Mulrow",
+          "affiliation": ""
+        },
+        {
+          "name": "Peter C G\u00f8tzsche",
+          "affiliation": "Cochrane"
+        },
+        {
+          "name": "John P. A. Ioannidis",
+          "affiliation": "University of Ioannina"
+        },
+        {
+          "name": "Mike Clarke",
+          "affiliation": "Trinity College Dublin"
+        },
+        {
+          "name": "P.J. Devereaux",
+          "affiliation": "McMaster University"
+        },
+        {
+          "name": "Jos Kleijnen",
+          "affiliation": "Maastricht University"
+        },
+        {
+          "name": "David Moher",
+          "affiliation": "Ottawa Hospital"
+        }
+      ],
+      "year": 2009,
+      "abstract": "Systematic reviews and meta-analyses are essential to summarize evidence relating to efficacy and safety of health care interventions accurately and reliably. The clarity and transparency of these reports, however, is not optimal. Poor reporting of systematic reviews diminishes their value to clinicians, policy makers, and other users.Since the development of the QUOROM (QUality Of Reporting Of Meta-analysis) Statement--a reporting guideline published in 1999--there have been several conceptual, methodological, and practical advances regarding the conduct and reporting of systematic reviews and meta-analyses. Also, reviews of published systematic reviews have found that key information about these studies is often poorly reported. Realizing these issues, an international group that included experienced authors and methodologists developed PRISMA (Preferred Reporting Items for Systematic reviews and Meta-Analyses) as an evolution of the original QUOROM guideline for systematic reviews and meta-analyses of evaluations of health care interventions.The PRISMA Statement consists of a 27-item checklist and a four-phase flow diagram. The checklist includes items deemed essential for transparent reporting of a systematic review. In this Explanation and Elaboration document, we explain the meaning and rationale for each checklist item. For each item, we include an example of good reporting and, where possible, references to relevant empirical studies and methodological literature. The PRISMA Statement, this document, and the associated Web site (http://www.prisma-statement.org/) should be helpful resources to improve reporting of systematic reviews and meta-analyses.",
+      "venue": "PLoS Medicine",
+      "citation_count": 27700,
+      "doi": "10.1371/journal.pmed.1000100",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1371/journal.pmed.1000100",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2042998208",
+      "title": "Muscle inflammatory cells after passive stretches, isometric contractions, and lengthening contractions",
+      "authors": [
+        {
+          "name": "Francis X. Pizza",
+          "affiliation": "University of Toledo"
+        },
+        {
+          "name": "Timothy J. Koh",
+          "affiliation": "University of Michigan\u2013Ann Arbor"
+        },
+        {
+          "name": "Stephen J. McGregor",
+          "affiliation": "University of Toledo"
+        },
+        {
+          "name": "Susan V. Brooks",
+          "affiliation": "University of Michigan\u2013Ann Arbor"
+        }
+      ],
+      "year": 2002,
+      "abstract": "We tested the hypotheses that lengthening contractions, isometric contractions, and passive stretches increase muscle inflammatory cells (neutrophils and macrophages) and that prior conditioning with lengthening contractions, isometric contractions, or passive stretches reduces neutrophils and macrophages after subsequent lengthening contractions. Extensor digitorum longus muscles in anesthetized mice were subjected in situ to lengthening contractions, isometric contractions, or passive stretches. Six hours or 3 days after a protocol of contractions or passive stretches, neutrophils and macrophages were quantified in muscle cross sections. Three days after isometric contractions or passive stretches, neutrophils were elevated (P < 0.05) 3.7- and 5.5-fold, respectively, relative to controls. Both macrophages and neutrophils were increased 51.2- and 7.9-fold, respectively, after lengthening contractions. Prior lengthening contractions, isometric contractions, or passive stretches reduced inflammatory cells after lengthening contractions performed 2 wk later. The major finding of this study was that passive stretches and isometric contractions elevated neutrophils without causing overt signs of injury. Because both passive stretches and isometric contractions elevated neutrophils and afforded some protection from contraction-induced muscle injury, neutrophils and/or the related inflammatory events may contribute to the induction of a protective mechanism.",
+      "venue": "Journal of Applied Physiology",
+      "citation_count": 188,
+      "doi": "10.1152/japplphysiol.01055.2001",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1152/japplphysiol.01055.2001",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2144981148",
+      "title": "Why Most Published Research Findings Are False",
+      "authors": [
+        {
+          "name": "John P. A. Ioannidis",
+          "affiliation": "University of Ioannina"
+        }
+      ],
+      "year": 2005,
+      "abstract": "There is increasing concern that most current published research findings are false. The probability that a research claim is true may depend on study power and bias, the number of other studies on the same question, and, importantly, the ratio of true to no relationships among the relationships probed in each scientific field. In this framework, a research finding is less likely to be true when the studies conducted in a field are smaller; when effect sizes are smaller; when there is a greater number and lesser preselection of tested relationships; where there is greater flexibility in designs, definitions, outcomes, and analytical modes; when there is greater financial and other interest and prejudice; and when more teams are involved in a scientific field in chase of statistical significance. Simulations show that for most study designs and settings, it is more likely for a research claim to be false than true. Moreover, for many current scientific fields, claimed research findings may often be simply accurate measures of the prevailing bias. In this essay, I discuss the implications of these problems for the conduct and interpretation of research.",
+      "venue": "PLoS Medicine",
+      "citation_count": 10337,
+      "doi": "10.1371/journal.pmed.0020124",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1371/journal.pmed.0020124",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W1572284155",
+      "title": "Understanding Work-Related Upper Extremity Disorders: Clinical Findings in 485 Computer Users, Musicians, and Others",
+      "authors": [
+        {
+          "name": "Emil F. Pascarelli",
+          "affiliation": "Columbia University"
+        },
+        {
+          "name": "Yu-Pin Hsu",
+          "affiliation": "Columbia University"
+        }
+      ],
+      "year": 2001,
+      "abstract": "",
+      "venue": "Journal of Occupational Rehabilitation",
+      "citation_count": 216,
+      "doi": "10.1023/a:1016647923501",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1023/a:1016647923501",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2139906193",
+      "title": "Skin blood flow and local temperature independently modify sweat rate during passive heat stress in humans",
+      "authors": [
+        {
+          "name": "Jonathan E. Wingo",
+          "affiliation": "Institute for Exercise and Environmental Medicine"
+        },
+        {
+          "name": "David A. Low",
+          "affiliation": "Presbyterian Hospital"
+        },
+        {
+          "name": "David M. Keller",
+          "affiliation": "The University of Texas Southwestern Medical Center"
+        },
+        {
+          "name": "R. Matthew Brothers",
+          "affiliation": "Institute for Exercise and Environmental Medicine"
+        },
+        {
+          "name": "Manabu Shibasaki",
+          "affiliation": "Nara Women's University"
+        },
+        {
+          "name": "Craig G. Crandall",
+          "affiliation": "Presbyterian Hospital"
+        }
+      ],
+      "year": 2010,
+      "abstract": "Sweat rate (SR) is reduced in locally cooled skin, which may result from decreased temperature and/or parallel reductions in skin blood flow. The purpose of this study was to test the hypotheses that decreased skin blood flow and decreased local temperature each independently attenuate sweating. In protocols I and II, eight subjects rested supine while wearing a water-perfused suit for the control of whole body skin and internal temperatures. While 34\u00b0C water perfused the suit, four microdialysis membranes were placed in posterior forearm skin not covered by the suit to manipulate skin blood flow using vasoactive agents. Each site was instrumented for control of local temperature and measurement of local SR (capacitance hygrometry) and skin blood flow (laser-Doppler flowmetry). In protocol I, two sites received norepinephrine to reduce skin blood flow, while two sites received Ringer solution (control). All sites were maintained at 34\u00b0C. In protocol II, all sites received 28 mM sodium nitroprusside to equalize skin blood flow between sites before local cooling to 20\u00b0C (2 sites) or maintenance at 34\u00b0C (2 sites). In both protocols, individuals were then passively heated to increase core temperature ~1\u00b0C. Both decreased skin blood flow and decreased local temperature attenuated the slope of the SR to mean body temperature relationship (2.0 \u00b1 1.2 vs. 1.0 \u00b1 0.7 mg\u00b7cm(-2)\u00b7min(-1)\u00b7\u00b0C(-1) for the effect of decreased skin blood flow, P = 0.01; 1.2 \u00b1 0.9 vs. 0.07 \u00b1 0.05 mg\u00b7cm(-2)\u00b7min(-1)\u00b7\u00b0C(-1) for the effect of decreased local temperature, P = 0.02). Furthermore, local cooling delayed the onset of sweating (mean body temperature of 37.5 \u00b1 0.4 vs. 37.6 \u00b1 0.4\u00b0C, P = 0.03). These data demonstrate that local cooling attenuates sweating by independent effects of decreased skin blood flow and decreased local skin temperature.",
+      "venue": "Journal of Applied Physiology",
+      "citation_count": 124,
+      "doi": "10.1152/japplphysiol.00646.2010",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1152/japplphysiol.00646.2010",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2018838463",
+      "title": "The Genotype-Tissue Expression (GTEx) project.",
+      "authors": [
+        {
+          "name": "John T. Lonsdale",
+          "affiliation": ""
+        }
+      ],
+      "year": 2013,
+      "abstract": "Genome-wide association studies have identified thousands of loci for common diseases, but, for the majority of these, the mechanisms underlying disease susceptibility remain unknown. Most associated variants are not correlated with protein-coding changes, suggesting that polymorphisms in regulatory regions probably contribute to many disease phenotypes. Here we describe the Genotype-Tissue Expression (GTEx) project, which will establish a resource database and associated tissue bank for the scientific community to study the relationship between genetic variation and gene expression in human tissues.",
+      "venue": "PubMed",
+      "citation_count": 9850,
+      "doi": "10.1038/ng.2653",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1038/ng.2653",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2134833483",
+      "title": "The PRISMA statement for reporting systematic reviews and meta-analyses of studies that evaluate healthcare interventions: explanation and elaboration",
+      "authors": [
+        {
+          "name": "A. Liberati",
+          "affiliation": "Mario Negri Institute for Pharmacological Research"
+        },
+        {
+          "name": "Doug Altman",
+          "affiliation": "University of Oxford"
+        },
+        {
+          "name": "Jennifer Tetzlaff",
+          "affiliation": "Ottawa Hospital Research Institute"
+        },
+        {
+          "name": "Cynthia D. Mulrow",
+          "affiliation": ""
+        },
+        {
+          "name": "Peter C G\u00f8tzsche",
+          "affiliation": "Cochrane"
+        },
+        {
+          "name": "John P. A. Ioannidis",
+          "affiliation": "University of Ioannina"
+        },
+        {
+          "name": "Mike Clarke",
+          "affiliation": "Cochrane"
+        },
+        {
+          "name": "P.J. Devereaux",
+          "affiliation": "McMaster University"
+        },
+        {
+          "name": "Jos Kleijnen",
+          "affiliation": "Maastricht University"
+        },
+        {
+          "name": "David Moher",
+          "affiliation": "Ottawa Hospital"
+        }
+      ],
+      "year": 2009,
+      "abstract": "Systematic reviews and meta-analyses are essential to summarise evidence relating to efficacy and safety of healthcare interventions accurately and reliably. The clarity and transparency of these reports, however, are not optimal. Poor reporting of systematic reviews diminishes their value to clinicians, policy makers, and other users. Since the development of the QUOROM (quality of reporting of meta-analysis) statement-a reporting guideline published in 1999-there have been several conceptual, methodological, and practical advances regarding the conduct and reporting of systematic reviews and meta-analyses. Also, reviews of published systematic reviews have found that key information about these studies is often poorly reported. Realising these issues, an international group that included experienced authors and methodologists developed PRISMA (preferred reporting items for systematic reviews and meta-analyses) as an evolution of the original QUOROM guideline for systematic reviews and meta-analyses of evaluations of health care interventions. The PRISMA statement consists of a 27-item checklist and a four-phase flow diagram. The checklist includes items deemed essential for transparent reporting of a systematic review. In this explanation and elaboration document, we explain the meaning and rationale for each checklist item. For each item, we include an example of good reporting and, where possible, references to relevant empirical studies and methodological literature. The PRISMA statement, this document, and the associated website (www.prisma-statement.org/) should be helpful resources to improve reporting of systematic reviews and meta-analyses.",
+      "venue": "BMJ",
+      "citation_count": 17429,
+      "doi": "10.1136/bmj.b2700",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1136/bmj.b2700",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2056279562",
+      "title": "phyloseq: An R Package for Reproducible Interactive Analysis and Graphics of Microbiome Census Data",
+      "authors": [
+        {
+          "name": "Paul J. McMurdie",
+          "affiliation": "Stanford University"
+        },
+        {
+          "name": "Susan Holmes",
+          "affiliation": "Stanford University"
+        }
+      ],
+      "year": 2013,
+      "abstract": "The phyloseq project for R is a new open-source software package, freely available on the web from both GitHub and Bioconductor.",
+      "venue": "PLoS ONE",
+      "citation_count": 21750,
+      "doi": "10.1371/journal.pone.0061217",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1371/journal.pone.0061217",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W4232249876",
+      "title": "Guidelines for good pharmacoepidemiology practice (GPP)",
+      "authors": [
+        {
+          "name": "",
+          "affiliation": ""
+        }
+      ],
+      "year": 2015,
+      "abstract": "Pharmacoepidemiologic studies provide valuable information about the health effects of healthcare products. The ISPE Guidelines for Good Pharmacoepidemiology Practice (GPP) are intended to assist investigators with issues pertaining to the planning, conduct, and interpretation of pharmacoepidemiologic research. This paper represents the fourth version and supersedes previous versions. While the overall structure and nature of the GPP has been preserved in the current revision, new sections have been added, and the text has been updated to reflect current practice. Pharmacoepidemiology is being used increasingly to evaluate health care systems, interventions, and health-related behaviors. Pharmacoepidemiology is the scientific backbone of therapeutic risk management\u2014the process of assessing a product's benefits and risks, and developing, implementing, and evaluating strategies to enhance the overall balance of such benefits and risks. Pharmacoepidemiology is also the scientific backbone of comparative effectiveness research (CER). These guidelines are intended to address these activities and other pharmacoepidemiologic studies. The GPP propose essential practices and procedures that should be considered to help ensure the quality and integrity of pharmacoepidemiologic research and to provide adequate documentation of research methods and results. The GPP do not prescribe specific research methods nor will adherence to guidelines guarantee valid research. The GPP are intended to apply broadly to all types of pharmacoepidemiologic research, including feasibility assessments, validation studies, descriptive studies, and etiologic investigations, and all of their related activities from design through publication. Therapeutic risk management activities provide a formal framework in which medicine, pharmacoepidemiology, and public health are integrated in the development and life-cycle management of healthcare products. Pharmacoepidemiology is the core science of risk assessment and the evaluation of the effectiveness of risk minimization interventions. Therefore, the GPP also support risk management activities. In a similar fashion, pharmacoepidemiology is the core discipline of CER. Such activities are based on problems from clinical medicine, by using rigorous methods to compare the outcomes of two or more therapeutic alternatives. Thereby, comparative effectiveness activities are defined by their research questions rather than by their methods. a statement of research objectives, specific aims, and rationale; Research objectives describe the knowledge or information to be gained from the study. Specific aims list key exposures and outcomes of interest, and any hypotheses to be evaluated. The protocol should distinguish between a limited number of a priori research hypotheses and hypotheses that are generated based on knowledge of the source data. The rationale explains how achievement of the specific aims will further the research objectives. The research question may be phrased by using the PICOT template; population, intervention, comparator, outcome, and timing. a critical review of the literature to evaluate pertinent information and gaps in knowledge; The literature review should describe specific gaps in knowledge that the study is intended to fill. The literature review might encompass relevant animal and human experiments, clinical studies, vital statistics, and previous epidemiologic studies. The literature review should also cite the findings of similar studies, and the expected contribution of the current study. the overall research design and reasons for choosing the proposed study design; Research designs include, for example, case\u2013control, cohort, cross-sectional, nested case\u2013control, self-controlled, randomized trials or hybrid designs. Any feasibility or pilot work that informed the choice of design should be described here. the population or sample to be studied; The population is defined in terms of persons, place, time period, and selection criteria. The rationale for the inclusion and exclusion criteria and their impact on the number of subjects available for analysis should be described, if known. If any sampling from a defined population is undertaken, description of the population and details of sampling methods should be provided. Some justification should be given to support that the necessary study size is actually attainable from the given data source or design. This could be data from informal queries or pilot studies. Considerations of generalizability from the study population to those actually receiving the drug may be voiced here. the strategies and data sources for determining exposures, health outcomes, and all other variables relevant to the study objectives, such as potential confounding variables and effect measure modifiers; Data sources might include, for example, questionnaires, hospital discharge files, abstracts of primary clinical records, clinical databases, electronic medical records, ad hoc data collection, administrative records such as eligibility files, prescription drug files, biological measurements, exposure/work history record reviews, or exposure/disease registries. If the study uses secondary data, the name of the data source should be included (e.g., Medicare, CPRD, and MarketScan). Use validated instruments and measures whenever such exist and describe the validation method and summarize what is known about the completeness and validity of those instruments and measures. If data collection methods or instruments will be tested in a pilot study, plans for the pilot study should be described. Any procedures to be used to validate diagnosis should be described. clear operational definitions of disease state, exposures, health outcomes, and other measured risk factors for outcome; An operational definition is one that can be implemented independently using the data available in the proposed study. For example \u201cpneumocystis carinii pneumonia, episode\u201d is not an operational definition; a better description would be \u201chospitalization with a principal discharge diagnosis of ICD-9-CM code 136.3.\u201d If complex algorithms are used to establish exposure or health status, they should be described or referenced. projected study size, statistical precision, and the basis for their determination; Describe the relation between the specific aims of the study and the projected study size in relation to each outcome. In most circumstances, it is desirable to express study goals in terms of precision sought for study estimates rather than statistical power. For safety studies, it may be useful to specify the sample size that can minimally detect a pre-specified risk with a pre-specified power, for example, \u201cthe study has an 80% power to detect a relative risk of 3 or greater for drug x compared with treatment with other drugs commonly used in this condition.\u201d For descriptive studies, for example, studies on drug utilization, where the result is a measure of frequency rather than of association, the protocol might specify the expected precision of these frequency estimates, if possible. methods used in assembling the study data; This should include a description of, or reference to, any pre-testing procedures for research instruments and any manuals and formal training to be provided to interviewers, abstractors, coders, or data entry personnel. This should also include procedures for linkage and data mining of administrative databases. If data are validated, methods should mentioned, for example, review of ICD codes. procedures for data management; Describe data management and statistical software programs and hardware to be used in the study. Describe data preparation as well as the methods for data retrieval and collection. Data management also includes methods used to correct inconsistencies or errors, impute values, or modify raw data. methods for data analysis; Data analysis comprises comparisons and methods for analyzing and presenting results, categorizations, and procedures to control sources of bias and their influence on results, for example, possible impact of biases due to selection bias, misclassification, confounding, and missing data. For instance, the statistical procedures to be applied to the data to obtain point estimates and confidence intervals of measures of occurrence or association should be presented. Any sensitivity analyses should be described.Details of the statistical analysis may be specified later, but before analysis begins, as part of a protocol amendment to the study protocol, or more typically as a separate document, usually referred to as a Statistical Analysis Plan. See Analysis under Study Conduct section. a description of quality assurance and quality control procedures for all phases of the study; Mechanisms to ensure data quality and integrity should be described or referenced if the mechanisms are published elsewhere (e.g., when publications describing procedures for existing data collection systems are published or in the public domain), including abstraction of original documents, extent of source data verification, validation of endpoints, and revision and oversight of programming. As appropriate, include certification and/or qualifications of any supporting laboratory or research groups. limitations or strengths of the study design, data sources, and analytic methods; At a minimum, issues relating to confounding, misclassification, selection bias, generalizability, and random error should be considered. The likely success of efforts taken to reduce errors should be discussed. a description of plans for protecting human subjects; This section should include information about whether study subjects will be placed at risk as a result of the study, provisions for maintaining confidentiality of information on study subjects, and potential circumstances and safeguards under which identifiable personal information may be provided to entities outside the study. Conditions under which a clinical trial would be terminated for ethical reasons (stopping rules) should be described. Procedures for monitoring results should be described, and the use of a Data Safety Monitoring Board for clinical trials should be considered for this purpose. The need for submitting the protocol to an Institutional Review Board (IRB)/Independent Ethics Committee and the requirement of informed consent should be considered in accordance with local law. Research using de-identified data from commercially or publically available secondary data sources represents the lowest risk to potential subjects because it involves the collection of anonymous or publically available data. These studies therefore may not require IRB review in all jurisdictions if the study meets other legal and regulatory requirements for the protection of human subjects. If the study is categorized as exempt from IRB review, this should be stated and duly referenced in the protocol. Further, if the investigator's sponsoring institution (e.g., university) or owner of the data source requires the registration and/or ethical review of all research, including \u201cexempt from human subjects research,\u201d this should also be stated. See section on Protection of human subjects. a description of plans for disseminating and communicating study results, including the presence or absence of any restrictions on the extent and timing of publication; There is an ethical obligation to disseminate findings of potential scientific or public health importance (e.g., results pertaining to the safety of a marketed medication). Authorship should follow guidelines established by the International Committee of Medical Journal Editors (http://www.icmje.org/). See also Communication section. dated amendments to the protocol; Significant deviations from the protocol, such as any changes in the population or sample that were implemented after the beginning of the study, along with the rationale, should be documented in writing. Any changes made after data analysis has begun should be documented as such and the rationale provided. archiving or registration of protocol; ISPE endorses the opportunity to register and publicly disclose hypothesis-driven pharmacoepidemiology research protocols in a suitable public site, such as the ENCePP registry (also currently functioning as the EU PAS Register) or ClinicalTrials.gov. If it is chosen, registration and disclosure should be permanent, without the option to retract the protocol. If possible, the researcher may choose to register a protocol with a published timetable for its later disclosure, rather than immediately disclose the protocol at the time of registration. This delay may be scientifically appropriate to avoid the potential for recall or other bias resulting from study participants' knowledge of the study hypothesis, such as in a case control study collecting data on past exposures. The procedures for protocol registration should also include a mechanism for amendment of previously posted protocols. In the registration statement, the investigators should declare the extent to which they were aware, through advance exploratory analyses, of the likely ultimate findings of the study at the time that the protocol is submitted. exceptions from overall protocol requirement; Active surveillance of medical products seeks to proactively identify suspected or unanticipated medical product-associated adverse events. The primary goal of active surveillance is to identify potential safety signals quickly. While these active surveillance activities generally employ sound design and analytic approaches, they are often not fully specified, protocol-driven analyses. As part of surveillance, identified safety alerts undergo further investigations using methods that are tailored to specific product\u2013outcome pairs. If a protocol-driven assessment is deemed necessary to confirm or refute the safety signal, the analysis should follow the GPP to the extent possible. The organization(s) and individual(s) conducting and sponsoring the research shall be fully responsible for the research. The relationship, roles, and responsibilities of the organizations and/or individuals conducting and sponsoring the study should be described. The individuals responsible for pharmacoepidemiologic research, along with the type of expertise and autonomy in conducting the research, should be stated clearly. For projects sponsored by one organization (such as a pharmaceutical company or government agency) but implemented by another (e.g., an academic institution or a contract research organization [CRO]), responsibility for scientific integrity is shared by the collaborating institutions (e.g., sponsor, the principal investigator conducting the study, the senior qualified epidemiology staff within the CRO, and the organization that employs the principal investigator). In such situations of shared responsibility, contractual arrangements should include a timeline for study completion and potential actions to be taken if the timeline cannot be met. In particular, the contract should delineate the roles and responsibilities to be assumed by the study sponsor and the contractor(s) in communicating various aspects of the study as well as data access, ownership, and archiving. Personnel engaged in epidemiologic research and related activities should have the education, training, or experience necessary to perform the assigned functions competently. The organization should maintain a current summary of training and experience of these personnel. A list of individuals engaged in or supervising activities should be maintained and updated periodically with current job titles. Adequate physical facilities shall be provided to all those engaged in epidemiologic research and related activities. Suitable storage facilities shall be available to maintain technical records in a secure and confidential environment in compliance with local regulations. For the purposes of ensuring and documenting the contractor's conformance with the GPP, it is recommended that the study sponsor have the right during the course of the study, and for a reasonable period following completion of the study, to inspect the contractor's facilities, including equipment, technical record, programming, and records relating to the work conducted under the sponsor's contract. The nature of the audit, including procedures that ensure patient confidentiality, should be agreed upon at the outset of any contract. The principal investigator shall be responsible for the overall content of the research project, including the day-to-day conduct of the study, interpretation of the study data, and preparation and publication of the final report. These responsibilities extend to all aspects of the study, including periodic reporting of study progress as well as quality assurance. The unusual decision to terminate a study prematurely should be taken with great caution and should be based on good scientific and ethical reasons and documented in writing. There may be rare instances in which administrative reasons require study termination. Investigators and sponsors should specify and agree in advance about the circumstances under which the study could be terminated early. Included should be a mechanism for resolution of any disagreement. Approval by an IRB, Independent Ethics Committee, or other appropriate body, should be obtained for all research involving human subjects. Studies using commercially or publically available de-identified secondary data sources, or which meet certain other criteria, are not considered research involving human subjects in some countries and may be exempt from IRB review. Informed consent beyond that already obtained for participants in a research database may be needed when the research imposes a risk for patients or data containing personal identifiers is required by the investigator (e.g., medical record). The legal definition of a personal identifier varies across countries; therefore, national and local laws should be consulted when proposing to obtain this type of data. In some circumstances, and in some countries, disclosure of relevant personal medical information (e.g., medical record) without consent is permissible under public health laws, for example, when government organizations conduct infectious disease surveillance or monitoring and reporting adverse drug reactions through secondary data sources (see section on Protocol Development, N on Active Surveillance). Investigators shall ensure that personal identifiers will be removed from any study files that are accessible to non-study personnel in accordance with applicable laws and regulations. Whenever feasible, study files should be coded and stripped of personal identifiers, and code keys should be stored separate from study files. All personnel with access to data containing personal identifiers should sign a pledge to maintain the confidentiality of study subjects. For additional information, please consult the ISPE guidelines on Data Privacy, Medical Record Confidentiality, and Research in the Interest of Public Health (http://www.pharmacoepi.org/resources/privacy.cfm). Blood and serum sample collections stored after completion of clinical studies are a valuable resource. However, protecting confidentiality in such data requires special consideration, and investigators are encouraged to consult guidelines developed by the NHLBI.1 All data collected for the study should be recorded accurately, promptly, and legibly. The individual(s) responsible for the integrity of the data, computerized or hard copy, shall be identified and shall have the education, training, and experience needed to perform the assigned tasks. All procedures used to obtain, verify, and promote the quality and integrity of the data should be recorded in sufficient detail so that others can replicate them. A historical file of these procedures shall be maintained, including all revisions and the dates of such revisions. Any changes in data entries shall be documented. For any endpoint or covariate status ascertainment (in a cohort study or trial) or exposure ascertainment (in a case\u2013control study) that requires adjudication, all measures taken to assure blinding of the adjudicators to the exposure (cohort) or outcome (case\u2013control) status of the subject should be outlined in the protocol. Documentation of these measures needs to be maintained with the data files throughout the course of the study and archiving period. Security of the data should be maintained at all times. Access should be limited to authorized individuals. Control systems, such as document encryption, should be used to ensure the authenticity, integrity, and confidentiality of electronic records when transmitted over open networks (e.g., the Internet). Adequate back up of the data should be maintained throughout the course of the study. The analysis should be directed toward the unbiased estimation of the epidemiologic parameters of interest (e.g., risk or rate differences and risk or rate ratios). The precision of effect estimates should be quantified using confidence intervals. Comparability of populations for pooled estimates should be assured, and missing of important variables should be addressed. Interpretation of statistical measures, including confidence intervals, should be tempered with appropriate judgment and acknowledgements of potential sources of error and limitations of the analysis and should never be taken as the sole or basis for that is or is not a relation between an exposure and outcome. analyses should be conducted to the effect of critical of the Describe the need and of an or analysis when If the of such be pre-specified in the study protocol. studies shall be in a final that the study objectives, results, strengths and limitations of the study, and interpretation of the organization and its if is shall procedures under which of the conduct, results, and interpretation of an epidemiologic study will including what individuals with the research These individuals should include the principal study and/or the This may be documented in the of a company in the study protocol, or through contractual ISPE communicating estimates of epidemiologic measures, generally by using point estimates and confidence intervals, or is useful in reporting results of safety studies to include the relative and risk Investigators should not about based on the outcome of a of (e.g., a or a statement about the confidence including or not including the There is an ethical obligation to disseminate findings of potential scientific or public health For findings that could have a impact on public may be as well as ethical to the results immediately to the appropriate regulatory shall be informed of study results in a by publication in the scientific literature and at scientific or at should not be considered as a for publication in the Authorship of study should follow the guidelines established by the International Committee of Medical Journal Editors (http://www.icmje.org/). All should meet the criteria for and all meet the criteria should be of interest, and should be to to these guidelines should be described in the protocol. research sponsors shall be informed of study results in a that with local regulatory of research including and of should be whether results are or in writing. Pharmacoepidemiologic studies are usually to the relation between certain exposures and health based on comparisons of the frequency in with and without the exposure of interest statistical analyses analytic The primary goal of these analytic studies is to whether a drug exposure the risk of an adverse or protection Therefore, assessment and reporting of if scientific to this For primary data collection studies, reporting of adverse is required by in most information on suspected adverse may be identified during the course of a study, but not as a formal part of the study objectives, procedures for and reporting of safety information in the study should be defined by the sponsor and research at the time of protocol For specific relevant regulatory should be consulted analysis of electronic healthcare may also identify an in risk with a Such studies may be as study but do not require reporting of adverse or adverse data source studies that include medical record or text review by a human for example, studies in which endpoint validation is using medical record review, are an These studies are generally required to adverse drug reactions documented in the medical text If reporting requirements the protocol should specify what data are being collected and how they will be of whether reporting requirements sponsors should findings of their analytic studies in as study be maintained for the storage and retrieval of all study related An shall be to identify the to identify their and to identify by name and any that by their nature are not in the study Access to the shall be and limited to authorized personnel procedures may be necessary to ensure that access to confidential information is limited and that the confidentiality of information about study subjects is pertaining to the study, informed consent of all relevant of IRB and other and of all quality assurance and Communication of study results to the sponsor, and scientific should be for example, questionnaires, and of relevant information and other important guidelines for pharmacoepidemiology research. This list is not to be but an of important guidelines available at the time of the GPP",
+      "venue": "Pharmacoepidemiology and Drug Safety",
+      "citation_count": 275,
+      "doi": "10.1002/pds.3891",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1002/pds.3891",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W1852411954",
+      "title": "State-Dependent Partial Occlusion of Cortical LTP-Like Plasticity in Major Depression",
+      "authors": [
+        {
+          "name": "Marion K\u00fchn",
+          "affiliation": "University Medical Center Freiburg"
+        },
+        {
+          "name": "F Mainberger",
+          "affiliation": "University Medical Center Freiburg"
+        },
+        {
+          "name": "Bernd Feige",
+          "affiliation": "University Medical Center Freiburg"
+        },
+        {
+          "name": "Jonathan G. Maier",
+          "affiliation": "University Medical Center Freiburg"
+        },
+        {
+          "name": "Volker Mall",
+          "affiliation": "Technical University of Munich"
+        },
+        {
+          "name": "Nicolai H Jung",
+          "affiliation": "Technical University of Munich"
+        },
+        {
+          "name": "Janine Reis",
+          "affiliation": "University Medical Center Freiburg"
+        },
+        {
+          "name": "Stefan Kl\u00f6ppel",
+          "affiliation": "University Medical Center Freiburg"
+        },
+        {
+          "name": "Claus Normann",
+          "affiliation": "University Medical Center Freiburg"
+        },
+        {
+          "name": "Christoph Nissen",
+          "affiliation": "University Medical Center Freiburg"
+        }
+      ],
+      "year": 2015,
+      "abstract": "",
+      "venue": "Neuropsychopharmacology",
+      "citation_count": 79,
+      "doi": "10.1038/npp.2015.310",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1038/npp.2015.310",
+      "source": "openalex",
+      "_bibtex_override": ""
+    }
+  ]
+}

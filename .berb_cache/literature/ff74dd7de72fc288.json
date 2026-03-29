@@ -1,0 +1,7 @@
+{
+  "query": "Test research topic",
+  "source": "semantic_scholar",
+  "limit": 15,
+  "timestamp": 1774735282.379162,
+  "papers": []
+}

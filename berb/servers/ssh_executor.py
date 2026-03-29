@@ -12,6 +12,9 @@ from berb.servers.registry import ServerEntry
 
 logger = logging.getLogger(__name__)
 
+# P1 FIX: Use accept-new for host key verification (more secure than no)
+_SSH_OPTS = "ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new"
+
 
 class SSHExecutor:
     """Execute experiments on remote servers via SSH/rsync."""
@@ -27,7 +30,7 @@ class SSHExecutor:
         logger.info("Uploading %s -> %s", local, remote)
         proc = await asyncio.create_subprocess_exec(
             "rsync", "-az", "--delete",
-            "-e", "ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no",
+            "-e", _SSH_OPTS,
             local, remote,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
@@ -45,8 +48,9 @@ class SSHExecutor:
         """Run an experiment command on the remote server."""
         full_cmd = f"cd {shlex.quote(remote_dir)} && {command}"
         logger.info("Running on %s: %s", self.host, full_cmd)
+        # P1 FIX: Use accept-new for host key verification
         proc = await asyncio.create_subprocess_exec(
-            "ssh", "-o", "ConnectTimeout=10", "-o", "StrictHostKeyChecking=no",
+            "ssh", "-o", "ConnectTimeout=10", "-o", "StrictHostKeyChecking=accept-new",
             self.host, full_cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
@@ -73,7 +77,7 @@ class SSHExecutor:
         logger.info("Downloading %s -> %s", remote, local)
         proc = await asyncio.create_subprocess_exec(
             "rsync", "-az",
-            "-e", "ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no",
+            "-e", _SSH_OPTS,
             remote, local,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
@@ -85,8 +89,9 @@ class SSHExecutor:
     async def cleanup(self, remote_dir: str) -> None:
         """Remove remote experiment directory."""
         logger.info("Cleaning up %s:%s", self.host, remote_dir)
+        # P1 FIX: Use accept-new for host key verification
         proc = await asyncio.create_subprocess_exec(
-            "ssh", "-o", "ConnectTimeout=10", "-o", "StrictHostKeyChecking=no",
+            "ssh", "-o", "ConnectTimeout=10", "-o", "StrictHostKeyChecking=accept-new",
             self.host, f"rm -rf {shlex.quote(remote_dir)}",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,

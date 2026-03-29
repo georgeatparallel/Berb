@@ -62,6 +62,7 @@ class LLMResponse:
     finish_reason: str = ""
     truncated: bool = False
     raw: dict[str, Any] = field(default_factory=dict)
+    cost: float = 0.0  # BUG-001 FIX: Added cost field for OpenRouter compatibility
 
 
 @dataclass
@@ -86,15 +87,130 @@ class LLMConfig:
     # MetaClaw bridge: fallback URL if primary (proxy) is unreachable
     fallback_url: str = ""
     fallback_api_key: str = ""
+    # SECURITY FIX #6: Rate limiting configuration
+    rate_limit_enabled: bool = True
+    rate_limit_requests_per_minute: int = 60  # Default: 60 requests/min
+    rate_limit_tokens_per_minute: int = 90000  # Default: 90k tokens/min
+    # P1 FIX: Multi-provider failover configuration
+    provider_name: str = ""  # Current provider name (for logging)
+    fallback_providers: list[str] = field(default_factory=list)  # Provider names for failover
+
+
+class TokenBucketRateLimiter:
+    """Token bucket rate limiter for LLM API calls.
+
+    SECURITY FIX #6: Prevents quota exhaustion from runaway pipelines.
+
+    Uses two buckets:
+    - Request bucket: Limits number of API calls
+    - Token bucket: Limits total tokens consumed
+    """
+
+    def __init__(
+        self,
+        requests_per_minute: int = 60,
+        tokens_per_minute: int = 90000,
+    ):
+        self.requests_per_minute = requests_per_minute
+        self.tokens_per_minute = tokens_per_minute
+
+        # Token bucket state
+        self._request_tokens = float(requests_per_minute)
+        self._token_tokens = float(tokens_per_minute)
+        self._last_update = time.monotonic()
+
+        # Lock for thread safety
+        self._lock = None  # Lazy init
+
+    def _get_lock(self):
+        """Get or create lock (lazy initialization)."""
+        if self._lock is None:
+            import threading
+            self._lock = threading.Lock()
+        return self._lock
+
+    def _refill(self) -> None:
+        """Refill tokens based on elapsed time."""
+        now = time.monotonic()
+        elapsed = now - self._last_update
+
+        # Refill at steady rate
+        self._request_tokens = min(
+            self.requests_per_minute,
+            self._request_tokens + elapsed * (self.requests_per_minute / 60.0)
+        )
+        self._token_tokens = min(
+            self.tokens_per_minute,
+            self._token_tokens + elapsed * (self.tokens_per_minute / 60.0)
+        )
+
+        self._last_update = now
+
+    def acquire(self, tokens: int = 0) -> tuple[bool, float]:
+        """Attempt to acquire rate limit tokens.
+
+        Args:
+            tokens: Number of tokens to consume (0 = just check request limit)
+
+        Returns:
+            Tuple of (allowed, wait_time_seconds).
+            If allowed is False, wait_time indicates how long to wait.
+        """
+        with self._get_lock():
+            self._refill()
+
+            # Check if we have enough tokens
+            if self._request_tokens < 1.0:
+                wait_time = (1.0 - self._request_tokens) * 60.0 / self.requests_per_minute
+                return (False, wait_time)
+
+            if tokens > 0 and self._token_tokens < tokens:
+                wait_time = (tokens - self._token_tokens) * 60.0 / self.tokens_per_minute
+                return (False, wait_time)
+
+            # Consume tokens
+            self._request_tokens -= 1.0
+            if tokens > 0:
+                self._token_tokens -= tokens
+
+            return (True, 0.0)
+
+    def get_status(self) -> dict[str, Any]:
+        """Get current rate limiter status."""
+        with self._get_lock():
+            self._refill()
+            return {
+                "request_tokens_available": self._request_tokens,
+                "token_tokens_available": self._token_tokens,
+                "requests_per_minute": self.requests_per_minute,
+                "tokens_per_minute": self.tokens_per_minute,
+            }
 
 
 class LLMClient:
-    """Stateless OpenAI-compatible chat completion client."""
+    """Stateless OpenAI-compatible chat completion client.
+
+    SECURITY FIX #6: Includes rate limiting to prevent quota exhaustion.
+    """
 
     def __init__(self, config: LLMConfig) -> None:
         self.config = config
         self._model_chain = [config.primary_model] + list(config.fallback_models)
         self._anthropic = None  # Will be set by from_rc_config if needed
+
+        # SECURITY FIX #6: Initialize rate limiter
+        self._rate_limiter: TokenBucketRateLimiter | None = None
+        if config.rate_limit_enabled:
+            self._rate_limiter = TokenBucketRateLimiter(
+                requests_per_minute=config.rate_limit_requests_per_minute,
+                tokens_per_minute=config.rate_limit_tokens_per_minute,
+            )
+
+    def get_rate_limiter_status(self) -> dict[str, Any] | None:
+        """Get current rate limiter status (for monitoring)."""
+        if self._rate_limiter:
+            return self._rate_limiter.get_status()
+        return None
 
     @staticmethod
     def _normalize_wire_api(wire_api: str) -> str:
@@ -187,6 +303,8 @@ class LLMClient:
     ) -> LLMResponse:
         """Send a chat completion request with retry and fallback.
 
+        SECURITY FIX #6: Includes rate limiting to prevent quota exhaustion.
+
         Args:
             messages: List of {role, content} dicts.
             model: Override model (skips fallback chain).
@@ -204,7 +322,39 @@ class LLMClient:
 
         Returns:
             LLMResponse with content and metadata.
+
+        Raises:
+            RuntimeError: If rate limit exceeded and wait would exceed timeout.
         """
+        # SECURITY FIX #6: Apply rate limiting
+        if self._rate_limiter:
+            # Estimate tokens from message content (rough estimate)
+            estimated_tokens = sum(
+                len(m.get("content", "")) // 4  # ~4 chars per token
+                for m in messages
+            )
+            estimated_tokens += max_tokens or self.config.max_tokens
+
+            allowed, wait_time = self._rate_limiter.acquire(estimated_tokens)
+            if not allowed:
+                # Check if wait time is acceptable
+                if wait_time > self.config.timeout_sec:
+                    raise RuntimeError(
+                        f"Rate limit exceeded. Would need to wait {wait_time:.1f}s "
+                        f"(exceeds timeout of {self.config.timeout_sec}s). "
+                        f"Consider reducing request frequency or increasing limits."
+                    )
+                # Wait and retry
+                logger.warning(
+                    "Rate limit hit. Waiting %.1f seconds before retry.",
+                    wait_time
+                )
+                time.sleep(wait_time)
+                # Try again after waiting
+                allowed, _ = self._rate_limiter.acquire(estimated_tokens)
+                if not allowed:
+                    raise RuntimeError("Rate limit still exceeded after waiting.")
+
         # Apply stage-based token limit if stage provided and max_tokens not set
         if stage is not None and max_tokens is None:
             from .output_limits import get_stage_token_limit
@@ -647,3 +797,163 @@ def create_client_from_yaml(yaml_path: str | None = None) -> LLMClient:
             ),
         )
     )
+
+
+class MultiProviderLLMClient:
+    """P1 FIX: Multi-provider LLM client with automatic failover.
+
+    Wraps multiple LLMClient instances and tries them in order when
+    the primary provider fails. This addresses the SPOF issue where
+    all 23 pipeline stages depend on a single LLM provider.
+
+    Example usage:
+        client = MultiProviderLLMClient.from_rc_config(rc_config)
+        response = client.chat(messages)  # Auto-fails to backup providers
+    """
+
+    def __init__(self, clients: list[LLMClient], provider_names: list[str]) -> None:
+        """Initialize with a list of LLMClient instances.
+
+        Args:
+            clients: List of LLMClient instances (primary first, then fallbacks)
+            provider_names: List of provider names for logging
+        """
+        if not clients:
+            raise ValueError("At least one LLMClient is required")
+        self._clients = clients
+        self._provider_names = provider_names
+        self._primary = clients[0]
+        self._current_provider_idx = 0
+
+    @classmethod
+    def from_rc_config(cls, rc_config: Any) -> "MultiProviderLLMClient":
+        """Create a multi-provider client from RCConfig.
+
+        Reads fallback_providers from config and creates clients for each.
+        """
+        from berb.llm import PROVIDER_PRESETS
+
+        # Create primary client
+        primary_client = LLMClient.from_rc_config(rc_config)
+        provider_names = [rc_config.llm.provider]
+
+        # Get fallback providers from config
+        fallback_providers = list(rc_config.llm.fallback_providers or [])
+        clients = [primary_client]
+
+        for fallback_provider in fallback_providers:
+            if fallback_provider == rc_config.llm.provider:
+                continue  # Skip if same as primary
+
+            preset = PROVIDER_PRESETS.get(fallback_provider, {})
+            preset_base_url = preset.get("base_url")
+
+            if not preset_base_url:
+                logger.warning(
+                    "Fallback provider '%s' has no preset base_url, skipping",
+                    fallback_provider,
+                )
+                continue
+
+            # Try to get API key for fallback provider
+            # Convention: FALLBACK_PROVIDER_API_KEY (e.g., DEEPSEEK_API_KEY)
+            env_var = f"{fallback_provider.upper()}_API_KEY"
+            api_key = os.environ.get(env_var, "")
+
+            if not api_key:
+                logger.warning(
+                    "Fallback provider '%s' has no API key (env var '%s' not set), skipping",
+                    fallback_provider,
+                    env_var,
+                )
+                continue
+
+            # Create fallback client config
+            fallback_config = LLMConfig(
+                base_url=preset_base_url,
+                api_key=api_key,
+                wire_api="chat_completions",
+                primary_model=rc_config.llm.primary_model or "gpt-4o",
+                fallback_models=list(rc_config.llm.fallback_models or []),
+                provider_name=fallback_provider,
+            )
+            clients.append(LLMClient(fallback_config))
+            provider_names.append(fallback_provider)
+            logger.info(
+                "Multi-provider failover: added '%s' as fallback (env var: %s)",
+                fallback_provider,
+                env_var,
+            )
+
+        return cls(clients, provider_names)
+
+    def chat(
+        self,
+        messages: list[dict[str, str]],
+        *,
+        model: str | None = None,
+        max_tokens: int | None = None,
+        temperature: float | None = None,
+        json_mode: bool = False,
+        system: str | None = None,
+        strip_thinking: bool = False,
+        stage: Any | None = None,
+    ) -> LLMResponse:
+        """Send a chat request with multi-provider failover.
+
+        Tries providers in order: primary → fallback_1 → fallback_2 → ...
+        """
+        last_error: Exception | None = None
+
+        for idx, client in enumerate(self._clients):
+            provider_name = self._provider_names[idx]
+            try:
+                logger.debug(
+                    "Trying provider '%s' (index %d/%d)",
+                    provider_name,
+                    idx + 1,
+                    len(self._clients),
+                )
+                response = client.chat(
+                    messages,
+                    model=model,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    json_mode=json_mode,
+                    system=system,
+                    strip_thinking=strip_thinking,
+                    stage=stage,
+                )
+                if idx > 0:
+                    logger.info(
+                        "Multi-provider failover: succeeded on fallback provider '%s'",
+                        provider_name,
+                    )
+                return response
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "Provider '%s' failed: %s. Trying next provider.",
+                    provider_name,
+                    exc,
+                )
+                last_error = exc
+
+        raise RuntimeError(
+            f"All providers failed. Tried: {self._provider_names}. Last error: {last_error}"
+        ) from last_error
+
+    def preflight(self) -> tuple[bool, str]:
+        """Check connectivity for primary provider."""
+        return self._primary.preflight()
+
+    def get_rate_limiter_status(self) -> dict[str, Any] | None:
+        """Get rate limiter status from primary client."""
+        return self._primary.get_rate_limiter_status()
+
+    def get_provider_status(self) -> dict[str, Any]:
+        """Get status of all providers."""
+        return {
+            "providers": self._provider_names,
+            "current_provider": self._provider_names[self._current_provider_idx],
+            "total_providers": len(self._clients),
+        }

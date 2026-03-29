@@ -1,0 +1,69 @@
+# Physics Domain - Chaos Detection Profile
+
+**Domain ID:** physics_chaos  
+**Display Name:** Physics - Chaos & Nonlinear Dynamics  
+**Experiment Paradigm:** Numerical simulation  
+**Core Libraries:** numpy, scipy  
+
+## Description
+
+Chaos detection and analysis for nonlinear dynamical systems.
+
+## Keywords
+
+- Lyapunov exponents
+- Bifurcation diagrams
+- Poincaré sections
+- Strange attractors
+- Period doubling
+- Chaos theory
+
+## Benchmark Systems
+
+### Lorenz-63
+```yaml
+system: lorenz
+parameters:
+  sigma: 10.0
+  rho: 28.0
+  beta: 2.667
+expected_lyapunov:
+  lambda1: 0.9056
+  lambda2: 0.0
+  lambda3: -14.572
+```
+
+### Hénon-Heiles
+```yaml
+system: henon_heiles
+parameters:
+  energy_range: [0.0833, 0.1667]
+transition_energy: 0.1667  # E = 1/6
+expected_behavior:
+  below_transition: regular
+  above_transition: chaotic
+```
+
+### Double Pendulum
+```yaml
+system: double_pendulum
+parameters:
+  m1: 1.0
+  m2: 1.0
+  l1: 1.0
+  l2: 1.0
+expected_behavior: chaotic
+```
+
+## Integration Methods
+
+- Velocity Verlet (2nd order)
+- Yoshida (4th order symplectic)
+
+## Analysis Tools
+
+- Lyapunov exponent computation
+- Bifurcation diagram generation
+- Poincaré section computation
+- Phase space visualization
+- Energy drift monitoring

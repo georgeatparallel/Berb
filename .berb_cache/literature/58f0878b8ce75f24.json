@@ -1,0 +1,1181 @@
+{
+  "query": "Adding robustness-aware objectives for Test improves out-of-domain performance without major in-domain regression.",
+  "source": "openalex",
+  "limit": 15,
+  "timestamp": 1774735688.9897723,
+  "papers": [
+    {
+      "paper_id": "oalex-W2295598076",
+      "title": "XGBoost",
+      "authors": [
+        {
+          "name": "Tianqi Chen",
+          "affiliation": "University of Washington"
+        },
+        {
+          "name": "Carlos Guestrin",
+          "affiliation": "University of Washington"
+        }
+      ],
+      "year": 2016,
+      "abstract": "Tree boosting is a highly effective and widely used machine learning method. In this paper, we describe a scalable end-to-end tree boosting system called XGBoost, which is used widely by data scientists to achieve state-of-the-art results on many machine learning challenges. We propose a novel sparsity-aware algorithm for sparse data and weighted quantile sketch for approximate tree learning. More importantly, we provide insights on cache access patterns, data compression and sharding to build a scalable tree boosting system. By combining these insights, XGBoost scales beyond billions of examples using far fewer resources than existing systems.",
+      "venue": "",
+      "citation_count": 45365,
+      "doi": "10.1145/2939672.2939785",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1145/2939672.2939785",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2280404143",
+      "title": "The Third International Consensus Definitions for Sepsis and Septic Shock (Sepsis-3)",
+      "authors": [
+        {
+          "name": "Mervyn Singer",
+          "affiliation": "University College London"
+        },
+        {
+          "name": "Clifford S. Deutschman",
+          "affiliation": "Feinstein Institute for Medical Research"
+        },
+        {
+          "name": "Christopher W. Seymour",
+          "affiliation": "University of Pittsburgh"
+        },
+        {
+          "name": "Manu Shankar\u2010Hari",
+          "affiliation": "Guy's and St Thomas' NHS Foundation Trust"
+        },
+        {
+          "name": "Djillali Annane",
+          "affiliation": "Institut Lavoisier de Versailles"
+        },
+        {
+          "name": "Michael Bauer",
+          "affiliation": "Jena University Hospital"
+        },
+        {
+          "name": "Rinaldo Bellomo",
+          "affiliation": "Australian and New Zealand Intensive Care Society"
+        },
+        {
+          "name": "Gordon R. Bernard",
+          "affiliation": "Vanderbilt University"
+        },
+        {
+          "name": "Jean\u2010Daniel Chiche",
+          "affiliation": "H\u00f4pital Cochin"
+        },
+        {
+          "name": "Craig M. Coopersmith",
+          "affiliation": "Emory University"
+        },
+        {
+          "name": "Richard S. Hotchkiss",
+          "affiliation": "Washington University in St. Louis"
+        },
+        {
+          "name": "Mitchell M. Levy",
+          "affiliation": "Brown University"
+        },
+        {
+          "name": "John C. Marshall",
+          "affiliation": "University of Toronto"
+        },
+        {
+          "name": "Greg S. Martin",
+          "affiliation": "Emory University"
+        },
+        {
+          "name": "Steven M. Opal",
+          "affiliation": "Brown University"
+        },
+        {
+          "name": "Gordon D. Rubenfeld",
+          "affiliation": "Health Sciences Centre"
+        },
+        {
+          "name": "Tom van der Poll",
+          "affiliation": "Academic Medical Center"
+        },
+        {
+          "name": "Jean\u2010Louis Vincent",
+          "affiliation": "Erasmus Hospital"
+        },
+        {
+          "name": "Derek C. Angus",
+          "affiliation": "UPMC Health System"
+        }
+      ],
+      "year": 2016,
+      "abstract": "These updated definitions and clinical criteria should replace previous definitions, offer greater consistency for epidemiologic studies and clinical trials, and facilitate earlier recognition and more timely management of patients with sepsis or at risk of developing sepsis.",
+      "venue": "JAMA",
+      "citation_count": 26997,
+      "doi": "10.1001/jama.2016.0287",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1001/jama.2016.0287",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2981731882",
+      "title": "Explainable Artificial Intelligence (XAI): Concepts, taxonomies, opportunities and challenges toward responsible AI",
+      "authors": [
+        {
+          "name": "Alejandro Barredo Arrieta",
+          "affiliation": "Tecnalia"
+        },
+        {
+          "name": "Natalia D\u00edaz-Rodr\u00edguez",
+          "affiliation": "\u00c9cole Nationale Sup\u00e9rieure de Techniques Avanc\u00e9es"
+        },
+        {
+          "name": "Javier Del Ser",
+          "affiliation": "Tecnalia"
+        },
+        {
+          "name": "Adrien Bennetot",
+          "affiliation": "Sorbonne Universit\u00e9"
+        },
+        {
+          "name": "Siham Tabik",
+          "affiliation": ""
+        },
+        {
+          "name": "Alberto Barbado",
+          "affiliation": "Telefonica Research and Development"
+        },
+        {
+          "name": "Salvador Garc\u00eda",
+          "affiliation": ""
+        },
+        {
+          "name": "Sergio Gil-L\u00f3pez",
+          "affiliation": "Tecnalia"
+        },
+        {
+          "name": "Daniel Molina",
+          "affiliation": ""
+        },
+        {
+          "name": "Richard Benjamins",
+          "affiliation": "Telefonica Research and Development"
+        },
+        {
+          "name": "Raja Chatila",
+          "affiliation": "Sorbonne Universit\u00e9"
+        },
+        {
+          "name": "Francisco Herrera",
+          "affiliation": ""
+        }
+      ],
+      "year": 2019,
+      "abstract": "",
+      "venue": "Information Fusion",
+      "citation_count": 8336,
+      "doi": "10.1016/j.inffus.2019.12.012",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1016/j.inffus.2019.12.012",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2169205464",
+      "title": "Preferred reporting items for systematic review and meta-analysis protocols (PRISMA-P) 2015: elaboration and explanation",
+      "authors": [
+        {
+          "name": "Larissa Shamseer",
+          "affiliation": "Ottawa Hospital"
+        },
+        {
+          "name": "David Moher",
+          "affiliation": "Ottawa Hospital"
+        },
+        {
+          "name": "Mike Clarke",
+          "affiliation": "National University of Ireland"
+        },
+        {
+          "name": "Davina Ghersi",
+          "affiliation": "National Health and Medical Research Council"
+        },
+        {
+          "name": "A. Liberati",
+          "affiliation": "University of Modena and Reggio Emilia"
+        },
+        {
+          "name": "Mark Petticrew",
+          "affiliation": "London School of Hygiene & Tropical Medicine"
+        },
+        {
+          "name": "Paul Shekelle",
+          "affiliation": ""
+        },
+        {
+          "name": "Lesley Stewart",
+          "affiliation": "University of York"
+        },
+        {
+          "name": "the PRISMA-P Group",
+          "affiliation": ""
+        }
+      ],
+      "year": 2015,
+      "abstract": "Protocols of systematic reviews and meta-analyses allow for planning and documentation of review methods, act as a guard against arbitrary decision making during review conduct, enable readers to assess for the presence of selective reporting against completed reviews, and, when made publicly available, reduce duplication of efforts and potentially prompt collaboration. Evidence documenting the existence of selective reporting and excessive duplication of reviews on the same or similar topics is accumulating and many calls have been made in support of the documentation and public availability of review protocols. Several efforts have emerged in recent years to rectify these problems, including development of an international register for prospective reviews (PROSPERO) and launch of the first open access journal dedicated to the exclusive publication of systematic review products, including protocols (BioMed Central's Systematic Reviews). Furthering these efforts and building on the PRISMA (Preferred Reporting Items for Systematic Reviews and Meta-analyses) guidelines, an international group of experts has created a guideline to improve the transparency, accuracy, completeness, and frequency of documented systematic review and meta-analysis protocols--PRISMA-P (for protocols) 2015. The PRISMA-P checklist contains 17 items considered to be essential and minimum components of a systematic review or meta-analysis protocol.This PRISMA-P 2015 Explanation and Elaboration paper provides readers with a full understanding of and evidence about the necessity of each item as well as a model example from an existing published protocol. This paper should be read together with the PRISMA-P 2015 statement. Systematic review authors and assessors are strongly encouraged to make use of PRISMA-P when drafting and appraising review protocols.",
+      "venue": "BMJ",
+      "citation_count": 12935,
+      "doi": "10.1136/bmj.g7647",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1136/bmj.g7647",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W3140854437",
+      "title": "Review of deep learning: concepts, CNN architectures, challenges, applications, future directions",
+      "authors": [
+        {
+          "name": "Laith Alzubaidi",
+          "affiliation": "Queensland University of Technology"
+        },
+        {
+          "name": "Jinglan Zhang",
+          "affiliation": "Queensland University of Technology"
+        },
+        {
+          "name": "Amjad J. Humaidi",
+          "affiliation": "University of Technology - Iraq"
+        },
+        {
+          "name": "Ayad Q. Al-Dujaili",
+          "affiliation": "Middle Technical University"
+        },
+        {
+          "name": "Ye Duan",
+          "affiliation": "University of Missouri"
+        },
+        {
+          "name": "Omran Al-Shamma",
+          "affiliation": "University of Information Technology and Communications"
+        },
+        {
+          "name": "Jos\u00e9 Santamar\u00eda",
+          "affiliation": "Universidad de Ja\u00e9n"
+        },
+        {
+          "name": "Mohammed A. Fadhel",
+          "affiliation": "Thi Qar University"
+        },
+        {
+          "name": "Muthana Al\u2010Amidie",
+          "affiliation": "University of Missouri"
+        },
+        {
+          "name": "Laith Farhan",
+          "affiliation": "Manchester Metropolitan University"
+        }
+      ],
+      "year": 2021,
+      "abstract": "In the last few years, the deep learning (DL) computing paradigm has been deemed the Gold Standard in the machine learning (ML) community. Moreover, it has gradually become the most widely used computational approach in the field of ML, thus achieving outstanding results on several complex cognitive tasks, matching or even beating those provided by human performance. One of the benefits of DL is the ability to learn massive amounts of data. The DL field has grown fast in the last few years and it has been extensively used to successfully address a wide range of traditional applications. More importantly, DL has outperformed well-known ML techniques in many domains, e.g., cybersecurity, natural language processing, bioinformatics, robotics and control, and medical information processing, among many others. Despite it has been contributed several works reviewing the State-of-the-Art on DL, all of them only tackled one aspect of the DL, which leads to an overall lack of knowledge about it. Therefore, in this contribution, we propose using a more holistic approach in order to provide a more suitable starting point from which to develop a full understanding of DL. Specifically, this review attempts to provide a more comprehensive survey of the most important aspects of DL and including those enhancements recently added to the field. In particular, this paper outlines the importance of DL, presents the types of DL techniques and networks. It then presents convolutional neural networks (CNNs) which the most utilized DL network type and describes the development of CNNs architectures together with their main features, e.g., starting with the AlexNet network and closing with the High-Resolution network (HR.Net). Finally, we further present the challenges and suggested solutions to help researchers understand the existing research gaps. It is followed by a list of the major DL applications. Computational tools including FPGA, GPU, and CPU are summarized along with a description of their influence on DL. The paper ends with the evolution matrix, benchmark datasets, and summary and conclusion.",
+      "venue": "Journal Of Big Data",
+      "citation_count": 7181,
+      "doi": "10.1186/s40537-021-00444-8",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1186/s40537-021-00444-8",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2145150141",
+      "title": "2015 American Thyroid Association Management Guidelines for Adult Patients with Thyroid Nodules and Differentiated Thyroid Cancer: The American Thyroid Association Guidelines Task Force on Thyroid Nodules and Differentiated Thyroid Cancer",
+      "authors": [
+        {
+          "name": "Bryan R. Haugen",
+          "affiliation": "University of Colorado Denver"
+        },
+        {
+          "name": "Erik K. Alexander",
+          "affiliation": "Harvard University"
+        },
+        {
+          "name": "Keith C. Bible",
+          "affiliation": "Mayo Clinic"
+        },
+        {
+          "name": "Gerard M. Doherty",
+          "affiliation": "Boston Medical Center"
+        },
+        {
+          "name": "Susan J. Mandel",
+          "affiliation": "University of Pennsylvania"
+        },
+        {
+          "name": "Yuri E. Nikiforov",
+          "affiliation": "University of Pittsburgh Medical Center"
+        },
+        {
+          "name": "Furio Pacini",
+          "affiliation": "University of Siena"
+        },
+        {
+          "name": "Gregory W. Randolph",
+          "affiliation": "Massachusetts General Hospital"
+        },
+        {
+          "name": "Anna M. Sawka",
+          "affiliation": "University Health Network"
+        },
+        {
+          "name": "Martin Schlumberger",
+          "affiliation": ""
+        },
+        {
+          "name": "Kathryn G. Schuff",
+          "affiliation": "Oregon Health & Science University"
+        },
+        {
+          "name": "Steven I. Sherman",
+          "affiliation": "The University of Texas MD Anderson Cancer Center"
+        },
+        {
+          "name": "Julie Ann Sosa",
+          "affiliation": "Duke University"
+        },
+        {
+          "name": "David L. Steward",
+          "affiliation": "University of Cincinnati"
+        },
+        {
+          "name": "R. Michael Tuttle",
+          "affiliation": "Memorial Sloan Kettering Cancer Center"
+        },
+        {
+          "name": "Leonard Wartofsky",
+          "affiliation": "MedStar Washington Hospital Center"
+        }
+      ],
+      "year": 2015,
+      "abstract": "We have developed evidence-based recommendations to inform clinical decision-making in the management of thyroid nodules and differentiated thyroid cancer. They represent, in our opinion, contemporary optimal care for patients with these disorders.",
+      "venue": "Thyroid",
+      "citation_count": 16122,
+      "doi": "10.1089/thy.2015.0020",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1089/thy.2015.0020",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2069089843",
+      "title": "Spatial reconstruction of single-cell gene expression data",
+      "authors": [
+        {
+          "name": "Rahul Satija",
+          "affiliation": "Broad Institute"
+        },
+        {
+          "name": "Jeffrey A. Farrell",
+          "affiliation": "Harvard University"
+        },
+        {
+          "name": "David Gennert",
+          "affiliation": "Broad Institute"
+        },
+        {
+          "name": "Alexander F. Schier",
+          "affiliation": "Broad Institute"
+        },
+        {
+          "name": "Aviv Regev",
+          "affiliation": "Broad Institute"
+        }
+      ],
+      "year": 2015,
+      "abstract": "",
+      "venue": "Nature Biotechnology",
+      "citation_count": 7445,
+      "doi": "10.1038/nbt.3192",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1038/nbt.3192",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2995022099",
+      "title": "Advances and Open Problems in Federated Learning",
+      "authors": [
+        {
+          "name": "Peter Kairouz",
+          "affiliation": ""
+        },
+        {
+          "name": "H. Brendan McMahan",
+          "affiliation": "Google (United States)"
+        },
+        {
+          "name": "Brendan Avent",
+          "affiliation": ""
+        },
+        {
+          "name": "Aur\u00e9lien Bellet",
+          "affiliation": ""
+        },
+        {
+          "name": "Mehdi Bennis",
+          "affiliation": ""
+        },
+        {
+          "name": "Arjun Nitin Bhagoji",
+          "affiliation": ""
+        },
+        {
+          "name": "Kallista Bonawitz",
+          "affiliation": ""
+        },
+        {
+          "name": "Zachary Charles",
+          "affiliation": ""
+        },
+        {
+          "name": "Graham Cormode",
+          "affiliation": ""
+        },
+        {
+          "name": "Rachel Cummings",
+          "affiliation": ""
+        },
+        {
+          "name": "Rafael G. L. D\u2019Oliveira",
+          "affiliation": ""
+        },
+        {
+          "name": "Hubert Eichner",
+          "affiliation": ""
+        },
+        {
+          "name": "Salim El Rouayheb",
+          "affiliation": ""
+        },
+        {
+          "name": "David Evans",
+          "affiliation": ""
+        },
+        {
+          "name": "Joshua Gardner",
+          "affiliation": ""
+        },
+        {
+          "name": "Zachary Garrett",
+          "affiliation": ""
+        },
+        {
+          "name": "Adri\u00e0 Gasc\u00f3n",
+          "affiliation": ""
+        },
+        {
+          "name": "Badih Ghazi",
+          "affiliation": ""
+        },
+        {
+          "name": "Phillip B. Gibbons",
+          "affiliation": ""
+        },
+        {
+          "name": "Marco Gruteser",
+          "affiliation": ""
+        },
+        {
+          "name": "Za\u00efd Harchaoui",
+          "affiliation": ""
+        },
+        {
+          "name": "Chaoyang He",
+          "affiliation": ""
+        },
+        {
+          "name": "Lingxiao He",
+          "affiliation": ""
+        },
+        {
+          "name": "Zhouyuan Huo",
+          "affiliation": ""
+        },
+        {
+          "name": "Ben Hutchinson",
+          "affiliation": ""
+        },
+        {
+          "name": "Justin Hsu",
+          "affiliation": ""
+        },
+        {
+          "name": "Martin Jaggi",
+          "affiliation": ""
+        },
+        {
+          "name": "Tara Javidi",
+          "affiliation": ""
+        },
+        {
+          "name": "Gauri Joshi",
+          "affiliation": ""
+        },
+        {
+          "name": "Mikhail Khodak",
+          "affiliation": ""
+        },
+        {
+          "name": "Jakub Kone\u010dn\u00fd",
+          "affiliation": ""
+        },
+        {
+          "name": "Aleksandra Korolova",
+          "affiliation": ""
+        },
+        {
+          "name": "Farinaz Koushanfar",
+          "affiliation": ""
+        },
+        {
+          "name": "Sanmi Koyejo",
+          "affiliation": ""
+        },
+        {
+          "name": "Tancr\u00e8de Lepoint",
+          "affiliation": ""
+        },
+        {
+          "name": "Yang Liu",
+          "affiliation": ""
+        },
+        {
+          "name": "Prateek Mittal",
+          "affiliation": ""
+        },
+        {
+          "name": "Mehryar Mohri",
+          "affiliation": ""
+        },
+        {
+          "name": "Richard Nock",
+          "affiliation": ""
+        },
+        {
+          "name": "Ayfer \u00d6zg\u00fcr",
+          "affiliation": ""
+        },
+        {
+          "name": "Rasmus Pagh",
+          "affiliation": ""
+        },
+        {
+          "name": "Hang Qi",
+          "affiliation": ""
+        },
+        {
+          "name": "Daniel Ramage",
+          "affiliation": ""
+        },
+        {
+          "name": "Ramesh Raskar",
+          "affiliation": ""
+        },
+        {
+          "name": "Mariana Raykova",
+          "affiliation": ""
+        },
+        {
+          "name": "Dawn Song",
+          "affiliation": ""
+        },
+        {
+          "name": "Weikang Song",
+          "affiliation": ""
+        },
+        {
+          "name": "Sebastian U. Stich",
+          "affiliation": ""
+        },
+        {
+          "name": "Ziteng Sun",
+          "affiliation": ""
+        },
+        {
+          "name": "Ajith Suresh",
+          "affiliation": ""
+        },
+        {
+          "name": "Florian Tram\u00e8r",
+          "affiliation": ""
+        },
+        {
+          "name": "Praneeth Vepakomma",
+          "affiliation": ""
+        },
+        {
+          "name": "Jianyu Wang",
+          "affiliation": ""
+        },
+        {
+          "name": "Li Xiong",
+          "affiliation": ""
+        },
+        {
+          "name": "Zheng Xu",
+          "affiliation": ""
+        },
+        {
+          "name": "Qiang Yang",
+          "affiliation": ""
+        },
+        {
+          "name": "Felix X. Yu",
+          "affiliation": ""
+        },
+        {
+          "name": "Han Yu",
+          "affiliation": ""
+        },
+        {
+          "name": "Sen Zhao",
+          "affiliation": ""
+        }
+      ],
+      "year": 2020,
+      "abstract": "Federated learning (FL) is a machine learning setting where many clients (e.g., mobile devices or whole organizations) collaboratively train a model under the orchestration of a central server (e.g., service provider), while keeping the training data decentralized. FL embodies the principles of focused data collection and minimization, and can mitigate many of the systemic privacy risks and costs resulting from traditional, centralized machine learning and data science approaches. Motivated by the explosive growth in FL research, this monograph discusses recent advances and presents an extensive collection of open problems and challenges.",
+      "venue": "Foundations and Trends\u00ae in Machine Learning",
+      "citation_count": 4363,
+      "doi": "10.1561/2200000083",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1561/2200000083",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W3168997536",
+      "title": "A Survey of Convolutional Neural Networks: Analysis, Applications, and Prospects",
+      "authors": [
+        {
+          "name": "Zewen Li",
+          "affiliation": "Hohai University"
+        },
+        {
+          "name": "Fan Liu",
+          "affiliation": "Hohai University"
+        },
+        {
+          "name": "Wenjie Yang",
+          "affiliation": "Hohai University"
+        },
+        {
+          "name": "Shouheng Peng",
+          "affiliation": "Hohai University"
+        },
+        {
+          "name": "Jun Zhou",
+          "affiliation": "Griffith University"
+        }
+      ],
+      "year": 2021,
+      "abstract": "A convolutional neural network (CNN) is one of the most significant networks in the deep learning field. Since CNN made impressive achievements in many areas, including but not limited to computer vision and natural language processing, it attracted much attention from both industry and academia in the past few years. The existing reviews mainly focus on CNN\u2019s applications in different scenarios without considering CNN from a general perspective, and some novel ideas proposed recently are not covered. In this review, we aim to provide some novel ideas and prospects in this fast-growing field. Besides, not only 2-D convolution but also 1-D and multidimensional ones are involved. First, this review introduces the history of CNN. Second, we provide an overview of various convolutions. Third, some classic and advanced CNN models are introduced; especially those key points making them reach state-of-the-art results. Fourth, through experimental analysis, we draw some conclusions and provide several rules of thumb for functions and hyperparameter selection. Fifth, the applications of 1-D, 2-D, and multidimensional convolution are covered. Finally, some open issues and promising directions for CNN are discussed as guidelines for future work.",
+      "venue": "IEEE Transactions on Neural Networks and Learning Systems",
+      "citation_count": 4572,
+      "doi": "10.1109/tnnls.2021.3084827",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1109/tnnls.2021.3084827",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W1641498739",
+      "title": "The Multimodal Brain Tumor Image Segmentation Benchmark (BRATS)",
+      "authors": [
+        {
+          "name": "Bjoern Menze",
+          "affiliation": "Massachusetts Institute of Technology"
+        },
+        {
+          "name": "Andr\u00e1s Jakab",
+          "affiliation": "ETH Zurich"
+        },
+        {
+          "name": "Stefan Bauer",
+          "affiliation": "University Hospital of Bern"
+        },
+        {
+          "name": "Jayashree Kalpathy\u2013Cramer",
+          "affiliation": "Harvard University"
+        },
+        {
+          "name": "Keyvan Farahani",
+          "affiliation": "National Institutes of Health"
+        },
+        {
+          "name": "Justin Kirby",
+          "affiliation": "National Institutes of Health"
+        },
+        {
+          "name": "Yuliya Burren",
+          "affiliation": "University Hospital of Bern"
+        },
+        {
+          "name": "Nicole Porz",
+          "affiliation": "University Hospital of Bern"
+        },
+        {
+          "name": "Johannes Slotboom",
+          "affiliation": "University Hospital of Bern"
+        },
+        {
+          "name": "Roland Wiest",
+          "affiliation": "University Hospital of Bern"
+        },
+        {
+          "name": "Levente L\u00e1nczi",
+          "affiliation": "University of Debrecen"
+        },
+        {
+          "name": "Elizabeth R. Gerstner",
+          "affiliation": "Massachusetts General Hospital"
+        },
+        {
+          "name": "Marc\u2010An\ufeffdr\u00e9 Weber",
+          "affiliation": "University Hospital Heidelberg"
+        },
+        {
+          "name": "Tal Arbel",
+          "affiliation": "McGill University"
+        },
+        {
+          "name": "Brian Avants",
+          "affiliation": "University of Pennsylvania"
+        },
+        {
+          "name": "Nicholas Ayache",
+          "affiliation": "Institut national de recherche en informatique et en automatique"
+        },
+        {
+          "name": "Patricia Buendia",
+          "affiliation": ""
+        },
+        {
+          "name": "D. Louis Collins",
+          "affiliation": "McGill University"
+        },
+        {
+          "name": "Nicolas Cordier",
+          "affiliation": "Institut national de recherche en informatique et en automatique"
+        },
+        {
+          "name": "Jason J. Corso",
+          "affiliation": "Buffalo State University"
+        },
+        {
+          "name": "Antonio Criminisi",
+          "affiliation": "Microsoft Research (United Kingdom)"
+        },
+        {
+          "name": "Tilak Das",
+          "affiliation": "Cambridge University Hospitals NHS Foundation Trust"
+        },
+        {
+          "name": "Herv\u00e9 Delingette",
+          "affiliation": "Institut national de recherche en informatique et en automatique"
+        },
+        {
+          "name": "\u00c7a\u011fatay Demiralp",
+          "affiliation": "Stanford University"
+        },
+        {
+          "name": "Christopher R. Durst",
+          "affiliation": "University of Virginia"
+        },
+        {
+          "name": "Michel Dojat",
+          "affiliation": "Inserm"
+        },
+        {
+          "name": "Senan Doyle",
+          "affiliation": "Institut national de recherche en informatique et en automatique"
+        },
+        {
+          "name": "Joana Festa",
+          "affiliation": "University of Minho"
+        },
+        {
+          "name": "Florence Forbes",
+          "affiliation": "Inserm"
+        },
+        {
+          "name": "Ezequiel Geremia",
+          "affiliation": "Institut national de recherche en informatique et en automatique"
+        },
+        {
+          "name": "Ben Glocker",
+          "affiliation": "Imperial College London"
+        },
+        {
+          "name": "Polina Golland",
+          "affiliation": "Massachusetts Institute of Technology"
+        },
+        {
+          "name": "Xiaotao Guo",
+          "affiliation": "Columbia University"
+        },
+        {
+          "name": "Anda\u00e7 Hamamc\u0131",
+          "affiliation": "Sabanc\u0131 \u00dcniversitesi"
+        },
+        {
+          "name": "Khan M. Iftekharuddin",
+          "affiliation": "Old Dominion University"
+        },
+        {
+          "name": "R. Jena",
+          "affiliation": "Cambridge University Hospitals NHS Foundation Trust"
+        },
+        {
+          "name": "Nigel John",
+          "affiliation": "University of Miami"
+        },
+        {
+          "name": "Ender Konuko\u011flu",
+          "affiliation": "Massachusetts General Hospital"
+        },
+        {
+          "name": "Danial Lashkari",
+          "affiliation": "Massachusetts Institute of Technology"
+        },
+        {
+          "name": "Jos\u00e9 Mariz",
+          "affiliation": "University of Minho"
+        },
+        {
+          "name": "Raphael Meier",
+          "affiliation": "University of Bern"
+        },
+        {
+          "name": "S\u00e9rgio Pereira",
+          "affiliation": "University of Minho"
+        },
+        {
+          "name": "Doina Precup",
+          "affiliation": "McGill University"
+        },
+        {
+          "name": "Stephen J. Price",
+          "affiliation": "Cambridge University Hospitals NHS Foundation Trust"
+        },
+        {
+          "name": "Tammy Riklin Raviv",
+          "affiliation": "Ben-Gurion University of the Negev"
+        },
+        {
+          "name": "Syed M. S. Reza",
+          "affiliation": "Old Dominion University"
+        },
+        {
+          "name": "Michael J. Ryan",
+          "affiliation": ""
+        },
+        {
+          "name": "Duygu Sar\u0131kaya",
+          "affiliation": "Buffalo State University"
+        },
+        {
+          "name": "Lawrence H. Schwartz",
+          "affiliation": "Columbia University"
+        },
+        {
+          "name": "Hoo-Chang Shin",
+          "affiliation": "Ben-Gurion University of the Negev"
+        },
+        {
+          "name": "Jamie Shotton",
+          "affiliation": "Microsoft Research (United Kingdom)"
+        },
+        {
+          "name": "Carlos A. Silva",
+          "affiliation": "University of Minho"
+        },
+        {
+          "name": "Nuno Sousa",
+          "affiliation": "University of Minho"
+        },
+        {
+          "name": "Nagesh K. Subbanna",
+          "affiliation": "University Hospital Heidelberg"
+        },
+        {
+          "name": "G\u00e1bor Sz\u00e9kely",
+          "affiliation": "ETH Zurich"
+        },
+        {
+          "name": "Thomas J. Taylor",
+          "affiliation": ""
+        },
+        {
+          "name": "Owen Thomas",
+          "affiliation": "Cambridge University Hospitals NHS Foundation Trust"
+        },
+        {
+          "name": "Nicholas J. Tustison",
+          "affiliation": "University of Virginia"
+        },
+        {
+          "name": "G\u00f6zde \u00dcnal",
+          "affiliation": "Sabanc\u0131 \u00dcniversitesi"
+        },
+        {
+          "name": "Flor Vasseur",
+          "affiliation": "Inserm"
+        },
+        {
+          "name": "Max Wintermark",
+          "affiliation": "University of Virginia"
+        },
+        {
+          "name": "Dong Hye Ye",
+          "affiliation": "Purdue University West Lafayette"
+        },
+        {
+          "name": "Liang Zhao",
+          "affiliation": "Buffalo State University"
+        },
+        {
+          "name": "Binsheng Zhao",
+          "affiliation": "Columbia University"
+        },
+        {
+          "name": "Darko Zikic",
+          "affiliation": "Microsoft Research (United Kingdom)"
+        },
+        {
+          "name": "Marcel Prastawa",
+          "affiliation": "GE Global Research (United States)"
+        },
+        {
+          "name": "Mauricio Reyes",
+          "affiliation": "University of Bern"
+        },
+        {
+          "name": "Koen Van Leemput",
+          "affiliation": "Technical University of Denmark"
+        }
+      ],
+      "year": 2014,
+      "abstract": "In this paper we report the set-up and results of the Multimodal Brain Tumor Image Segmentation Benchmark (BRATS) organized in conjunction with the MICCAI 2012 and 2013 conferences. Twenty state-of-the-art tumor segmentation algorithms were applied to a set of 65 multi-contrast MR scans of low- and high-grade glioma patients-manually annotated by up to four raters-and to 65 comparable scans generated using tumor image simulation software. Quantitative evaluations revealed considerable disagreement between the human raters in segmenting various tumor sub-regions (Dice scores in the range 74%-85%), illustrating the difficulty of this task. We found that different algorithms worked best for different sub-regions (reaching performance comparable to human inter-rater variability), but that no single algorithm ranked in the top for all sub-regions simultaneously. Fusing several good algorithms using a hierarchical majority vote yielded segmentations that consistently ranked above all individual algorithms, indicating remaining opportunities for further methodological improvements. The BRATS image data and manual annotations continue to be publicly available through an online evaluation system as an ongoing benchmarking resource.",
+      "venue": "IEEE Transactions on Medical Imaging",
+      "citation_count": 6262,
+      "doi": "10.1109/tmi.2014.2377694",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1109/tmi.2014.2377694",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2962772482",
+      "title": "A survey of methods for explaining black box models",
+      "authors": [
+        {
+          "name": "Riccardo Guidotti",
+          "affiliation": "University of Pisa"
+        },
+        {
+          "name": "Anna Monreale",
+          "affiliation": "University of Pisa"
+        },
+        {
+          "name": "Salvatore Ruggieri",
+          "affiliation": "University of Pisa"
+        },
+        {
+          "name": "Franco Turini",
+          "affiliation": "University of Pisa"
+        },
+        {
+          "name": "Fosca Giannotti",
+          "affiliation": "Istituto di Scienza e Tecnologie dell'Informazione \"Alessandro Faedo\""
+        },
+        {
+          "name": "Dino Pedreschi",
+          "affiliation": "University of Pisa"
+        }
+      ],
+      "year": 2019,
+      "abstract": "In recent years, many accurate decision support systems have been constructed as black boxes, that is as systems that hide their internal logic to the user. This lack of explanation constitutes both a practical and an ethical issue. The literature reports many approaches aimed at overcoming this crucial weakness, sometimes at the cost of sacrificing accuracy for interpretability. The applications in which black box decision systems can be used are various, and each approach is typically developed to provide a solution for a specific problem and, as a consequence, it explicitly or implicitly delineates its own definition of interpretability and explanation. The aim of this article is to provide a classification of the main problems addressed in the literature with respect to the notion of explanation and the type of black box system. Given a problem definition, a black box type, and a desired explanation, this survey should help the researcher to find the proposals more useful for his own work. The proposed classification of approaches to open black box models should also be useful for putting the many research open questions in perspective.",
+      "venue": "ISTI Open Portal",
+      "citation_count": 4471,
+      "doi": "10.1145/3236009",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1145/3236009",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2512971201",
+      "title": "Deep Neural Networks for YouTube Recommendations",
+      "authors": [
+        {
+          "name": "Paul Covington",
+          "affiliation": "Google (United States)"
+        },
+        {
+          "name": "Jay Adams",
+          "affiliation": "Google (United States)"
+        },
+        {
+          "name": "Emre Sargin",
+          "affiliation": "Google (United States)"
+        }
+      ],
+      "year": 2016,
+      "abstract": "YouTube represents one of the largest scale and most sophisticated industrial recommendation systems in existence. In this paper, we describe the system at a high level and focus on the dramatic performance improvements brought by deep learning. The paper is split according to the classic two-stage information retrieval dichotomy: first, we detail a deep candidate generation model and then describe a separate deep ranking model. We also provide practical lessons and insights derived from designing, iterating and maintaining a massive recommendation system with enormous user-facing impact.",
+      "venue": "",
+      "citation_count": 3285,
+      "doi": "10.1145/2959100.2959190",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1145/2959100.2959190",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2049056319",
+      "title": "The American College of Rheumatology Preliminary Diagnostic Criteria for Fibromyalgia and Measurement of Symptom Severity",
+      "authors": [
+        {
+          "name": "Frederick Wolfe",
+          "affiliation": "The National Databank for Rheumatic Diseases"
+        },
+        {
+          "name": "Daniel J. Clauw",
+          "affiliation": "University of Michigan\u2013Ann Arbor"
+        },
+        {
+          "name": "Mary\u2010Ann Fitzcharles",
+          "affiliation": "Montreal General Hospital"
+        },
+        {
+          "name": "Don L. Goldenberg",
+          "affiliation": "Newton Wellesley Hospital"
+        },
+        {
+          "name": "Robert S. Katz",
+          "affiliation": "Rush University Medical Center"
+        },
+        {
+          "name": "Philip J. Mease",
+          "affiliation": "Swedish Medical Center"
+        },
+        {
+          "name": "Anthony S. Russell",
+          "affiliation": "University of Alberta"
+        },
+        {
+          "name": "I. Jon Russell",
+          "affiliation": "The University of Texas Health Science Center at San Antonio"
+        },
+        {
+          "name": "John B. Winfield",
+          "affiliation": "University of North Carolina at Chapel Hill"
+        },
+        {
+          "name": "Muhammad B. Yunus",
+          "affiliation": "University of Illinois Chicago"
+        }
+      ],
+      "year": 2010,
+      "abstract": "This simple clinical case definition of fibromyalgia correctly classifies 88.1% of cases classified by the ACR classification criteria, and does not require a physical or tender point examination. The SS scale enables assessment of fibromyalgia symptom severity in persons with current or previous fibromyalgia, and in those to whom the criteria have not been applied. It will be especially useful in the longitudinal evaluation of patients with marked symptom variability.",
+      "venue": "Arthritis Care & Research",
+      "citation_count": 3885,
+      "doi": "10.1002/acr.20140",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1002/acr.20140",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W3185341429",
+      "title": "Pre-train, Prompt, and Predict: A Systematic Survey of Prompting Methods in Natural Language Processing",
+      "authors": [
+        {
+          "name": "Pengfei Liu",
+          "affiliation": "Carnegie Mellon University"
+        },
+        {
+          "name": "Weizhe Yuan",
+          "affiliation": "Carnegie Mellon University"
+        },
+        {
+          "name": "Jinlan Fu",
+          "affiliation": "National University of Singapore"
+        },
+        {
+          "name": "Zhengbao Jiang",
+          "affiliation": "Carnegie Mellon University"
+        },
+        {
+          "name": "Hiroaki Hayashi",
+          "affiliation": "Carnegie Mellon University"
+        },
+        {
+          "name": "Graham Neubig",
+          "affiliation": "Carnegie Mellon University"
+        }
+      ],
+      "year": 2022,
+      "abstract": "This article surveys and organizes research works in a new paradigm in natural language processing, which we dub \u201cprompt-based learning.\u201d Unlike traditional supervised learning, which trains a model to take in an input x and predict an output y as P ( y|x ), prompt-based learning is based on language models that model the probability of text directly. To use these models to perform prediction tasks, the original input x is modified using a template into a textual string prompt x\u2032 that has some unfilled slots, and then the language model is used to probabilistically fill the unfilled information to obtain a final string x\u0302 , from which the final output y can be derived. This framework is powerful and attractive for a number of reasons: It allows the language model to be pre-trained on massive amounts of raw text, and by defining a new prompting function the model is able to perform few-shot or even zero-shot learning, adapting to new scenarios with few or no labeled data. In this article, we introduce the basics of this promising paradigm, describe a unified set of mathematical notations that can cover a wide variety of existing work, and organize existing work along several dimensions, e.g., the choice of pre-trained language models, prompts, and tuning strategies. To make the field more accessible to interested beginners, we not only make a systematic review of existing works and a highly structured typology of prompt-based concepts but also release other resources, e.g., a website NLPedia\u2013Pretrain including constantly updated survey and paperlist.",
+      "venue": "ACM Computing Surveys",
+      "citation_count": 3433,
+      "doi": "10.1145/3560815",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1145/3560815",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2988916019",
+      "title": "Deep Learning for Generic Object Detection: A Survey",
+      "authors": [
+        {
+          "name": "Li Liu",
+          "affiliation": "National University of Defense Technology"
+        },
+        {
+          "name": "Wanli Ouyang",
+          "affiliation": "The University of Sydney"
+        },
+        {
+          "name": "Xiaogang Wang",
+          "affiliation": "Chinese University of Hong Kong"
+        },
+        {
+          "name": "Paul Fieguth",
+          "affiliation": "University of Waterloo"
+        },
+        {
+          "name": "Jie Chen",
+          "affiliation": "University of Oulu"
+        },
+        {
+          "name": "Xinwang Liu",
+          "affiliation": "National University of Defense Technology"
+        },
+        {
+          "name": "Matti Pietik\u00e4inen",
+          "affiliation": "University of Oulu"
+        }
+      ],
+      "year": 2019,
+      "abstract": "Abstract Object detection, one of the most fundamental and challenging problems in computer vision, seeks to locate object instances from a large number of predefined categories in natural images. Deep learning techniques have emerged as a powerful strategy for learning feature representations directly from data and have led to remarkable breakthroughs in the field of generic object detection. Given this period of rapid evolution, the goal of this paper is to provide a comprehensive survey of the recent achievements in this field brought about by deep learning techniques. More than 300 research contributions are included in this survey, covering many aspects of generic object detection: detection frameworks, object feature representation, object proposal generation, context modeling, training strategies, and evaluation metrics. We finish the survey by identifying promising directions for future research.",
+      "venue": "International Journal of Computer Vision",
+      "citation_count": 2701,
+      "doi": "10.1007/s11263-019-01247-4",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1007/s11263-019-01247-4",
+      "source": "openalex",
+      "_bibtex_override": ""
+    }
+  ]
+}

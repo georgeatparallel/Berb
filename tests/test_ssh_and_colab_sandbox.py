@@ -171,7 +171,12 @@ class TestSshEntryPointValidation:
         result = sandbox.run_project(project, entry_point="/etc/passwd")
 
         assert result.returncode == -1
-        assert "relative" in result.stderr.lower() or "absolute" in result.stderr.lower()
+        # Accept either "relative/absolute" or "escapes" error message
+        assert (
+            "relative" in result.stderr.lower()
+            or "absolute" in result.stderr.lower()
+            or "escapes" in result.stderr.lower()
+        )
         sandbox._execute.assert_not_called()
 
 

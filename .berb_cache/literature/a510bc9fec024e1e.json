@@ -1,0 +1,351 @@
+{
+  "query": "Test research topic",
+  "source": "openalex",
+  "limit": 15,
+  "timestamp": 1774735281.8774045,
+  "papers": [
+    {
+      "paper_id": "oalex-W2582377764",
+      "title": "Building theories from case study research",
+      "authors": [
+        {
+          "name": "Kathleen M. Eisenhardt",
+          "affiliation": "Stanford University"
+        }
+      ],
+      "year": 2009,
+      "abstract": "- This paper describes the process of inducting theory using case studies from specifying the research questions to reaching closure. Some features of the process, such as problem definition and construct validation, are similar to hypothesis-testing research. Others, such as within-case analysis and replication logic, are unique to the inductive, case-oriented process. Overall, the process described here is highly iterative and tightly linked to data. This research approach is especially appropriate in new topic areas. The resultant theory is often novel, testable, and empirically valid. Finally, framebreaking insights, the tests of good theory (e.g., parsimony, logical coherence), and convincing grounding in the evidence are the key criteria for evaluating this type of research.",
+      "venue": "STUDI ORGANIZZATIVI",
+      "citation_count": 11396,
+      "doi": "10.3280/so2008-002004",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.3280/so2008-002004",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W1505999675",
+      "title": "Research Methods for Business Students",
+      "authors": [
+        {
+          "name": "Mark N. K. Saunders",
+          "affiliation": ""
+        },
+        {
+          "name": "Philip Lewis",
+          "affiliation": ""
+        },
+        {
+          "name": "Adrian Thornhill",
+          "affiliation": ""
+        }
+      ],
+      "year": 1996,
+      "abstract": "Research Methods for Business Students has been fully revised for this seventh edition and continues to be the market-leading textbook in its field, guiding hundreds of thousands of student researchers to success in their research methods modules, research proposals, projects and dissertations. So, if you're thinking ...'How do I choose my topic?' 'I'm confused by all these different philosophies' 'I need to collect my data; what do I do first?' 'When and what do I need to write? ...then, open this book to discover: * Regular checklists and 'Progressing your research project' sections to give you step-by-step practical guidance on the process * A glossary of clear definitions for 600 research terms * Cases and examples of students' and academics' research and topical news articles illustrating research in practice * Detailed chapters on choosing your topic, reviewing the literature, understanding philosophies, research design, access and ethics, secondary data, data collection and analysis, and writing about and presenting your research Don't forget to visit www.pearsoned.co.uk/saunders where you can use online tutorials on research software, such as IBM SPSS Statistics and NVivo, test yourself with hundreds of multiple choice questions, analyse over 60 further case studies, and learn how to search the Internet more efficiently and effectively with our Smarter Online Searching guide! Start your project with confidence and complete it with success! Mark Saunders is Professor of Business Research Methods at The Surrey Business School, University of Surrey. Philip Lewis was a Principal Lecturer and Adrian Thornhill was a Head of Department, both at the University of Gloucestershire.",
+      "venue": "",
+      "citation_count": 15282,
+      "doi": "",
+      "arxiv_id": "",
+      "url": "https://openalex.org/W1505999675",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2162090451",
+      "title": "A very brief measure of the Big-Five personality domains",
+      "authors": [
+        {
+          "name": "Samuel D. Gosling",
+          "affiliation": ""
+        },
+        {
+          "name": "Peter J. Rentfrow",
+          "affiliation": ""
+        },
+        {
+          "name": "William B. Swann",
+          "affiliation": ""
+        }
+      ],
+      "year": 2003,
+      "abstract": "",
+      "venue": "Journal of Research in Personality",
+      "citation_count": 8165,
+      "doi": "10.1016/s0092-6566(03)00046-1",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1016/s0092-6566(03)00046-1",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W1489838709",
+      "title": "Experimental Design and Data Analysis for Biologists",
+      "authors": [
+        {
+          "name": "Gerry P. Quinn",
+          "affiliation": "Monash University"
+        },
+        {
+          "name": "Michael J. Keough",
+          "affiliation": "University of Melbourne"
+        }
+      ],
+      "year": 2002,
+      "abstract": "An essential textbook for any student or researcher in biology needing to design experiments, sample programs or analyse the resulting data. The text begins with a revision of estimation and hypothesis testing methods, covering both classical and Bayesian philosophies, before advancing to the analysis of linear and generalized linear models. Topics covered include linear and logistic regression, simple and complex ANOVA models (for factorial, nested, block, split-plot and repeated measures and covariance designs), and log-linear models. Multivariate techniques, including classification and ordination, are then introduced. Special emphasis is placed on checking assumptions, exploratory data analysis and presentation of results. The main analyses are illustrated with many examples from published papers and there is an extensive reference list to both the statistical and biological literature. The book is supported by a website that provides all data sets, questions for each chapter and links to software.",
+      "venue": "Cambridge University Press eBooks",
+      "citation_count": 10627,
+      "doi": "10.1017/cbo9780511806384",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1017/cbo9780511806384",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W1576460547",
+      "title": "Doing Qualitative Research: A Practical Handbook",
+      "authors": [
+        {
+          "name": "David J. Silverman",
+          "affiliation": ""
+        }
+      ],
+      "year": 1999,
+      "abstract": "Written in a lively, accessible style, this step-by-step guide provides answers to all the questions students ask when beginning their first research project. David Silverman demonstrates how to learn the craft of qualitative research by applying knowledge about different methodologies to actual data. He provides practical advice on key issues, such as: defining `originality' and narrowing down a topic; keeping a research diary and writing a research report; and presenting research to different audiences. Packed with case studies and examples of students' experiences, the book has many features to aid study, including overviews, summaries of key skills and a glossary of terms. Each stage in the research process is grounded in worked examples, with exercises designed both to test students' knowledge and to encourage the development of practical skills.",
+      "venue": "",
+      "citation_count": 5984,
+      "doi": "",
+      "arxiv_id": "",
+      "url": "https://openalex.org/W1576460547",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2432517183",
+      "title": "Numerical recipes in C: the art of scientific computing",
+      "authors": [
+        {
+          "name": "Press, William H",
+          "affiliation": ""
+        },
+        {
+          "name": "Flannery, Brian P",
+          "affiliation": ""
+        },
+        {
+          "name": "Teukolsky, Saul Arno",
+          "affiliation": ""
+        },
+        {
+          "name": "Vetterling, William T",
+          "affiliation": ""
+        }
+      ],
+      "year": 1993,
+      "abstract": "From the Publisher:\r\nThis is the revised and greatly expanded Second Edition of the hugely popular Numerical Recipes: The Art of Scientific Computing. The product of a unique collaboration among four leading scientists in academic research and industry, Numerical Recipes is a complete text and reference book on scientific computing. In a self-contained manner it proceeds from mathematical and theoretical considerations to actual practical computer routines. With over 100 new routines (now well over 300 in all), plus upgraded versions of many of the original routines, this book is more than ever the most practical, comprehensive handbook of scientific computing available today. The book retains the informal, easy-to-read style that made the first edition so popular, with many new topics presented at the same accessible level. In addition, some sections of more advanced material have been introduced, set off in small type from the main body of the text. Numerical Recipes is an ideal textbook for scientists and engineers and an indispensable reference for anyone who works in scientific computing. Highlights of the new material include a new chapter on integral equations and inverse methods; multigrid methods for solving partial differential equations; improved random number routines; wavelet transforms; the statistical bootstrap method; a new chapter on less-numerical algorithms including compression coding and arbitrary precision arithmetic; band diagonal linear systems; linear algebra on sparse matrices; Cholesky and QR decomposition; calculation of numerical derivatives; Pade approximants, and rational Chebyshev approximation; new special functions; Monte Carlo integration in high-dimensional spaces; globally convergent methods for sets of nonlinear equations; an expanded chapter on fast Fourier methods; spectral analysis on unevenly sampled data; Savitzky-Golay smoothing filters; and two-dimensional Kolmogorov-Smirnoff tests. All this is in addition to material on such basic top",
+      "venue": "Choice Reviews Online",
+      "citation_count": 17990,
+      "doi": "10.5860/choice.30-5638",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.5860/choice.30-5638",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W1511395520",
+      "title": "Microeconometrics Using Stata",
+      "authors": [
+        {
+          "name": "A. Colin Cameron",
+          "affiliation": ""
+        },
+        {
+          "name": "Pravin K. Trivedi",
+          "affiliation": ""
+        }
+      ],
+      "year": 2009,
+      "abstract": "An outstanding introduction to microeconometrics and how to do microeconometric research using Stata, this book covers topics often left out of microeconometrics textbooks and omitted from basic introductions to Stata. Cameron and Trivedi provide the most complete and up-to-date survey of microeconometric methods available in Stata. They begin by introducing simulation methods and then use them to illustrate features of the estimators and tests described in the rest of the book. They address each topic with an in-depth Stata example and demonstrate how to use Statas programming features to implement methods for which Stata does not have a specific command. Multi/Card Deck Copy",
+      "venue": "",
+      "citation_count": 4432,
+      "doi": "",
+      "arxiv_id": "",
+      "url": "https://openalex.org/W1511395520",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2094736317",
+      "title": "Designing Social Inquiry",
+      "authors": [
+        {
+          "name": "Gary King",
+          "affiliation": ""
+        },
+        {
+          "name": "Robert O. Keohane",
+          "affiliation": ""
+        },
+        {
+          "name": "Sidney Verba",
+          "affiliation": ""
+        }
+      ],
+      "year": 1994,
+      "abstract": "While heated arguments between practitioners of qualitative and quantitative research have begun to test the very integrity of the social sciences, Gary King, Robert Keohane, and Sidney Verba have produced a farsighted and timely book that promises to sharpen and strengthen a wide range of research performed in this field. These leading scholars, each representing diverse academic traditions, have developed a unified approach to valid descriptive and causal inference in qualitative research, where numerical measurement is either impossible or undesirable. Their book demonstrates that the same logic of inference underlies both good quantitative and good qualitative research designs, and their approach applies equally to each. Providing precepts intended to stimulate and discipline thought, the authors explore issues related to framing research questions, measuring the accuracy of data and uncertainty of empirical inferences, discovering causal effects, and generally improving qualitative research. Among the specific topics they address are interpretation and inference, comparative case studies, constructing causal theories, dependent and explanatory variables, the limits of random selection, selection bias, and errors in measurement. Mathematical notation is occasionally used to clarify concepts, but no prior knowledge of mathematics or statistics is assumed. The unified logic of inference that this book explicates will be enormously useful to qualitative researchers of all traditions and substantive fields.",
+      "venue": "Princeton University Press eBooks",
+      "citation_count": 6661,
+      "doi": "10.1515/9781400821211",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1515/9781400821211",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2132549764",
+      "title": "Statistical pattern recognition: a review",
+      "authors": [
+        {
+          "name": "Anil K. Jain",
+          "affiliation": "Michigan State University"
+        },
+        {
+          "name": "Peter Duin",
+          "affiliation": "Delft University of Technology"
+        },
+        {
+          "name": "Jianchang Mao",
+          "affiliation": "IBM Research - Almaden"
+        }
+      ],
+      "year": 2000,
+      "abstract": "The primary goal of pattern recognition is supervised or unsupervised classification. Among the various frameworks in which pattern recognition has been traditionally formulated, the statistical approach has been most intensively studied and used in practice. More recently, neural network techniques and methods imported from statistical learning theory have been receiving increasing attention. The design of a recognition system requires careful attention to the following issues: definition of pattern classes, sensing environment, pattern representation, feature extraction and selection, cluster analysis, classifier design and learning, selection of training and test samples, and performance evaluation. In spite of almost 50 years of research and development in this field, the general problem of recognizing complex patterns with arbitrary orientation, location, and scale remains unsolved. New and emerging applications, such as data mining, web searching, retrieval of multimedia data, face recognition, and cursive handwriting recognition, require robust and efficient pattern recognition techniques. The objective of this review paper is to summarize and compare some of the well-known methods used in various stages of a pattern recognition system and identify research topics and applications which are at the forefront of this exciting and challenging field.",
+      "venue": "IEEE Transactions on Pattern Analysis and Machine Intelligence",
+      "citation_count": 6718,
+      "doi": "10.1109/34.824819",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1109/34.824819",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2037521346",
+      "title": "Principles of Computerized Tomographic Imaging",
+      "authors": [
+        {
+          "name": "Avinash C. Kak",
+          "affiliation": ""
+        },
+        {
+          "name": "Malcolm Slaney",
+          "affiliation": ""
+        }
+      ],
+      "year": 2001,
+      "abstract": "Tomography refers to the cross-sectional imaging of an object from either transmission or reflection data collected by illuminating the object from many different directions. The impact of tomography in diagnostic medicine has been revolutionary, since it has enabled doctors to view internal organs with unprecedented precision and safety to the patient. There are also numerous nonmedical imaging applications which lend themselves to methods of computerized tomography, such as mapping of underground resources...cross-sectional imaging of for nondestructive testing...the determination of the brightness distribution over a celestial sphere...three-dimensional imaging with electron microscopy. Principles of Computerized Tomographic Imaging provides a tutorial overview of topics in tomographic imaging covering mathematical principles and theory...how to apply the theory to problems in medical imaging and other fields...several variations of tomography that are currently being researched.",
+      "venue": "Society for Industrial and Applied Mathematics eBooks",
+      "citation_count": 5732,
+      "doi": "10.1137/1.9780898719277",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1137/1.9780898719277",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W3125788531",
+      "title": "Capital markets research in accounting",
+      "authors": [
+        {
+          "name": "S.P. Kothari",
+          "affiliation": "Massachusetts Institute of Technology"
+        }
+      ],
+      "year": 2001,
+      "abstract": "",
+      "venue": "Journal of Accounting and Economics",
+      "citation_count": 2444,
+      "doi": "10.1016/s0165-4101(01)00030-1",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1016/s0165-4101(01)00030-1",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2151694441",
+      "title": "E-S-QUAL",
+      "authors": [
+        {
+          "name": "A. Parasuraman",
+          "affiliation": "University of Miami"
+        },
+        {
+          "name": "Valarie A. Zeithaml",
+          "affiliation": "University of North Carolina at Chapel Hill"
+        },
+        {
+          "name": "Arvind Malhotra",
+          "affiliation": "University of North Carolina at Chapel Hill"
+        }
+      ],
+      "year": 2004,
+      "abstract": "Using the means-end framework as a theoretical foundation, this article conceptualizes, constructs, refines, and tests a multiple-item scale (E-S-QUAL) for measuring the service quality delivered by Web sites on which customers shop online. Two stages of empirical data collection revealed that two different scales were necessary for capturing electronic service quality. The basic E-S-QUAL scale developed in the research is a 22-item scale of four dimensions: efficiency, fulfillment, system availability, and privacy. The second scale, E-RecS-QUAL, is salient only to customers who had nonroutine encounters with the sites and contains 11 items in three dimensions: responsiveness, compensation, and contact. Both scales demonstrate good psychometric properties based on findings from a variety of reliability and validity tests and build on the research already conducted on the topic. Directions for further research on electronic service quality are offered. Managerial implications stemming from the empirical findings about E-S-QUAL are also discussed.",
+      "venue": "Journal of Service Research",
+      "citation_count": 3783,
+      "doi": "10.1177/1094670504271156",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1177/1094670504271156",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2158685692",
+      "title": "Designing the user interface: Strategies for effective human-computer interaction",
+      "authors": [],
+      "year": 1993,
+      "abstract": "",
+      "venue": "Applied Ergonomics",
+      "citation_count": 5616,
+      "doi": "10.1016/0003-6870(93)90471-k",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1016/0003-6870(93)90471-k",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W2009543464",
+      "title": "Handbook of Parametric and Nonparametric Statistical Procedures",
+      "authors": [],
+      "year": 2004,
+      "abstract": "With more than 500 pages of new material, the Handbook of Parametric and Nonparametric Statistical Procedures, Fourth Edition carries on the esteemed tradition of the previous editions, providing up-to-date, in-depth coverage of now more than 160 statistical procedures. The book also discusses both theoretical and practical statistical topics, such as experimental design, experimental control, and statistical analysis. New to the Fourth Edition Multivariate statistics including matrix algebra, multiple regression, Hotellings T2, MANOVA, MANCOVA, discriminant function analysis, canonical correlation, logistic regression, and principal components/factor analysis Clinical trials, survival analysis, tests of equivalence, analysis of censored data, and analytical procedures for crossover design Regression diagnostics that include the Durbin-Watson test Log-linear analysis of contingency tables, Mantel-Haenszel analysis of multiple 2 2 contingency tables, trend analysis, and analysis of variance for a Latin square design Levene and Brown-Forsythe tests for evaluating homogeneity of variance, the Jarque-Bera test of normality, and the extreme studentized deviate test for identifying outliers Confidence intervals for computing the population median and the difference between two population medians The relationship between exponential and Poisson distribution Eliminating the need to search across numerous books, this handbook provides you with everything you need to know about parametric and nonparametric statistical procedures. It helps you choose the best test for your data, interpret the results, and better evaluate the research of others.",
+      "venue": "Technometrics",
+      "citation_count": 4697,
+      "doi": "10.1198/tech.2004.s209",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1198/tech.2004.s209",
+      "source": "openalex",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "oalex-W1482674833",
+      "title": "Sensory Evaluation of Food: Principles and Practices",
+      "authors": [
+        {
+          "name": "Harry T. Lawless",
+          "affiliation": ""
+        },
+        {
+          "name": "Hildegarde Heymann",
+          "affiliation": ""
+        }
+      ],
+      "year": 1999,
+      "abstract": "",
+      "venue": "",
+      "citation_count": 2267,
+      "doi": "10.1007/978-1-4419-6488-5",
+      "arxiv_id": "",
+      "url": "https://doi.org/10.1007/978-1-4419-6488-5",
+      "source": "openalex",
+      "_bibtex_override": ""
+    }
+  ]
+}
