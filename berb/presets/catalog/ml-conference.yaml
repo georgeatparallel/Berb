@@ -1,0 +1,87 @@
+# Preset: ML Conference (NeurIPS / ICML / ICLR)
+# The default high-quality ML research preset targeting top-tier venues.
+
+name: ml-conference
+description: >
+  Full-pipeline ML research targeting top-tier venues (NeurIPS, ICML, ICLR).
+  Emphasises rigorous empirical evaluation, reproducibility, and strong baselines.
+tags:
+  - machine-learning
+  - deep-learning
+  - neurips
+  - icml
+  - iclr
+  - conference
+
+# Literature
+primary_sources:
+  - semantic_scholar
+  - openalex
+search_engines:
+  - google_scholar
+grey_sources:
+  - arxiv
+full_text_access:
+  - arxiv
+
+# Model routing
+primary_model: claude-sonnet-4-6
+reasoning_model: claude-opus-4-6
+budget_model: claude-haiku-4-5-20251001
+fallback_models: []
+
+# Pipeline (all 23 stages)
+enabled_stages:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  - 9
+  - 10
+  - 11
+  - 12
+  - 13
+  - 14
+  - 15
+  - 16
+  - 17
+  - 18
+  - 19
+  - 20
+  - 21
+  - 22
+  - 23
+
+stage_overrides: {}
+
+# Experiment execution
+experiment_mode: docker
+experiment_frameworks:
+  - pytorch
+  - transformers
+  - scikit-learn
+  - wandb
+validation_methods:
+  - ablation_study
+  - statistical_significance
+  - baseline_comparison
+
+# Paper writing
+paper_format: neurips
+target_venue: NeurIPS
+max_pages: 9
+style_profile: auto
+citation_style: numeric
+
+# Quality
+min_literature_papers: 40
+min_quality_score: 8.0
+min_novelty_score: 7.0
+
+# Budget
+max_budget_usd: 2.00
+cost_optimization: quality-first

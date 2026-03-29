@@ -690,4 +690,124 @@ berb/
 
 ---
 
+## 🗂️ Preset System (BERB_IMPLEMENTATION_PROMPT Group C)
+
+**Priority:** P1 | **Status:** 🔄 In Progress | **Started:** 2026-03-29
+
+### Phase 1 — Core Infrastructure ✅ Done
+
+| # | File | Status |
+|---|------|--------|
+| 1 | `berb/presets/__init__.py` | ✅ |
+| 2 | `berb/presets/base.py` — `PipelinePreset` Pydantic v2 model | ✅ |
+| 3 | `berb/presets/registry.py` — `PresetRegistry`, `load_preset()`, `list_presets()` | ✅ |
+
+### Phase 2 — Catalog YAML Files
+
+| # | File | Domain | Status |
+|---|------|--------|--------|
+| 4 | `catalog/ml-conference.yaml` | NeurIPS / ICML / ICLR | ✅ |
+| 5 | `catalog/rapid-draft.yaml` | Speed / low-cost iteration | ✅ |
+| 6 | `catalog/biomedical.yaml` | Clinical & translational | ✅ |
+| 7 | `catalog/nutrition-bioactive.yaml` | Bioactives / LEAP (PIPA) | ✅ |
+| 8 | `catalog/food-ai-innovation.yaml` | Food-AI / FIOS (PIPA) | ✅ |
+| 9 | `catalog/life-sciences-kg.yaml` | Drug discovery / KG (DEUS) | ✅ |
+| 10 | `catalog/process-optimization-dt.yaml` | Digital Twins (DEUS) | ✅ |
+| 11 | `catalog/nlp.yaml` | NLP / ACL / EMNLP | ⏳ |
+| 12 | `catalog/computer-vision.yaml` | CV / CVPR / ECCV | ⏳ |
+| 13 | `catalog/physics.yaml` | Physics / chaos / simulation | ⏳ |
+| 14 | `catalog/systematic-review.yaml` | Cochrane-style meta-analysis | ⏳ |
+| 15 | `catalog/eu-sovereign.yaml` | EU-funded / GDPR-safe stack | ⏳ |
+| 16 | `catalog/max-quality.yaml` | Max quality, cost irrelevant | ⏳ |
+| 17 | `catalog/budget.yaml` | Under $0.20, aggressive caching | ⏳ |
+
+### Phase 3 — CLI Integration
+
+| # | Task | Status |
+|---|------|--------|
+| 18 | Wire `--preset <name>` flag in `berb/cli.py` | ⏳ |
+| 19 | Pass loaded preset into `PipelineRunner` | ⏳ |
+| 20 | `berb list-presets` sub-command | ⏳ |
+
+---
+
+## 🏗️ BERB_IMPLEMENTATION_PROMPT — Outstanding Groups
+
+> Audit completed 2026-03-29. Items below were identified as missing or partial.
+
+### Group A — Style Fingerprinting (B1)
+
+| # | Task | Priority | Status |
+|---|------|----------|--------|
+| 1 | `berb/writing/style_fingerprint.py` — mine writing patterns from user corpus | P2 | ⏳ |
+| 2 | `berb/writing/venue_style.py` — per-venue style profiles (tone, section structure) | P2 | ⏳ |
+| 3 | Integrate into Stage 16 (paper writing) | P2 | ⏳ |
+
+### Group B — Citation Graph (D1)
+
+| # | Task | Priority | Status |
+|---|------|----------|--------|
+| 4 | `berb/literature/citation_graph.py` — build citation network from search results | P2 | ⏳ |
+| 5 | PageRank-style influence scoring for related work section | P2 | ⏳ |
+| 6 | Integrate into Stage 5 (synthesis) | P2 | ⏳ |
+
+### Group C — Reproducibility Artifacts (F1)
+
+| # | Task | Priority | Status |
+|---|------|----------|--------|
+| 7 | `berb/experiment/artifact_packager.py` — zip code + data + requirements | P2 | ⏳ |
+| 8 | `berb/experiment/reproducibility_report.py` — auto-generate reproducibility section | P2 | ⏳ |
+| 9 | Docker image export for submission artifacts | P2 | ⏳ |
+
+### Group D — Windows 11 Compatibility ✅ Done (2026-03-29)
+
+| # | Fix | Status |
+|---|-----|--------|
+| 10 | Process termination (`os.killpg` → `proc.terminate()`) | ✅ |
+| 11 | Docker volume paths (`\` → `/`) | ✅ |
+| 12 | `subprocess.run` encoding (`encoding="utf-8"`) — 15 files | ✅ |
+| 13 | `--user` flag omitted on Windows (no `os.getuid`) | ✅ |
+
+### Group E — HyperAgent Full Implementation
+
+| # | Task | Priority | Status |
+|---|------|----------|--------|
+| 14 | `berb/hyperagent/meta_agent.py` — real impl (currently `NotImplementedError`) | P1 | ⏳ |
+| 15 | `berb/hyperagent/task_agent.py` — real impl | P1 | ⏳ |
+| 16 | `berb/hyperagent/improvement_loop.py` — real impl | P1 | ⏳ |
+| 17 | `berb/hyperagent/memory.py` — real impl | P1 | ⏳ |
+
+### Group F — Remaining Reasoning Methods
+
+| # | Method | Priority | Status |
+|---|--------|----------|--------|
+| 18 | Counterfactual reasoning | P1 | ⏳ |
+| 19 | Pre-mortem failure analysis | P1 | ⏳ |
+| 20 | Multi-perspective synthesis | P1 | ⏳ |
+| 21 | Tree of Thought orchestration | P2 | ⏳ |
+
+---
+
+## 🧪 Domain Presets — PIPA / DEUS Context
+
+> Websites analysed: https://pipacorp.com/ (PIPA LLC, Ilias Tagkopoulos / UC Davis)
+> and https://ekmechanes.com/ (DEUS EX MACHINA — bioinformatics, digital twins, EU grants).
+
+| Preset | Domain | Venue Target | Status |
+|--------|--------|--------------|--------|
+| `nutrition-bioactive` | Bioactive discovery, LEAP platform | Food Chemistry, EFSA | ✅ |
+| `food-ai-innovation` | FIOS / food product dev, EU grant | J. Food Engineering | ✅ |
+| `life-sciences-kg` | Drug discovery KG, multi-omics | PLOS Comp. Bio | ✅ |
+| `process-optimization-dt` | Digital twins (extruder/fermentor/oven) | Comp. Chem. Eng. | ✅ |
+
+---
+
+### **v1.1.0 (2026-03-29)** - Preset System + Windows Compatibility
+- ✅ Windows 11 end-to-end compatibility (15 files patched)
+- ✅ `berb/presets/` module with Pydantic v2 `PipelinePreset`
+- ✅ `PresetRegistry` with YAML catalog loader
+- ✅ 7 catalog presets (ml-conference, rapid-draft, biomedical, 4× PIPA/DEUS)
+
+---
+
 **Berb — Research, Refined.** 🧪✨
