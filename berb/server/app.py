@@ -46,10 +46,13 @@ def create_app(
     _app_state["monitor_dir"] = monitor_dir
 
     # --- CORS ---
+    # allow_credentials=True is incompatible with allow_origins=["*"] per the CORS spec.
+    # Only enable credentials when an explicit allowlist is configured.
+    _origins = list(config.server.cors_origins)
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=list(config.server.cors_origins),
-        allow_credentials=True,
+        allow_origins=_origins,
+        allow_credentials=bool(_origins),  # False when no origins configured
         allow_methods=["*"],
         allow_headers=["*"],
     )
@@ -62,7 +65,12 @@ def create_app(
     event_manager = ConnectionManager()
     _app_state["event_manager"] = event_manager
 
-    # --- Health endpoint ---
+    # --- Health endpoints ---
+    @app.get("/healthz")
+    async def healthz() -> dict[str, str]:
+        """Kubernetes liveness / readiness probe."""
+        return {"status": "ok"}
+
     @app.get("/api/health")
     async def health() -> dict[str, Any]:
         return {

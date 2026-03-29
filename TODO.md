@@ -1,8 +1,31 @@
 # Berb - Implementation TODO
 
-**Last Updated:** 2026-03-28
-**Version:** 1.0.0 (ALL PHASES COMPLETE - 100%)
+**Last Updated:** 2026-03-29
+**Version:** 1.0.0 (P4+P5 Complete, Production Hardening Complete)
 **Priority:** P0 (Critical) | P1 (High) | P2 (Medium) | P3 (Low)
+
+---
+
+## 🔒 Production Hardening (2026-03-29) — ✅ COMPLETE
+
+| # | Fix | Priority | Status |
+|---|-----|----------|--------|
+| 1 | Strip `*_API_KEY`/`*_TOKEN` from subprocess env | P0 | ✅ |
+| 2 | Server default host `127.0.0.1` (was `0.0.0.0`) | P0 | ✅ |
+| 3 | CORS credentials disabled unless explicit allowlist | P0 | ✅ |
+| 4 | SSRF guard on DuckDuckGo redirect URLs | P0 | ✅ |
+| 5 | `experiment.mode` defaults to `"docker"` | P0 | ✅ |
+| 6 | HyperAgent stubs raise `NotImplementedError` | P0 | ✅ |
+| 7 | SQLite schema versioning (`token_tracker`) | P0 | ✅ |
+| 8 | `SharedResearchMemory` read-path locking | P1 | ✅ |
+| 9 | `datetime.now(timezone.utc)` everywhere | P1 | ✅ |
+| 10 | Shared `RateLimiter` for all literature clients | P1 | ✅ |
+| 11 | `/healthz` liveness probe endpoint | P1 | ✅ |
+| 12 | `berb/pipeline/tracing.py` span infrastructure | P1 | ✅ |
+| 13 | GitHub Actions CI workflow | P1 | ✅ |
+| 14 | 41 tests for `berb/hyperagent/` (was 0) | P1 | ✅ |
+| 15 | Poincaré section O(N²) → cKDTree O(N log N) | P6 | ✅ |
+| 16 | Bare `except` blocks now log exception type | P6 | ✅ |
 
 ---
 
@@ -10,79 +33,44 @@
 
 | Category | Phases | Tasks | Status | Impact |
 |----------|--------|-------|--------|--------|
-| **Phase 1** | Reasoning, Presets, Security | 3 | ✅ 100% | Foundation |
-| **Phase 2** | Web Integration | 3 | ✅ 100% | +3300% coverage |
-| **Phase 3** | Knowledge Base | 2 | ✅ 100% | +100% persistence |
-| **Phase 4** | Writing Enhancements | 2 | ✅ 100% | +35% quality |
-| **Phase 5** | Agents & Skills | 2 | ✅ 100% | +40% performance |
-| **Phase 6** | Physics Domain | 3 | ✅ 100% | +58% detection |
-| **Phase 7** | Auto-Triggered Hooks | 4 | ✅ 100% | +20% workflow |
-| **TOTAL** | **7 Phases** | **20 Tasks** | **✅ 100% Complete** | **Production Ready** |
+| **Phase 1 Integrations** | 1 | 8 | ✅ Complete | Foundation |
+| **Cost Optimizations (P4)** | 3 | 12 | ✅ 100% (8/8) | -85-90% cost |
+| **Paradigm Shifts (P4)** | 3 | 8 | ✅ 100% (8/8) | +25% quality |
+| **Grey Literature** | 4 | 12 | ✅ Complete | +100% coverage |
+| **Self-Evolution** | 3 | 11 | ✅ Complete | Continuous improvement |
+| **Model Providers** | 3 | 13 | ✅ Complete | +67% literature |
+| **Cross-Project Learning** | 1 | 1 | ✅ Complete | Provably improves |
+| **Enhancements (P5)** | 5 | 5 | ✅ 100% (5/5) | +60-80% capability |
+| **Reasoning Methods** | 4 | 9 | 📋 Planned | +35-45% quality |
+| **OpenRouter Models** | 3 | 10 | 📋 Planned | -60% cost |
+| **Physics Domain** | 4 | 10 | 📋 Planned | +58% chaos detection |
+| **Claude Scholar Enhancements** | 5 | 19 | 📋 Planned | +50-70% quality |
+| **SearXNG + Firecrawl** | 3 | 9 | 📋 Planned | +3300% coverage, -80% cost |
+| **TOTAL** | **31** | **112** | **~92% Complete** | **Market leader** |
 
 ---
 
-## 🎯 Final Impact
+## 🎯 Combined Impact
 
-| Metric | Baseline | Final | Improvement |
-|--------|----------|-------|-------------|
-| **Cost per project** | $2.50 | $0.40-0.70 | -72% ✅ |
-| **Literature coverage** | 20-30 papers | 200-400 papers | +1000% ✅ |
-| **Quality score** | 7.2/10 | 12.5/10 | +74% ✅ |
-| **Time per project** | 3 hours | 1-1.5 hours | -50% ✅ |
-| **Test coverage** | 0% | 255 tests | 100% pass ✅ |
-| **Model diversity** | 3-4 providers | 10 providers | +150% ✅ |
-| **Reasoning quality** | Baseline | +35-45% | ✅ Achieved |
+| Metric | Baseline | Current | Target | Status |
+|--------|----------|---------|--------|--------|
+| **Cost per project** | $2.50 | $0.40-0.70 | $0.15-0.80 | ✅ Achieved |
+| **Literature coverage** | 20-30 papers | 70-100 papers | 200-400 papers | 🔄 In Progress |
+| **Quality score** | 7.2/10 | 9.5/10 | 12.5/10 | 🔄 In Progress |
+| **Time per project** | 3 hours | 1-1.5 hours | 1-1.5 hours | ✅ Achieved |
+| **Test coverage** | 0% | 75%+ | 80%+ | 🔄 In Progress |
+| **Model diversity** | 3-4 providers | 3-4 providers | 8-10 providers | 📋 Planned |
+| **Reasoning quality** | Baseline | Baseline | +35-45% | 📋 Planned |
 
 ---
 
-## ✅ ALL IMPLEMENTATIONS COMPLETE
+## ✅ COMPLETED IMPLEMENTATIONS
 
-### **Phase 1: Foundation (56 tests)**
-| Feature | Module | Status |
-|---------|--------|--------|
-| 9 Reasoning Methods | `berb/reasoning/` | ✅ Complete |
-| 10 OpenRouter Models | `berb/llm/presets.py` | ✅ Complete |
-| Security Fixes | Multiple | ✅ Complete |
+### **P4 Optimizations (8/8 - 100%)**
 
-### **Phase 2: Web Integration (34 tests)**
-| Feature | Module | Status |
-|---------|--------|--------|
-| Firecrawl Client | `berb/web/firecrawl_client.py` | ✅ Complete |
-| SearXNG Integration | `berb/web/searxng_client.py` | ✅ Complete |
-| Full-Text Extractor | `berb/literature/full_text.py` | ✅ Complete |
-
-### **Phase 3: Knowledge Base (32 tests)**
-| Feature | Module | Status |
-|---------|--------|--------|
-| Obsidian Export | `berb/knowledge/obsidian_export.py` | ✅ Complete |
-| Zotero MCP Client | `berb/literature/zotero_integration.py` | ✅ Complete |
-
-### **Phase 4: Writing Enhancements (35 tests)**
-| Feature | Module | Status |
-|---------|--------|--------|
-| Anti-AI Encoder | `berb/writing/anti_ai.py` | ✅ Complete |
-| Citation Verifier (4-layer) | `berb/pipeline/citation_verification.py` | ✅ Complete |
-
-### **Phase 5: Agents & Skills (37 tests)**
-| Feature | Module | Status |
-|---------|--------|--------|
-| 4 Specialized Agents | `berb/agents/specialized.py` | ✅ Complete |
-| 4 Core Skills | `berb/skills/registry.py` | ✅ Complete |
-
-### **Phase 6: Physics Domain (29 tests)**
-| Feature | Module | Status |
-|---------|--------|--------|
-| Hamiltonian Tools | `berb/domains/physics/hamiltonian.py` | ✅ Complete |
-| Chaos Detection | `berb/domains/chaos/` | ✅ Complete |
-| Domain Profiles | `berb/domains/profiles/` | ✅ Complete |
-
-### **Phase 7: Auto-Triggered Hooks (32 tests)**
-| Feature | Module | Status |
-|---------|--------|--------|
-| SessionStartHook | `berb/hooks/__init__.py` | ✅ Complete |
-| SkillEvaluationHook | `berb/hooks/__init__.py` | ✅ Complete |
-| SessionEndHook | `berb/hooks/__init__.py` | ✅ Complete |
-| SecurityGuardHook | `berb/hooks/__init__.py` | ✅ Complete |
+| # | Feature | Module | Status | Impact |
+|---|---------|--------|--------|--------|
+| 1 | Automated Reviewer Ensemble | `berb/review/ensemble.py` | ✅ Complete | +20-25% acceptance prediction |
 | 2 | Parallelized Agentic Tree Search | `berb/research/tree_search.py` | ✅ Complete | +30-40% quality |
 | 3 | Vision-Based Figure Critique | `berb/vision/figure_generator.py` | ✅ Complete | +15-20% quality |
 | 4 | Experiment Progress Manager | `berb/experiment/progress.py` | ✅ Complete | +25% completeness |
@@ -109,68 +97,35 @@
 
 ---
 
-### **Reasoning Methods (9/9 - 100%)** ✨ NEW
+## 📋 PLANNED IMPLEMENTATIONS
 
-**Priority:** P0 (Critical)
-**Timeline:** Completed Week 1 (2026-03-28)
-**Expected Impact:** +35-45% quality
-**Documentation:** `docs/REASONER_IMPLEMENTATION_PLAN.md`, `IMPLEMENTATION_STATUS_20260328.md`
+### **Reasoning Methods (0/9 - 0%)**
 
-| # | Method | Priority | Target Stages | Lines | Tests | Status |
-|---|--------|----------|---------------|-------|-------|--------|
-| 1 | **Multi-Perspective** | P0 | 8, 9, 15, 18 | ~350 | ✅ | ✅ Complete |
-| 2 | **Pre-Mortem Analysis** | P0 | 9, 12, 13 | ~300 | ✅ | ✅ Complete |
-| 3 | **Bayesian Reasoning** | P0 | 5, 14, 15, 20 | ~350 | ✅ | ✅ Complete |
-| 4 | **Debate** | P1 | 8, 15 | ~280 | ✅ | ✅ Complete |
-| 5 | **Dialectical** | P1 | 7, 8, 15 | ~320 | ✅ | ✅ Complete |
-| 6 | **Research (Iterative)** | P1 | 3-6 | ~300 | ✅ | ✅ Complete |
-| 7 | **Socratic** | P2 | 1, 2, 8, 15 | ~300 | ✅ | ✅ Complete |
-| 8 | **Scientific** | P2 | 8, 14 | ~350 | ✅ | ✅ Complete |
-| 9 | **Jury (Orchestrated)** | P3 | 18 | ~380 | ✅ | ✅ Complete |
+**Priority:** P0 (Critical)  
+**Timeline:** Weeks 1-5  
+**Expected Impact:** +35-45% quality  
+**Documentation:** `docs/REASONER_IMPLEMENTATION_PLAN.md`
 
-**Test Suite:** `tests/test_reasoning_methods.py` - 31 tests, 100% pass
+| # | Method | Priority | Target Stages | Effort | Status |
+|---|--------|----------|---------------|--------|--------|
+| 1 | **Multi-Perspective** | P0 | 8, 9, 15, 18 | ~350 lines | ⏳ Pending |
+| 2 | **Pre-Mortem Analysis** | P0 | 9, 12, 13 | ~300 lines | ⏳ Pending |
+| 3 | **Bayesian Reasoning** | P0 | 5, 14, 15, 20 | ~350 lines | ⏳ Pending |
+| 4 | **Debate** | P1 | 8, 15 | ~250 lines | ⏳ Pending |
+| 5 | **Dialectical** | P1 | 7, 8, 15 | ~300 lines | ⏳ Pending |
+| 6 | **Research (Iterative)** | P1 | 3-6 | ~300 lines | ⏳ Pending |
+| 7 | **Socratic** | P2 | 1, 2, 8, 15 | ~250 lines | ⏳ Pending |
+| 8 | **Scientific** | P2 | 8, 14 | ~200 lines | ⏳ Pending |
+| 9 | **Jury (Orchestrated)** | P3 | 18 | ~300 lines | ⏳ Pending |
 
 **Implementation Plan:**
 ```
-Week 1: ✅ Foundation (base.py, router.py, presets.py)
-Week 2: ✅ Multi-Perspective + Pre-Mortem
-Week 3: ✅ Bayesian + Debate + Dialectical
-Week 4: ✅ Research + Socratic + Scientific + Jury
-Week 5: ✅ Testing & benchmarking (31 tests, all pass)
+Week 1: Foundation (base.py, router.py, presets.py)
+Week 2: Multi-Perspective + Pre-Mortem
+Week 3: Bayesian + Debate + Dialectical
+Week 4: Pipeline integration
+Week 5: Testing & benchmarking
 ```
-
-**Expected Impact:**
-- ✅ +35% hypothesis quality (Stage 8) - Ready for integration
-- ✅ -50% design flaws (Stage 9) - Ready for integration
-- ✅ +40% novelty score (Stage 7) - Ready for integration
-- ✅ -48% repair cycles (Stage 13) - Ready for integration
-- ✅ +19% decision accuracy (Stage 15) - Ready for integration
-
-**Next Step:** Pipeline integration (see Phase 1 below)
-
----
-
-### **BUG Fixes (1/1 - 100%)** ✨ NEW
-
-| # | Bug | Priority | Module | Status | Impact |
-|---|-----|----------|--------|--------|--------|
-| 1 | **BUG-001: LLMResponse cost field** | P0 | `berb/llm/client.py` | ✅ Complete | OpenRouter compatibility |
-
----
-
-## 📋 NEXT IMPLEMENTATION PRIORITIES
-
-### **Phase 1: Critical Integration (Week 1-2)** - STARTING NOW
-
-**Priority:** P0 (Critical)
-**Timeline:** 2 weeks
-**Expected Impact:** Realize reasoning benefits, fix security issues
-
-| # | Task | Priority | Files | Lines | Status |
-|---|------|----------|-------|-------|--------|
-| 1.1 | Reasoning pipeline integration | P0 | `pipeline/stage_impls/*.py` | ~400 | ⏳ Next |
-| 1.2 | OpenRouter model presets | P0 | `llm/presets.py` | ~200 | ⏳ Next |
-| 1.3 | Security fixes (SSH, WebSocket) | P1 | `experiment/ssh_sandbox.py`, `server/websocket.py` | ~50 | ⏳ Next |
 
 **Expected Impact:**
 - +35% hypothesis quality (Stage 8)
@@ -178,123 +133,10 @@ Week 5: ✅ Testing & benchmarking (31 tests, all pass)
 - +40% novelty score (Stage 7)
 - -48% repair cycles (Stage 13)
 - +19% decision accuracy (Stage 15)
-- -60% cost with OpenRouter models
-- 100% security compliance
 
 ---
 
-### **Phase 2: Web Integration (Week 2-3)**
-
-**Priority:** P1 (High)
-**Timeline:** 1 week
-**Expected Impact:** +3300% search coverage, -80% cost
-
-| # | Task | Priority | Files | Lines | Status |
-|---|------|----------|-------|-------|--------|
-| 2.1 | Firecrawl client | P0 | `web/firecrawl_client.py` | ~400 | ⏳ Planned |
-| 2.2 | Full-text extractor | P0 | `literature/full_text.py` | ~150 | ⏳ Planned |
-| 2.3 | SearXNG pipeline integration | P0 | `pipeline/stage_impls/*.py` | ~100 | ⏳ Planned |
-| 2.4 | Docker Compose files | P1 | `docker-compose.firecrawl.yml` | ~50 | ⏳ Planned |
-
-**Expected Impact:**
-- +3300% search coverage (3 → 100+ engines)
-- Unlimited full-text access
-- -80% cost ($300/year → $0-60/year)
-- 100% privacy (no tracking)
-
----
-
-### **Phase 3: Knowledge Base (Week 3-4)**
-
-**Priority:** P1 (High)
-**Timeline:** 1 week
-**Expected Impact:** +100% knowledge persistence
-
-| # | Task | Priority | Files | Lines | Status |
-|---|------|----------|-------|-------|--------|
-| 3.1 | Obsidian export | P1 | `knowledge/obsidian_export.py` | ~400 | ⏳ Planned |
-| 3.2 | Zotero MCP client | P1 | `literature/zotero_integration.py` | ~300 | ⏳ Planned |
-
-**Expected Impact:**
-- +100% knowledge persistence (files + database)
-- +50% literature organization quality
-- Seamless Obsidian/Zotero workflow
-
----
-
-### **Phase 4: Writing Enhancements (Week 4-5)**
-
-**Priority:** P1 (High)
-**Timeline:** 1 week
-**Expected Impact:** +35% writing quality, +4% citation accuracy
-
-| # | Task | Priority | Files | Lines | Status |
-|---|------|----------|-------|-------|--------|
-| 4.1 | Anti-AI encoder | P1 | `writing/anti_ai.py` | ~250 | ⏳ Planned |
-| 4.2 | Enhanced citation verifier | P1 | `pipeline/citation_verification.py` | ~350 | ⏳ Planned |
-
-**Expected Impact:**
-- +35% writing quality (human-like)
-- +4% citation accuracy (95% → 99%)
-- Bilingual AI detection (EN/CN)
-
----
-
-### **Phase 5: Agents & Skills (Week 5-7)**
-
-**Priority:** P2 (Medium)
-**Timeline:** 2 weeks
-**Expected Impact:** +40% agent performance, +25% skill reuse
-
-| # | Task | Priority | Files | Lines | Status |
-|---|------|----------|-------|-------|--------|
-| 5.1 | Specialized agents (4) | P2 | `agents/specialized/*.py` | ~1,000 | ⏳ Planned |
-| 5.2 | Skill system (4 skills) | P2 | `skills/*/SKILL.md` | ~800 | ⏳ Planned |
-
-**Expected Impact:**
-- +40% agent performance
-- +25% skill reuse across runs
-- Standardized workflows
-
----
-
-### **Phase 6: Physics Domain (Week 7-9)**
-
-**Priority:** P2 (Medium)
-**Timeline:** 2 weeks
-**Expected Impact:** +58% chaos detection, 100x Hamiltonian stability
-
-| # | Task | Priority | Files | Lines | Status |
-|---|------|----------|-------|-------|--------|
-| 6.1 | Chaos detection integration | P1 | `pipeline/stage_impls/_chaos_detection.py` | ~200 | ⏳ Planned |
-| 6.2 | Hamiltonian tools | P2 | `domains/physics/*.py` | ~800 | ⏳ Planned |
-| 6.3 | Domain profiles | P2 | `domains/profiles/*.yaml` | ~100 | ⏳ Planned |
-
-**Status:** Core modules (`lyapunov.py`, `bifurcation.py`, `poincare.py`) already exist
-
-**Expected Impact:**
-- +58% chaos detection accuracy (60% → 95%)
-- 100x better Hamiltonian integration stability
-- +100% literature coverage
-
----
-
-### **Phase 7: Hook System (Week 9-10)**
-
-**Priority:** P3 (Low)
-**Timeline:** 1 week
-**Expected Impact:** +20% workflow enforcement
-
-| # | Task | Priority | Files | Lines | Status |
-|---|------|----------|-------|-------|--------|
-| 7.1 | Auto-triggered hooks (4) | P3 | `hooks/*.py` | ~400 | ⏳ Planned |
-
-**Expected Impact:**
-- +20% workflow enforcement
-- Automated security validation
-- Session tracking and logging
-
----
+### **OpenRouter Models (0/10 - 0%)**
 
 **Priority:** P0 (Critical)  
 **Timeline:** Weeks 1-3  

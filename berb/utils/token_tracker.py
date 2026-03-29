@@ -181,9 +181,29 @@ class TokenTracker:
             self._conn.row_factory = sqlite3.Row
         return self._conn
     
+    # Increment when DDL changes to trigger migration.
+    _SCHEMA_VERSION: int = 1
+
     def _init_db(self) -> None:
-        """Initialize database schema."""
+        """Initialize database schema with version tracking."""
         conn = self.connection
+
+        # Schema version table — always created first so migrations can reference it.
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS schema_meta "
+            "(key TEXT PRIMARY KEY, value TEXT NOT NULL)"
+        )
+        row = conn.execute(
+            "SELECT value FROM schema_meta WHERE key='version'"
+        ).fetchone()
+        current_version = int(row[0]) if row else 0
+        if current_version < self._SCHEMA_VERSION:
+            self._migrate(conn, current_version, self._SCHEMA_VERSION)
+            conn.execute(
+                "INSERT OR REPLACE INTO schema_meta (key, value) VALUES ('version', ?)",
+                (str(self._SCHEMA_VERSION),),
+            )
+
         conn.execute("""
             CREATE TABLE IF NOT EXISTS token_usage (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -214,7 +234,22 @@ class TokenTracker:
         
         conn.commit()
         logger.debug(f"Token tracker initialized at {self.db_path}")
-    
+
+    @staticmethod
+    def _migrate(conn: object, from_version: int, to_version: int) -> None:
+        """Apply incremental schema migrations.
+
+        Add a new ``elif from_version == N`` block for each future DDL change.
+        Migrations run in order and are idempotent.
+        """
+        import sqlite3 as _sqlite3
+        assert isinstance(conn, _sqlite3.Connection)
+        # Version 0 → 1: initial schema (nothing to ALTER; CREATE IF NOT EXISTS handles it)
+        if from_version < 1:
+            logger.debug("Schema migration: 0 → 1 (initial schema, no DDL changes needed)")
+        # Future: elif from_version < 2: conn.execute("ALTER TABLE token_usage ADD COLUMN ...")
+        logger.debug("Schema migrated from v%d to v%d", from_version, to_version)
+
     def close(self) -> None:
         """Close database connection."""
         if self._conn:

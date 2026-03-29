@@ -29,7 +29,7 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -189,8 +189,8 @@ class CrossProjectLearning:
                 run_id=data.get("run_id", "unknown"),
                 topic=data.get("topic", ""),
                 domain=data.get("domain", "unknown"),
-                start_time=datetime.fromisoformat(data["start_time"]) if data.get("start_time") else datetime.now(),
-                end_time=datetime.fromisoformat(data["end_time"]) if data.get("end_time") else datetime.now(),
+                start_time=datetime.fromisoformat(data["start_time"]) if data.get("start_time") else datetime.now(timezone.utc),
+                end_time=datetime.fromisoformat(data["end_time"]) if data.get("end_time") else datetime.now(timezone.utc),
                 status=data.get("status", "unknown"),
                 total_cost=data.get("total_cost", 0.0),
                 total_tokens=data.get("total_tokens", 0),
@@ -483,7 +483,7 @@ class CrossProjectLearning:
         output_path = Path(output_path)
 
         data = {
-            "exported_at": datetime.now().isoformat(),
+            "exported_at": datetime.now(timezone.utc).isoformat(),
             "total_runs": len(self._runs),
             "model_affinities": {},
             "failure_predictors": {},

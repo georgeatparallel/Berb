@@ -36,3 +36,8 @@ def check_url_ssrf(url: str) -> str | None:
     if addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_reserved:
         return f"Blocked internal/private URL: {hostname}"
     return None
+
+
+def is_safe_url(url: str) -> bool:
+    """Return True if *url* is safe to fetch (not an internal/private address)."""
+    return check_url_ssrf(url) is None

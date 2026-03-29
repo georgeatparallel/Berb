@@ -27,6 +27,7 @@ import urllib.parse
 import urllib.request
 from typing import Any
 
+from berb.literature._rate_limiter import RateLimiter
 from berb.literature.models import Author, Paper
 
 logger = logging.getLogger(__name__)
@@ -38,6 +39,8 @@ _RATE_LIMIT_SEC = 1.5  # conservative spacing between requests
 _MAX_RETRIES = 3
 _MAX_WAIT_SEC = 60
 _TIMEOUT_SEC = 30
+
+_rate_limiter = RateLimiter(min_interval_sec=_RATE_LIMIT_SEC)
 
 # ---------------------------------------------------------------------------
 # Three-state circuit breaker
@@ -140,9 +143,7 @@ def _cb_on_429() -> bool:
         return False
 
 
-# Last request timestamp for rate limiting
-_last_request_time: float = 0.0
-_rate_lock = threading.Lock()
+# Removed: _last_request_time / _rate_lock — replaced by _rate_limiter above.
 
 
 def search_semantic_scholar(
@@ -170,16 +171,7 @@ def search_semantic_scholar(
     list[Paper]
         Parsed papers.  Empty list on network failure.
     """
-    global _last_request_time  # noqa: PLW0603
-
-    # Rate limiting: locked to serialize concurrent callers
-    with _rate_lock:
-        now = time.monotonic()
-        rate_limit = 0.3 if api_key else _RATE_LIMIT_SEC
-        elapsed_since_last = now - _last_request_time
-        if elapsed_since_last < rate_limit:
-            time.sleep(rate_limit - elapsed_since_last)
-        _last_request_time = time.monotonic()
+    _rate_limiter.wait_sync()
 
     limit = min(limit, _MAX_PER_REQUEST)
     params: dict[str, str] = {
@@ -285,14 +277,7 @@ def batch_fetch_papers(
     if not _cb_should_allow():
         return []
 
-    global _last_request_time  # noqa: PLW0603
-    rate = 0.3 if api_key else _RATE_LIMIT_SEC
-    with _rate_lock:
-        now = time.monotonic()
-        elapsed = now - _last_request_time
-        if elapsed < rate:
-            time.sleep(rate - elapsed)
-        _last_request_time = time.monotonic()
+    _rate_limiter.wait_sync()
 
     all_papers: list[Paper] = []
 
@@ -311,8 +296,6 @@ def batch_fetch_papers(
         body = json.dumps({"ids": chunk}).encode("utf-8")
 
         result = _post_with_retry(url, headers, body)
-        with _rate_lock:
-            _last_request_time = time.monotonic()
         if result is None:
             continue
 
@@ -324,11 +307,9 @@ def batch_fetch_papers(
             except Exception:  # noqa: BLE001
                 logger.debug("Failed to parse batch S2 paper entry")
 
-        # Delay between chunks (sleep outside lock to avoid contention)
+        # Delay between chunks
         if i + _BATCH_MAX < len(paper_ids):
-            time.sleep(rate)
-            with _rate_lock:
-                _last_request_time = time.monotonic()
+            _rate_limiter.wait_sync()
 
     return all_papers
 

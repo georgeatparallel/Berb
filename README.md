@@ -4,6 +4,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![CI](https://github.com/georgehadji/berb/actions/workflows/ci.yml/badge.svg)](https://github.com/georgehadji/berb/actions/workflows/ci.yml)
 [![P4 Optimizations](https://img.shields.io/badge/P4-100%25-green)](docs/P4_OPTIMIZATION_PLAN.md)
 [![P5 Enhancements](https://img.shields.io/badge/P5-100%25-green)](docs/P5_ENHANCEMENT_PLAN.md)
 
@@ -129,6 +130,26 @@ berb/
 | Finding Reproduction | Edison Scientific | 100% validation | ✅ |
 | Memory-Centric Coordination | MCP-SIM | -30% redundancy | ✅ |
 
+### Production Hardening (2026-03-29)
+
+| Fix | Category | Impact |
+|-----|----------|--------|
+| Subprocess env isolation — strips `*_API_KEY`/`*_TOKEN` from child processes | Security (P0) | Prevents secret leakage |
+| Server binds `127.0.0.1` by default (was `0.0.0.0`) | Security (P0) | No unintentional LAN exposure |
+| CORS credentials disabled unless explicit allowlist configured | Security (P0) | Prevents CORS credential attacks |
+| SSRF guard on DuckDuckGo redirect URLs | Security (P0) | Closes SSRF bypass |
+| `experiment.mode` defaults to `"docker"` (was `"simulated"`) | Correctness (P0) | Stops silent fake results |
+| HyperAgent stubs raise `NotImplementedError` (were silent) | Correctness (P0) | No invisible no-ops |
+| SQLite schema versioning in `token_tracker` | Reliability (P0) | Safe forward migration |
+| `SharedResearchMemory` read paths are now lock-protected | Concurrency (P1) | Eliminates data races |
+| All `datetime.now()` → `datetime.now(timezone.utc)` | Correctness (P1) | No naive timestamps |
+| Shared `RateLimiter` for all literature API clients | Reliability (P1) | Consistent rate limiting |
+| `/healthz` liveness probe endpoint | Ops (P1) | Kubernetes/Docker health checks |
+| `berb/pipeline/tracing.py` — span-level JSONL tracing | Observability (P1) | Production debugging |
+| GitHub Actions CI workflow | CI/CD (P1) | Automated test gate |
+| 41 new tests for `berb/hyperagent/` (was 0 coverage) | Testing | 4 modules now tested |
+| Poincaré section clustering O(N²) → O(N log N) via cKDTree | Performance | Large trajectory speedup |
+
 ---
 
 ## 📖 Documentation
@@ -160,9 +181,7 @@ llm:
   fallback_models: ["gpt-4o-mini"]
 
 experiment:
-  mode: "sandbox"
-  sandbox:
-    python_path: ".venv/bin/python"
+  mode: "docker"  # "sandbox" | "docker" | "ssh_remote" | "colab_drive"
 ```
 
 ### Key Options

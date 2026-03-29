@@ -30,9 +30,9 @@ class TestServerConfig:
 
         cfg = ServerConfig()
         assert cfg.enabled is False
-        assert cfg.host == "0.0.0.0"
+        assert cfg.host == "127.0.0.1"  # Secure default (P0 fix)
         assert cfg.port == 8080
-        assert cfg.cors_origins == ("*",)
+        assert cfg.cors_origins == ()  # Empty by default (P0 fix)
         assert cfg.auth_token == ""
         assert cfg.voice_enabled is False
 

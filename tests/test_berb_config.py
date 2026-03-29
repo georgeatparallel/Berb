@@ -268,10 +268,10 @@ def test_security_config_defaults_match_expected_values():
     assert defaults.redact_sensitive_logs is True
 
 
-def test_experiment_config_defaults_mode_is_simulated():
+def test_experiment_config_defaults_mode_is_docker():
     defaults = ExperimentConfig()
 
-    assert defaults.mode == "simulated"
+    assert defaults.mode == "docker"  # P0 fix: "simulated" silently produces fake results
     assert defaults.metric_direction == "minimize"
 
 

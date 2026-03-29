@@ -274,8 +274,8 @@ def _run_experiment_diagnosis(run_dir: Path, config: RCConfig, run_id: str) -> N
             try:
                 import yaml as _yaml_diag
                 plan = _yaml_diag.safe_load(candidate.read_text(encoding="utf-8"))
-            except Exception:
-                pass
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("YAML plan load failed (%s: %s)", type(exc).__name__, exc)
         if plan is None:
             for candidate in sorted(run_dir.glob("stage-09*/experiment_design.json")):
                 try:
@@ -535,8 +535,8 @@ def execute_pipeline(
                     backend=config.knowledge_base.backend,
                     topic=config.research.topic,
                 )
-            except Exception:  # noqa: BLE001
-                pass
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("Knowledge base store failed (%s: %s)", type(exc).__name__, exc)
 
         if result.status == StageStatus.DONE:
             _write_checkpoint(run_dir, stage, run_id)
@@ -679,22 +679,22 @@ def execute_pipeline(
             store = EvolutionStore(run_dir / "evolution")
             store.append_many(lessons)
             logger.info("Extracted %d lessons from pipeline run", len(lessons))
-    except Exception:  # noqa: BLE001
-        logger.warning("Evolution lesson extraction failed (non-blocking)")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Evolution lesson extraction failed (%s: %s)", type(exc).__name__, exc)
 
     # --- MetaClaw bridge: convert high-severity lessons to skills ---
     try:
         _metaclaw_post_pipeline(config, results, lessons, run_id, run_dir)
-    except Exception:  # noqa: BLE001
-        logger.warning("MetaClaw post-pipeline hook failed (non-blocking)")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("MetaClaw post-pipeline hook failed (%s: %s)", type(exc).__name__, exc)
 
     # --- Package deliverables into a single folder ---
     try:
         deliverables_dir = _package_deliverables(run_dir, run_id, config)
         if deliverables_dir is not None:
             print(f"[{run_id}] Deliverables packaged → {deliverables_dir}")
-    except Exception:  # noqa: BLE001
-        logger.warning("Deliverables packaging failed (non-blocking)")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Deliverables packaging failed (%s: %s)", type(exc).__name__, exc)
 
     return results
 
@@ -1446,8 +1446,8 @@ def execute_iterative_pipeline(
         deliverables_dir = _package_deliverables(run_dir, run_id, config)
         if deliverables_dir is not None:
             print(f"[{run_id}] Deliverables packaged → {deliverables_dir}")
-    except Exception:  # noqa: BLE001
-        logger.warning("Deliverables packaging failed (non-blocking)")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Deliverables packaging failed (%s: %s)", type(exc).__name__, exc)
 
     return summary
 
@@ -1534,8 +1534,8 @@ def _metaclaw_post_pipeline(
                     success,
                     active_skills,
                 )
-    except Exception:  # noqa: BLE001
-        logger.warning("MetaClaw skill feedback recording failed")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("MetaClaw skill feedback recording failed (%s: %s)", type(exc).__name__, exc)
 
     # 3. Signal session end (fire-and-forget)
     try:

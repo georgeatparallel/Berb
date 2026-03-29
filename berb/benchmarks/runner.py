@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -59,7 +59,7 @@ class BenchmarkRunner:
         logger.info(f"Starting benchmark: {benchmark.name}")
         logger.info(f"Topic: {benchmark.topic}")
         
-        start_time = datetime.now()
+        start_time = datetime.now(timezone.utc)
         
         try:
             # Run the benchmark pipeline
@@ -106,8 +106,8 @@ class BenchmarkRunner:
                 topic=benchmark.topic,
                 status="failed",
                 start_time=start_time,
-                end_time=datetime.now(),
-                duration_sec=(datetime.now() - start_time).total_seconds(),
+                end_time=datetime.now(timezone.utc),
+                duration_sec=(datetime.now(timezone.utc) - start_time).total_seconds(),
                 total_cost=0.0,
                 total_tokens=0,
                 input_tokens=0,
@@ -142,8 +142,8 @@ class BenchmarkRunner:
             category=benchmark.category.value,
             topic=benchmark.topic,
             status="success",
-            start_time=datetime.now(),
-            end_time=datetime.now(),
+            start_time=datetime.now(timezone.utc),
+            end_time=datetime.now(timezone.utc),
             duration_sec=60.0,
             total_cost=0.35,
             total_tokens=8000,
@@ -291,7 +291,7 @@ class BenchmarkRunner:
         lines = [
             "# Berb Benchmark Report",
             "",
-            f"**Generated:** {datetime.now().isoformat()}",
+            f"**Generated:** {datetime.now(timezone.utc).isoformat()}",
             "",
             "## Summary",
             "",
@@ -337,7 +337,7 @@ class BenchmarkRunner:
             output_path: Output file path (default: auto-generated)
         """
         if output_path is None:
-            timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+            timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
             output_path = self._output_dir / f"benchmark_results_{timestamp}.json"
         else:
             output_path = Path(output_path)
@@ -345,7 +345,7 @@ class BenchmarkRunner:
         output_path.parent.mkdir(parents=True, exist_ok=True)
         
         data = {
-            "generated_at": datetime.now().isoformat(),
+            "generated_at": datetime.now(timezone.utc).isoformat(),
             "summary": self.get_summary(),
             "results": [r.to_dict() for r in self._results],
         }

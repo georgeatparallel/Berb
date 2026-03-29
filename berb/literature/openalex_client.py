@@ -28,6 +28,7 @@ import urllib.parse
 import urllib.request
 from typing import Any
 
+from berb.literature._rate_limiter import RateLimiter
 from berb.literature.models import Author, Paper
 
 logger = logging.getLogger(__name__)
@@ -40,10 +41,7 @@ _MAX_WAIT_SEC = 60
 _TIMEOUT_SEC = 20
 _RATE_LIMIT_SEC = 0.2  # OpenAlex is generous; 200ms is more than enough
 
-
-# Last request timestamp for rate limiting
-_last_request_time: float = 0.0
-_rate_lock = threading.Lock()
+_rate_limiter = RateLimiter(min_interval_sec=_RATE_LIMIT_SEC)
 
 
 def search_openalex(
@@ -71,15 +69,7 @@ def search_openalex(
     list[Paper]
         Parsed papers.  Empty list on network failure.
     """
-    global _last_request_time  # noqa: PLW0603
-
-    # Rate limiting (locked to serialize concurrent callers)
-    with _rate_lock:
-        now = time.monotonic()
-        elapsed = now - _last_request_time
-        if elapsed < _RATE_LIMIT_SEC:
-            time.sleep(_RATE_LIMIT_SEC - elapsed)
-        _last_request_time = time.monotonic()
+    _rate_limiter.wait_sync()
 
     limit = min(limit, _MAX_PER_REQUEST)
 
@@ -159,45 +149,43 @@ def _request_with_retry(
                     )
                     return None
                 wait = min(wait, _MAX_WAIT_SEC)
-                jitter = random.uniform(0, wait * 0.2)
+                delay = wait + random.uniform(0, wait * 0.2)
                 logger.warning(
                     "[rate-limit] OpenAlex 429 (Retry-After: %s). "
                     "Waiting %.1fs (attempt %d/%d)...",
                     retry_after or "none",
-                    wait + jitter,
+                    delay,
                     attempt + 1,
                     _MAX_RETRIES,
                 )
-                time.sleep(wait + jitter)
+                time.sleep(delay)
                 continue
 
             if exc.code in (500, 502, 503, 504):
-                wait = 2 ** attempt
-                jitter = random.uniform(0, wait * 0.2)
+                delay = RateLimiter.backoff_delay(attempt, max_delay=_MAX_WAIT_SEC)
                 logger.warning(
                     "OpenAlex HTTP %d. Retry %d/%d in %.0fs...",
                     exc.code,
                     attempt + 1,
                     _MAX_RETRIES,
-                    wait + jitter,
+                    delay,
                 )
-                time.sleep(wait + jitter)
+                time.sleep(delay)
                 continue
 
             logger.warning("OpenAlex HTTP %d for %s", exc.code, url)
             return None
 
         except (urllib.error.URLError, OSError, json.JSONDecodeError) as exc:
-            wait = min(2**attempt, _MAX_WAIT_SEC)
-            jitter = random.uniform(0, wait * 0.2)
+            delay = RateLimiter.backoff_delay(attempt, max_delay=_MAX_WAIT_SEC)
             logger.warning(
-                "OpenAlex request failed (%s). Retry %d/%d in %ds...",
+                "OpenAlex request failed (%s). Retry %d/%d in %.0fs...",
                 exc,
                 attempt + 1,
                 _MAX_RETRIES,
-                wait,
+                delay,
             )
-            time.sleep(wait + jitter)
+            time.sleep(delay)
 
     logger.error("OpenAlex request exhausted retries for: %s", url)
     return None

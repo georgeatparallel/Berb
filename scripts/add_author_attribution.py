@@ -29,7 +29,7 @@ new_files = [
     'berb/memory_vault/__init__.py',
 ]
 
-author_line = '\nAuthor: Georgios-Chrysovalantis Chatzivantsidis\n'
+author_line = '\n# Author: Georgios-Chrysovalantis Chatzivantsidis\n'
 
 updated = 0
 skipped = 0

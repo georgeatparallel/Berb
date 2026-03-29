@@ -1,4 +1,4 @@
-# Contributing to AutoResearchClaw
+# Contributing to Berb
 
 ## Setup
 
@@ -32,9 +32,19 @@ pytest tests/
 berb doctor
 ```
 
+## CI
+
+GitHub Actions runs on every push and PR to `main`:
+- Unit tests (`pytest -m "not slow and not e2e and not llm"`)
+- Ruff lint + format check
+- Pyright type check (advisory)
+
+The workflow is at `.github/workflows/ci.yml`.
+
 ## PR Guidelines
 
-- Branch from main
+- Branch from `main`
 - One concern per PR
-- Ensure `pytest tests/` passes
+- Ensure `pytest tests/ -m "not slow and not e2e and not llm"` passes locally
 - Include tests for new functionality
+- Do not commit secrets or config files (`config.arc.yaml` is gitignored)

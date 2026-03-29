@@ -18,6 +18,38 @@ from berb.hardware import is_metric_name
 
 logger = logging.getLogger(__name__)
 
+# Keys from the host environment that are safe to pass into experiment subprocesses.
+# Excludes all *_API_KEY, *_TOKEN, *_SECRET, and *_PASSWORD patterns.
+_SAFE_ENV_KEYS: frozenset[str] = frozenset({
+    "PATH", "HOME", "USER", "LOGNAME", "SHELL", "TMPDIR", "TEMP", "TMP",
+    "LANG", "LC_ALL", "LC_CTYPE", "LANGUAGE", "TZ",
+    "PYTHONPATH", "PYTHONDONTWRITEBYTECODE", "VIRTUAL_ENV",
+    "CONDA_PREFIX", "CONDA_DEFAULT_ENV",
+    "CUDA_VISIBLE_DEVICES", "CUDA_HOME", "LD_LIBRARY_PATH",
+    "HF_HOME", "TRANSFORMERS_CACHE", "TORCH_HOME",
+})
+
+_SECRET_PATTERNS = ("_API_KEY", "_TOKEN", "_SECRET", "_PASSWORD", "_CREDENTIAL")
+
+
+def _safe_subprocess_env() -> dict[str, str]:
+    """Return a sanitised copy of os.environ safe to pass to experiment subprocesses.
+
+    Strips all credentials (API keys, tokens, secrets, passwords) to prevent
+    experiment code from exfiltrating host secrets.
+    """
+    safe: dict[str, str] = {}
+    for key, value in os.environ.items():
+        upper = key.upper()
+        if key in _SAFE_ENV_KEYS:
+            safe[key] = value
+        elif any(upper.endswith(p) for p in _SECRET_PATTERNS):
+            continue  # drop credential
+        elif upper.startswith(("AWS_", "AZURE_", "GOOGLE_", "GCP_", "GITHUB_")):
+            continue  # drop cloud credentials
+    safe["PYTHONUNBUFFERED"] = "1"
+    return safe
+
 
 def validate_entry_point(entry_point: str) -> str | None:
     """Validate *entry_point* syntax (no filesystem access needed).
@@ -320,7 +352,7 @@ class ExperimentSandbox:
 
         result: SandboxResult
         try:
-            env = {**os.environ, "PYTHONUNBUFFERED": "1"}
+            env = _safe_subprocess_env()
             completed = subprocess.run(
                 command,
                 capture_output=True,
@@ -418,7 +450,7 @@ class ExperimentSandbox:
 
         result: SandboxResult
         try:
-            env = {**os.environ, "PYTHONUNBUFFERED": "1"}
+            env = _safe_subprocess_env()
             completed = subprocess.run(
                 command,
                 capture_output=True,
