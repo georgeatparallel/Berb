@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import importlib
 import logging
+from datetime import datetime, timezone
 import os
 import shutil
 import sys
@@ -52,10 +53,14 @@ def _release_run_lock(fh: IO[str]) -> None:
     try:
         if sys.platform == "win32":
             import msvcrt as _msvcrt
+            # LK_NBLCK locked 1 byte at offset 0; must seek back before unlocking.
+            fh.seek(0)
             _msvcrt.locking(fh.fileno(), _msvcrt.LK_UNLCK, 1)
         else:
             import fcntl as _fcntl
             _fcntl.flock(fh, _fcntl.LOCK_UN)
+    except OSError:
+        pass  # Best-effort unlock; file will be released on close
     finally:
         fh.close()
 
@@ -1348,6 +1353,26 @@ def _check_experiment_quality(
         return False, f"Analysis quality score {quality}/10 — below minimum threshold"
 
     return True, "Quality checks passed"
+
+
+def _write_heartbeat(run_dir: Path, stage: "Stage", run_id: str) -> None:
+    """Write a heartbeat file for the sentinel watchdog.
+
+    The file records the current stage and timestamp so an external watchdog
+    can detect stalled runs.  Failures are silently ignored — a missing
+    heartbeat is non-fatal for the pipeline.
+    """
+    try:
+        heartbeat = {
+            "run_id": run_id,
+            "stage": stage.name if hasattr(stage, "name") else str(stage),
+            "ts": datetime.now(timezone.utc).isoformat(),
+        }
+        (run_dir / ".heartbeat.json").write_text(
+            json.dumps(heartbeat), encoding="utf-8"
+        )
+    except OSError:
+        pass
 
 
 def _read_pivot_count(run_dir: Path) -> int:

@@ -165,6 +165,7 @@ def _execute_hypothesis_gen(
             problem = f"Research topic: {config.research.topic}\n\nSynthesis:\n{synthesis}"
             context = create_context(
                 stage_id="hypothesis_gen",
+                stage_name="Hypothesis Generation",
                 input_data={"problem": problem, "topic": config.research.topic},
                 query=problem,
             )
@@ -179,14 +180,24 @@ def _execute_hypothesis_gen(
                 top_candidates = result.output.get("top_candidates", [])
                 perspectives = result.output.get("perspectives", [])
                 scores = result.output.get("scores", [])
-                
+
                 logger.info(
                     "MultiPerspectiveMethod: %d perspectives, %d top candidates, confidence=%.2f",
                     len(perspectives),
                     len(top_candidates),
                     result.confidence,
                 )
-                
+
+                # Persist perspectives to disk (mirrors fallback path layout).
+                # Use the first 3 perspectives mapped to the standard debate role names.
+                perspectives_dir = stage_dir / "perspectives"
+                perspectives_dir.mkdir(parents=True, exist_ok=True)
+                _perspective_names = ["innovator", "pragmatist", "contrarian"]
+                for idx, persp in enumerate(perspectives[:3]):
+                    name = _perspective_names[idx]
+                    content = persp.get("content", str(persp)) if isinstance(persp, dict) else str(persp)
+                    (perspectives_dir / f"{name}.md").write_text(content, encoding="utf-8")
+
                 # Synthesize hypotheses from top candidates
                 if top_candidates:
                     hypotheses_parts = []
@@ -216,7 +227,9 @@ def _execute_hypothesis_gen(
                     
         except Exception as e:
             logger.error("MultiPerspectiveMethod integration failed: %s", e, exc_info=True)
-            hypotheses_md = _default_hypotheses(config.research.topic)
+            hypotheses_md = _fallback_hypothesis_gen(
+                llm, prompts, config.research.topic, synthesis, stage_dir
+            )
     else:
         hypotheses_md = _default_hypotheses(config.research.topic)
     
