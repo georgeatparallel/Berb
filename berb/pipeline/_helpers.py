@@ -1590,11 +1590,14 @@ def _multi_perspective_generate(
                 [{"role": "user", "content": user}],
                 system=system,
             )
-            results[role_name] = resp.content
+            content = resp.content
+            if not isinstance(content, str):
+                raise TypeError(f"data must be str, not {type(content).__name__}")
             (perspectives_dir / f"{role_name}.md").write_text(
-                resp.content, encoding="utf-8"
+                content, encoding="utf-8"
             )
-            logger.info("Debate perspective '%s' generated (%d chars)", role_name, len(resp.content))
+            results[role_name] = content
+            logger.info("Debate perspective '%s' generated (%d chars)", role_name, len(content))
         except Exception as exc:  # noqa: BLE001
             logger.warning("Debate perspective '%s' failed: %s", role_name, exc)
     if len(results) < 2:

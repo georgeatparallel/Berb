@@ -174,7 +174,7 @@ class TestEdgeCases:
         )
         
         assert context is not None
-        assert "stage_id" in context
+        assert hasattr(context, "stage_id") and context.stage_id == "test"
 
     def test_unicode_in_synthesis(self):
         """Test handling of unicode in synthesis."""
@@ -282,10 +282,11 @@ class TestFailureInjection:
                 # Should fall back gracefully
                 assert result.status == StageStatus.DONE
 
+    @pytest.mark.llm
     def test_async_execution_timeout(self):
         """Test handling of async execution timeout."""
         from berb.pipeline.stage_impls._synthesis import _SimpleRouter, _LLMProviderWrapper
-        
+
         config = LLMConfig(
             base_url="https://api.openai.com/v1",
             api_key="test-key",
