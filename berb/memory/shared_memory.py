@@ -629,7 +629,12 @@ class SharedResearchMemory:
             logger.error(f"Failed to load memory: {e}")
     
     def clear(self) -> None:
-        """Clear all memory."""
+        """Clear all memory and persist the empty state to disk.
+
+        Persisting after clear ensures that a process restart does not reload
+        stale data from a previous run's snapshot files.
+        """
+        disk_snapshot: dict | None = None
         with self._lock:
             self._entries.clear()
             self._key_value_store.clear()
@@ -638,6 +643,18 @@ class SharedResearchMemory:
             self._clarifications.clear()
             self._execution_traces.clear()
             self._message_queue.clear()
+            # Advance the flush sequence so any in-flight store() flush is
+            # superseded by this clear snapshot.
+            self._flush_seq += 1
+            my_seq = self._flush_seq
+            if self._storage_path:
+                disk_snapshot = self._make_disk_snapshot()
+
+        if disk_snapshot is not None:
+            with self._flush_lock:
+                if my_seq > self._flush_seq_written:
+                    self._save_to_disk(disk_snapshot)
+                    self._flush_seq_written = my_seq
 
         logger.info("Cleared all memory")
 

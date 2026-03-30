@@ -147,14 +147,18 @@ class DockerSandbox:
         self._run_counter += 1
         staging = self.workdir / f"_docker_run_{self._run_counter}"
         staging.mkdir(parents=True, exist_ok=True)
+        try:
+            script_path = staging / "main.py"
+            script_path.write_text(code, encoding="utf-8")
 
-        script_path = staging / "main.py"
-        script_path.write_text(code, encoding="utf-8")
+            # Inject experiment harness
+            self._inject_harness(staging)
 
-        # Inject experiment harness
-        self._inject_harness(staging)
-
-        return self._execute(staging, entry_point="main.py", timeout_sec=timeout_sec)
+            return self._execute(staging, entry_point="main.py", timeout_sec=timeout_sec)
+        finally:
+            # Clean up staging dir unconditionally — results.json has already
+            # been read by _execute() before it returns, so we don't need it.
+            shutil.rmtree(staging, ignore_errors=True)
 
     def run_project(
         self,
@@ -170,50 +174,53 @@ class DockerSandbox:
             shutil.rmtree(staging)
         staging.mkdir(parents=True, exist_ok=True)
 
-        # Pre-copy syntax validation — fail fast before any I/O
-        err = validate_entry_point(entry_point)
-        if err:
-            return SandboxResult(
-                returncode=-1, stdout="", stderr=err,
-                elapsed_sec=0.0, metrics={},
-            )
-
-        # Inject harness first (immutable)
-        self._inject_harness(staging)
-
-        # Copy project files and subdirectories (skip harness overwrite)
-        import shutil as _shutil
-        for src_item in project_dir.iterdir():
-            dest = staging / src_item.name
-            if src_item.name == "experiment_harness.py":
-                logger.warning(
-                    "Project contains experiment_harness.py — skipping (immutable)"
+        try:
+            # Pre-copy syntax validation — fail fast before any I/O
+            err = validate_entry_point(entry_point)
+            if err:
+                return SandboxResult(
+                    returncode=-1, stdout="", stderr=err,
+                    elapsed_sec=0.0, metrics={},
                 )
-                continue
-            if src_item.is_file():
-                dest.write_bytes(src_item.read_bytes())
-            elif src_item.is_dir() and not src_item.name.startswith((".", "__")):
-                _shutil.copytree(src_item, dest, dirs_exist_ok=True)
 
-        # Post-copy resolve check — catches symlink-based escapes
-        err = validate_entry_point_resolved(staging, entry_point)
-        if err:
-            return SandboxResult(
-                returncode=-1, stdout="", stderr=err,
-                elapsed_sec=0.0, metrics={},
-            )
+            # Inject harness first (immutable)
+            self._inject_harness(staging)
 
-        entry = staging / entry_point
-        if not entry.exists():
-            return SandboxResult(
-                returncode=-1,
-                stdout="",
-                stderr=f"Entry point {entry_point} not found in project",
-                elapsed_sec=0.0,
-                metrics={},
-            )
+            # Copy project files and subdirectories (skip harness overwrite)
+            import shutil as _shutil
+            for src_item in project_dir.iterdir():
+                dest = staging / src_item.name
+                if src_item.name == "experiment_harness.py":
+                    logger.warning(
+                        "Project contains experiment_harness.py — skipping (immutable)"
+                    )
+                    continue
+                if src_item.is_file():
+                    dest.write_bytes(src_item.read_bytes())
+                elif src_item.is_dir() and not src_item.name.startswith((".", "__")):
+                    _shutil.copytree(src_item, dest, dirs_exist_ok=True)
 
-        return self._execute(staging, entry_point=entry_point, timeout_sec=timeout_sec)
+            # Post-copy resolve check — catches symlink-based escapes
+            err = validate_entry_point_resolved(staging, entry_point)
+            if err:
+                return SandboxResult(
+                    returncode=-1, stdout="", stderr=err,
+                    elapsed_sec=0.0, metrics={},
+                )
+
+            entry = staging / entry_point
+            if not entry.exists():
+                return SandboxResult(
+                    returncode=-1,
+                    stdout="",
+                    stderr=f"Entry point {entry_point} not found in project",
+                    elapsed_sec=0.0,
+                    metrics={},
+                )
+
+            return self._execute(staging, entry_point=entry_point, timeout_sec=timeout_sec)
+        finally:
+            shutil.rmtree(staging, ignore_errors=True)
 
     # ------------------------------------------------------------------
     # Static helpers
