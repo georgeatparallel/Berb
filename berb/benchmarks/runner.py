@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import time
 from datetime import datetime, timezone
@@ -126,36 +127,113 @@ class BenchmarkRunner:
         benchmark: BenchmarkDefinition,
         auto_approve: bool,
     ) -> BenchmarkResult:
-        """Execute benchmark pipeline.
-        
-        This integrates with the main Berb pipeline runner.
-        For now, we'll simulate execution with placeholder logic.
+        """Execute the benchmark by running the full Berb pipeline.
+
+        Builds a run directory under ``self._output_dir``, overrides the
+        research topic from the benchmark definition, runs
+        :func:`berb.pipeline.runner.execute_pipeline`, and extracts cost /
+        token / quality metrics from the returned :class:`StageResult` list.
         """
-        # TODO: Integrate with berb.pipeline.runner.PipelineRunner
-        # For now, return a placeholder result
-        
-        # Simulate pipeline execution
-        await asyncio.sleep(0.1)  # Placeholder
-        
+        import copy
+        import uuid
+
+        from berb.adapters import AdapterBundle
+        from berb.pipeline.runner import execute_pipeline
+        from berb.pipeline.stages import Stage
+
+        start_time = datetime.now(timezone.utc)
+
+        # Build a per-benchmark run directory so runs don't collide.
+        run_id = f"benchmark_{benchmark.id}_{uuid.uuid4().hex[:6]}"
+        run_dir = self._output_dir / run_id
+        run_dir.mkdir(parents=True, exist_ok=True)
+
+        # Clone the config and override the research topic.
+        if self._config is None:
+            raise RuntimeError(
+                "BenchmarkRunner requires a config to run the pipeline. "
+                "Pass config=<RCConfig> to BenchmarkRunner()."
+            )
+        import dataclasses
+        bench_config = dataclasses.replace(
+            self._config,
+            research=dataclasses.replace(
+                self._config.research,
+                topic=benchmark.topic,
+            ),
+        )
+
+        adapters = AdapterBundle()
+
+        # Run the pipeline synchronously in the event loop executor so we
+        # don't block the async caller while the pipeline is running.
+        loop = asyncio.get_event_loop()
+        stage_results = await loop.run_in_executor(
+            None,
+            lambda: execute_pipeline(
+                run_dir=run_dir,
+                run_id=run_id,
+                config=bench_config,
+                adapters=adapters,
+                auto_approve_gates=auto_approve,
+            ),
+        )
+
+        end_time = datetime.now(timezone.utc)
+        duration_sec = (end_time - start_time).total_seconds()
+
+        # Aggregate metrics from stage results.
+        total_cost: float = 0.0
+        total_tokens: int = 0
+        input_tokens: int = 0
+        output_tokens: int = 0
+        literature_count: int = 0
+        repair_cycles: int = 0
+        quality_score: float = 0.0
+        failed_stages: int = 0
+
+        for sr in stage_results:
+            # StageResult carries a .metrics dict populated by each stage.
+            m = getattr(sr, "metrics", {}) or {}
+            total_cost += float(m.get("cost_usd", 0.0))
+            total_tokens += int(m.get("tokens", 0))
+            input_tokens += int(m.get("input_tokens", 0))
+            output_tokens += int(m.get("output_tokens", 0))
+            literature_count += int(m.get("papers_found", 0))
+            repair_cycles += int(m.get("repair_cycles", 0))
+            if hasattr(sr, "status") and str(getattr(sr, "status", "")).lower() in ("failed", "error"):
+                failed_stages += 1
+
+        # Quality score: fraction of stages that succeeded, scaled to 0–10.
+        total_stages = max(len(stage_results), 1)
+        quality_score = round(10.0 * (total_stages - failed_stages) / total_stages, 2)
+
+        overall_status = "failed" if failed_stages == total_stages else (
+            "partial" if failed_stages > 0 else "success"
+        )
+
         return BenchmarkResult(
             benchmark_id=benchmark.id,
             category=benchmark.category.value,
             topic=benchmark.topic,
-            status="success",
-            start_time=datetime.now(timezone.utc),
-            end_time=datetime.now(timezone.utc),
-            duration_sec=60.0,
-            total_cost=0.35,
-            total_tokens=8000,
-            input_tokens=6000,
-            output_tokens=2000,
-            quality_score=8.2,
-            literature_count=25,
-            repair_cycles=1,
-            success_rate=1.0,
+            status=overall_status,
+            start_time=start_time,
+            end_time=end_time,
+            duration_sec=duration_sec,
+            total_cost=total_cost,
+            total_tokens=total_tokens,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            quality_score=quality_score,
+            literature_count=literature_count,
+            repair_cycles=repair_cycles,
+            success_rate=1.0 if overall_status == "success" else 0.0,
             metrics={
                 "benchmark_name": benchmark.name,
                 "difficulty": benchmark.difficulty,
+                "total_stages": total_stages,
+                "failed_stages": failed_stages,
+                "run_id": run_id,
             },
         )
     

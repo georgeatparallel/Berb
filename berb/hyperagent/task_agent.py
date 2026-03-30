@@ -249,9 +249,101 @@ def execute_task(task: str, **kwargs) -> dict:
                 "See berb/experiment/docker_sandbox.py for the production implementation."
             )
 
-        raise NotImplementedError(
-            "Docker-based TaskAgent execution is not yet wired up. "
-            "See berb/experiment/docker_sandbox.py."
+        return await self._execute_in_docker(task)
+
+    async def _execute_in_docker(self, task: str) -> Any:
+        """Execute the task agent code inside a Docker sandbox.
+
+        Writes *self.code* plus a thin runner shim to a Docker container via
+        :class:`berb.experiment.docker_sandbox.DockerSandbox`, captures stdout
+        JSON, and converts it to a :class:`berb.hyperagent.base.TaskResult`.
+        """
+        import asyncio
+        import json
+        import tempfile
+        from pathlib import Path
+
+        from berb.config import DockerSandboxConfig
+        from berb.experiment.docker_sandbox import DockerSandbox
+        from berb.hyperagent.base import TaskResult
+
+        # Build a self-contained runner that embeds the agent code and calls
+        # execute_task(), then emits a JSON result line on stdout.
+        agent_code_escaped = self.code.replace("\\", "\\\\").replace('"""', '\\"\\"\\"')
+        runner = (
+            "import json, sys\n"
+            "\n"
+            "# --- agent code begin ---\n"
+            f"{self.code}\n"
+            "# --- agent code end ---\n"
+            "\n"
+            "try:\n"
+            f"    _result = execute_task({json.dumps(task)})\n"
+            "    if isinstance(_result, dict):\n"
+            "        print(json.dumps(_result))\n"
+            "    else:\n"
+            "        print(json.dumps({'success': True, 'output': str(_result)}))\n"
+            "except Exception as _exc:\n"
+            "    print(json.dumps({'success': False, 'error': str(_exc)}))\n"
+        )
+
+        # Map TaskAgentConfig → DockerSandboxConfig (conservative network policy)
+        sandbox_cfg = DockerSandboxConfig(
+            image=self.task_config.docker_image,
+            memory_limit_mb=self.task_config.docker_memory_mb,
+            # Convert CPU quota (µs per 100ms period) to fractional cores
+            cpu_limit=self.task_config.docker_cpu_quota / 100_000,
+            network_policy="none" if self.task_config.docker_network_disabled else "setup_only",
+            fallback_to_sandbox=False,
+        )
+
+        with tempfile.TemporaryDirectory(prefix="berb_taskagent_") as tmpdir:
+            sandbox = DockerSandbox(config=sandbox_cfg, workdir=Path(tmpdir))
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(
+                None,
+                lambda: sandbox.run(runner, timeout_sec=self.task_config.max_execution_time),
+            )
+
+        if result.timed_out:
+            return TaskResult(
+                task_id=task,
+                success=False,
+                error=f"Execution timed out after {self.task_config.max_execution_time}s",
+                metrics={"timeout": True},
+            )
+
+        if result.returncode != 0:
+            return TaskResult(
+                task_id=task,
+                success=False,
+                error=(result.stderr[:500] if result.stderr else f"exit code {result.returncode}"),
+                metrics={"exit_code": float(result.returncode)},
+            )
+
+        # Parse the last JSON line from stdout
+        stdout_lines = [l for l in result.stdout.splitlines() if l.strip().startswith("{")]
+        if stdout_lines:
+            try:
+                output = json.loads(stdout_lines[-1])
+                return TaskResult(
+                    task_id=task,
+                    success=output.get("success", True),
+                    output=output,
+                    error=output.get("error"),
+                    metrics={k: float(v) for k, v in result.metrics.items()
+                             if isinstance(v, (int, float))},
+                )
+            except (json.JSONDecodeError, ValueError):
+                pass
+
+        # Fallback: treat any stdout as raw output
+        return TaskResult(
+            task_id=task,
+            success=True,
+            output={"raw_output": result.stdout[:2000]},
+            metrics={k: float(v) for k, v in result.metrics.items()
+                     if isinstance(v, (int, float))},
         )
 
     async def _execute_simulated(self, task: str, timeout: int) -> Any:

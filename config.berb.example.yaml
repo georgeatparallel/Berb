@@ -35,21 +35,16 @@ openclaw_bridge:
   use_browser: false
 
 llm:
-  provider: "openai-compatible"
-  base_url: "https://api.openai.com/v1"
-  wire_api: "chat_completions"  # Set to "responses" for Responses-only gateways
-  api_key_env: "OPENAI_API_KEY"
+  provider: "openrouter"
+  base_url: "https://openrouter.ai/api/v1"
+  wire_api: "chat_completions"
+  api_key_env: "OPENROUTER_API_KEY"
   api_key: ""
-  primary_model: "gpt-4o"
+  primary_model: "openai/gpt-4o"
   fallback_models:
-    - "gpt-4.1"
-    - "gpt-4o-mini"
-  # --- MiniMax provider example ---
-  # provider: "minimax"
-  # api_key_env: "MINIMAX_API_KEY"
-  # primary_model: "MiniMax-M2.5"
-  # fallback_models:
-  #   - "MiniMax-M2.5-highspeed"
+    - "openai/gpt-4.1"
+    - "anthropic/claude-sonnet-4-5-20250929"
+    - "openai/gpt-4o-mini"
 
 security:
   hitl_required_stages: [5, 9, 20]

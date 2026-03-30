@@ -21,6 +21,14 @@ from berb.hyperagent.task_agent import TaskAgent, TaskAgentState
 
 logger = logging.getLogger(__name__)
 
+# System prompt for all LLM-based code generation requests.
+_CODE_GEN_SYSTEM = (
+    "You are an expert Python software engineer. "
+    "When asked to improve code, return ONLY the complete improved Python source file. "
+    "Do not wrap in markdown code fences. Do not add explanations outside the code. "
+    "Preserve all existing function signatures unless explicitly changing them."
+)
+
 
 @dataclass
 class ModificationResult:
@@ -101,17 +109,25 @@ class MetaAgent:
     def __init__(self, config: RCConfig):
         """
         Initialize Meta Agent.
-        
+
         Args:
             config: Berb configuration
         """
         self.config = config
         self.state = MetaAgentState()
-        
+        self._llm: Any = None  # lazy-initialized on first use
+
         # Initialize modification procedure code
         self.modification_code = self._initialize_modification_code()
-        
+
         logger.info("Meta Agent initialized (variant: %s)", self.state.variant_id)
+
+    def _get_llm(self) -> Any:
+        """Return (and cache) an LLMClient built from the current RCConfig."""
+        if self._llm is None:
+            from berb.llm.client import LLMClient
+            self._llm = LLMClient.from_rc_config(self.config)
+        return self._llm
     
     def _initialize_modification_code(self) -> str:
         """Initialize modification procedure code."""
@@ -343,34 +359,99 @@ def generate_modification(analysis: dict, current_code: str) -> str:
             return False
     
     def _generate_error_handling_improvement(self, current_code: str) -> str:
-        """Generate code improvement for error handling.
+        """Use the LLM to rewrite *current_code* with improved error handling.
 
-        Not yet implemented — requires LLM-based code generation.
+        Returns the improved source code (complete file, not a patch).
+        Falls back to the original code if the LLM call fails.
         """
-        raise NotImplementedError(
-            "LLM-based code generation is not yet implemented for MetaAgent. "
-            "This method requires integration with berb.llm to produce real diffs."
+        llm = self._get_llm()
+        prompt = (
+            "The following Python code is a research task agent. "
+            "Rewrite it to add robust error handling:\n"
+            "- Wrap every major operation in try/except with specific exception types\n"
+            "- Log all errors with context using the `logging` module\n"
+            "- Return structured failure results instead of raising unhandled exceptions\n"
+            "- Add retry logic (up to 3 attempts) for transient failures\n\n"
+            f"Current code:\n{current_code}\n\n"
+            "Return ONLY the improved Python source file."
         )
+        try:
+            resp = llm.chat(
+                [{"role": "user", "content": prompt}],
+                system=_CODE_GEN_SYSTEM,
+                max_tokens=4096,
+            )
+            improved = resp.content.strip()
+            # Sanity: must parse as valid Python
+            compile(improved, "<generated>", "exec")
+            logger.info("MetaAgent: generated error-handling improvement (%d chars)", len(improved))
+            return improved
+        except Exception as exc:
+            logger.warning("MetaAgent: error-handling generation failed: %s", exc)
+            return current_code
 
     def _generate_performance_optimization(self, current_code: str) -> str:
-        """Generate code improvement for performance.
+        """Use the LLM to rewrite *current_code* with performance optimisations.
 
-        Not yet implemented — requires LLM-based code generation.
+        Returns the improved source code (complete file, not a patch).
+        Falls back to the original code if the LLM call fails.
         """
-        raise NotImplementedError(
-            "LLM-based code generation is not yet implemented for MetaAgent. "
-            "This method requires integration with berb.llm to produce real diffs."
+        llm = self._get_llm()
+        prompt = (
+            "The following Python code is a research task agent. "
+            "Rewrite it to improve performance:\n"
+            "- Cache expensive repeated computations with functools.lru_cache or instance-level dicts\n"
+            "- Replace sequential loops with batch operations where possible\n"
+            "- Use async/await for any I/O-bound operations\n"
+            "- Minimise redundant data copies\n\n"
+            f"Current code:\n{current_code}\n\n"
+            "Return ONLY the improved Python source file."
         )
+        try:
+            resp = llm.chat(
+                [{"role": "user", "content": prompt}],
+                system=_CODE_GEN_SYSTEM,
+                max_tokens=4096,
+            )
+            improved = resp.content.strip()
+            compile(improved, "<generated>", "exec")
+            logger.info("MetaAgent: generated performance optimisation (%d chars)", len(improved))
+            return improved
+        except Exception as exc:
+            logger.warning("MetaAgent: performance optimisation generation failed: %s", exc)
+            return current_code
 
     def _generate_meta_improvement(self) -> str:
-        """Generate metacognitive improvement to modification procedure.
+        """Use the LLM to rewrite the modification procedure with metacognitive improvements.
 
-        Not yet implemented — requires LLM-based code generation.
+        Returns the improved modification procedure code.
+        Falls back to the current procedure if the LLM call fails.
         """
-        raise NotImplementedError(
-            "LLM-based meta-improvement generation is not yet implemented. "
-            "This method requires integration with berb.llm to produce real diffs."
+        llm = self._get_llm()
+        prompt = (
+            "The following Python code is the modification procedure for a MetaAgent — "
+            "it defines how the agent generates improvements for a TaskAgent.\n\n"
+            "Rewrite the procedure to be more effective:\n"
+            "- analyse_performance() should identify concrete improvement patterns from task history\n"
+            "- generate_modification() should produce targeted, high-confidence code changes\n"
+            "- Add a new function: evaluate_modification(diff, task_history) that scores "
+            "  a proposed modification before applying it\n\n"
+            f"Current modification procedure:\n{self.modification_code}\n\n"
+            "Return ONLY the improved Python source file."
         )
+        try:
+            resp = llm.chat(
+                [{"role": "user", "content": prompt}],
+                system=_CODE_GEN_SYSTEM,
+                max_tokens=4096,
+            )
+            improved = resp.content.strip()
+            compile(improved, "<generated>", "exec")
+            logger.info("MetaAgent: generated metacognitive improvement (%d chars)", len(improved))
+            return improved
+        except Exception as exc:
+            logger.warning("MetaAgent: metacognitive improvement generation failed: %s", exc)
+            return self.modification_code
     
     def _validate_modification_code(self, code: str) -> bool:
         """Validate modification procedure code."""
