@@ -1,0 +1,187 @@
+# Berb Configuration - Production Ready
+# Copy this to config.berb.yaml and fill in your API keys
+
+project:
+  name: "my-research"
+  mode: "full-auto"
+
+research:
+  topic: "Your research topic here"
+  domains:
+    - "machine-learning"
+  daily_paper_count: 10
+  quality_threshold: 4.0
+
+runtime:
+  timezone: "UTC"
+  max_parallel_tasks: 3
+  approval_timeout_hours: 12
+  retry_limit: 2
+
+notifications:
+  channel: "console"
+  target: ""
+  on_stage_start: false
+  on_stage_fail: true
+  on_gate_required: true
+
+knowledge_base:
+  backend: "markdown"
+  root: "docs/kb"
+
+# ============================================================================
+# LLM Configuration - Extended Model Support (11 Providers)
+# ============================================================================
+
+llm:
+  # Provider: "openrouter" gives access to all 11 providers with one key
+  # Get key at: https://openrouter.ai
+  provider: "openrouter"
+  base_url: "https://openrouter.ai/api/v1"
+  wire_api: "chat_completions"
+  api_key_env: "OPENROUTER_API_KEY"
+  api_key: ""  # Or set OPENROUTER_API_KEY environment variable
+  
+  # Optimized default models (97% cost savings)
+  primary_model: "qwen/qwen3.5-flash"
+  fallback_models:
+    - "minimax/minimax-m2.5:free"
+    - "z-ai/glm-4.5-air:free"
+  
+  # Alternative: Direct provider configuration
+  # provider: "anthropic"
+  # base_url: "https://api.anthropic.com/v1"
+  # api_key_env: "ANTHROPIC_API_KEY"
+  # primary_model: "claude-sonnet-4.6"
+
+# ============================================================================
+# Reasoning Methods Configuration
+# ============================================================================
+
+reasoning:
+  # Cost budget per full reasoning run (all 9 methods)
+  cost_budget_usd: 6.00
+  
+  # Provider diversity (no single provider >40%)
+  provider_weights:
+    minimax: 0.25
+    qwen: 0.25
+    mimo: 0.15
+    glm: 0.10
+    xai: 0.10
+    kimi: 0.05
+    perplexity: 0.05
+    deepseek: 0.03
+    google: 0.02
+  
+  # Per-method model routing (27 roles total)
+  methods:
+    multi_perspective:
+      constructive: "xiaomi/mimo-v2-pro"
+      destructive: "qwen/qwen3.5-397b-a17b"
+      systemic: "z-ai/glm-5"
+      minimalist: "minimax/minimax-m2.5:free"
+      scoring: "qwen/qwen3-coder-next"
+    
+    pre_mortem:
+      narrative: "qwen/qwen3-max-thinking"
+      root_cause: "qwen/qwen3-coder-next"
+      early_warning: "minimax/minimax-m2.5:free"
+      hardened: "xiaomi/mimo-v2-pro"
+    
+    bayesian:
+      prior: "z-ai/glm-4.5"
+      likelihood: "minimax/minimax-m2.5:free"
+      sensitivity: "qwen/qwen3.5-flash"
+    
+    debate:
+      pro: "qwen/qwen3.5-397b-a17b"
+      con: "qwen/qwen3-max-thinking"
+      judge: "x-ai/grok-4.20-beta"
+    
+    dialectical:
+      thesis: "z-ai/glm-5"
+      antithesis: "qwen/qwen3.5-397b-a17b"
+      synthesis: "moonshotai/kimi-k2-thinking"
+    
+    research:
+      query: "perplexity/sonar-pro-search"
+      synthesis: "qwen/qwen3.5-plus"
+      gap: "minimax/minimax-m2.5:free"
+      final: "xiaomi/mimo-v2-pro"
+    
+    socratic:
+      clarification: "z-ai/glm-4.5-air:free"
+      assumption: "z-ai/glm-4.7-flash"
+      evidence: "minimax/minimax-m2.5:free"
+      perspective: "qwen/qwen3.5-35b-a3b"
+      meta: "moonshotai/kimi-k2-thinking"
+    
+    scientific:
+      observation: "z-ai/glm-4.7"
+      hypothesis: "qwen/qwen3-max-thinking"
+      prediction: "qwen/qwen3-coder-next"
+      experiment: "moonshotai/kimi-k2.5"
+      analysis: "minimax/minimax-m2.5:free"
+    
+    jury:
+      juror: "x-ai/grok-4.20-multi-agent-beta"
+      foreman: "qwen/qwen3.5-plus"
+      verdict: "z-ai/glm-5"
+
+# ============================================================================
+# Experiment Configuration
+# ============================================================================
+
+experiment:
+  # Mode: "sandbox" (local), "docker" (container), "simulated" (fake results)
+  mode: "sandbox"
+  time_budget_sec: 300
+  max_iterations: 10
+  metric_key: "primary_metric"
+  metric_direction: "minimize"
+  
+  sandbox:
+    # Windows: ".venv/Scripts/python.exe"
+    # Linux/Mac: ".venv/bin/python3"
+    python_path: ".venv/Scripts/python.exe"
+    gpu_required: false
+    max_memory_mb: 4096
+
+# ============================================================================
+# Security
+# ============================================================================
+
+security:
+  hitl_required_stages: [5, 9, 20]
+  allow_publish_without_approval: false
+  redact_sensitive_logs: true
+
+# ============================================================================
+# OpenCode Beast Mode (Optional - AI coding agent)
+# ============================================================================
+
+opencode:
+  enabled: true
+  auto: true
+  complexity_threshold: 0.2
+  timeout_sec: 600
+  max_retries: 1
+  workspace_cleanup: true
+
+# ============================================================================
+# Figure Agent (Scientific visualization)
+# ============================================================================
+
+figure_agent:
+  enabled: true
+  min_figures: 3
+  max_figures: 10
+  max_iterations: 3
+  render_timeout_sec: 30
+  output_format: "python"  # or "latex" for TikZ
+  nano_banana_enabled: true
+  # gemini_api_key: ""  # or set GEMINI_API_KEY env var
+  gemini_model: "gemini-2.5-flash-image"
+  strict_mode: false
+  dpi: 300

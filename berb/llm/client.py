@@ -19,9 +19,78 @@ import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+
+class LLMProvider(str, Enum):
+    """LLM provider enumeration.
+    
+    Used for cross-model review and provider-specific routing.
+    """
+    OPENAI = "openai"
+    ANTHROPIC = "anthropic"
+    GOOGLE = "google"
+    DEEPSEEK = "deepseek"
+    OPENROUTER = "openrouter"
+    MINIMAX = "minimax"
+    QWEN = "qwen"
+    GLM = "glm"
+    XAI = "xai"
+    KIMI = "kimi"
+    PERPLEXITY = "perplexity"
+    MIMO = "mimo"
+    UNKNOWN = "unknown"
+
+
+def get_provider_from_model(model: str) -> LLMProvider:
+    """Extract provider from model string.
+    
+    Args:
+        model: Model identifier (e.g., 'qwen/qwen3.5-flash')
+    
+    Returns:
+        LLMProvider enum value
+    
+    Example:
+        >>> get_provider_from_model('qwen/qwen3.5-flash')
+        <LLMProvider.QWEN: 'qwen'>
+        >>> get_provider_from_model('unknown-model')
+        <LLMProvider.UNKNOWN: 'unknown'>
+    """
+    if not model:
+        return LLMProvider.UNKNOWN
+    
+    model_lower = model.lower().split('/')[0]  # Extract provider prefix
+    for provider in LLMProvider:
+        if provider.value != 'unknown' and model_lower == provider.value:
+            return provider
+    return LLMProvider.UNKNOWN
+
+
+def validate_model_for_provider(model: str, provider: LLMProvider) -> bool:
+    """Validate that model string matches provider.
+    
+    Args:
+        model: Model identifier
+        provider: Expected provider
+    
+    Returns:
+        True if model matches provider
+    
+    Example:
+        >>> validate_model_for_provider('qwen/qwen3.5-flash', LLMProvider.QWEN)
+        True
+        >>> validate_model_for_provider('openai/gpt-4', LLMProvider.QWEN)
+        False
+    """
+    if not model or provider == LLMProvider.UNKNOWN:
+        return True  # Can't validate unknown provider
+    extracted = get_provider_from_model(model)
+    return extracted == provider
+
 
 # Models that require max_completion_tokens instead of max_tokens
 _NEW_PARAM_MODELS = frozenset(

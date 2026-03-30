@@ -966,6 +966,27 @@ def validate_config(
             "Remove this field and use llm.api_key_env instead. "
             "Example: api_key_env: \"OPENAI_API_KEY\""
         )
+    
+    # BUG-EXT-002 FIX: Detect API key in api_key_env field
+    import re as _re
+    llm_api_key_env = _get_by_path(data, "llm.api_key_env")
+    if llm_api_key_env and len(str(llm_api_key_env).strip()) > 0:
+        api_key_env_str = str(llm_api_key_env).strip()
+        # Check if it looks like an API key (starts with sk-, pplx-, etc.)
+        if _re.match(r'^(sk[-_]|pplx[-_]|ghp[-_]|xox[-_])', api_key_env_str, _re.IGNORECASE):
+            warnings.append(
+                f"CONFIGURATION WARNING: llm.api_key_env looks like an API key "
+                f"('{api_key_env_str[:20]}...'). This field should contain an "
+                f"environment variable name (e.g., 'OPENROUTER_API_KEY'), not the "
+                f"actual API key. Set the key in your .env file instead."
+            )
+        # Check if it follows env var naming convention (UPPERCASE_WITH_UNDERSCORES)
+        elif not _re.match(r'^[A-Z][A-Z0-9_]*$', api_key_env_str):
+            warnings.append(
+                f"CONFIGURATION WARNING: llm.api_key_env '{api_key_env_str}' doesn't "
+                f"follow the environment variable naming convention "
+                f"(UPPERCASE_WITH_UNDERSCORES, e.g., 'OPENROUTER_API_KEY')"
+            )
 
     # Also check for other sensitive keys that should use env vars
     s2_api_key = _get_by_path(data, "llm.s2_api_key")

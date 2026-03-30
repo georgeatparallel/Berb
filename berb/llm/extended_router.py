@@ -125,46 +125,31 @@ MODEL_ALTERNATIVES = {
 }
 
 
-@dataclass
-class ProviderSelection:
-    """Provider selection result.
-    
-    Attributes:
-        model: Selected model identifier
-        provider: Provider enum
-        tier: Complexity tier
-        is_fallback: Whether fallback was used
-        fallback_depth: Number of fallback attempts
-        reason: Selection reasoning
-    """
-    model: str
-    provider: Provider
-    tier: str
-    is_fallback: bool = False
-    fallback_depth: int = 0
-    reason: str = ""
-
-
 class ExtendedNadirClawRouter(NadirClawRouter):
     """Extended router with multi-provider support and cost optimization.
     
     Features:
-    - Role-based model routing (27 roles)
+    - Role-based model routing (27 roles across 9 reasoning methods)
     - Provider diversity enforcement (no provider >40%)
     - Intelligent fallback chains (3-tier)
     - Cost budget enforcement
     - Cost tracking integration
+    
+    Thread Safety:
+        - get() uses threading.Lock for sync safety
+        - get_async() uses asyncio.Lock for async safety
+        - These locks are NOT coordinated - avoid calling both for same role simultaneously
+    
+    Known Limitation:
+        Sync and async singleton creation use separate locks. In practice, this is safe
+        because most callers use one or the other consistently. If mixed usage becomes
+        common, consider implementing a unified lock strategy.
     
     Usage:
         >>> router = ExtendedNadirClawRouter(
         ...     role_models={
         ...         "constructive": "xiaomi/mimo-v2-pro",
         ...         "destructive": "qwen/qwen3.5-397b-a17b",
-        ...     },
-        ...     provider_weights={
-        ...         "minimax": 0.25,
-        ...         "qwen": 0.25,
-        ...         "mimo": 0.15,
         ...     },
         ...     cost_budget_usd=6.00,
         ... )
