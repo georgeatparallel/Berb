@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -66,7 +67,7 @@ class TestHeartbeatInPipeline:
                 "api_key": "k",
             },
         }
-        config = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False)
+        config = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
         run_dir = tmp_path / "run"
         run_dir.mkdir()
 
@@ -102,6 +103,7 @@ class TestSentinelScript:
         script = Path(__file__).parent.parent / "sentinel.sh"
         assert script.exists()
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="bash not available on Windows")
     def test_sentinel_script_is_valid_bash(self) -> None:
         script = Path(__file__).parent.parent / "sentinel.sh"
         result = subprocess.run(
@@ -111,6 +113,7 @@ class TestSentinelScript:
         )
         assert result.returncode == 0, f"Bash syntax error: {result.stderr}"
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="Unix file permissions not applicable on Windows")
     def test_sentinel_script_is_executable(self) -> None:
         script = Path(__file__).parent.parent / "sentinel.sh"
         assert os.access(script, os.X_OK)

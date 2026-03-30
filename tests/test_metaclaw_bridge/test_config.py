@@ -26,7 +26,7 @@ def _minimal_config_data(**overrides):
 def test_metaclaw_bridge_defaults():
     """MetaClaw bridge should have sensible defaults when not configured."""
     data = _minimal_config_data()
-    cfg = RCConfig.from_dict(data, check_paths=False)
+    cfg = RCConfig.from_dict(data, check_paths=False, check_security=False)
     assert cfg.metaclaw_bridge.enabled is False
     assert cfg.metaclaw_bridge.proxy_url == "http://localhost:30000"
     assert cfg.metaclaw_bridge.prm.enabled is False
@@ -55,7 +55,7 @@ def test_metaclaw_bridge_enabled():
             },
         }
     )
-    cfg = RCConfig.from_dict(data, check_paths=False)
+    cfg = RCConfig.from_dict(data, check_paths=False, check_security=False)
     assert cfg.metaclaw_bridge.enabled is True
     assert cfg.metaclaw_bridge.proxy_url == "http://localhost:31000"
     assert cfg.metaclaw_bridge.prm.enabled is True
@@ -68,5 +68,5 @@ def test_metaclaw_bridge_enabled():
 def test_metaclaw_bridge_none_is_default():
     """When metaclaw_bridge is None/missing, defaults should apply."""
     data = _minimal_config_data(metaclaw_bridge=None)
-    cfg = RCConfig.from_dict(data, check_paths=False)
+    cfg = RCConfig.from_dict(data, check_paths=False, check_security=False)
     assert cfg.metaclaw_bridge.enabled is False

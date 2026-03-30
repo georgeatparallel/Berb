@@ -30,7 +30,7 @@ def rc_config(tmp_path: Path) -> RCConfig:
             "api_key": "inline",
         },
     }
-    return RCConfig.from_dict(data, project_root=tmp_path, check_paths=False)
+    return RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
 
 
 @pytest.fixture()
@@ -686,7 +686,7 @@ def test_package_deliverables_returns_none_when_no_stage_artifacts(
         },
         "export": {"target_conference": "unknown_conf_9999"},
     }
-    cfg = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False)
+    cfg = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
     result = rc_runner._package_deliverables(run_dir, "run-empty", cfg)
     assert result is None
     assert not (run_dir / "deliverables").exists()

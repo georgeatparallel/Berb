@@ -547,6 +547,10 @@ Vet this paper for quality issues."""
                 logger.warning("Failed to parse vetting response: %s", e)
                 data = {}
 
+            # Ensure severity is always present (contract requirement)
+            if "severity" not in data:
+                data["severity"] = "low"
+
             return data
         
         except Exception as e:

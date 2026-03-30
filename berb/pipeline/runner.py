@@ -1358,17 +1358,24 @@ def _check_experiment_quality(
 def _write_heartbeat(run_dir: Path, stage: "Stage", run_id: str) -> None:
     """Write a heartbeat file for the sentinel watchdog.
 
-    The file records the current stage and timestamp so an external watchdog
-    can detect stalled runs.  Failures are silently ignored — a missing
-    heartbeat is non-fatal for the pipeline.
+    Schema written to ``heartbeat.json``:
+      pid            — current process PID
+      run_id         — pipeline run identifier
+      last_stage     — stage ordinal (integer value)
+      last_stage_name — stage enum name string
+      timestamp      — ISO-8601 UTC timestamp
+
+    Failures are silently ignored — a missing heartbeat is non-fatal.
     """
     try:
         heartbeat = {
+            "pid": os.getpid(),
             "run_id": run_id,
-            "stage": stage.name if hasattr(stage, "name") else str(stage),
-            "ts": datetime.now(timezone.utc).isoformat(),
+            "last_stage": stage.value if hasattr(stage, "value") else int(stage),
+            "last_stage_name": stage.name if hasattr(stage, "name") else str(stage),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
-        (run_dir / ".heartbeat.json").write_text(
+        (run_dir / "heartbeat.json").write_text(
             json.dumps(heartbeat), encoding="utf-8"
         )
     except OSError:
