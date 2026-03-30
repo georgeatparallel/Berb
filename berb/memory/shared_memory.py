@@ -420,19 +420,15 @@ class SharedResearchMemory:
         message_type: str | None = None,
     ) -> list[dict]:
         """Get messages for an agent."""
-        messages = []
-        
-        for msg in self._message_queue:
-            # Check if message is for this agent (or broadcast)
-            if msg["to"] is None or msg["to"] == agent_id:
-                if message_type is None or msg["type"] == message_type:
-                    messages.append(msg)
-        
-        # Update received count
-        if agent_id in self._agent_states:
-            self._agent_states[agent_id].messages_received += len(messages)
-        
-        return messages
+        with self._lock:
+            messages = [
+                msg for msg in self._message_queue
+                if (msg["to"] is None or msg["to"] == agent_id)
+                and (message_type is None or msg["type"] == message_type)
+            ]
+            if agent_id in self._agent_states:
+                self._agent_states[agent_id].messages_received += len(messages)
+            return messages
     
     # ========== Trajectory & Analytics ==========
     

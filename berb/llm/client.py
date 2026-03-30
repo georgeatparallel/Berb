@@ -330,9 +330,12 @@ class LLMClient:
         """
         # SECURITY FIX #6: Apply rate limiting
         if self._rate_limiter:
-            # Estimate tokens from message content (rough estimate)
+            # Estimate tokens from message content.
+            # Use ceil(chars/3) as a conservative upper-bound — real tokenisers
+            # average ~3.5 chars/token for English prose and less for code, so
+            # dividing by 3 avoids systematically undercharging the bucket.
             estimated_tokens = sum(
-                len(m.get("content", "")) // 4  # ~4 chars per token
+                (len(m.get("content", "")) + 2) // 3
                 for m in messages
             )
             estimated_tokens += max_tokens or self.config.max_tokens
@@ -346,12 +349,14 @@ class LLMClient:
                         f"(exceeds timeout of {self.config.timeout_sec}s). "
                         f"Consider reducing request frequency or increasing limits."
                     )
-                # Wait and retry
+                # Cap sleep to 60 s so a single call can never block indefinitely
+                # even when timeout_sec is set to a very large value.
+                capped_wait = min(wait_time, 60.0)
                 logger.warning(
                     "Rate limit hit. Waiting %.1f seconds before retry.",
-                    wait_time
+                    capped_wait,
                 )
-                time.sleep(wait_time)
+                time.sleep(capped_wait)
                 # Try again after waiting
                 allowed, _ = self._rate_limiter.acquire(estimated_tokens)
                 if not allowed:

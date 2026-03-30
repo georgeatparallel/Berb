@@ -6,8 +6,11 @@ import logging
 import os
 import shutil
 import tempfile
+import threading
 import time as _time
 from pathlib import Path
+
+_checkpoint_lock = threading.Lock()
 
 from berb.adapters import AdapterBundle
 from berb.config import RCConfig
@@ -72,11 +75,21 @@ def _write_pipeline_summary(run_dir: Path, summary: dict[str, object]) -> None:
 
 def _write_checkpoint(run_dir: Path, stage: Stage, run_id: str) -> None:
     """Write checkpoint atomically via temp file + rename to prevent corruption.
-    
+
     P1 FIX: Includes SHA-256 checksum for integrity validation.
+    Module-level _checkpoint_lock serialises concurrent callers so only one
+    temp file is in-flight at a time, preventing Windows PermissionError when
+    two threads race to os.replace() the same target path.
     """
     import hashlib
-    
+
+    with _checkpoint_lock:
+        _write_checkpoint_locked(run_dir, stage, run_id)
+
+
+def _write_checkpoint_locked(run_dir: Path, stage: Stage, run_id: str) -> None:
+    import hashlib
+
     checkpoint = {
         "last_completed_stage": int(stage),
         "last_completed_name": stage.name,
