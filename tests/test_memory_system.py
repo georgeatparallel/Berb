@@ -501,3 +501,255 @@ class TestWritingMemory:
         wm = WritingMemory(store, retriever)
         result = wm.recall_writing_tips("method", "RL paper")
         assert result == ""
+
+
+# ── SharedResearchMemory concurrency regression tests (BUG-001, BUG-002) ──────
+
+
+class TestSharedResearchMemoryConcurrency:
+    """Regression tests for BUG-001 (unprotected mutations) and
+    BUG-002 (I/O held under lock) in berb.memory.shared_memory.
+
+    These tests confirm that concurrent access to SharedResearchMemory does
+    not corrupt data and that the singleton factory is thread-safe.
+    """
+
+    def _make_memory(self, tmp_path=None):
+        from berb.memory.shared_memory import SharedResearchMemory
+        return SharedResearchMemory(project_id="test", storage_path=tmp_path)
+
+    # ── BUG-001: unprotected dict mutations ─────────────────────────────
+
+    def test_concurrent_store_code_snapshot_no_corruption(self):
+        """REGRESSION BUG-001: concurrent store_code_snapshot must not corrupt
+        _code_snapshots under thread contention."""
+        import threading
+
+        mem = self._make_memory()
+        errors = []
+
+        def writer(version, code):
+            try:
+                for _ in range(50):
+                    mem.store_code_snapshot(version, code, agent_id="agent")
+            except Exception as exc:
+                errors.append(exc)
+
+        threads = [
+            threading.Thread(target=writer, args=(f"v{i}", f"code_{i}"))
+            for i in range(5)
+        ]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        assert not errors, f"Exceptions during concurrent writes: {errors}"
+        # All versions must be retrievable without KeyError or None corruption.
+        for i in range(5):
+            snap = mem.get_code_snapshot(f"v{i}")
+            assert snap == f"code_{i}", f"v{i} corrupted: {snap!r}"
+
+    def test_concurrent_store_error_fix_no_corruption(self):
+        """REGRESSION BUG-001: concurrent store_error_fix is safe."""
+        import threading
+
+        mem = self._make_memory()
+        errors = []
+
+        def writer(pattern, fix):
+            try:
+                for _ in range(50):
+                    mem.store_error_fix(pattern, fix, agent_id="agent", success=True)
+            except Exception as exc:
+                errors.append(exc)
+
+        threads = [
+            threading.Thread(target=writer, args=(f"err_{i}", f"fix_{i}"))
+            for i in range(5)
+        ]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        assert not errors
+        for i in range(5):
+            fix = mem.get_error_fix(f"err_{i}")
+            assert fix == f"fix_{i}", f"err_{i} corrupted: {fix!r}"
+
+    def test_concurrent_register_agent_no_corruption(self):
+        """REGRESSION BUG-001: concurrent register_agent is safe."""
+        import threading
+
+        mem = self._make_memory()
+        errors = []
+
+        def registrar(agent_id):
+            try:
+                for _ in range(30):
+                    mem.register_agent(agent_id, "idle")
+            except Exception as exc:
+                errors.append(exc)
+
+        threads = [threading.Thread(target=registrar, args=(f"agent_{i}",)) for i in range(8)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        assert not errors
+
+    def test_concurrent_send_message_no_corruption(self):
+        """REGRESSION BUG-001: messages_sent counter is not torn under contention."""
+        import threading
+
+        mem = self._make_memory()
+        mem.register_agent("sender")
+
+        errors = []
+
+        def sender():
+            try:
+                for _ in range(100):
+                    mem.send_message("sender", None, "ping", "data")
+            except Exception as exc:
+                errors.append(exc)
+
+        threads = [threading.Thread(target=sender) for _ in range(4)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        assert not errors
+        state = mem.get_agent_state("sender")
+        assert state is not None
+        # messages_sent must equal total sends across all threads.
+        assert state.messages_sent == 400, (
+            f"Expected 400 messages_sent, got {state.messages_sent} — "
+            "likely torn read-modify-write without lock."
+        )
+
+    def test_clear_is_thread_safe(self):
+        """REGRESSION BUG-001: clear() acquires lock; concurrent reads do not crash."""
+        import threading
+
+        mem = self._make_memory()
+        for i in range(20):
+            mem.store(f"k{i}", i)
+
+        errors = []
+
+        def reader():
+            try:
+                for _ in range(50):
+                    mem.get_trajectory()
+            except Exception as exc:
+                errors.append(exc)
+
+        def clearer():
+            try:
+                for _ in range(10):
+                    mem.clear()
+            except Exception as exc:
+                errors.append(exc)
+
+        threads = (
+            [threading.Thread(target=reader) for _ in range(3)]
+            + [threading.Thread(target=clearer)]
+        )
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        assert not errors
+
+    # ── BUG-002: disk I/O outside lock ──────────────────────────────────
+
+    def test_save_to_disk_called_outside_lock(self, tmp_path):
+        """REGRESSION BUG-002: _save_to_disk must NOT be called while self._lock
+        is held.  A secondary thread must be able to acquire the lock during I/O.
+
+        Strategy: pause _save_to_disk mid-execution, then have another thread
+        attempt to acquire mem._lock.  If the lock is free (fix applied) the
+        thread succeeds; if still held (bug present) the thread times out.
+        """
+        import threading
+
+        mem = self._make_memory(tmp_path=tmp_path)
+
+        io_started = threading.Event()
+        io_can_finish = threading.Event()
+        lock_was_free_during_io = threading.Event()
+
+        original_save = mem._save_to_disk
+
+        def pausing_save(snapshot=None):
+            # Signal that disk I/O has begun, then wait for the checker.
+            io_started.set()
+            io_can_finish.wait(timeout=2.0)
+            original_save(snapshot)
+
+        mem._save_to_disk = pausing_save
+
+        def checker():
+            io_started.wait(timeout=2.0)
+            # Attempt to acquire the lock from a different thread.
+            # RLock from a DIFFERENT thread behaves like a regular lock —
+            # it will block if the writer_thread holds it.
+            acquired = mem._lock.acquire(blocking=True, timeout=0.2)
+            if acquired:
+                lock_was_free_during_io.set()
+                mem._lock.release()
+            io_can_finish.set()
+
+        writer_thread = threading.Thread(target=lambda: mem.store("k", "v"))
+        checker_thread = threading.Thread(target=checker)
+
+        checker_thread.start()
+        writer_thread.start()
+        writer_thread.join(timeout=3)
+        checker_thread.join(timeout=3)
+
+        assert lock_was_free_during_io.is_set(), (
+            "Lock was held during _save_to_disk — disk I/O is still inside the "
+            "critical section (BUG-002 not fixed)."
+        )
+        assert mem.get("k") == "v"
+
+    # ── Singleton race ───────────────────────────────────────────────────
+
+    def test_get_shared_memory_singleton_is_thread_safe(self):
+        """REGRESSION BUG-001 (singleton): concurrent get_shared_memory() calls
+        must always return the same instance for the same project_id."""
+        import threading
+        from berb.memory import shared_memory as sm
+
+        # Reset the global singleton so this test starts fresh.
+        original = sm._memory
+        sm._memory = None
+
+        results = []
+        errors = []
+
+        def getter():
+            try:
+                results.append(sm.get_shared_memory("proj_concurrent_test"))
+            except Exception as exc:
+                errors.append(exc)
+
+        threads = [threading.Thread(target=getter) for _ in range(20)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        sm._memory = original  # Restore
+
+        assert not errors
+        # All threads must have received the same instance.
+        assert len(set(id(r) for r in results)) == 1, (
+            "Multiple SharedResearchMemory instances created — singleton race condition."
+        )

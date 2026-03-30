@@ -103,9 +103,18 @@ class CascadingLLMClient:
         self._config = config
         self._evaluator = quality_evaluator or self._default_evaluator
         
-        # Statistics — protected by a lock because chat() is async and multiple
-        # coroutines may share one CascadingLLMClient instance.
-        self._stats_lock: asyncio.Lock = asyncio.Lock()
+        # Statistics — protected by a threading.Lock (not asyncio.Lock) so the
+        # lock is event-loop-agnostic.  BUG-005 fix: asyncio.Lock() bound to the
+        # event loop at creation time; if this object is constructed outside an
+        # active loop, or is reused across multiple asyncio.run() calls (each
+        # creates a fresh event loop), acquiring the original asyncio.Lock from
+        # inside the new loop raises "got Future attached to a different loop".
+        # A threading.Lock is always safe to acquire from any coroutine because
+        # asyncio coroutines run on a single OS thread — no OS-level contention
+        # occurs, and short critical sections (integer increment) never suspend
+        # the event loop long enough to matter.
+        import threading
+        self._stats_lock = threading.Lock()
         self._total_requests = 0
         self._cascade_exits: dict[int, int] = {}  # step -> count
         self._total_saved = 0.0
@@ -126,7 +135,7 @@ class CascadingLLMClient:
         Returns:
             LLM response from first acceptable model in cascade
         """
-        async with self._stats_lock:
+        with self._stats_lock:
             self._total_requests += 1
         start_time = time.time()
         
@@ -162,7 +171,7 @@ class CascadingLLMClient:
                             f"{step.model} (score={score:.2f} >= {step.min_score:.2f})"
                         )
                         
-                        async with self._stats_lock:
+                        with self._stats_lock:
                             self._record_cascade_exit(step_idx)
 
                         return response
