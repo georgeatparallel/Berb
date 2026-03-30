@@ -463,10 +463,15 @@ class DockerSandbox:
         # "Permission denied: '/.local'".
         cmd.extend(["-e", "HOME=/workspace/.home"])
 
-        # Pass HF token if available (for gated model downloads)
+        # Pass HF token if available (for gated model downloads).
+        # Write to a staging-dir env file instead of the command line so the
+        # secret does not appear in `ps aux`, `docker inspect`, or CI logs.
         hf_token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
         if hf_token:
-            cmd.extend(["-e", f"HF_TOKEN={hf_token}"])
+            env_file = staging_dir / ".hf_secrets.env"
+            env_file.write_text(f"HF_TOKEN={hf_token}\n", encoding="utf-8")
+            env_file.chmod(0o600)
+            cmd.extend(["--env-file", str(env_file)])
 
         # GPU passthrough
         if cfg.gpu_enabled:

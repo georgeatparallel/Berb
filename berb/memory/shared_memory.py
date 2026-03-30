@@ -95,6 +95,16 @@ class SharedResearchMemory:
         # a thread-pool executor cannot corrupt the data structures.
         self._lock = threading.RLock()
 
+        # Monotonic flush sequencing.  Each store() increments _flush_seq inside
+        # _lock and captures the value.  Outside _lock the thread acquires
+        # _flush_lock and only writes to disk if its captured seq exceeds the
+        # last-written seq (_flush_seq_written).  This prevents an older snapshot
+        # (captured by a thread that lost a race) from overwriting a newer one
+        # that was already persisted by a concurrent thread.
+        self._flush_lock = threading.Lock()
+        self._flush_seq: int = 0
+        self._flush_seq_written: int = 0
+
         # Core memory structures
         self._entries: list[MemoryEntry] = []
         self._key_value_store: dict[str, Any] = {}
@@ -107,9 +117,12 @@ class SharedResearchMemory:
         self._clarifications: dict[str, Any] = {}  # question → answer
         self._execution_traces: list[dict] = []
         
-        # Load from persistent storage if available
+        # Load from persistent storage if available.  The lock is not strictly
+        # required here because __init__ runs before the object is shared with
+        # any other thread, but acquiring it keeps all disk-read paths uniform.
         if self._storage_path and self._storage_path.exists():
-            self._load_from_disk()
+            with self._lock:
+                self._load_from_disk()
         
         logger.info(f"Initialized shared memory for project {project_id}")
     
@@ -146,6 +159,7 @@ class SharedResearchMemory:
         # persist steps.  RLock allows the same thread to re-enter (e.g. when
         # store_execution_trace() holds the lock and then calls store()).
         disk_snapshot: dict | None = None
+        my_seq: int = 0
         with self._lock:
             # Add to entries list (trajectory)
             self._entries.append(entry)
@@ -164,13 +178,18 @@ class SharedResearchMemory:
             # on a slow or network-mounted filesystem, or hang indefinitely on
             # failure, causing all agents to stall).
             if self._storage_path:
+                self._flush_seq += 1
+                my_seq = self._flush_seq
                 disk_snapshot = self._make_disk_snapshot()
 
-        # Persist outside the lock; concurrent _save_to_disk() calls may race
-        # on the same files but each individual write is atomic (open→write→close),
-        # so the last writer always leaves a consistent snapshot on disk.
+        # Persist outside _lock, but serialised by _flush_lock with a sequence
+        # check: only write if no newer snapshot has already been persisted.
+        # This prevents an older snapshot from overwriting a newer disk state.
         if disk_snapshot is not None:
-            self._save_to_disk(disk_snapshot)
+            with self._flush_lock:
+                if my_seq > self._flush_seq_written:
+                    self._save_to_disk(disk_snapshot)
+                    self._flush_seq_written = my_seq
 
         logger.debug(f"Stored {key} ({entry_type}) from agent {agent_id}")
     

@@ -73,7 +73,7 @@ class TestCascadingLLMClient:
         """Test cascade exits early when quality met."""
         mock_client = AsyncMock()
         mock_response = MagicMock(
-            content="good response",
+            content="This is a comprehensive and accurate response to the question.",
             model="deepseek",
         )
         mock_client.chat.return_value = mock_response

@@ -240,49 +240,86 @@ class CascadingLLMClient:
     
     def _default_evaluator(self, response: Any, messages: list[dict]) -> float:
         """Default quality evaluator.
-        
-        Uses simple heuristics:
-        - Response length (not too short)
-        - No refusal patterns
-        - Contains expected structure (for JSON tasks)
-        
+
+        Scores on five independent axes (each capped to avoid double-penalising):
+
+        1. Completeness  — response isn't suspiciously short relative to prompt
+        2. Non-refusal   — hard refusal phrases drop score to near 0 immediately
+        3. Non-truncation — response doesn't end mid-sentence (likely cut off)
+        4. Structure     — JSON delivered when JSON was explicitly requested
+        5. Proportionality — extremely terse reply to a long prompt is suspect
+
         Args:
             response: LLM response
             messages: Input messages
-            
+
         Returns:
-            Quality score 0.0-1.0
+            Quality score 0.0–1.0
         """
+        import json as _json
+
         content = getattr(response, "content", "")
-        
         if not content:
             return 0.0
-        
+
         score = 1.0
-        
-        # Penalize very short responses
-        if len(content) < 50:
-            score -= 0.3
-        
-        # Penalize refusal patterns
-        refusal_patterns = [
+        content_stripped = content.strip()
+        content_lower = content_stripped.lower()
+
+        # ── 1. Hard refusals → immediate near-zero score ──────────────────────
+        # These patterns indicate the model refused the task entirely, making
+        # the response useless regardless of its length.
+        hard_refusals = [
             "i cannot",
-            "i'm unable",
-            "i am not able",
-            "as an ai",
-            "i don't have",
+            "i'm unable to",
+            "i am not able to",
+            "i'm not able to",
+            "as an ai language model, i cannot",
+            "i must decline",
+            "i won't be able to",
         ]
-        
-        content_lower = content.lower()
-        for pattern in refusal_patterns:
-            if pattern in content_lower:
-                score -= 0.2
-        
-        # Bonus for structured output (if requested)
-        if any("json" in str(m.get("content", "")).lower() for m in messages):
-            if content.strip().startswith("{") or content.strip().startswith("["):
-                score += 0.2
-        
+        if any(p in content_lower for p in hard_refusals):
+            return 0.05
+
+        # ── 2. Soft hedges — penalise but don't disqualify ────────────────────
+        soft_hedges = [
+            "as an ai",
+            "i don't have access",
+            "i don't have the ability",
+            "i'm just an ai",
+        ]
+        hedge_hits = sum(1 for p in soft_hedges if p in content_lower)
+        score -= min(0.3, hedge_hits * 0.15)
+
+        # ── 3. Completeness: length relative to prompt ────────────────────────
+        prompt_chars = sum(len(m.get("content", "")) for m in messages)
+        # A useful response should be at least 5% of the prompt length or 20 chars
+        min_expected = max(20, prompt_chars * 0.05)
+        if len(content_stripped) < min_expected:
+            shortfall = 1.0 - len(content_stripped) / min_expected
+            score -= min(0.4, shortfall * 0.5)
+
+        # ── 4. Truncation: response ends mid-sentence ─────────────────────────
+        # A well-formed response ends with sentence-terminal punctuation, a
+        # closing fence (```), or a closing bracket — not a bare word/comma.
+        last_char = content_stripped[-1] if content_stripped else ""
+        if last_char not in {".", "!", "?", "}", "]", "`", '"', "'", ":", ";"}:
+            score -= 0.15
+
+        # ── 5. JSON structure when explicitly requested ───────────────────────
+        json_requested = any(
+            "json" in str(m.get("content", "")).lower() for m in messages
+        )
+        if json_requested:
+            if content_stripped.startswith(("{", "[")):
+                try:
+                    _json.loads(content_stripped)
+                    score += 0.1  # valid JSON → small bonus
+                except ValueError:
+                    score -= 0.2  # looks like JSON but is malformed
+            else:
+                score -= 0.15  # JSON requested but not delivered
+
         return max(0.0, min(1.0, score))
     
     def _record_cascade_exit(self, step_idx: int) -> None:
