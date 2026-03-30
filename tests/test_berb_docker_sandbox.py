@@ -39,11 +39,12 @@ def test_build_run_command_network_none(tmp_path: Path):
     """network_policy='none' → --network none, --user UID:GID."""
     cfg = DockerSandboxConfig(network_policy="none")
     sandbox = DockerSandbox(cfg, tmp_path / "work")
-    cmd = sandbox._build_run_command(
-        tmp_path / "staging",
-        entry_point="main.py",
-        container_name="rc-test-1",
-    )
+    with patch("berb.experiment.docker_sandbox._get_user_id", return_value="1000:1000"):
+        cmd = sandbox._build_run_command(
+            tmp_path / "staging",
+            entry_point="main.py",
+            container_name="rc-test-1",
+        )
     assert "docker" in cmd
     assert "--gpus" in cmd
     assert "--network" in cmd
@@ -59,11 +60,12 @@ def test_build_run_command_setup_only(tmp_path: Path):
     """Default network_policy='setup_only' → RC_SETUP_ONLY_NETWORK=1, --cap-add."""
     cfg = DockerSandboxConfig()  # default is setup_only
     sandbox = DockerSandbox(cfg, tmp_path / "work")
-    cmd = sandbox._build_run_command(
-        tmp_path / "staging",
-        entry_point="main.py",
-        container_name="rc-test-setup",
-    )
+    with patch("berb.experiment.docker_sandbox._get_user_id", return_value="1000:1000"):
+        cmd = sandbox._build_run_command(
+            tmp_path / "staging",
+            entry_point="main.py",
+            container_name="rc-test-setup",
+        )
     # Should set env var for setup-only network
     assert "-e" in cmd
     env_idx = [i for i, x in enumerate(cmd) if x == "-e"]
@@ -82,11 +84,12 @@ def test_build_run_command_full_network(tmp_path: Path):
     """network_policy='full' → no --network none, has --user."""
     cfg = DockerSandboxConfig(network_policy="full")
     sandbox = DockerSandbox(cfg, tmp_path / "work")
-    cmd = sandbox._build_run_command(
-        tmp_path / "staging",
-        entry_point="main.py",
-        container_name="rc-test-full",
-    )
+    with patch("berb.experiment.docker_sandbox._get_user_id", return_value="1000:1000"):
+        cmd = sandbox._build_run_command(
+            tmp_path / "staging",
+            entry_point="main.py",
+            container_name="rc-test-full",
+        )
     # No --network none
     network_indices = [i for i, x in enumerate(cmd) if x == "--network"]
     assert len(network_indices) == 0

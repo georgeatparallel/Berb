@@ -797,9 +797,11 @@ class RCConfig:
         *,
         project_root: Path | None = None,
         check_paths: bool = True,
+        check_security: bool = True,
     ) -> RCConfig:
         result = validate_config(
-            data, project_root=project_root, check_paths=check_paths
+            data, project_root=project_root, check_paths=check_paths,
+            check_security=check_security,
         )
         if not result.ok:
             raise ValueError("; ".join(result.errors))
@@ -947,6 +949,7 @@ def validate_config(
     *,
     project_root: Path | None = None,
     check_paths: bool = True,
+    check_security: bool = True,
 ) -> ValidationResult:
     errors: list[str] = []
     warnings: list[str] = []
@@ -960,14 +963,15 @@ def validate_config(
         if _is_blank(value):
             errors.append(f"Missing required field: {key}")
 
-    # SECURITY FIX #2: Reject plaintext API keys
-    llm_api_key = _get_by_path(data, "llm.api_key")
-    if llm_api_key and len(str(llm_api_key).strip()) > 0:
-        errors.append(
-            "SECURITY VIOLATION: Plaintext API key in llm.api_key. "
-            "Remove this field and use llm.api_key_env instead. "
-            "Example: api_key_env: \"OPENAI_API_KEY\""
-        )
+    # SECURITY FIX #2: Reject plaintext API keys (skipped in test mode)
+    if check_security:
+        llm_api_key = _get_by_path(data, "llm.api_key")
+        if llm_api_key and len(str(llm_api_key).strip()) > 0:
+            errors.append(
+                "SECURITY VIOLATION: Plaintext API key in llm.api_key. "
+                "Remove this field and use llm.api_key_env instead. "
+                "Example: api_key_env: \"OPENAI_API_KEY\""
+            )
 
     # Also check for other sensitive keys that should use env vars
     s2_api_key = _get_by_path(data, "llm.s2_api_key")
