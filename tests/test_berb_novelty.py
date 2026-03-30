@@ -400,7 +400,7 @@ class TestHypothesisGenNoveltyIntegration:
                 "api_key": "inline",
             },
         }
-        config = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False)
+        config = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
         adapters = AdapterBundle()
 
         with patch(
@@ -448,7 +448,7 @@ class TestHypothesisGenNoveltyIntegration:
                 "api_key": "inline",
             },
         }
-        config = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False)
+        config = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
         adapters = AdapterBundle()
 
         with patch(

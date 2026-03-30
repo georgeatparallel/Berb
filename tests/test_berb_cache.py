@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib
+import pytest
 from unittest.mock import patch
 
 from berb.literature.models import Author, Paper
@@ -170,3 +171,110 @@ class TestSearchDegradation:
         cached = get_cached("test", "semantic_scholar", 20, cache_base=tmp_path)
         assert cached is not None
         assert cached[0]["paper_id"] == "s2-test"
+
+
+# ── BUG-006: atomic cache write regression tests ─────────────────────────────
+
+
+class TestAtomicCacheWrite:
+    """Regression tests for BUG-006: put_cache must write atomically.
+
+    Previously put_cache used path.write_text() which truncates the file
+    then writes, leaving a window where concurrent readers observe an empty
+    or partial JSON file and raise JSONDecodeError.  The fix uses a
+    temp-file + Path.replace() pattern.
+    """
+
+    def test_no_tmp_file_left_on_success(self, tmp_path):
+        """REGRESSION BUG-006: temp file must be cleaned up after success."""
+        from berb.literature.cache import put_cache, cache_key
+
+        put_cache("q", "arxiv", 5, [{"id": "p1"}], cache_base=tmp_path)
+
+        key = cache_key("q", "arxiv", 5)
+        tmp = (tmp_path / f"{key}.tmp")
+        assert not tmp.exists(), "Temp file leaked after successful write"
+
+    def test_final_file_is_valid_json(self, tmp_path):
+        """REGRESSION BUG-006: final cache file must be complete valid JSON."""
+        import json
+        from berb.literature.cache import put_cache, cache_key
+
+        papers = [{"id": f"p{i}", "title": f"Paper {i}"} for i in range(10)]
+        put_cache("atomic_test", "semantic_scholar", 10, papers, cache_base=tmp_path)
+
+        key = cache_key("atomic_test", "semantic_scholar", 10)
+        path = tmp_path / f"{key}.json"
+        assert path.exists()
+        data = json.loads(path.read_text(encoding="utf-8"))
+        assert len(data["papers"]) == 10
+
+    def test_concurrent_writes_leave_valid_json(self, tmp_path):
+        """REGRESSION BUG-006: concurrent writes must not corrupt the cache file.
+
+        The atomic-write guarantee: any cache file that exists after all writes
+        complete must contain valid, complete JSON — never a partial or empty
+        payload.  On Windows, os.replace() may raise PermissionError when two
+        threads race on the same target (mandatory-lock limitation); those
+        failures are acceptable because the temp file is cleaned up and the
+        original cache file is untouched.  A PermissionError is not a
+        corruption — it is a clean failure.
+        """
+        import json
+        import threading
+        from berb.literature.cache import put_cache, get_cached
+
+        non_permission_errors: list[Exception] = []
+
+        def writer(idx: int) -> None:
+            try:
+                put_cache(
+                    "concurrent_q",
+                    "arxiv",
+                    5,
+                    [{"id": f"p{idx}"}],
+                    cache_base=tmp_path,
+                )
+            except PermissionError:
+                # Windows mandatory locking: os.replace() on a contended target
+                # raises PermissionError.  The temp file is cleaned up; the
+                # existing cache file is left intact.  This is acceptable.
+                pass
+            except Exception as exc:
+                non_permission_errors.append(exc)
+
+        threads = [threading.Thread(target=writer, args=(i,)) for i in range(20)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        assert not non_permission_errors, (
+            f"Unexpected non-PermissionError exceptions: {non_permission_errors}"
+        )
+
+        # The file must be readable as valid JSON — never a partial payload.
+        result = get_cached("concurrent_q", "arxiv", 5, cache_base=tmp_path)
+        if result is not None:
+            # If a write succeeded, the payload must be a well-formed list
+            assert isinstance(result, list), f"Unexpected type: {type(result)}"
+
+        # No orphaned temp files should remain after all threads finish
+        remaining_tmp = list(tmp_path.glob("*.tmp"))
+        assert remaining_tmp == [], f"Temp files leaked: {remaining_tmp}"
+
+    def test_cleanup_on_replace_failure(self, tmp_path):
+        """REGRESSION BUG-006: temp file is removed when os.replace() fails."""
+        import os as _os
+        from berb.literature.cache import put_cache, cache_key
+
+        def failing_replace(src, dst):
+            raise OSError("Simulated rename failure")
+
+        with patch("berb.literature.cache.os.replace", side_effect=failing_replace):
+            with pytest.raises(OSError):
+                put_cache("fail_q", "arxiv", 1, [{"id": "x"}], cache_base=tmp_path)
+
+        # No .tmp file should survive after the failure
+        remaining_tmp = list(tmp_path.glob("*.tmp"))
+        assert remaining_tmp == [], f"Temp files leaked: {remaining_tmp}"

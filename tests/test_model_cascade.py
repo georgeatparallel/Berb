@@ -73,7 +73,7 @@ class TestCascadingLLMClient:
         """Test cascade exits early when quality met."""
         mock_client = AsyncMock()
         mock_response = MagicMock(
-            content="good response",
+            content="This is a comprehensive and accurate response to the question.",
             model="deepseek",
         )
         mock_client.chat.return_value = mock_response
@@ -233,7 +233,82 @@ class TestGetCascadeForStage:
     def test_default_cascade(self):
         """Test default cascade for unknown stage."""
         config = get_cascade_for_stage("UNKNOWN_STAGE")
-        
+
         # Should have balanced cascade
         assert len(config.cascade) == 3
         assert config.cascade[0].min_score == 0.75
+
+
+# ── BUG-005: asyncio.Lock event-loop binding regression tests ─────────────────
+
+
+class TestCascadingLLMClientLockFix:
+    """Regression tests for BUG-005: _stats_lock must not use asyncio.Lock.
+
+    asyncio.Lock() binds to the running event loop at first use.  If
+    CascadingLLMClient is constructed outside an active loop and later used
+    inside one, or is reused across multiple asyncio.run() calls (each
+    creates a fresh event loop), the lock raises RuntimeError.
+
+    The fix replaces asyncio.Lock with threading.Lock, which is always safe
+    from any coroutine since asyncio runs on a single OS thread.
+    """
+
+    def _make_client(self, base_client=None):
+        """Helper: create a minimal CascadingLLMClient for testing."""
+        from unittest.mock import MagicMock
+        from berb.llm.model_cascade import CascadingLLMClient, CascadeConfig, CascadeStep
+
+        cfg = CascadeConfig(
+            cascade=[CascadeStep(model="test-model", min_score=0.0)],
+            quick_eval_enabled=False,
+        )
+        return CascadingLLMClient(
+            base_client=base_client or MagicMock(),
+            config=cfg,
+        )
+
+    def test_stats_lock_is_threading_lock(self):
+        """REGRESSION BUG-005: _stats_lock must be a threading.Lock, not asyncio.Lock."""
+        import threading
+        import asyncio
+
+        client = self._make_client()
+
+        assert isinstance(client._stats_lock, type(threading.Lock())), (
+            "_stats_lock is not a threading.Lock — still using asyncio.Lock (BUG-005)."
+        )
+        assert not isinstance(client._stats_lock, type(asyncio.Lock())), (
+            "_stats_lock is an asyncio.Lock which is event-loop-bound."
+        )
+
+    def test_stats_lock_usable_outside_event_loop(self):
+        """REGRESSION BUG-005: stats lock must be acquirable outside an event loop."""
+        client = self._make_client()
+
+        # If _stats_lock were an asyncio.Lock, acquiring it outside an async
+        # context would raise RuntimeError.
+        with client._stats_lock:
+            client._total_requests += 1
+
+        assert client._total_requests == 1
+
+    def test_stats_lock_usable_across_event_loop_restarts(self):
+        """REGRESSION BUG-005: lock must survive multiple asyncio.run() calls.
+
+        asyncio.Lock created in one loop context raises on reuse in a second
+        loop context ('got Future attached to a different loop').
+        threading.Lock is loop-agnostic, so this must succeed.
+        """
+        import asyncio
+
+        client = self._make_client()
+
+        async def increment():
+            with client._stats_lock:
+                client._total_requests += 1
+
+        asyncio.run(increment())
+        asyncio.run(increment())  # BUG-005: raised RuntimeError before fix
+
+        assert client._total_requests == 2

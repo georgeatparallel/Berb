@@ -77,14 +77,15 @@ nadirclaw:
 # =============================================================================
 
 llm:
-  provider: "openrouter"  # openai | openrouter | deepseek | anthropic | acp
+  provider: "openrouter"
   base_url: "https://openrouter.ai/api/v1"
   api_key_env: "OPENROUTER_API_KEY"
   api_key: ""
-  primary_model: "gpt-4o"
+  primary_model: "openai/gpt-4o"
   fallback_models:
-    - "gpt-4.1"
-    - "gpt-4o-mini"
+    - "openai/gpt-4.1"
+    - "anthropic/claude-sonnet-4-5-20250929"
+    - "openai/gpt-4o-mini"
 
 # =============================================================================
 # Mnemo Cortex Memory Integration (NEW!)

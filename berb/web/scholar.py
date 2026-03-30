@@ -1,37 +1,36 @@
-"""Google Scholar search powered by the ``scholarly`` library.
+"""Academic paper search backed by the Semantic Scholar API.
 
-scholarly is installed as a dependency and provides direct access to
-Google Scholar search, citation graph traversal, and author lookup.
+Replaces the previous ``scholarly`` (Google Scholar scraping) implementation.
+Semantic Scholar provides a stable, ToS-compliant REST API that returns the
+same information (title, authors, year, abstract, citation count, venue).
 
-Usage::
+The public interface (``GoogleScholarClient``, ``ScholarPaper``) is preserved
+so existing call-sites require no changes.
 
-    client = GoogleScholarClient()
-    papers = client.search("attention is all you need", limit=5)
-    citing = client.get_citations(papers[0].scholar_id, limit=10)
+API docs: https://api.semanticscholar.org/api-docs/graph
 """
 
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
 import time
+import urllib.parse
+import urllib.request
 from dataclasses import dataclass, field
 from typing import Any
 
-try:
-    from scholarly import scholarly, ProxyGenerator
-    HAS_SCHOLARLY = True
-except ImportError:
-    scholarly = None  # type: ignore[assignment]
-    ProxyGenerator = None  # type: ignore[assignment,misc]
-    HAS_SCHOLARLY = False
-
 logger = logging.getLogger(__name__)
+
+_S2_BASE = "https://api.semanticscholar.org/graph/v1"
+_S2_FIELDS = "title,authors,year,abstract,citationCount,externalIds,venue,url"
+_DEFAULT_TIMEOUT = 15  # seconds
 
 
 @dataclass
 class ScholarPaper:
-    """A paper result from Google Scholar."""
+    """A paper result from Semantic Scholar (formerly Google Scholar)."""
 
     title: str
     authors: list[str] = field(default_factory=list)
@@ -41,7 +40,7 @@ class ScholarPaper:
     url: str = ""
     scholar_id: str = ""
     venue: str = ""
-    source: str = "google_scholar"
+    source: str = "semantic_scholar"
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -61,7 +60,7 @@ class ScholarPaper:
         from berb.literature.models import Author, Paper
         authors_tuple = tuple(Author(name=a) for a in self.authors)
         return Paper(
-            paper_id=self.scholar_id or f"gs-{hashlib.sha256(self.title.encode()).hexdigest()[:8]}",
+            paper_id=self.scholar_id or f"s2-{hashlib.sha256(self.title.encode()).hexdigest()[:8]}",
             title=self.title,
             authors=authors_tuple,
             year=self.year,
@@ -69,112 +68,115 @@ class ScholarPaper:
             venue=self.venue,
             citation_count=self.citation_count,
             url=self.url,
-            source="google_scholar",
+            source="semantic_scholar",
         )
 
 
 class GoogleScholarClient:
-    """Google Scholar search client using the ``scholarly`` library.
+    """Academic paper search client backed by the Semantic Scholar API.
+
+    Keeps the same interface as the former ``scholarly``-based client so
+    existing call-sites do not require changes.
 
     Parameters
     ----------
     inter_request_delay:
-        Seconds between requests to avoid rate limiting.
-    use_proxy:
-        Whether to set up a free proxy to reduce blocking risk.
+        Seconds between requests (Semantic Scholar public tier: 1 req/s
+        unauthenticated; pass an ``api_key`` for 10 req/s).
+    api_key:
+        Optional Semantic Scholar API key for higher rate limits.
     """
 
     def __init__(
         self,
         *,
-        inter_request_delay: float = 2.0,
-        use_proxy: bool = False,
+        inter_request_delay: float = 1.1,
+        use_proxy: bool = False,  # kept for API compat; ignored
+        api_key: str | None = None,
     ) -> None:
-        if not HAS_SCHOLARLY:
-            raise ImportError(
-                "scholarly is required for Google Scholar search. "
-                "Install: pip install 'berb[web]'"
-            )
         self.delay = inter_request_delay
+        self._api_key = api_key
         self._last_request_time: float = 0.0
-
         if use_proxy:
-            try:
-                pg = ProxyGenerator()
-                pg.FreeProxies()
-                scholarly.use_proxy(pg)
-                logger.info("Google Scholar: proxy enabled")
-            except Exception as exc:  # noqa: BLE001
-                logger.warning("Failed to set up proxy: %s", exc)
+            logger.debug("use_proxy is ignored — Semantic Scholar API needs no proxy")
 
     @property
     def available(self) -> bool:
-        """Always True — scholarly is installed as a dependency."""
+        """Always True — uses stdlib urllib, no optional dependency."""
         return True
 
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
     def search(self, query: str, *, limit: int = 10) -> list[ScholarPaper]:
-        """Search Google Scholar for papers matching query."""
-        self._rate_limit()
-        results: list[ScholarPaper] = []
-        try:
-            search_gen = scholarly.search_pubs(query)
-            for i, pub in enumerate(search_gen):
-                if i >= limit:
-                    break
-                results.append(self._parse_pub(pub))
-                if i < limit - 1:
-                    self._rate_limit()
-
-            logger.info("Google Scholar: found %d papers for %r", len(results), query)
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("Google Scholar search failed: %s", exc)
-
-        return results
+        """Search Semantic Scholar for papers matching *query*."""
+        params = urllib.parse.urlencode({
+            "query": query,
+            "limit": min(limit, 100),
+            "fields": _S2_FIELDS,
+        })
+        url = f"{_S2_BASE}/paper/search?{params}"
+        data = self._get(url)
+        papers: list[ScholarPaper] = []
+        for item in (data.get("data") or [])[:limit]:
+            papers.append(self._parse_item(item))
+        logger.info("Semantic Scholar: found %d papers for %r", len(papers), query)
+        return papers
 
     def get_citations(self, scholar_id: str, *, limit: int = 20) -> list[ScholarPaper]:
-        """Get papers that cite the given paper (citation graph traversal)."""
-        self._rate_limit()
-        results: list[ScholarPaper] = []
-        try:
-            pub = scholarly.search_single_pub(scholar_id)
-            if pub:
-                citations = scholarly.citedby(pub)
-                for i, cit in enumerate(citations):
-                    if i >= limit:
-                        break
-                    results.append(self._parse_pub(cit))
-                    if i < limit - 1:
-                        self._rate_limit()
-
-            logger.info("Google Scholar: found %d citations for %s", len(results), scholar_id)
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("Citation retrieval failed for %s: %s", scholar_id, exc)
-
-        return results
+        """Return papers that cite *scholar_id* (citation graph traversal)."""
+        params = urllib.parse.urlencode({
+            "limit": min(limit, 100),
+            "fields": _S2_FIELDS,
+        })
+        url = f"{_S2_BASE}/paper/{urllib.parse.quote(scholar_id)}/citations?{params}"
+        data = self._get(url)
+        papers: list[ScholarPaper] = []
+        for item in (data.get("data") or [])[:limit]:
+            citing = item.get("citingPaper") or item
+            papers.append(self._parse_item(citing))
+        logger.info("Semantic Scholar: found %d citations for %s", len(papers), scholar_id)
+        return papers
 
     def search_author(self, name: str) -> list[dict[str, Any]]:
-        """Search for an author on Google Scholar."""
-        self._rate_limit()
-        try:
-            results = []
-            for author in scholarly.search_author(name):
-                results.append({
-                    "name": author.get("name", ""),
-                    "affiliation": author.get("affiliation", ""),
-                    "scholar_id": author.get("scholar_id", ""),
-                    "citedby": author.get("citedby", 0),
-                    "interests": author.get("interests", []),
-                })
-                if len(results) >= 5:
-                    break
-            return results
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("Author search failed for %s: %s", name, exc)
-            return []
+        """Search for an author on Semantic Scholar."""
+        params = urllib.parse.urlencode({
+            "query": name,
+            "limit": 5,
+            "fields": "name,affiliations,citationCount,paperCount,hIndex",
+        })
+        url = f"{_S2_BASE}/author/search?{params}"
+        data = self._get(url)
+        results = []
+        for item in (data.get("data") or [])[:5]:
+            affiliations = item.get("affiliations") or []
+            results.append({
+                "name": item.get("name", ""),
+                "affiliation": affiliations[0] if affiliations else "",
+                "scholar_id": str(item.get("authorId", "")),
+                "citedby": item.get("citationCount", 0),
+                "interests": [],
+            })
+        return results
 
     # ------------------------------------------------------------------
     # Internals
     # ------------------------------------------------------------------
+
+    def _get(self, url: str) -> dict[str, Any]:
+        """Perform a rate-limited GET and return parsed JSON."""
+        self._rate_limit()
+        req = urllib.request.Request(url)
+        if self._api_key:
+            req.add_header("x-api-key", self._api_key)
+        req.add_header("Accept", "application/json")
+        try:
+            with urllib.request.urlopen(req, timeout=_DEFAULT_TIMEOUT) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Semantic Scholar request failed (%s): %s", url, exc)
+            return {}
 
     def _rate_limit(self) -> None:
         now = time.monotonic()
@@ -184,34 +186,23 @@ class GoogleScholarClient:
         self._last_request_time = time.monotonic()
 
     @staticmethod
-    def _parse_pub(pub: Any) -> ScholarPaper:
-        """Parse a scholarly publication object into ScholarPaper."""
-        bib = pub.get("bib", {}) if isinstance(pub, dict) else getattr(pub, "bib", {})
-        info = pub if isinstance(pub, dict) else pub.__dict__ if hasattr(pub, "__dict__") else {}
-
-        authors = bib.get("author", [])
-        if isinstance(authors, str):
-            authors = [a.strip() for a in authors.split(" and ")]
-
-        year = 0
-        year_raw = bib.get("pub_year", bib.get("year", 0))
-        try:
-            year = int(year_raw)
-        except (ValueError, TypeError):
-            pass
-
-        cites_id = info.get("cites_id", [])
-        scholar_id = info.get("author_pub_id", "") or (
-            cites_id[0] if isinstance(cites_id, list) and cites_id else ""
+    def _parse_item(item: dict[str, Any]) -> ScholarPaper:
+        """Parse a Semantic Scholar paper object into ScholarPaper."""
+        authors = [a.get("name", "") for a in (item.get("authors") or [])]
+        ext_ids = item.get("externalIds") or {}
+        scholar_id = str(item.get("paperId") or "")
+        url = (
+            item.get("url")
+            or (f"https://doi.org/{ext_ids['DOI']}" if "DOI" in ext_ids else "")
         )
-
         return ScholarPaper(
-            title=bib.get("title", ""),
+            title=item.get("title") or "",
             authors=authors,
-            year=year,
-            abstract=bib.get("abstract", ""),
-            citation_count=info.get("num_citations", 0),
-            url=info.get("pub_url", info.get("eprint_url", "")),
+            year=int(item.get("year") or 0),
+            abstract=item.get("abstract") or "",
+            citation_count=int(item.get("citationCount") or 0),
+            url=url,
             scholar_id=scholar_id,
-            venue=bib.get("venue", bib.get("journal", "")),
+            venue=item.get("venue") or "",
+            source="semantic_scholar",
         )

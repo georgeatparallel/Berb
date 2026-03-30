@@ -1,8 +1,10 @@
-"""Tests for berb.web.scholar — GoogleScholarClient."""
+"""Tests for berb.web.scholar — GoogleScholarClient (Semantic Scholar backend)."""
 
 from __future__ import annotations
 
+import json
 import time
+from io import BytesIO
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -26,7 +28,7 @@ class TestScholarPaper:
         d = p.to_dict()
         assert d["title"] == "Attention Is All You Need"
         assert d["year"] == 2017
-        assert d["source"] == "google_scholar"
+        assert d["source"] == "semantic_scholar"
 
     def test_to_literature_paper(self):
         p = ScholarPaper(
@@ -39,7 +41,7 @@ class TestScholarPaper:
         )
         lit = p.to_literature_paper()
         assert lit.title == "Test Paper"
-        assert lit.source == "google_scholar"
+        assert lit.source == "semantic_scholar"
         assert len(lit.authors) == 2
         assert lit.authors[0].name == "Author One"
 
@@ -50,56 +52,39 @@ class TestScholarPaper:
 
 
 class TestGoogleScholarClient:
-    @patch("berb.web.scholar.HAS_SCHOLARLY", True)
     def test_available_always_true(self):
-        """scholarly is now an installed dependency, always available."""
+        """Client is always available — uses stdlib urllib."""
         client = GoogleScholarClient()
         assert client.available
 
-    def test_parse_pub_full(self):
-        """Test _parse_pub with a complete publication dict."""
-        pub = {
-            "bib": {
-                "title": "Deep Learning",
-                "author": ["LeCun", "Bengio", "Hinton"],
-                "pub_year": "2015",
-                "abstract": "Deep learning review.",
-                "venue": "Nature",
-            },
-            "num_citations": 30000,
-            "pub_url": "https://nature.com/dl",
-            "cites_id": ["abc123"],
+    def test_parse_item_full(self):
+        """Test _parse_item with a complete Semantic Scholar response dict."""
+        item = {
+            "paperId": "abc123",
+            "title": "Deep Learning",
+            "authors": [{"name": "LeCun"}, {"name": "Bengio"}, {"name": "Hinton"}],
+            "year": 2015,
+            "abstract": "Deep learning review.",
+            "citationCount": 30000,
+            "venue": "Nature",
+            "url": "https://nature.com/dl",
+            "externalIds": {},
         }
-        paper = GoogleScholarClient._parse_pub(pub)
+        paper = GoogleScholarClient._parse_item(item)
         assert paper.title == "Deep Learning"
         assert paper.year == 2015
         assert paper.citation_count == 30000
         assert "LeCun" in paper.authors
         assert paper.venue == "Nature"
+        assert paper.scholar_id == "abc123"
 
-    def test_parse_pub_string_authors(self):
-        pub = {
-            "bib": {
-                "title": "Paper",
-                "author": "Smith and Jones",
-                "pub_year": "2023",
-            },
-            "num_citations": 10,
-            "pub_url": "https://example.com",
-        }
-        paper = GoogleScholarClient._parse_pub(pub)
-        assert paper.title == "Paper"
-        assert "Smith" in paper.authors
-        assert "Jones" in paper.authors
-
-    def test_parse_pub_missing_fields(self):
-        pub = {"bib": {}, "num_citations": 0}
-        paper = GoogleScholarClient._parse_pub(pub)
+    def test_parse_item_missing_fields(self):
+        item = {}
+        paper = GoogleScholarClient._parse_item(item)
         assert paper.title == ""
         assert paper.year == 0
         assert paper.authors == []
 
-    @patch("berb.web.scholar.HAS_SCHOLARLY", True)
     def test_rate_limiting(self):
         client = GoogleScholarClient(inter_request_delay=0.01)
         t0 = time.monotonic()
@@ -108,32 +93,39 @@ class TestGoogleScholarClient:
         elapsed = time.monotonic() - t0
         assert elapsed >= 0.01
 
-    @patch("berb.web.scholar.HAS_SCHOLARLY", True)
-    @patch("berb.web.scholar.scholarly")
-    def test_search_with_mocked_scholarly(self, mock_scholarly):
-        """Test search using mocked scholarly library."""
-        mock_pub = {
-            "bib": {
-                "title": "Test Paper",
-                "author": ["Author A"],
-                "pub_year": "2024",
-            },
-            "num_citations": 5,
-            "pub_url": "https://example.com",
+    def test_search_with_mocked_api(self):
+        """Test search using a mocked HTTP response."""
+        response_data = {
+            "data": [
+                {
+                    "paperId": "p1",
+                    "title": "Test Paper",
+                    "authors": [{"name": "Author A"}],
+                    "year": 2024,
+                    "abstract": "",
+                    "citationCount": 5,
+                    "venue": "",
+                    "url": "https://example.com",
+                    "externalIds": {},
+                }
+            ]
         }
-        mock_scholarly.search_pubs.return_value = iter([mock_pub])
 
-        client = GoogleScholarClient(inter_request_delay=0.0)
-        results = client.search("test query", limit=5)
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = json.dumps(response_data).encode()
+        mock_resp.__enter__ = lambda s: s
+        mock_resp.__exit__ = MagicMock(return_value=False)
+
+        with patch("urllib.request.urlopen", return_value=mock_resp):
+            client = GoogleScholarClient(inter_request_delay=0.0)
+            results = client.search("test query", limit=5)
+
         assert len(results) == 1
         assert results[0].title == "Test Paper"
 
-    @patch("berb.web.scholar.HAS_SCHOLARLY", True)
-    @patch("berb.web.scholar.scholarly")
-    def test_search_error_graceful(self, mock_scholarly):
+    def test_search_error_graceful(self):
         """Search should return empty list on error, not raise."""
-        mock_scholarly.search_pubs.side_effect = Exception("Rate limited")
-
-        client = GoogleScholarClient(inter_request_delay=0.0)
-        results = client.search("test query")
+        with patch("urllib.request.urlopen", side_effect=Exception("Network error")):
+            client = GoogleScholarClient(inter_request_delay=0.0)
+            results = client.search("test query")
         assert results == []

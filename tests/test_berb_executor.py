@@ -67,7 +67,7 @@ def rc_config(tmp_path: Path) -> RCConfig:
         "security": {"hitl_required_stages": [5, 9, 20]},
         "experiment": {"mode": "sandbox"},
     }
-    return RCConfig.from_dict(data, project_root=tmp_path, check_paths=False)
+    return RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
 
 
 @pytest.fixture()
@@ -836,6 +836,7 @@ class TestIterativeRefine:
             sandbox_data,
             project_root=tmp_path,
             check_paths=False,
+            check_security=False,
         )
         llm = FakeLLMClient(
             "```python\nfor _ in range(3):\n    print('val_loss: 0.5000')\n```"
@@ -943,6 +944,7 @@ class TestIterativeRefine:
             sandbox_data,
             project_root=tmp_path,
             check_paths=False,
+            check_security=False,
         )
         llm = FakeLLMClient(
             "```python\n"
@@ -1887,7 +1889,7 @@ class TestComputeBudgetBlock:
                 },
             },
         }
-        cfg = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False)
+        cfg = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
 
         # Write exp_plan prior artifact
         _write_prior_artifact(run_dir, 10, "exp_plan.yaml", "objectives: test")
@@ -1958,7 +1960,7 @@ class TestPartialTimeoutStatus:
                 },
             },
         }
-        cfg = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False)
+        cfg = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
 
         # Write experiment code that prints some metrics then sleeps
         exp_dir = run_dir / "stage-11" / "experiment"
@@ -2058,7 +2060,7 @@ class TestTimeoutAwareRefine:
                 "metric_direction": "minimize",
             },
         }
-        cfg = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False)
+        cfg = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
 
         llm = FakeLLMClient(
             "```python\nimport numpy as np\nprint('best_loss: 0.1')\n```"
@@ -2293,7 +2295,7 @@ class TestRefineTimeoutAndIterationCap:
                 "metric_direction": "minimize",
             },
         }
-        cfg = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False)
+        cfg = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
 
         # LLM always returns same code — will trigger no_improvement early stop
         llm = FakeLLMClient("```python\nprint('best_loss: 0.5')\n```")
@@ -2545,7 +2547,7 @@ class TestStdoutTruncation:
                 "metric_direction": "minimize",
             },
         }
-        cfg = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False)
+        cfg = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
 
         llm = FakeLLMClient("```python\nprint('best_loss: 0.3')\n```")
         rc_executor._execute_iterative_refine(
@@ -2610,7 +2612,7 @@ class TestNoImproveStreakFix:
                 "metric_direction": "minimize",
             },
         }
-        cfg = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False)
+        cfg = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
 
         # LLM returns code that won't produce metrics in simulated mode
         llm = FakeLLMClient("```python\nprint('no metrics here')\n```")
@@ -2676,7 +2678,7 @@ class TestStdoutFailureDetection:
                 },
             },
         }
-        cfg = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False)
+        cfg = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
         adapters = AdapterBundle()
 
         result = _execute_experiment_run(
@@ -2735,7 +2737,7 @@ class TestStdoutFailureDetection:
                 },
             },
         }
-        cfg = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False)
+        cfg = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
         adapters = AdapterBundle()
 
         result = _execute_experiment_run(
@@ -2948,7 +2950,7 @@ class TestConditionCoverageDetection:
                 "metric_direction": "minimize",
             },
         }
-        cfg = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False)
+        cfg = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
 
         llm = FakeLLMClient("```python\nprint('primary_metric: 0.3')\n```")
         rc_executor._execute_iterative_refine(
@@ -3010,7 +3012,7 @@ class TestConditionCoverageDetection:
                 "metric_direction": "minimize",
             },
         }
-        cfg = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False)
+        cfg = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
 
         llm = FakeLLMClient("```python\nprint('primary_metric: 0.3')\n```")
         rc_executor._execute_iterative_refine(
@@ -3094,7 +3096,7 @@ class TestRefineFilePreservation:
                 "metric_direction": "minimize",
             },
         }
-        cfg = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False)
+        cfg = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
 
         # LLM returns only main.py in multi-file format
         llm = FakeLLMClient("```filename:main.py\nfrom helpers import foo\nprint('primary_metric: 0.3')\n```")

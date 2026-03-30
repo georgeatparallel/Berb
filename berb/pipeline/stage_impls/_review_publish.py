@@ -1405,6 +1405,129 @@ def _resolve_missing_citations(
 
 
 # ---------------------------------------------------------------------------
+# Stage 22 helpers
+# ---------------------------------------------------------------------------
+
+_KNOWN_PACKAGES: dict[str, str] = {
+    "numpy": "numpy",
+    "torch": "torch",
+    "tensorflow": "tensorflow",
+    "sklearn": "scikit-learn",
+    "scikit-learn": "scikit-learn",
+    "scipy": "scipy",
+    "pandas": "pandas",
+    "matplotlib": "matplotlib",
+    "seaborn": "seaborn",
+    "transformers": "transformers",
+    "datasets": "datasets",
+    "jax": "jax",
+}
+
+
+def _detect_dependencies(source_code: str) -> list[str]:
+    """Return sorted list of known PyPI packages imported by *source_code*."""
+    import ast as _ast
+    detected: set[str] = set()
+    try:
+        tree = _ast.parse(source_code)
+        for node in _ast.walk(tree):
+            if isinstance(node, _ast.Import):
+                for alias in node.names:
+                    top = alias.name.split(".")[0]
+                    if top in _KNOWN_PACKAGES:
+                        detected.add(_KNOWN_PACKAGES[top])
+            elif isinstance(node, _ast.ImportFrom) and node.module:
+                top = node.module.split(".")[0]
+                if top in _KNOWN_PACKAGES:
+                    detected.add(_KNOWN_PACKAGES[top])
+    except SyntaxError:
+        pass
+    return sorted(detected)
+
+
+def _package_code_release(
+    stage_dir: Path,
+    run_dir: Path,
+    final_paper: str,
+) -> list[str]:
+    """Package experiment code into stage_dir/code/.
+
+    Handles both multi-file (experiment_final/) and single-file
+    (experiment_final.py / experiment.py) layouts.
+
+    Returns list of artifact paths added (e.g. ["code/"]).
+    """
+    exp_final_dir_path = _read_prior_artifact(run_dir, "experiment_final/")
+    if exp_final_dir_path and Path(exp_final_dir_path).is_dir():
+        code_dir = stage_dir / "code"
+        code_dir.mkdir(parents=True, exist_ok=True)
+        all_code_combined = ""
+        code_file_names: list[str] = []
+        for src in sorted(Path(exp_final_dir_path).glob("*.py")):
+            (code_dir / src.name).write_bytes(src.read_bytes())
+            all_code_combined += src.read_text(encoding="utf-8") + "\n"
+            code_file_names.append(src.name)
+
+        requirements = _detect_dependencies(all_code_combined)
+        (code_dir / "requirements.txt").write_text(
+            "\n".join(requirements) + ("\n" if requirements else ""),
+            encoding="utf-8",
+        )
+        paper_title = _extract_paper_title(final_paper)
+        file_list_md = "\n".join(f"- `{f}`" for f in code_file_names)
+        readme = (
+            f"# Code Package for {paper_title}\n\n"
+            "## Description\n"
+            "This directory contains the experiment project used for the paper.\n\n"
+            "## Project Files\n"
+            f"{file_list_md}\n\n"
+            "## How to Run\n"
+            "`python main.py`\n\n"
+            "## Dependencies\n"
+            "Install dependencies with `pip install -r requirements.txt` if needed.\n"
+        )
+        (code_dir / "README.md").write_text(readme, encoding="utf-8")
+        logger.info(
+            "Stage 22: Packaged multi-file code release (%d files, %d deps)",
+            len(code_file_names),
+            len(requirements),
+        )
+        return ["code/"]
+
+    # Backward compat: single-file packaging
+    code_payload = _read_prior_artifact(run_dir, "experiment_final.py")
+    if not code_payload:
+        code_payload = _read_prior_artifact(run_dir, "experiment.py")
+    if not code_payload:
+        return []
+
+    code_dir = stage_dir / "code"
+    code_dir.mkdir(parents=True, exist_ok=True)
+    (code_dir / "experiment.py").write_text(code_payload, encoding="utf-8")
+    requirements = _detect_dependencies(code_payload)
+    (code_dir / "requirements.txt").write_text(
+        "\n".join(requirements) + ("\n" if requirements else ""),
+        encoding="utf-8",
+    )
+    paper_title = _extract_paper_title(final_paper)
+    readme = (
+        f"# Code Package for {paper_title}\n\n"
+        "## Description\n"
+        "This directory contains the final experiment script used for the paper.\n\n"
+        "## How to Run\n"
+        "`python experiment.py`\n\n"
+        "## Dependencies\n"
+        "Install dependencies with `pip install -r requirements.txt` if needed.\n"
+    )
+    (code_dir / "README.md").write_text(readme, encoding="utf-8")
+    logger.info(
+        "Stage 22: Packaged single-file code release with %d deps",
+        len(requirements),
+    )
+    return ["code/"]
+
+
+# ---------------------------------------------------------------------------
 # Stage 22: Export & Publish
 # ---------------------------------------------------------------------------
 
@@ -2328,140 +2451,9 @@ def _execute_export_publish(
     # (Charts, BUG-99 path fix, and remove_missing_figures are now handled
     #  BEFORE compile_latex() — see "Pre-compilation" block above.)
 
-    # --- Code packaging: multi-file directory or single file ---
-    exp_final_dir_path = _read_prior_artifact(run_dir, "experiment_final/")
-    if exp_final_dir_path and Path(exp_final_dir_path).is_dir():
-        import ast
+    # --- Code packaging ---
+    artifacts.extend(_package_code_release(stage_dir, run_dir, final_paper))
 
-        code_dir = stage_dir / "code"
-        code_dir.mkdir(parents=True, exist_ok=True)
-        all_code_combined = ""
-        code_file_names: list[str] = []
-        for src in sorted(Path(exp_final_dir_path).glob("*.py")):
-            (code_dir / src.name).write_bytes(src.read_bytes())
-            all_code_combined += src.read_text(encoding="utf-8") + "\n"
-            code_file_names.append(src.name)
-
-        # Detect dependencies from all files
-        detected: set[str] = set()
-        known_packages = {
-            "numpy": "numpy",
-            "torch": "torch",
-            "tensorflow": "tensorflow",
-            "sklearn": "scikit-learn",
-            "scikit-learn": "scikit-learn",
-            "scipy": "scipy",
-            "pandas": "pandas",
-            "matplotlib": "matplotlib",
-            "seaborn": "seaborn",
-            "transformers": "transformers",
-            "datasets": "datasets",
-            "jax": "jax",
-        }
-        try:
-            tree = ast.parse(all_code_combined)
-            for node in ast.walk(tree):
-                if isinstance(node, ast.Import):
-                    for alias in node.names:
-                        top = alias.name.split(".")[0]
-                        if top in known_packages:
-                            detected.add(known_packages[top])
-                elif isinstance(node, ast.ImportFrom) and node.module:
-                    top = node.module.split(".")[0]
-                    if top in known_packages:
-                        detected.add(known_packages[top])
-        except SyntaxError:
-            pass
-
-        requirements = sorted(detected)
-        (code_dir / "requirements.txt").write_text(
-            "\n".join(requirements) + ("\n" if requirements else ""),
-            encoding="utf-8",
-        )
-
-        paper_title = _extract_paper_title(final_paper)
-        file_list_md = "\n".join(f"- `{f}`" for f in code_file_names)
-        readme = (
-            f"# Code Package for {paper_title}\n\n"
-            "## Description\n"
-            "This directory contains the experiment project used for the paper.\n\n"
-            "## Project Files\n"
-            f"{file_list_md}\n\n"
-            "## How to Run\n"
-            "`python main.py`\n\n"
-            "## Dependencies\n"
-            "Install dependencies with `pip install -r requirements.txt` if needed.\n"
-        )
-        (code_dir / "README.md").write_text(readme, encoding="utf-8")
-        artifacts.append("code/")
-        logger.info(
-            "Stage 22: Packaged multi-file code release (%d files, %d deps)",
-            len(code_file_names),
-            len(requirements),
-        )
-    else:
-        # Backward compat: single-file packaging
-        code_payload = _read_prior_artifact(run_dir, "experiment_final.py")
-        if not code_payload:
-            code_payload = _read_prior_artifact(run_dir, "experiment.py")
-        if code_payload:
-            import ast
-
-            code_dir = stage_dir / "code"
-            code_dir.mkdir(parents=True, exist_ok=True)
-            (code_dir / "experiment.py").write_text(code_payload, encoding="utf-8")
-
-            detected_single: set[str] = set()
-            known_packages_single = {
-                "numpy": "numpy",
-                "torch": "torch",
-                "tensorflow": "tensorflow",
-                "sklearn": "scikit-learn",
-                "scikit-learn": "scikit-learn",
-                "scipy": "scipy",
-                "pandas": "pandas",
-                "matplotlib": "matplotlib",
-                "seaborn": "seaborn",
-                "transformers": "transformers",
-                "datasets": "datasets",
-                "jax": "jax",
-            }
-            try:
-                tree = ast.parse(code_payload)
-                for node in ast.walk(tree):
-                    if isinstance(node, ast.Import):
-                        for alias in node.names:
-                            top = alias.name.split(".")[0]
-                            if top in known_packages_single:
-                                detected_single.add(known_packages_single[top])
-                    elif isinstance(node, ast.ImportFrom) and node.module:
-                        top = node.module.split(".")[0]
-                        if top in known_packages_single:
-                            detected_single.add(known_packages_single[top])
-            except SyntaxError:
-                pass
-
-            requirements = sorted(detected_single)
-            (code_dir / "requirements.txt").write_text(
-                "\n".join(requirements) + ("\n" if requirements else ""),
-                encoding="utf-8",
-            )
-            paper_title = _extract_paper_title(final_paper)
-            readme = (
-                f"# Code Package for {paper_title}\n\n"
-                "## Description\n"
-                "This directory contains the final experiment script used for the paper.\n\n"
-                "## How to Run\n"
-                "`python experiment.py`\n\n"
-                "## Dependencies\n"
-                "Install dependencies with `pip install -r requirements.txt` if needed.\n"
-            )
-            (code_dir / "README.md").write_text(readme, encoding="utf-8")
-            artifacts.append("code/")
-            logger.info(
-                "Stage 22: Packaged single-file code release with %d deps",
-                len(requirements),
-            )
     # WS-5.5: Generate framework diagram prompt for methodology section
     try:
         _framework_prompt = _generate_framework_diagram_prompt(

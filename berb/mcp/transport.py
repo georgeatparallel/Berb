@@ -73,27 +73,92 @@ class StdioTransport:
 class SSETransport:
     """MCP transport over Server-Sent Events (for web integration).
 
-    This is a stub — a full implementation would use aiohttp or similar.
+    Architecture
+    ============
+    SSE is a **server→client** protocol — the server pushes events over a
+    long-lived HTTP connection, but the client cannot send messages back over
+    the same channel.  For bi-directional MCP communication the client sends
+    requests via HTTP POST to a companion endpoint, and the server pushes
+    responses back via SSE.
+
+    This implementation models that with an asyncio Queue:
+
+    * ``send()``    — formats the message as an SSE ``data:`` line and writes
+                      it to all connected SSE subscribers (tracked in
+                      ``_subscribers``).
+    * ``post_message()`` — called by the companion HTTP POST handler to inject
+                           an inbound client message into the inbound queue.
+    * ``receive()`` — blocks until an item is available in the inbound queue
+                      (populated by ``post_message()``).
+
+    Integration with a real HTTP framework (aiohttp, Starlette, FastAPI …) is
+    left to the caller: wire the SSE endpoint to ``_subscribers`` and the POST
+    endpoint to ``post_message()``.
     """
 
     def __init__(self, host: str = "0.0.0.0", port: int = 3000) -> None:
         self.host = host
         self.port = port
         self._running = False
+        self._inbound: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
+        # Each subscriber is an asyncio.Queue that receives raw SSE lines
+        self._subscribers: list[asyncio.Queue[str]] = []
 
     async def start(self) -> None:
-        """Start the SSE server."""
+        """Mark the transport as running."""
         self._running = True
         logger.info("SSE transport started on %s:%d", self.host, self.port)
 
+    def subscribe(self) -> asyncio.Queue[str]:
+        """Register a new SSE subscriber and return its queue.
+
+        Each item placed on the returned queue is a complete SSE chunk
+        (e.g. ``"data: {...}\\n\\n"``) ready to be written to the HTTP
+        response stream.
+        """
+        q: asyncio.Queue[str] = asyncio.Queue()
+        self._subscribers.append(q)
+        return q
+
+    def unsubscribe(self, q: asyncio.Queue[str]) -> None:
+        """Remove a subscriber (call when the HTTP connection closes)."""
+        try:
+            self._subscribers.remove(q)
+        except ValueError:
+            pass
+
     async def send(self, message: dict[str, Any]) -> None:
-        """Send an SSE event (stub)."""
-        logger.debug("SSE send: %s", json.dumps(message, default=str)[:200])
+        """Broadcast *message* as an SSE ``data:`` event to all subscribers."""
+        payload = json.dumps(message, ensure_ascii=False, default=str)
+        sse_chunk = f"data: {payload}\n\n"
+        logger.debug("SSE send (%d subscribers): %s", len(self._subscribers), payload[:200])
+        for q in list(self._subscribers):
+            await q.put(sse_chunk)
+
+    async def post_message(self, message: dict[str, Any]) -> None:
+        """Inject an inbound message (from HTTP POST) into the receive queue.
+
+        Call this from your HTTP POST handler whenever the client sends an
+        MCP request.
+        """
+        await self._inbound.put(message)
 
     async def receive(self) -> dict[str, Any]:
-        """Receive from SSE (stub)."""
-        raise NotImplementedError("SSE receive not yet implemented")
+        """Block until a client message arrives via the companion POST endpoint.
+
+        Returns the next message from the inbound queue.  Raises
+        ``RuntimeError`` if the transport is not running.
+        """
+        if not self._running:
+            raise RuntimeError("SSE transport is not running — call start() first")
+        return await self._inbound.get()
 
     async def close(self) -> None:
-        """Stop the SSE server."""
+        """Stop the SSE server and notify all subscribers."""
         self._running = False
+        # Send a sentinel to wake any waiting subscribers
+        close_chunk = "event: close\ndata: {}\n\n"
+        for q in list(self._subscribers):
+            await q.put(close_chunk)
+        self._subscribers.clear()
+        logger.info("SSE transport closed")

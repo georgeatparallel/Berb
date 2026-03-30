@@ -149,9 +149,8 @@ class TestWebSearchAgent:
         assert all(u.endswith(".pdf") for u in pdfs)
 
     @patch("berb.web.search.urlopen")
-    @patch("berb.web.scholar.scholarly")
-    def test_search_and_extract_minimal(self, mock_scholarly, mock_urlopen):
-        """End-to-end test with mocked HTTP — DuckDuckGo + mocked Scholar."""
+    def test_search_and_extract_minimal(self, mock_urlopen):
+        """End-to-end test with mocked HTTP — DuckDuckGo only."""
         mock_resp = MagicMock()
         mock_resp.read.return_value = b"""
         <a class="result__a" href="https://arxiv.org/abs/1234">Paper About KD</a>
@@ -159,11 +158,8 @@ class TestWebSearchAgent:
         """
         mock_urlopen.return_value = mock_resp
 
-        # Mock scholarly to return empty (avoid network calls)
-        mock_scholarly.search_pubs.return_value = iter([])
-
         agent = WebSearchAgent(
-            enable_scholar=True,
+            enable_scholar=False,
             enable_crawling=False,
             enable_pdf=False,
         )
@@ -172,9 +168,8 @@ class TestWebSearchAgent:
         assert result.elapsed_seconds > 0
 
     @patch("berb.web.search.urlopen")
-    @patch("berb.web.scholar.scholarly")
     @patch("berb.web.crawler.urlopen")
-    def test_search_and_extract_with_crawling(self, mock_crawl_urlopen, mock_scholarly, mock_search_urlopen):
+    def test_search_and_extract_with_crawling(self, mock_crawl_urlopen, mock_search_urlopen):
         """Test with crawling enabled."""
         mock_search_resp = MagicMock()
         mock_search_resp.read.return_value = b"""
@@ -191,8 +186,6 @@ class TestWebSearchAgent:
         )
         mock_crawl_resp.headers = {"Content-Type": "text/html"}
         mock_crawl_urlopen.return_value = mock_crawl_resp
-
-        mock_scholarly.search_pubs.return_value = iter([])
 
         agent = WebSearchAgent(
             enable_scholar=False,

@@ -10,6 +10,8 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
+import tempfile
 import time
 from pathlib import Path
 from typing import Any
@@ -103,7 +105,19 @@ def put_cache(
     *,
     cache_base: Path | None = None,
 ) -> None:
-    """Write search results to cache."""
+    """Write search results to cache atomically.
+
+    BUG-006 fix: the previous ``path.write_text(...)`` call truncates the
+    target file and then fills it in two separate I/O operations.  A
+    concurrent writer (or a crash between truncate and write) leaves a
+    zero-length or partial JSON file.  Subsequent reads hit JSONDecodeError,
+    treat the entry as a cache miss, and trigger redundant API calls.
+
+    The fix writes to a sibling temp file and renames it onto the target.
+    ``Path.replace()`` maps to ``os.replace()`` which is atomic on POSIX and
+    as close to atomic as Windows allows (the kernel swap is not interruptible
+    by another writer operating on the same path).
+    """
     d = _cache_dir(cache_base)
     key = cache_key(query, source, limit)
     path = d / f"{key}.json"
@@ -115,8 +129,60 @@ def put_cache(
         "timestamp": time.time(),
         "papers": papers,
     }
-    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    serialized = json.dumps(payload, indent=2)
+
+    # Write to a uniquely-named temp file in the same directory so that:
+    #   (a) the rename is within the same filesystem (no cross-device error),
+    #   (b) concurrent writers each have their own temp file and don't race on
+    #       a shared ".tmp" name (Windows raises PermissionError if two threads
+    #       try to replace/unlink the same file simultaneously).
+    # os.replace() is atomic on POSIX and best-effort-atomic on Windows.
+    fd, tmp_path = tempfile.mkstemp(dir=d, suffix=".tmp", prefix=f"{key}_")
+    os.close(fd)
+    try:
+        Path(tmp_path).write_text(serialized, encoding="utf-8")
+        os.replace(tmp_path, path)  # atomic: readers see old or new, never partial
+    except BaseException:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
+
     logger.debug("Cached %d papers for key %s", len(papers), key)
+    _evict_if_oversized(d)
+
+
+_MAX_CACHE_BYTES = 2 * 1024 * 1024 * 1024  # 2 GiB
+_EVICT_FRACTION = 0.25  # evict oldest 25% when over limit
+
+
+def _evict_if_oversized(cache_dir: Path) -> None:
+    """Evict oldest cache entries when total size exceeds _MAX_CACHE_BYTES."""
+    files = list(cache_dir.glob("*.json"))
+    if not files:
+        return
+    total = sum(f.stat().st_size for f in files)
+    if total <= _MAX_CACHE_BYTES:
+        return
+
+    # Sort by modification time ascending (oldest first)
+    files.sort(key=lambda f: f.stat().st_mtime)
+    evict_count = max(1, int(len(files) * _EVICT_FRACTION))
+    evicted_bytes = 0
+    for f in files[:evict_count]:
+        try:
+            evicted_bytes += f.stat().st_size
+            f.unlink()
+        except OSError:
+            pass
+    logger.info(
+        "[cache] Evicted %d entries (%.1f MB) — cache was %.1f MB > limit %.1f MB",
+        evict_count,
+        evicted_bytes / 1024 / 1024,
+        total / 1024 / 1024,
+        _MAX_CACHE_BYTES / 1024 / 1024,
+    )
 
 
 def clear_cache(*, cache_base: Path | None = None) -> int:

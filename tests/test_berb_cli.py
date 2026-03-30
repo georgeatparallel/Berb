@@ -202,7 +202,8 @@ def test_resolve_config_returns_none_when_missing(
 def test_resolve_config_explicit_path_no_search() -> None:
     result = resolve_config_path("/some/explicit/path.yaml")
     assert result is not None
-    assert str(result) == "/some/explicit/path.yaml"
+    # Path normalises separators on Windows (\) vs POSIX (/)
+    assert result == Path("/some/explicit/path.yaml")
 
 
 # --- cmd_init tests ---
@@ -214,13 +215,14 @@ def _write_example_config(path: Path) -> None:
 project:
   name: "my-research"
 llm:
-  provider: "openai"
-  base_url: "https://api.openai.com/v1"
-  api_key_env: "OPENAI_API_KEY"
-  primary_model: "gpt-4o"
+  provider: "openrouter"
+  base_url: "https://openrouter.ai/api/v1"
+  api_key_env: "OPENROUTER_API_KEY"
+  primary_model: "openai/gpt-4o"
   fallback_models:
-    - "gpt-4.1"
-    - "gpt-4o-mini"
+    - "openai/gpt-4.1"
+    - "anthropic/claude-sonnet-4-5-20250929"
+    - "openai/gpt-4o-mini"
 """,
         encoding="utf-8",
     )
@@ -231,15 +233,15 @@ def test_cmd_init_creates_config(
 ) -> None:
     monkeypatch.chdir(tmp_path)
     _write_example_config(tmp_path / "config.berb.example.yaml")
-    # Simulate non-TTY (stdin not a tty) → defaults to openai
+    # Simulate non-TTY (stdin not a tty) → defaults to openrouter
     monkeypatch.setattr("sys.stdin", type("FakeStdin", (), {"isatty": lambda self: False})())
     args = argparse.Namespace(force=False)
     code = rc_cli.cmd_init(args)
     assert code == 0
     created = tmp_path / "config.arc.yaml"
     assert created.exists()
-    content = created.read_text()
-    assert 'provider: "openai"' in content
+    content = created.read_text(encoding="utf-8")
+    assert 'provider: "openrouter"' in content
     assert "Created config.arc.yaml" in capsys.readouterr().out
 
 
@@ -266,7 +268,7 @@ def test_cmd_init_force_overwrites(
     args = argparse.Namespace(force=True)
     code = rc_cli.cmd_init(args)
     assert code == 0
-    assert (tmp_path / "config.arc.yaml").read_text() != "old\n"
+    assert (tmp_path / "config.arc.yaml").read_text(encoding="utf-8") != "old\n"
 
 
 def test_cmd_run_missing_config_shows_init_hint(

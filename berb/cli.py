@@ -549,8 +549,8 @@ _PROVIDER_URLS = {
 _PROVIDER_MODELS = {
     "openai": ("gpt-4o", ["gpt-4.1", "gpt-4o-mini"]),
     "openrouter": (
-        "anthropic/claude-3.5-sonnet",
-        ["google/gemini-pro-1.5", "meta-llama/llama-3.1-70b-instruct"],
+        "openai/gpt-4o",
+        ["openai/gpt-4.1", "anthropic/claude-sonnet-4-5-20250929", "openai/gpt-4o-mini"],
     ),
     "deepseek": ("deepseek-chat", ["deepseek-reasoner"]),
     "minimax": ("MiniMax-M2.5", ["MiniMax-M2.5-highspeed"]),
@@ -581,17 +581,17 @@ def cmd_init(args: argparse.Namespace) -> int:
         )
         return 1
 
-    # Interactive provider prompt (TTY only, else default to openai)
-    choice = "1"
+    # Interactive provider prompt (TTY only, else default to openrouter)
+    choice = "2"
     if sys.stdin.isatty():
         print("Select LLM provider:")
         print("  1) openai       (requires OPENAI_API_KEY)")
-        print("  2) openrouter   (requires OPENROUTER_API_KEY)")
+        print("  2) openrouter   (requires OPENROUTER_API_KEY)  [default]")
         print("  3) deepseek     (requires DEEPSEEK_API_KEY)")
         print("  4) minimax      (requires MINIMAX_API_KEY)")
         print("  5) acp          (local AI agent — no API key needed)")
         try:
-            raw = input("Choice [1]: ").strip()
+            raw = input("Choice [2]: ").strip()
         except (EOFError, KeyboardInterrupt):
             raw = ""
         if raw in _PROVIDER_CHOICES:
@@ -601,32 +601,38 @@ def cmd_init(args: argparse.Namespace) -> int:
 
     content = example.read_text(encoding="utf-8")
 
-    # String-based replacement to preserve YAML comments
+    # String-based replacement to preserve YAML comments.
+    # The example config defaults to openrouter; replacements use those values as source.
     content = content.replace(
-        'provider: "openai-compatible"', f'provider: "{provider}"'
+        'provider: "openrouter"', f'provider: "{provider}"'
     )
 
     if provider == "acp":
         # ACP doesn't need base_url or api_key
         content = content.replace(
-            'base_url: "https://api.openai.com/v1"', 'base_url: ""'
+            'base_url: "https://openrouter.ai/api/v1"', 'base_url: ""'
         )
-        content = content.replace('api_key_env: "OPENAI_API_KEY"', 'api_key_env: ""')
+        content = content.replace('api_key_env: "OPENROUTER_API_KEY"', 'api_key_env: ""')
     else:
-        base_url = _PROVIDER_URLS.get(provider, "https://api.openai.com/v1")
+        base_url = _PROVIDER_URLS.get(provider, "https://openrouter.ai/api/v1")
         content = content.replace(
-            'base_url: "https://api.openai.com/v1"', f'base_url: "{base_url}"'
+            'base_url: "https://openrouter.ai/api/v1"', f'base_url: "{base_url}"'
         )
         if api_key_env:
             content = content.replace(
-                'api_key_env: "OPENAI_API_KEY"', f'api_key_env: "{api_key_env}"'
+                'api_key_env: "OPENROUTER_API_KEY"', f'api_key_env: "{api_key_env}"'
             )
 
     if provider in _PROVIDER_MODELS:
         primary, fallbacks = _PROVIDER_MODELS[provider]
-        content = content.replace('primary_model: "gpt-4o"', f'primary_model: "{primary}"')
+        content = content.replace('primary_model: "openai/gpt-4o"', f'primary_model: "{primary}"')
         # Replace fallback models block
-        old_fallbacks = '  fallback_models:\n    - "gpt-4.1"\n    - "gpt-4o-mini"'
+        old_fallbacks = (
+            '  fallback_models:\n'
+            '    - "openai/gpt-4.1"\n'
+            '    - "anthropic/claude-sonnet-4-5-20250929"\n'
+            '    - "openai/gpt-4o-mini"'
+        )
         new_fallbacks = "  fallback_models:\n" + "".join(
             f'    - "{m}"\n' for m in fallbacks
         )

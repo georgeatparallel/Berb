@@ -3,11 +3,66 @@ from __future__ import annotations
 import json
 import importlib
 import logging
+from datetime import datetime, timezone
 import os
 import shutil
+import sys
 import tempfile
+import threading
 import time as _time
 from pathlib import Path
+from typing import IO
+
+_checkpoint_lock = threading.Lock()
+
+
+# ---------------------------------------------------------------------------
+# Run-directory exclusive lock — prevents two pipeline processes from sharing
+# the same run_dir (and corrupting each other's checkpoints / shared memory).
+# ---------------------------------------------------------------------------
+
+def _acquire_run_lock(run_dir: Path) -> IO[str]:
+    """Exclusively lock <run_dir>/.berb.lock.
+
+    Uses fcntl on POSIX and msvcrt on Windows for a non-blocking exclusive
+    lock.  Raises RuntimeError if another process already holds the lock.
+    """
+    lock_path = run_dir / ".berb.lock"
+    fh: IO[str] = open(lock_path, "w", encoding="utf-8")  # noqa: WPS515
+    try:
+        if sys.platform == "win32":
+            import msvcrt as _msvcrt
+            _msvcrt.locking(fh.fileno(), _msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl as _fcntl
+            _fcntl.flock(fh, _fcntl.LOCK_EX | _fcntl.LOCK_NB)
+    except (OSError, IOError):
+        fh.close()
+        raise RuntimeError(
+            f"Another berb pipeline is already running in {run_dir}. "
+            "If no other instance is running, delete "
+            f"{run_dir / '.berb.lock'} and retry."
+        )
+    fh.write(str(os.getpid()))
+    fh.flush()
+    return fh
+
+
+def _release_run_lock(fh: IO[str]) -> None:
+    """Release and close the run-directory lock file."""
+    try:
+        if sys.platform == "win32":
+            import msvcrt as _msvcrt
+            # LK_NBLCK locked 1 byte at offset 0; must seek back before unlocking.
+            fh.seek(0)
+            _msvcrt.locking(fh.fileno(), _msvcrt.LK_UNLCK, 1)
+        else:
+            import fcntl as _fcntl
+            _fcntl.flock(fh, _fcntl.LOCK_UN)
+    except OSError:
+        pass  # Best-effort unlock; file will be released on close
+    finally:
+        fh.close()
 
 from berb.adapters import AdapterBundle
 from berb.config import RCConfig
@@ -72,11 +127,21 @@ def _write_pipeline_summary(run_dir: Path, summary: dict[str, object]) -> None:
 
 def _write_checkpoint(run_dir: Path, stage: Stage, run_id: str) -> None:
     """Write checkpoint atomically via temp file + rename to prevent corruption.
-    
+
     P1 FIX: Includes SHA-256 checksum for integrity validation.
+    Module-level _checkpoint_lock serialises concurrent callers so only one
+    temp file is in-flight at a time, preventing Windows PermissionError when
+    two threads race to os.replace() the same target path.
     """
     import hashlib
-    
+
+    with _checkpoint_lock:
+        _write_checkpoint_locked(run_dir, stage, run_id)
+
+
+def _write_checkpoint_locked(run_dir: Path, stage: Stage, run_id: str) -> None:
+    import hashlib
+
     checkpoint = {
         "last_completed_stage": int(stage),
         "last_completed_name": stage.name,
@@ -462,6 +527,44 @@ def execute_pipeline(
     _pivot_depth: int = 0,
 ) -> list[StageResult]:
     """Execute pipeline stages sequentially from `from_stage` and write summary."""
+    # Recursive PIVOT/REFINE calls share the same run_dir and must NOT re-acquire
+    # the lock (they are the same process).  Only the outermost call locks.
+    _lock_fh: IO[str] | None = None
+    if _pivot_depth == 0:
+        _lock_fh = _acquire_run_lock(run_dir)
+
+    try:
+        return _execute_pipeline_inner(
+            run_dir=run_dir,
+            run_id=run_id,
+            config=config,
+            adapters=adapters,
+            from_stage=from_stage,
+            auto_approve_gates=auto_approve_gates,
+            stop_on_gate=stop_on_gate,
+            skip_noncritical=skip_noncritical,
+            kb_root=kb_root,
+            _pivot_depth=_pivot_depth,
+        )
+    finally:
+        if _lock_fh is not None:
+            _release_run_lock(_lock_fh)
+
+
+def _execute_pipeline_inner(
+    *,
+    run_dir: Path,
+    run_id: str,
+    config: RCConfig,
+    adapters: AdapterBundle,
+    from_stage: Stage = Stage.TOPIC_INIT,
+    auto_approve_gates: bool = False,
+    stop_on_gate: bool = False,
+    skip_noncritical: bool = False,
+    kb_root: Path | None = None,
+    _pivot_depth: int = 0,
+) -> list[StageResult]:
+    """Inner implementation of execute_pipeline (called after lock is held)."""
     # Guard against unbounded recursion independent of the file-based pivot counter.
     # Each PIVOT/REFINE decision recurses; without this a hung inner stage propagates
     # to all outer frames and the process never terminates.
@@ -1250,6 +1353,26 @@ def _check_experiment_quality(
         return False, f"Analysis quality score {quality}/10 — below minimum threshold"
 
     return True, "Quality checks passed"
+
+
+def _write_heartbeat(run_dir: Path, stage: "Stage", run_id: str) -> None:
+    """Write a heartbeat file for the sentinel watchdog.
+
+    The file records the current stage and timestamp so an external watchdog
+    can detect stalled runs.  Failures are silently ignored — a missing
+    heartbeat is non-fatal for the pipeline.
+    """
+    try:
+        heartbeat = {
+            "run_id": run_id,
+            "stage": stage.name if hasattr(stage, "name") else str(stage),
+            "ts": datetime.now(timezone.utc).isoformat(),
+        }
+        (run_dir / ".heartbeat.json").write_text(
+            json.dumps(heartbeat), encoding="utf-8"
+        )
+    except OSError:
+        pass
 
 
 def _read_pivot_count(run_dir: Path) -> int:

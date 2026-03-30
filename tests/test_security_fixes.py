@@ -468,6 +468,53 @@ class TestLLMRateLimiting:
         # Some requests should have been allowed
         assert True in results
 
+    def test_rate_limiter_lock_is_eagerly_initialized(self):
+        """REGRESSION BUG-004: _lock must be a real Lock from __init__, not None.
+
+        The previous lazy-init pattern had a TOCTOU window: two threads could
+        both see self._lock is None and each create a separate Lock, causing
+        one thread to operate without mutual exclusion.
+        """
+        import threading
+        from berb.llm.client import TokenBucketRateLimiter
+
+        limiter = TokenBucketRateLimiter()
+
+        # _lock must be a Lock immediately after construction — before any call
+        assert limiter._lock is not None, (
+            "_lock is None after __init__ — lazy init TOCTOU not fixed (BUG-004)."
+        )
+        assert isinstance(limiter._lock, type(threading.Lock())), (
+            "_lock is not a threading.Lock."
+        )
+
+    def test_rate_limiter_lock_identity_stable_under_concurrency(self):
+        """REGRESSION BUG-004: concurrent _get_lock() calls must return identical object."""
+        import threading
+        from berb.llm.client import TokenBucketRateLimiter
+
+        limiter = TokenBucketRateLimiter()
+        lock_ids: set[int] = set()
+        errors: list[Exception] = []
+
+        def grab_lock_id():
+            try:
+                lock_ids.add(id(limiter._get_lock()))
+            except Exception as exc:
+                errors.append(exc)
+
+        threads = [threading.Thread(target=grab_lock_id) for _ in range(50)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        assert not errors
+        assert len(lock_ids) == 1, (
+            f"Multiple distinct lock objects returned by _get_lock(): {len(lock_ids)} "
+            "— TOCTOU race not fixed (BUG-004)."
+        )
+
 
 # =============================================================================
 # Integration Tests
@@ -515,6 +562,79 @@ class TestSecurityFixesIntegration:
         if client_path.exists():
             content = client_path.read_text(encoding="utf-8")
             assert "SECURITY FIX #6" in content
+
+
+# =============================================================================
+# BUG-003: SSRF fail-closed regression tests
+# =============================================================================
+
+
+class TestSSRFFailClosed:
+    """Regression tests for BUG-003: SSRF guard must fail closed.
+
+    Previously check_url_ssrf() returned None (safe) when DNS resolution
+    failed, allowing unresolvable hostnames through without verification.
+    The fix returns an error string so the caller blocks the request.
+    """
+
+    def test_unresolvable_hostname_is_blocked(self):
+        """REGRESSION: unresolvable hostname must be blocked, not allowed."""
+        from berb.web._ssrf import check_url_ssrf
+        import socket
+        from unittest.mock import patch
+
+        with patch("socket.getaddrinfo", side_effect=socket.gaierror("NXDOMAIN")):
+            result = check_url_ssrf("http://this-domain-definitely-does-not-exist-xyzzy.invalid/path")
+
+        # Must return a non-None error — not silently allow the request.
+        assert result is not None, (
+            "SSRF check must fail closed when DNS resolution fails; "
+            "got None (safe) which bypasses the guard."
+        )
+        assert "resolve" in result.lower() or "hostname" in result.lower()
+
+    def test_oserror_on_dns_is_blocked(self):
+        """OSError during DNS lookup must also be blocked."""
+        from berb.web._ssrf import check_url_ssrf
+        from unittest.mock import patch
+
+        with patch("socket.getaddrinfo", side_effect=OSError("network unreachable")):
+            result = check_url_ssrf("http://attacker.example.com/internal")
+
+        assert result is not None
+
+    def test_public_resolvable_domain_still_allowed(self):
+        """Regression guard: legitimate resolvable public IPs remain allowed."""
+        from berb.web._ssrf import check_url_ssrf
+        import socket
+        from unittest.mock import patch
+
+        # Simulate resolving to a public IP (e.g. 93.184.216.34 = example.com)
+        mock_info = [(socket.AF_INET, socket.SOCK_STREAM, 0, "", ("93.184.216.34", 0))]
+        with patch("socket.getaddrinfo", return_value=mock_info):
+            result = check_url_ssrf("http://example.com/page")
+
+        assert result is None, f"Public domain should be allowed; got: {result}"
+
+    def test_private_ip_still_blocked(self):
+        """Existing behavior: private IPs continue to be blocked."""
+        from berb.web._ssrf import check_url_ssrf
+
+        assert check_url_ssrf("http://10.0.0.1/admin") is not None
+        assert check_url_ssrf("http://192.168.1.100/") is not None
+        assert check_url_ssrf("http://127.0.0.1:8080/") is not None
+        assert check_url_ssrf("http://169.254.169.254/latest/meta-data") is not None
+
+    def test_is_safe_url_mirrors_check(self):
+        """is_safe_url() must return False when DNS resolution fails."""
+        from berb.web._ssrf import is_safe_url
+        import socket
+        from unittest.mock import patch
+
+        with patch("socket.getaddrinfo", side_effect=socket.gaierror("NXDOMAIN")):
+            safe = is_safe_url("http://unresolvable.invalid/")
+
+        assert safe is False
 
 
 if __name__ == "__main__":

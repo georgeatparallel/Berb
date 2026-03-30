@@ -31,9 +31,18 @@ def check_url_ssrf(url: str) -> str | None:
             info = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
             addr = ipaddress.ip_address(info[0][4][0])
         except (socket.gaierror, OSError, IndexError):
-            # Can't resolve — let the actual request fail naturally
-            return None
-    if addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_reserved:
+            # Fail closed: if we cannot resolve the hostname we cannot verify
+            # it is safe to fetch.  Allowing unresolvable hosts through would
+            # create a fail-open SSRF gate — an attacker could register a
+            # domain whose DNS is transiently unavailable, bypassing the check.
+            return f"Cannot resolve hostname (SSRF check requires successful DNS resolution): {hostname}"
+    if (
+        addr.is_private
+        or addr.is_loopback
+        or addr.is_link_local
+        or addr.is_reserved
+        or addr.is_multicast  # block ff00::/8 and 224.0.0.0/4 multicast ranges
+    ):
         return f"Blocked internal/private URL: {hostname}"
     return None
 

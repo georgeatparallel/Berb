@@ -346,25 +346,77 @@ class WebSearchClient:
 
     @staticmethod
     def _parse_ddg_html(html: str, limit: int) -> list[SearchResult]:
-        """Parse DuckDuckGo HTML results page."""
-        results = []
-        link_pattern = re.compile(
-            r'<a[^>]*class="result__a"[^>]*href="([^"]*)"[^>]*>(.*?)</a>', re.DOTALL,
-        )
-        snippet_pattern = re.compile(
-            r'<a[^>]*class="result__snippet"[^>]*>(.*?)</a>', re.DOTALL,
-        )
+        """Parse DuckDuckGo HTML results page using the stdlib html.parser.
 
-        links = link_pattern.findall(html)
-        snippets = snippet_pattern.findall(html)
+        Using a proper parser rather than regex makes the extraction resilient
+        to attribute-order changes, extra whitespace, and minor HTML variations
+        in DuckDuckGo's page structure.
+        """
+        from html.parser import HTMLParser
+        from urllib.parse import urlparse as _urlparse, parse_qs as _parse_qs, unquote as _unquote
+        from berb.web._ssrf import is_safe_url
 
-        for i, (url, title_html) in enumerate(links[:limit]):
-            title = re.sub(r"<[^>]+>", "", title_html).strip()
-            snippet = re.sub(r"<[^>]+>", "", snippets[i]).strip() if i < len(snippets) else ""
+        class _DDGParser(HTMLParser):
+            """Collect result links and snippets from DDG HTML."""
+
+            def __init__(self) -> None:
+                super().__init__(convert_charrefs=True)
+                self.results: list[tuple[str, str, str]] = []  # (url, title, snippet)
+                self._in_result_a = False
+                self._in_snippet_a = False
+                self._current_url = ""
+                self._current_title_parts: list[str] = []
+                self._snippets: list[str] = []
+                self._current_snippet_parts: list[str] = []
+
+            def _get_attr(self, attrs: list[tuple[str, str | None]], name: str) -> str:
+                for k, v in attrs:
+                    if k == name:
+                        return v or ""
+                return ""
+
+            def _has_class(self, attrs: list[tuple[str, str | None]], cls: str) -> bool:
+                classes = self._get_attr(attrs, "class").split()
+                return cls in classes
+
+            def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+                if tag == "a":
+                    if self._has_class(attrs, "result__a"):
+                        self._in_result_a = True
+                        self._current_url = self._get_attr(attrs, "href")
+                        self._current_title_parts = []
+                    elif self._has_class(attrs, "result__snippet"):
+                        self._in_snippet_a = True
+                        self._current_snippet_parts = []
+
+            def handle_endtag(self, tag: str) -> None:
+                if tag == "a":
+                    if self._in_result_a:
+                        self._in_result_a = False
+                        title = "".join(self._current_title_parts).strip()
+                        self.results.append((self._current_url, title, ""))
+                    elif self._in_snippet_a:
+                        self._in_snippet_a = False
+                        snippet = "".join(self._current_snippet_parts).strip()
+                        self._snippets.append(snippet)
+
+            def handle_data(self, data: str) -> None:
+                if self._in_result_a:
+                    self._current_title_parts.append(data)
+                elif self._in_snippet_a:
+                    self._current_snippet_parts.append(data)
+
+        parser = _DDGParser()
+        parser.feed(html)
+
+        # Merge snippets back into results
+        raw = parser.results
+        snippets = parser.snippets if hasattr(parser, "snippets") else parser._snippets
+
+        results: list[SearchResult] = []
+        for i, (url, title, _) in enumerate(raw[:limit]):
+            snippet = snippets[i] if i < len(snippets) else ""
             if "duckduckgo.com" in url:
-                # Extract actual URL from DDG redirect: //duckduckgo.com/l/?uddg=https%3A...
-                from urllib.parse import urlparse as _urlparse, parse_qs as _parse_qs, unquote as _unquote
-                from berb.web._ssrf import is_safe_url
                 _parsed_ddg = _urlparse(url)
                 _uddg = _parse_qs(_parsed_ddg.query).get("uddg")
                 if _uddg:
