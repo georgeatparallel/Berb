@@ -150,6 +150,39 @@ def put_cache(
         raise
 
     logger.debug("Cached %d papers for key %s", len(papers), key)
+    _evict_if_oversized(d)
+
+
+_MAX_CACHE_BYTES = 2 * 1024 * 1024 * 1024  # 2 GiB
+_EVICT_FRACTION = 0.25  # evict oldest 25% when over limit
+
+
+def _evict_if_oversized(cache_dir: Path) -> None:
+    """Evict oldest cache entries when total size exceeds _MAX_CACHE_BYTES."""
+    files = list(cache_dir.glob("*.json"))
+    if not files:
+        return
+    total = sum(f.stat().st_size for f in files)
+    if total <= _MAX_CACHE_BYTES:
+        return
+
+    # Sort by modification time ascending (oldest first)
+    files.sort(key=lambda f: f.stat().st_mtime)
+    evict_count = max(1, int(len(files) * _EVICT_FRACTION))
+    evicted_bytes = 0
+    for f in files[:evict_count]:
+        try:
+            evicted_bytes += f.stat().st_size
+            f.unlink()
+        except OSError:
+            pass
+    logger.info(
+        "[cache] Evicted %d entries (%.1f MB) — cache was %.1f MB > limit %.1f MB",
+        evict_count,
+        evicted_bytes / 1024 / 1024,
+        total / 1024 / 1024,
+        _MAX_CACHE_BYTES / 1024 / 1024,
+    )
 
 
 def clear_cache(*, cache_base: Path | None = None) -> int:

@@ -41,12 +41,11 @@ openai = ["openai>=1.0"]
 deepseek = ["openai>=1.0"]  # Uses OpenAI-compatible API
 perplexity = []  # Built-in
 xai = []  # Built-in
-web = ["scholarly>=1.7", "crawl4ai>=0.2", "tavily-python>=0.3"]
+web = ["crawl4ai>=0.2", "tavily-python>=0.3"]
 pdf = ["PyMuPDF>=1.23"]
 all = [
     "anthropic>=0.20",
     "openai>=1.0",
-    "scholarly>=1.7",
     "crawl4ai>=0.2",
     "tavily-python>=0.3",
     "PyMuPDF>=1.23",

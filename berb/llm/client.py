@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -22,6 +23,46 @@ from dataclasses import dataclass, field
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+
+class BudgetTracker:
+    """Thread-safe cumulative token-spend tracker for a single pipeline run.
+
+    Raises RuntimeError when the pipeline's token budget is exhausted, preventing
+    a runaway LLM loop from spending unbounded API credits.
+
+    Usage::
+
+        tracker = BudgetTracker(max_tokens=2_000_000)
+        # inside LLMClient.chat():
+        tracker.charge(estimated_tokens)   # raises if over budget
+    """
+
+    def __init__(self, max_tokens: int) -> None:
+        self._max = max_tokens
+        self._used: int = 0
+        self._lock = threading.Lock()
+
+    def charge(self, tokens: int) -> None:
+        """Deduct *tokens* from the budget; raise RuntimeError if exhausted."""
+        with self._lock:
+            self._used += tokens
+            if self._used > self._max:
+                raise RuntimeError(
+                    f"Pipeline token budget exhausted: {self._used:,} tokens used "
+                    f"(limit {self._max:,}). Increase llm.max_tokens_per_run in config "
+                    "or use a more token-efficient model."
+                )
+
+    @property
+    def used(self) -> int:
+        with self._lock:
+            return self._used
+
+    @property
+    def remaining(self) -> int:
+        with self._lock:
+            return max(0, self._max - self._used)
 
 # Models that require max_completion_tokens instead of max_tokens
 _NEW_PARAM_MODELS = frozenset(
@@ -208,6 +249,14 @@ class LLMClient:
                 tokens_per_minute=config.rate_limit_tokens_per_minute,
             )
 
+        # Per-pipeline budget cap — prevents runaway spend.
+        # Defaults to None (unlimited) if max_tokens_per_run is not set on the
+        # config object (older configs without the field).
+        _max_budget = getattr(config, "max_tokens_per_run", 0)
+        self._budget_tracker: BudgetTracker | None = (
+            BudgetTracker(_max_budget) if _max_budget > 0 else None
+        )
+
     def get_rate_limiter_status(self) -> dict[str, Any] | None:
         """Get current rate limiter status (for monitoring)."""
         if self._rate_limiter:
@@ -361,6 +410,13 @@ class LLMClient:
                 allowed, _ = self._rate_limiter.acquire(estimated_tokens)
                 if not allowed:
                     raise RuntimeError("Rate limit still exceeded after waiting.")
+
+        # Deduct from per-pipeline budget (raises if exhausted)
+        if self._budget_tracker is not None:
+            self._budget_tracker.charge(estimated_tokens if self._rate_limiter else (
+                sum((len(m.get("content", "")) + 2) // 3 for m in messages)
+                + (max_tokens or self.config.max_tokens)
+            ))
 
         # Apply stage-based token limit if stage provided and max_tokens not set
         if stage is not None and max_tokens is None:

@@ -5,12 +5,59 @@ import importlib
 import logging
 import os
 import shutil
+import sys
 import tempfile
 import threading
 import time as _time
 from pathlib import Path
+from typing import IO
 
 _checkpoint_lock = threading.Lock()
+
+
+# ---------------------------------------------------------------------------
+# Run-directory exclusive lock — prevents two pipeline processes from sharing
+# the same run_dir (and corrupting each other's checkpoints / shared memory).
+# ---------------------------------------------------------------------------
+
+def _acquire_run_lock(run_dir: Path) -> IO[str]:
+    """Exclusively lock <run_dir>/.berb.lock.
+
+    Uses fcntl on POSIX and msvcrt on Windows for a non-blocking exclusive
+    lock.  Raises RuntimeError if another process already holds the lock.
+    """
+    lock_path = run_dir / ".berb.lock"
+    fh: IO[str] = open(lock_path, "w", encoding="utf-8")  # noqa: WPS515
+    try:
+        if sys.platform == "win32":
+            import msvcrt as _msvcrt
+            _msvcrt.locking(fh.fileno(), _msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl as _fcntl
+            _fcntl.flock(fh, _fcntl.LOCK_EX | _fcntl.LOCK_NB)
+    except (OSError, IOError):
+        fh.close()
+        raise RuntimeError(
+            f"Another berb pipeline is already running in {run_dir}. "
+            "If no other instance is running, delete "
+            f"{run_dir / '.berb.lock'} and retry."
+        )
+    fh.write(str(os.getpid()))
+    fh.flush()
+    return fh
+
+
+def _release_run_lock(fh: IO[str]) -> None:
+    """Release and close the run-directory lock file."""
+    try:
+        if sys.platform == "win32":
+            import msvcrt as _msvcrt
+            _msvcrt.locking(fh.fileno(), _msvcrt.LK_UNLCK, 1)
+        else:
+            import fcntl as _fcntl
+            _fcntl.flock(fh, _fcntl.LOCK_UN)
+    finally:
+        fh.close()
 
 from berb.adapters import AdapterBundle
 from berb.config import RCConfig
@@ -475,6 +522,44 @@ def execute_pipeline(
     _pivot_depth: int = 0,
 ) -> list[StageResult]:
     """Execute pipeline stages sequentially from `from_stage` and write summary."""
+    # Recursive PIVOT/REFINE calls share the same run_dir and must NOT re-acquire
+    # the lock (they are the same process).  Only the outermost call locks.
+    _lock_fh: IO[str] | None = None
+    if _pivot_depth == 0:
+        _lock_fh = _acquire_run_lock(run_dir)
+
+    try:
+        return _execute_pipeline_inner(
+            run_dir=run_dir,
+            run_id=run_id,
+            config=config,
+            adapters=adapters,
+            from_stage=from_stage,
+            auto_approve_gates=auto_approve_gates,
+            stop_on_gate=stop_on_gate,
+            skip_noncritical=skip_noncritical,
+            kb_root=kb_root,
+            _pivot_depth=_pivot_depth,
+        )
+    finally:
+        if _lock_fh is not None:
+            _release_run_lock(_lock_fh)
+
+
+def _execute_pipeline_inner(
+    *,
+    run_dir: Path,
+    run_id: str,
+    config: RCConfig,
+    adapters: AdapterBundle,
+    from_stage: Stage = Stage.TOPIC_INIT,
+    auto_approve_gates: bool = False,
+    stop_on_gate: bool = False,
+    skip_noncritical: bool = False,
+    kb_root: Path | None = None,
+    _pivot_depth: int = 0,
+) -> list[StageResult]:
+    """Inner implementation of execute_pipeline (called after lock is held)."""
     # Guard against unbounded recursion independent of the file-based pivot counter.
     # Each PIVOT/REFINE decision recurses; without this a hung inner stage propagates
     # to all outer frames and the process never terminates.

@@ -402,6 +402,8 @@ class DockerSandbox:
             f"--memory={cfg.memory_limit_mb}m",
             f"--shm-size={cfg.shm_size_mb}m",
         ]
+        if cfg.cpu_limit > 0:
+            cmd.extend([f"--cpus={cfg.cpu_limit:.2f}"])
 
         user_id = _get_user_id()  # None on Windows
 

@@ -293,7 +293,8 @@ Output JSON: {{
             import json
             try:
                 data = json.loads(response.content)
-            except:
+            except (json.JSONDecodeError, ValueError, KeyError) as e:
+                logger.warning("Failed to parse hypothesis response: %s", e)
                 data = {"hypothesis": response.content, "key_insights": [], "confidence": 0.5}
             
             return HypothesisCandidate(
@@ -356,7 +357,8 @@ Score each hypothesis."""
             try:
                 data = json.loads(response.content)
                 scores = data.get("scores", [])
-            except:
+            except (json.JSONDecodeError, ValueError, KeyError) as e:
+                logger.warning("Failed to parse scoring response: %s", e)
                 scores = []
             
             # Attach scores to candidates
@@ -468,9 +470,10 @@ Analyze experiment performance."""
             import json
             try:
                 data = json.loads(response.content)
-            except:
+            except (json.JSONDecodeError, ValueError, KeyError) as e:
+                logger.warning("Failed to parse stress-test response: %s", e)
                 data = {}
-            
+
             return StressTestResult(
                 scenario=scenario,
                 survival_rate=float(data.get("survival_rate", 0.5)),
@@ -540,9 +543,10 @@ Vet this paper for quality issues."""
             import json
             try:
                 data = json.loads(response.content)
-            except:
+            except (json.JSONDecodeError, ValueError, KeyError) as e:
+                logger.warning("Failed to parse vetting response: %s", e)
                 data = {}
-            
+
             return data
         
         except Exception as e:

@@ -39,6 +39,8 @@ jobs:
             -m "not slow and not e2e and not llm" \
             --tb=short \
             -q \
+            --cov=berb \
+            --cov-fail-under=70 \
             --junitxml=test-results-${{ matrix.python-version }}.xml
 
       - name: Upload test results

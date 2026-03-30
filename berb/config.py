@@ -328,6 +328,8 @@ class DockerSandboxConfig:
     keep_containers: bool = False
     # P0 FIX: Automatic fallback to sandbox when Docker unavailable
     fallback_to_sandbox: bool = True  # Auto-fallback when Docker daemon/image unavailable
+    # CPU limit in cores (0 = unlimited).  Maps to Docker --cpus flag.
+    cpu_limit: float = 2.0
 
 
 @dataclass(frozen=True)
