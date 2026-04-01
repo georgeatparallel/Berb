@@ -18,6 +18,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import random
+import threading
 import time
 
 logger = logging.getLogger(__name__)
@@ -47,6 +48,10 @@ class RateLimiter:
         # to avoid the race condition. The _async_lock is protected by _init_lock.
         self._async_lock: asyncio.Lock | None = None
         self._init_lock: asyncio.Lock | None = None
+        # BUG-A fix: threading.Lock guards _last_call for concurrent sync callers.
+        # Without this, two threads both read _last_call before either writes it,
+        # compute under-budget sleep times, and both proceed too quickly.
+        self._sync_lock: threading.Lock = threading.Lock()
 
     # ------------------------------------------------------------------
     # Async interface
@@ -98,12 +103,13 @@ class RateLimiter:
         Only use this from synchronous code that is NOT running inside an
         asyncio event loop.  Prefer ``await wait()`` from coroutines.
         """
-        elapsed = time.monotonic() - self._last_call
-        delay = self._interval + random.uniform(0.0, self._jitter) - elapsed
-        if delay > 0:
-            logger.debug("RateLimiter: sync sleep %.3fs", delay)
-            time.sleep(delay)
-        self._last_call = time.monotonic()
+        with self._sync_lock:
+            elapsed = time.monotonic() - self._last_call
+            delay = self._interval + random.uniform(0.0, self._jitter) - elapsed
+            if delay > 0:
+                logger.debug("RateLimiter: sync sleep %.3fs", delay)
+                time.sleep(delay)
+            self._last_call = time.monotonic()
 
     # ------------------------------------------------------------------
     # Exponential backoff helper

@@ -10,6 +10,8 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
+import tempfile
 import time
 from pathlib import Path
 from typing import Any
@@ -115,7 +117,21 @@ def put_cache(
         "timestamp": time.time(),
         "papers": papers,
     }
-    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    data = json.dumps(payload, indent=2)
+    # BUG-B fix: write atomically via temp file + rename to prevent concurrent
+    # writers from producing interleaved / truncated JSON.  os.replace() is
+    # atomic on POSIX and best-effort atomic on Windows (same volume).
+    fd, tmp_path_str = tempfile.mkstemp(dir=d, suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(data)
+        os.replace(tmp_path_str, path)
+    except Exception:
+        try:
+            os.unlink(tmp_path_str)
+        except OSError:
+            pass
+        raise
     logger.debug("Cached %d papers for key %s", len(papers), key)
 
 

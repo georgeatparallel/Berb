@@ -382,12 +382,16 @@ class SharedResearchMemory:
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
         
-        self._message_queue.append(message)
-        
-        # Update agent stats
-        if from_agent in self._agent_states:
-            self._agent_states[from_agent].messages_sent += 1
-        
+        # Protect the deque append and the agent-state counter update under the
+        # same lock so that concurrent send_message() calls cannot interleave
+        # the compound read-modify-write on messages_sent (BUG-002).
+        with self._lock:
+            self._message_queue.append(message)
+            if from_agent in self._agent_states:
+                # messages_sent += 1 is three bytecodes (LOAD/ADD/STORE) and is
+                # NOT atomic without an explicit lock, even under CPython's GIL.
+                self._agent_states[from_agent].messages_sent += 1
+
         logger.debug(f"Message {message_type} from {from_agent} to {to_agent or 'all'}")
     
     def get_messages(
@@ -396,18 +400,19 @@ class SharedResearchMemory:
         message_type: str | None = None,
     ) -> list[dict]:
         """Get messages for an agent."""
-        messages = []
-        
-        for msg in self._message_queue:
-            # Check if message is for this agent (or broadcast)
-            if msg["to"] is None or msg["to"] == agent_id:
-                if message_type is None or msg["type"] == message_type:
-                    messages.append(msg)
-        
-        # Update received count
-        if agent_id in self._agent_states:
-            self._agent_states[agent_id].messages_received += len(messages)
-        
+        # Snapshot the queue and update the counter atomically under the lock
+        # so that a concurrent send_message() cannot cause a lost increment on
+        # messages_received (BUG-002 — same compound read-modify-write issue).
+        with self._lock:
+            messages = [
+                msg
+                for msg in self._message_queue
+                if (msg["to"] is None or msg["to"] == agent_id)
+                and (message_type is None or msg["type"] == message_type)
+            ]
+            if agent_id in self._agent_states:
+                self._agent_states[agent_id].messages_received += len(messages)
+
         return messages
     
     # ========== Trajectory & Analytics ==========
@@ -575,13 +580,21 @@ class SharedResearchMemory:
         logger.info("Cleared all memory")
 
 
-# Global memory instance
+# Global memory instance — protected by _memory_lock against check-then-act
+# races when two threads call get_shared_memory() simultaneously.
 _memory: SharedResearchMemory | None = None
+_memory_lock = threading.Lock()
 
 
 def get_shared_memory(project_id: str) -> SharedResearchMemory:
-    """Get global shared memory instance."""
+    """Get (or create) the global shared memory singleton for *project_id*.
+
+    Thread-safe: a module-level Lock serialises the check-and-assign so that
+    two threads racing here cannot each create a separate instance and silently
+    discard one another's writes (BUG-001).
+    """
     global _memory
-    if _memory is None or _memory._project_id != project_id:
-        _memory = SharedResearchMemory(project_id=project_id)
-    return _memory
+    with _memory_lock:
+        if _memory is None or _memory._project_id != project_id:
+            _memory = SharedResearchMemory(project_id=project_id)
+        return _memory

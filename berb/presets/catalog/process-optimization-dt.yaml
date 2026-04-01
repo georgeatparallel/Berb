@@ -1,0 +1,122 @@
+# Preset: Process Optimisation & Digital Twins
+# Domain: Manufacturing process control, digital twins for industrial equipment
+#         (extruders, fermentors, ovens), physics-informed ML, real-time optimisation.
+# Inspired by DEUS EX MACHINA — Digital Extruder, Digital Fermentor, Digital Oven.
+
+name: process-optimization-dt
+description: >
+  Manufacturing process optimisation and digital twin development — covering
+  physics-informed machine learning, surrogate modelling, real-time process
+  control, and digital twins for industrial equipment (extruders, fermentors,
+  continuous ovens). Aligned with DEUS EX MACHINA's digital twin portfolio.
+tags:
+  - digital-twins
+  - process-optimisation
+  - physics-informed-ml
+  - manufacturing
+  - industrial-ai
+  - deus-ex-machina
+
+# Literature
+primary_sources:
+  - semantic_scholar
+  - openalex
+  - scopus
+search_engines:
+  - google_scholar
+  - core_ac_uk
+grey_sources:
+  - patents_google
+  - eu_cordis
+  - industry_white_papers
+full_text_access:
+  - arxiv
+  - open_access_button
+
+# Model routing
+primary_model: claude-sonnet-4-6
+reasoning_model: claude-opus-4-6
+budget_model: claude-haiku-4-5-20251001
+fallback_models:
+  - gpt-4o
+
+# Pipeline (all 23 stages)
+enabled_stages:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  - 9
+  - 10
+  - 11
+  - 12
+  - 13
+  - 14
+  - 15
+  - 16
+  - 17
+  - 18
+  - 19
+  - 20
+  - 21
+  - 22
+  - 23
+
+stage_overrides:
+  3:  # Literature — process engineering + ML
+    extra_sources:
+      - chemical_engineering_journals
+      - ieee_xplore
+      - asme_digital
+  9:  # Experiment design — simulation + hardware-in-loop
+    default_validation:
+      - rmse_vs_physical_model
+      - energy_efficiency_gain
+      - process_stability_kpi
+  12: # Code execution — scientific Python stack
+    docker_image: python:3.11-slim
+  14: # Analysis — time-series and control systems metrics
+    stat_methods:
+      - rmse
+      - mae
+      - r2_score
+      - pareto_front_analysis
+      - sobol_sensitivity
+  16: # Writing — include industrial context section
+    include_industrial_application: true
+    include_energy_analysis: true
+
+# Experiment execution
+experiment_mode: docker
+experiment_frameworks:
+  - scikit-learn
+  - pytorch
+  - scipy
+  - pandas
+  - deepxde          # physics-informed neural networks
+  - gekko            # dynamic process optimisation
+  - matplotlib
+validation_methods:
+  - cross_validation
+  - physical_model_comparison
+  - industrial_kpi_benchmark
+
+# Paper writing
+paper_format: elsevier
+target_venue: Computers and Chemical Engineering
+max_pages: 16
+style_profile: engineering
+citation_style: numeric
+
+# Quality
+min_literature_papers: 40
+min_quality_score: 7.5
+min_novelty_score: 6.5
+
+# Budget
+max_budget_usd: 2.50
+cost_optimization: balanced
