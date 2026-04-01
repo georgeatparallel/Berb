@@ -106,7 +106,7 @@ MODEL_ALTERNATIVES = {
         Provider.DEEPSEEK: "deepseek/deepseek-v3.1",
     },
     "mid": {
-        Provider.QWEN: "qwen/qwen3.5-flash",
+        Provider.QWEN: "qwen/qwen-2.5-72b-instruct",
         Provider.MIMO: "xiaomi/mimo-v2-flash",
         Provider.GLM: "z-ai/glm-4.7-flash",
         Provider.KIMI: "moonshotai/kimi-k2.5",
@@ -114,7 +114,7 @@ MODEL_ALTERNATIVES = {
         Provider.PERPLEXITY: "perplexity/sonar-reasoning-pro",
     },
     "complex": {
-        Provider.QWEN: "qwen/qwen3.5-397b-a17b",
+        Provider.QWEN: "qwen/qwen-2.5-72b-instruct",
         Provider.MIMO: "xiaomi/mimo-v2-pro",
         Provider.XAI: "x-ai/grok-4.20-beta",
         Provider.KIMI: "moonshotai/kimi-k2-thinking",
@@ -159,7 +159,7 @@ class ExtendedNadirClawRouter(NadirClawRouter):
     def __init__(
         self,
         simple_model: str = "minimax/minimax-m2.5:free",
-        mid_model: str = "qwen/qwen3.5-flash",
+        mid_model: str = "qwen/qwen-2.5-72b-instruct",
         complex_model: str = "xiaomi/mimo-v2-pro",
         role_models: Optional[Dict[str, str]] = None,
         fallback_chain: Optional[List[str]] = None,

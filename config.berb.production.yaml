@@ -43,10 +43,10 @@ llm:
   api_key: ""  # Or set OPENROUTER_API_KEY environment variable
   
   # Optimized default models (97% cost savings)
-  primary_model: "qwen/qwen3.5-flash"
+  primary_model: "qwen/qwen3.5-flash-02-23"
   fallback_models:
     - "minimax/minimax-m2.5:free"
-    - "z-ai/glm-4.5-air:free"
+    - "z-ai/glm-4.7-flash"
   
   # Alternative: Direct provider configuration
   # provider: "anthropic"
@@ -90,43 +90,43 @@ reasoning:
       hardened: "xiaomi/mimo-v2-pro"
     
     bayesian:
-      prior: "z-ai/glm-4.5"
+      prior: "z-ai/glm-4.7-flash"
       likelihood: "minimax/minimax-m2.5:free"
-      sensitivity: "qwen/qwen3.5-flash"
+      sensitivity: "qwen/qwen3.5-flash-02-23"
     
     debate:
       pro: "qwen/qwen3.5-397b-a17b"
       con: "qwen/qwen3-max-thinking"
       judge: "x-ai/grok-4.20-beta"
-    
+
     dialectical:
       thesis: "z-ai/glm-5"
       antithesis: "qwen/qwen3.5-397b-a17b"
-      synthesis: "moonshotai/kimi-k2-thinking"
-    
+      synthesis: "moonshotai/kimi-k2.5"
+
     research:
       query: "perplexity/sonar-pro-search"
-      synthesis: "qwen/qwen3.5-plus"
+      synthesis: "qwen/qwen3.5-plus-02-15"
       gap: "minimax/minimax-m2.5:free"
       final: "xiaomi/mimo-v2-pro"
     
     socratic:
-      clarification: "z-ai/glm-4.5-air:free"
+      clarification: "z-ai/glm-4.7-flash"
       assumption: "z-ai/glm-4.7-flash"
       evidence: "minimax/minimax-m2.5:free"
       perspective: "qwen/qwen3.5-35b-a3b"
-      meta: "moonshotai/kimi-k2-thinking"
-    
+      meta: "moonshotai/kimi-k2.5"
+
     scientific:
       observation: "z-ai/glm-4.7"
       hypothesis: "qwen/qwen3-max-thinking"
       prediction: "qwen/qwen3-coder-next"
       experiment: "moonshotai/kimi-k2.5"
       analysis: "minimax/minimax-m2.5:free"
-    
+
     jury:
       juror: "x-ai/grok-4.20-multi-agent-beta"
-      foreman: "qwen/qwen3.5-plus"
+      foreman: "qwen/qwen3.5-plus-02-15"
       verdict: "z-ai/glm-5"
 
 # ============================================================================

@@ -70,6 +70,20 @@ def _write_pipeline_summary(run_dir: Path, summary: dict[str, object]) -> None:
     )
 
 
+def _write_heartbeat(run_dir: Path, stage: Stage, run_id: str) -> None:
+    """Write heartbeat file for sentinel watchdog monitoring."""
+    heartbeat = {
+        "run_id": run_id,
+        "current_stage": int(stage),
+        "current_stage_name": stage.name,
+        "timestamp": _utcnow_iso(),
+    }
+    (run_dir / "heartbeat.json").write_text(
+        json.dumps(heartbeat, indent=2),
+        encoding="utf-8",
+    )
+
+
 def _write_checkpoint(run_dir: Path, stage: Stage, run_id: str) -> None:
     """Write checkpoint atomically via temp file + rename to prevent corruption.
 
@@ -103,11 +117,16 @@ def _write_checkpoint(run_dir: Path, stage: Stage, run_id: str) -> None:
         
         # BUG-003 FIX: Also fsync the directory to ensure rename is durable
         # This prevents the case where rename is cached and lost on crash
-        dir_fd = os.open(run_dir, os.O_RDONLY | os.O_DIRECTORY)
-        try:
-            os.fsync(dir_fd)
-        finally:
-            os.close(dir_fd)
+        # Windows compatibility: os.O_DIRECTORY is Unix-only
+        if hasattr(os, 'O_DIRECTORY'):
+            dir_fd = os.open(run_dir, os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                os.fsync(dir_fd)
+            finally:
+                os.close(dir_fd)
+        else:
+            # Windows: skip directory fsync (not supported)
+            pass
     except BaseException:
         Path(tmp_path).unlink(missing_ok=True)
         raise
@@ -497,7 +516,8 @@ def execute_pipeline(
 
         stage_num = int(stage)
         prefix = f"[{run_id}] Stage {stage_num:02d}/{total_stages}"
-        print(f"{prefix} {stage.name} — running...")
+        model_info = config.llm.primary_model.split("/")[-1] if config.llm.primary_model else "unknown"
+        print(f"{prefix} {stage.name} — running... [model: {model_info}]")
 
         # BUG-218: Ensure the best stage-14 experiment data is promoted
         # BEFORE paper writing begins.  Without this, the recursive REFINE

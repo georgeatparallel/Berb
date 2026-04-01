@@ -12,7 +12,9 @@ This module tracks every empirical claim through the pipeline:
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from datetime import datetime, timezone
+from enum import Enum
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field

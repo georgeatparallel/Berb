@@ -1,20 +1,19 @@
 """Automated peer review for Berb papers.
 
-Implements 5-reviewer ensemble + Area Chair meta-review
-and cross-model review for unbiased evaluation.
+Implements 5-reviewer ensemble + Area Chair meta-review,
+cross-model review for unbiased evaluation, and council mode
+for multi-model parallel analysis.
 Enhanced with Jury reasoning for multi-dimensional evaluation.
 
 # Author: Georgios-Chrysovalantis Chatzivantsidis
 """
 
-from .ensemble import (
-    AutomatedReviewerEnsemble,
-    Decision,
-    MetaReview,
-    Review,
-    ReviewDimension,
-    ReviewerPersona,
-    review_paper,
+from .council_mode import (
+    CouncilMode,
+    CouncilReport,
+    CouncilSynthesis,
+    CouncilConfig,
+    run_council,
 )
 from .cross_model_reviewer import (
     CrossModelReviewer,
@@ -27,6 +26,15 @@ from .cross_model_reviewer import (
     ImprovementDelta,
     get_review_config_for_generation,
 )
+from .ensemble import (
+    AutomatedReviewerEnsemble,
+    Decision,
+    MetaReview,
+    Review,
+    ReviewDimension,
+    ReviewerPersona,
+    review_paper,
+)
 from .jury_reviewer import (
     JuryCrossModelReviewer,
     JuryReviewConfig,
@@ -35,14 +43,12 @@ from .jury_reviewer import (
 )
 
 __all__ = [
-    # Ensemble review
-    "AutomatedReviewerEnsemble",
-    "Decision",
-    "MetaReview",
-    "Review",
-    "ReviewDimension",
-    "ReviewerPersona",
-    "review_paper",
+    # Council mode (NEW)
+    "CouncilMode",
+    "CouncilReport",
+    "CouncilSynthesis",
+    "CouncilConfig",
+    "run_council",
     # Cross-model review
     "CrossModelReviewer",
     "CrossModelReviewConfig",
@@ -53,6 +59,14 @@ __all__ = [
     "ReviewResult",
     "ImprovementDelta",
     "get_review_config_for_generation",
+    # Ensemble review
+    "AutomatedReviewerEnsemble",
+    "Decision",
+    "MetaReview",
+    "Review",
+    "ReviewDimension",
+    "ReviewerPersona",
+    "review_paper",
     # Jury review
     "JuryCrossModelReviewer",
     "JuryReviewConfig",

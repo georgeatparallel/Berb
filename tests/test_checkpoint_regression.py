@@ -89,7 +89,8 @@ class TestCheckpointDurability:
             original_open = os.open
             
             def mock_open(path, flags, *args, **kwargs):
-                if os.O_DIRECTORY & flags:
+                # Windows compatibility: os.O_DIRECTORY is Unix-only
+                if hasattr(os, 'O_DIRECTORY') and os.O_DIRECTORY & flags:
                     dir_open_calls.append((path, flags))
                 return original_open(path, flags, *args, **kwargs)
             

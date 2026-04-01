@@ -20,6 +20,19 @@ from berb.config import (
     resolve_config_path,
 )
 from berb.health import print_doctor_report, run_doctor, write_doctor_report
+from berb.commands import (
+    cmd_research_init,
+    cmd_zotero_review,
+    cmd_zotero_notes,
+    cmd_obsidian_ingest,
+    cmd_analyze_results,
+    cmd_rebuttal_enhanced,
+    cmd_mine_writing_patterns,
+    cmd_verify_citations,
+    cmd_anti_ai_editing,
+    cmd_obsidian_init,
+    setup_claude_scholar_commands,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -793,6 +806,172 @@ def cmd_calendar(args: argparse.Namespace) -> int:
     print("Usage: berb calendar --upcoming|--plan <venue>")
     return 0
 
+
+# ── New Workflow commands (Group A1) ───────────────────────────────
+
+
+def cmd_literature(args: argparse.Namespace) -> int:
+    """Run literature-only workflow."""
+    from berb.modes.workflow import create_workflow_manager, WorkflowType
+    
+    config_path = Path(cast(str, args.config)) if args.config else None
+    if config_path and not config_path.exists():
+        print(f"Error: config file not found: {config_path}", file=sys.stderr)
+        return 1
+    
+    # Create workflow manager for literature-only
+    workflow_manager = create_workflow_manager(
+        workflow="literature-only",
+        stages=[1, 2, 3, 4, 5, 6, 7, 8],
+        operation_mode="autonomous",
+    )
+    
+    print(f"Starting literature-only workflow for: {args.topic}")
+    print(f"Workflow: {workflow_manager.current_workflow.value}")
+    print(f"Stages: {workflow_manager.get_enabled_stages()}")
+    
+    # TODO: Integrate with actual pipeline execution
+    print("\nNote: Literature-only workflow is ready for integration.")
+    return 0
+
+
+def cmd_write(args: argparse.Namespace) -> int:
+    """Write paper from existing results."""
+    from berb.modes.workflow import create_workflow_manager, WorkflowType
+    
+    config_path = Path(cast(str, args.config)) if args.config else None
+    if config_path and not config_path.exists():
+        print(f"Error: config file not found: {config_path}", file=sys.stderr)
+        return 1
+    
+    # Create workflow manager for paper-from-results
+    workflow_manager = create_workflow_manager(
+        workflow="paper-from-results",
+        stages=[14, 15, 16, 17, 18, 19, 20, 21, 22, 23],
+        operation_mode="autonomous",
+    )
+    
+    print(f"Starting paper-from-results workflow for: {args.topic}")
+    print(f"Workflow: {workflow_manager.current_workflow.value}")
+    print(f"Stages: {workflow_manager.get_enabled_stages()}")
+    
+    if args.data:
+        print(f"Data files: {', '.join(args.data)}")
+    if args.figures:
+        print(f"Figures: {', '.join(args.figures)}")
+    
+    # TODO: Integrate with actual pipeline execution
+    print("\nNote: Paper-from-results workflow is ready for integration.")
+    return 0
+
+
+def cmd_experiment(args: argparse.Namespace) -> int:
+    """Run experiment-only workflow."""
+    from berb.modes.workflow import create_workflow_manager, WorkflowType
+    
+    config_path = Path(cast(str, args.config)) if args.config else None
+    if config_path and not config_path.exists():
+        print(f"Error: config file not found: {config_path}", file=sys.stderr)
+        return 1
+    
+    # Create workflow manager for experiment-only
+    workflow_manager = create_workflow_manager(
+        workflow="experiment-only",
+        stages=[9, 10, 11, 12, 13, 14, 15],
+        operation_mode="autonomous",
+    )
+    
+    print(f"Starting experiment-only workflow")
+    print(f"Hypothesis: {args.hypothesis}")
+    print(f"Workflow: {workflow_manager.current_workflow.value}")
+    print(f"Stages: {workflow_manager.get_enabled_stages()}")
+    
+    if args.context:
+        print(f"Context file: {args.context}")
+    
+    # TODO: Integrate with actual pipeline execution
+    print("\nNote: Experiment-only workflow is ready for integration.")
+    return 0
+
+
+def cmd_review(args: argparse.Namespace) -> int:
+    """Review existing manuscript."""
+    from berb.modes.workflow import create_workflow_manager, WorkflowType
+    
+    config_path = Path(cast(str, args.config)) if args.config else None
+    if config_path and not config_path.exists():
+        print(f"Error: config file not found: {config_path}", file=sys.stderr)
+        return 1
+    
+    # Create workflow manager for review-only
+    workflow_manager = create_workflow_manager(
+        workflow="review-only",
+        stages=[18],
+        operation_mode="autonomous",
+    )
+    
+    print(f"Starting review workflow for: {args.manuscript}")
+    print(f"Workflow: {workflow_manager.current_workflow.value}")
+    print(f"Stages: {workflow_manager.get_enabled_stages()}")
+    
+    if args.venue:
+        print(f"Target venue: {args.venue}")
+    
+    # TODO: Integrate with actual pipeline execution
+    print("\nNote: Review-only workflow is ready for integration.")
+    return 0
+
+
+def cmd_rebuttal(args: argparse.Namespace) -> int:
+    """Generate rebuttal letter."""
+    from berb.modes.workflow import create_workflow_manager, WorkflowType
+    
+    config_path = Path(cast(str, args.config)) if args.config else None
+    if config_path and not config_path.exists():
+        print(f"Error: config file not found: {config_path}", file=sys.stderr)
+        return 1
+    
+    # Create workflow manager for rebuttal
+    workflow_manager = create_workflow_manager(
+        workflow="rebuttal",
+        operation_mode="autonomous",
+    )
+    
+    print(f"Starting rebuttal workflow")
+    print(f"Manuscript: {args.manuscript}")
+    print(f"Reviews: {args.reviews}")
+    print(f"Workflow: {workflow_manager.current_workflow.value}")
+    
+    # TODO: Integrate with actual pipeline execution
+    print("\nNote: Rebuttal workflow is ready for integration.")
+    return 0
+
+
+def cmd_survey(args: argparse.Namespace) -> int:
+    """Write literature review paper."""
+    from berb.modes.workflow import create_workflow_manager, WorkflowType
+    
+    config_path = Path(cast(str, args.config)) if args.config else None
+    if config_path and not config_path.exists():
+        print(f"Error: config file not found: {config_path}", file=sys.stderr)
+        return 1
+    
+    # Create workflow manager for literature-review
+    workflow_manager = create_workflow_manager(
+        workflow="literature-review",
+        stages=[1, 2, 3, 4, 5, 6, 7, 8, 16, 17, 18, 19, 20, 21, 22, 23],
+        operation_mode="autonomous",
+    )
+    
+    print(f"Starting literature review workflow for: {args.topic}")
+    print(f"Workflow: {workflow_manager.current_workflow.value}")
+    print(f"Stages: {workflow_manager.get_enabled_stages()}")
+    
+    # TODO: Integrate with actual pipeline execution
+    print("\nNote: Literature review workflow is ready for integration.")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="berb",
@@ -911,11 +1090,51 @@ def main(argv: list[str] | None = None) -> int:
     _ = trends_p.add_argument("--config", "-c", default="config.yaml", help="Config file path")
     _ = trends_p.add_argument("--domains", nargs="+", help="Override domains")
 
+    # A1: New workflow commands
+    lit_p = sub.add_parser("literature", help="Run literature-only workflow")
+    _ = lit_p.add_argument("--topic", "-t", required=True, help="Research topic")
+    _ = lit_p.add_argument("--preset", default="ml-conference", help="Preset to use")
+    _ = lit_p.add_argument("--upload", nargs="+", help="Upload specific PDFs")
+    _ = lit_p.add_argument("--upload-dir", help="Upload directory of PDFs")
+    _ = lit_p.add_argument("--min-papers", type=int, default=30, help="Minimum papers to find")
+    _ = lit_p.add_argument("--config", "-c", default=None, help="Config file path")
+
+    write_p = sub.add_parser("write", help="Write paper from existing results")
+    _ = write_p.add_argument("--topic", "-t", required=True, help="Research topic")
+    _ = write_p.add_argument("--data", nargs="+", help="Experiment data files")
+    _ = write_p.add_argument("--figures", nargs="+", help="Figure files")
+    _ = write_p.add_argument("--preset", default="ml-conference", help="Preset to use")
+    _ = write_p.add_argument("--config", "-c", default=None, help="Config file path")
+
+    exp_p = sub.add_parser("experiment", help="Run experiment-only workflow")
+    _ = exp_p.add_argument("--hypothesis", required=True, help="Hypothesis to test")
+    _ = exp_p.add_argument("--context", help="Background context file")
+    _ = exp_p.add_argument("--preset", default="ml-conference", help="Preset to use")
+    _ = exp_p.add_argument("--config", "-c", default=None, help="Config file path")
+
+    rev_p = sub.add_parser("review", help="Review existing manuscript")
+    _ = rev_p.add_argument("--manuscript", required=True, help="Manuscript PDF")
+    _ = rev_p.add_argument("--venue", help="Target venue (neurips, icml, etc.)")
+    _ = rev_p.add_argument("--config", "-c", default=None, help="Config file path")
+
+    rebut_p = sub.add_parser("rebuttal", help="Generate rebuttal letter")
+    _ = rebut_p.add_argument("--manuscript", required=True, help="Manuscript PDF")
+    _ = rebut_p.add_argument("--reviews", required=True, help="Reviewer comments file")
+    _ = rebut_p.add_argument("--config", "-c", default=None, help="Config file path")
+
+    survey_p = sub.add_parser("survey", help="Write literature review paper")
+    _ = survey_p.add_argument("--topic", "-t", required=True, help="Review topic")
+    _ = survey_p.add_argument("--preset", default="ml-conference", help="Preset to use")
+    _ = survey_p.add_argument("--config", "-c", default=None, help="Config file path")
+
     # D4: Conference deadline calendar
     cal_p = sub.add_parser("calendar", help="Conference deadline calendar")
     _ = cal_p.add_argument("--upcoming", action="store_true", help="Show upcoming deadlines")
     _ = cal_p.add_argument("--plan", help="Generate submission timeline for a venue")
     _ = cal_p.add_argument("--domains", nargs="+", help="Filter by domain")
+
+    # Claude Scholar enhancement commands
+    setup_claude_scholar_commands(sub)
 
     args = parser.parse_args(argv)
 
@@ -949,6 +1168,39 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_trends(args)
     elif command == "calendar":
         return cmd_calendar(args)
+    elif command == "literature":
+        return cmd_literature(args)
+    elif command == "write":
+        return cmd_write(args)
+    elif command == "experiment":
+        return cmd_experiment(args)
+    elif command == "review":
+        return cmd_review(args)
+    elif command == "rebuttal":
+        return cmd_rebuttal(args)
+    elif command == "survey":
+        return cmd_survey(args)
+    # Claude Scholar commands
+    elif command == "research-init":
+        return cmd_research_init(args)
+    elif command == "zotero-review":
+        return cmd_zotero_review(args)
+    elif command == "zotero-notes":
+        return cmd_zotero_notes(args)
+    elif command == "obsidian-ingest":
+        return cmd_obsidian_ingest(args)
+    elif command == "analyze-results":
+        return cmd_analyze_results(args)
+    elif command == "rebuttal-enhanced":
+        return cmd_rebuttal_enhanced(args)
+    elif command == "mine-writing-patterns":
+        return cmd_mine_writing_patterns(args)
+    elif command == "verify-citations":
+        return cmd_verify_citations(args)
+    elif command == "anti-ai-editing":
+        return cmd_anti_ai_editing(args)
+    elif command == "obsidian-init":
+        return cmd_obsidian_init(args)
     else:
         parser.print_help()
         return 0

@@ -38,11 +38,12 @@ llm:
   base_url: "https://openrouter.ai/api/v1"
   wire_api: "chat_completions"
   api_key_env: "OPENROUTER_API_KEY"
-  api_key: ""
-  primary_model: "qwen/qwen3.5-flash"
+  api_key: "***REMOVED-OPENROUTER-KEY***"
+  primary_model: "deepseek/deepseek-chat-v3"
   fallback_models:
+    - "deepseek/deepseek-r1"
+    - "qwen/qwen3.5-9b"
     - "minimax/minimax-m2.5:free"
-    - "z-ai/glm-4.5-air:free"
 
 # ============================================================================
 # Reasoning Methods Configuration
@@ -52,68 +53,68 @@ reasoning:
   cost_budget_usd: 6.00
   
   provider_weights:
-    minimax: 0.25
-    qwen: 0.25
+    deepseek: 0.30
+    minimax: 0.20
     mimo: 0.15
     glm: 0.10
     xai: 0.10
     kimi: 0.05
     perplexity: 0.05
-    deepseek: 0.03
+    qwen: 0.03
     google: 0.02
   
   methods:
     multi_perspective:
       constructive: "xiaomi/mimo-v2-pro"
-      destructive: "qwen/qwen3.5-397b-a17b"
+      destructive: "deepseek/deepseek-chat-v3"
       systemic: "z-ai/glm-5"
       minimalist: "minimax/minimax-m2.5:free"
-      scoring: "qwen/qwen3-coder-next"
-    
+      scoring: "deepseek/deepseek-r1"
+
     pre_mortem:
-      narrative: "qwen/qwen3-max-thinking"
-      root_cause: "qwen/qwen3-coder-next"
+      narrative: "deepseek/deepseek-r1"
+      root_cause: "deepseek/deepseek-chat-v3"
       early_warning: "minimax/minimax-m2.5:free"
       hardened: "xiaomi/mimo-v2-pro"
-    
+
     bayesian:
-      prior: "z-ai/glm-4.5"
+      prior: "z-ai/glm-4.7-flash"
       likelihood: "minimax/minimax-m2.5:free"
-      sensitivity: "qwen/qwen3.5-flash"
-    
+      sensitivity: "deepseek/deepseek-chat-v3"
+
     debate:
-      pro: "qwen/qwen3.5-397b-a17b"
-      con: "qwen/qwen3-max-thinking"
+      pro: "deepseek/deepseek-chat-v3"
+      con: "deepseek/deepseek-r1"
       judge: "x-ai/grok-4.20-beta"
-    
+
     dialectical:
       thesis: "z-ai/glm-5"
-      antithesis: "qwen/qwen3.5-397b-a17b"
-      synthesis: "moonshotai/kimi-k2-thinking"
-    
+      antithesis: "deepseek/deepseek-chat-v3"
+      synthesis: "moonshotai/kimi-k2.5"
+
     research:
       query: "perplexity/sonar-pro-search"
-      synthesis: "qwen/qwen3.5-plus"
+      synthesis: "deepseek/deepseek-chat-v3"
       gap: "minimax/minimax-m2.5:free"
       final: "xiaomi/mimo-v2-pro"
-    
+
     socratic:
-      clarification: "z-ai/glm-4.5-air:free"
+      clarification: "z-ai/glm-4.7-flash"
       assumption: "z-ai/glm-4.7-flash"
       evidence: "minimax/minimax-m2.5:free"
-      perspective: "qwen/qwen3.5-35b-a3b"
-      meta: "moonshotai/kimi-k2-thinking"
-    
+      perspective: "deepseek/deepseek-chat-v3"
+      meta: "moonshotai/kimi-k2.5"
+
     scientific:
       observation: "z-ai/glm-4.7"
-      hypothesis: "qwen/qwen3-max-thinking"
-      prediction: "qwen/qwen3-coder-next"
+      hypothesis: "deepseek/deepseek-r1"
+      prediction: "deepseek/deepseek-chat-v3"
       experiment: "moonshotai/kimi-k2.5"
       analysis: "minimax/minimax-m2.5:free"
-    
+
     jury:
       juror: "x-ai/grok-4.20-multi-agent-beta"
-      foreman: "qwen/qwen3.5-plus"
+      foreman: "deepseek/deepseek-chat-v3"
       verdict: "z-ai/glm-5"
 
 # ============================================================================
@@ -121,16 +122,22 @@ reasoning:
 # ============================================================================
 
 experiment:
-  mode: "sandbox"
+  mode: "colab_drive"
   time_budget_sec: 300
   max_iterations: 10
   metric_key: "primary_metric"
   metric_direction: "minimize"
-  
+
   sandbox:
     python_path: ".venv/Scripts/python.exe"
     gpu_required: false
     max_memory_mb: 4096
+
+  colab_drive:
+    drive_root: "C:/Users/tesse/My Drive/berb"
+    poll_interval_sec: 30
+    timeout_sec: 3600
+    setup_script: "pip install torch torchvision numpy scipy -q"
 
 # ============================================================================
 # Security
@@ -168,3 +175,127 @@ figure_agent:
   gemini_model: "gemini-2.5-flash-image"
   strict_mode: false
   dpi: 300
+
+# ============================================================================
+# Web Search Configuration
+# ============================================================================
+
+web_search:
+  enabled: true
+  tavily_api_key_env: "TAVILY_API_KEY"
+  enable_scholar: true
+  enable_crawling: true
+  enable_pdf_extraction: true
+  max_web_results: 10
+  max_scholar_results: 10
+  max_crawl_urls: 5
+
+# ============================================================================
+# Multi-Model Collaboration (Critique + Council)
+# ============================================================================
+# Based on Microsoft Copilot Researcher patterns:
+# - Critique: Generate → Evaluate (different models)
+# - Council: Multiple independent analyses → synthesis
+# ============================================================================
+
+multi_model:
+  # Critique Pattern: Generation → Evaluation
+  critique:
+    enabled: true
+    
+    # Paper draft + revision stages
+    stages: [17, 19]
+    
+    # Generator model (creates content)
+    generator: "claude-3-sonnet"
+    
+    # Evaluator model (reviews content)
+    evaluator: "gpt-4o"
+    
+    # Evaluation dimensions
+    dimensions:
+      - "factual_accuracy"
+      - "completeness"
+      - "citation_quality"
+      - "clarity"
+    
+    # Auto-apply suggested changes (if confidence > threshold)
+    auto_apply_threshold: 0.8
+
+  # Council Pattern: Multiple models → Synthesis
+  council:
+    enabled: true
+    
+    # Synthesis, hypothesis generation, and decision stages
+    stages: [7, 8, 15]
+    
+    # Models to use in council (parallel analysis)
+    models:
+      - "claude-opus"
+      - "gpt-4o"
+      - "deepseek-v3.2"
+    
+    # Judge model for synthesis
+    judge: "claude-sonnet"
+    
+    # Consensus threshold for high-confidence decisions
+    consensus_threshold: 0.8
+    
+    # Include divergent opinions in output
+    include_divergences: true
+
+# ============================================================================
+# Hidden Consistent Evaluation (HCE)
+# ============================================================================
+# Based on AIRA2 (Meta FAIR) - prevents evaluation gaming
+# Three-way split: search, selection, test criteria
+# ============================================================================
+
+hidden_eval:
+  enabled: true
+  
+  # Use HCE during improvement loop (M2)
+  use_in_improvement_loop: true
+  
+  # Use HCE for final paper selection
+  use_for_selection: true
+  
+  # Track hidden scores for benchmarking
+  track_hidden_scores: true
+  
+  # Criteria weights (optional - uses defaults if not specified)
+  # search_criteria:
+  #   dimensions: ["novelty", "technical_soundness", "clarity", "relevance"]
+  #   weights: {novelty: 0.3, technical_soundness: 0.3, clarity: 0.2, relevance: 0.2}
+  # 
+  # selection_criteria:
+  #   dimensions: ["impact", "rigor", "presentation", "reproducibility"]
+  #   weights: {impact: 0.35, rigor: 0.35, presentation: 0.15, reproducibility: 0.15}
+  # 
+  # test_criteria:
+  #   dimensions: ["ground_truth_accuracy", "citation_correctness", "claim_validity"]
+  #   weights: {ground_truth_accuracy: 0.25, citation_correctness: 0.20, claim_validity: 0.20}
+
+# ============================================================================
+# Async Experiment Pool (AIRA2 + CAID)
+# ============================================================================
+# Parallel experiment execution with isolation
+# ============================================================================
+
+experiment_pool:
+  enabled: true
+  
+  # Maximum parallel workers (CAID optimal: 4)
+  max_workers: 4
+  
+  # Isolation mode: docker, worktree, sandbox
+  isolation: "docker"
+  
+  # GPU access for workers
+  gpu_enabled: true
+  
+  # Docker image for experiment execution
+  docker_image: "berb/experiment:latest"
+  
+  # Timeout per experiment (seconds)
+  timeout_per_experiment: 3600

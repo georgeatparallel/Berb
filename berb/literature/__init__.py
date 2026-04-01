@@ -3,27 +3,12 @@
 Includes citation classification, evidence consensus mapping,
 citation graph analysis, section-aware citation analysis,
 structured reading notes, multimodal literature analysis,
-and recency filtering.
+recency filtering, and file-system-based literature processing
+for handling 200-400 papers efficiently.
 
 # Author: Georgios-Chrysovalantis Chatzivantsidis
 """
 
-from .models import Author, Paper
-from .search import search_papers
-from .verify import (
-    CitationResult,
-    VerificationReport,
-    VerifyStatus,
-    verify_citations,
-)
-from .multimodal_search import (
-    MultimodalLiteratureAgent,
-    MultimodalPaper,
-    FigureAnalysis,
-    ExtractedChartData,
-    ExtractedTableData,
-    analyze_paper_multimodal,
-)
 from .citation_classifier import (
     CitationClassifier,
     CitationIntent,
@@ -31,6 +16,16 @@ from .citation_classifier import (
     PaperCitationProfile,
     CitationClassifierConfig,
     classify_citations,
+)
+from .citation_graph import (
+    CitationGraphEngine,
+    CitationGraphClient,
+    CitationGraphConfig,
+    Cluster,
+    Contradiction,
+    JournalQuality,
+    Paper as CitationGraphPaper,
+    analyze_citation_network,
 )
 from .evidence_map import (
     EvidenceConsensusMapper,
@@ -43,16 +38,32 @@ from .evidence_map import (
     EvidenceConsensusConfig,
     build_evidence_map,
 )
-from .citation_graph import (
-    CitationGraphEngine,
-    CitationGraphClient,
-    CitationGraphConfig,
-    Paper,
-    Cluster,
-    Contradiction,
-    JournalQuality,
-    analyze_citation_network,
+from .fs_processor import (
+    FileSystemLiteratureProcessor,
+    LiteratureWorkspace,
+    RelevantExcerpt,
 )
+from .fs_query import (
+    FileSystemQueryEngine,
+    QueryConfig,
+)
+from .models import Author, Paper
+from .multimodal_search import (
+    MultimodalLiteratureAgent,
+    MultimodalPaper,
+    FigureAnalysis,
+    ExtractedChartData,
+    ExtractedTableData,
+    analyze_paper_multimodal,
+)
+from .recency_filter import (
+    RecencyFilter,
+    RecencyFilterConfig,
+    RecencyAwareRanker,
+    filter_papers_by_recency,
+    rank_papers_with_recency,
+)
+from .search import search_papers
 from .section_analysis import (
     SectionCitationAnalyzer,
     SectionCitation,
@@ -73,12 +84,11 @@ from .structured_notes import (
     ReadingNotesConfig,
     generate_reading_notes,
 )
-from .recency_filter import (
-    RecencyFilter,
-    RecencyFilterConfig,
-    RecencyAwareRanker,
-    filter_papers_by_recency,
-    rank_papers_with_recency,
+from .verify import (
+    CitationResult,
+    VerificationReport,
+    VerifyStatus,
+    verify_citations,
 )
 
 __all__ = [
@@ -120,6 +130,7 @@ __all__ = [
     "CitationGraphEngine",
     "CitationGraphClient",
     "CitationGraphConfig",
+    "CitationGraphPaper",
     "Cluster",
     "Contradiction",
     "JournalQuality",
@@ -148,4 +159,10 @@ __all__ = [
     "RecencyAwareRanker",
     "filter_papers_by_recency",
     "rank_papers_with_recency",
+    # FS-based processing (NEW)
+    "FileSystemLiteratureProcessor",
+    "LiteratureWorkspace",
+    "RelevantExcerpt",
+    "FileSystemQueryEngine",
+    "QueryConfig",
 ]

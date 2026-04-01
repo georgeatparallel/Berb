@@ -571,17 +571,6 @@ class ClaimConfidenceAnalyzer:
             reasoning=f"Supporting: {len(supporting)}, Contradicting: {len(contradicting)}",
             recommendations=recommendations,
         )
-        )
-
-        return ClaimConfidenceResult(
-            claim=claim,
-            confidence_level=confidence_level,
-            confidence_score=confidence_score,
-            supporting_count=len(supporting),
-            contradicting_count=len(contradicting),
-            reasoning=self._generate_reasoning(confidence_level, supporting, contradicting),
-            recommendations=recommendations,
-        )
 
     async def _check_source_alignment(
         self,

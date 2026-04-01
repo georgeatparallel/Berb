@@ -1,0 +1,193 @@
+# Berb Configuration - Humanities Research
+# For philosophy, religion, history, literature
+
+project:
+  name: "humanities-research"
+  mode: "full-auto"
+
+research:
+  topic: "Augustine's Theory of Time and Eternity"
+  domains:
+    - "philosophy"
+    - "religion"
+    - "humanities"
+  daily_paper_count: 30
+  quality_threshold: 4.0
+
+runtime:
+  timezone: "UTC"
+  max_parallel_tasks: 3
+  approval_timeout_hours: 12
+  retry_limit: 2
+
+notifications:
+  channel: "console"
+  target: ""
+  on_stage_start: false
+  on_stage_fail: true
+  on_gate_required: true
+
+knowledge_base:
+  backend: "markdown"
+  root: "docs/kb"
+
+# ============================================================================
+# LLM Configuration
+# ============================================================================
+
+llm:
+  provider: "openrouter"
+  base_url: "https://openrouter.ai/api/v1"
+  wire_api: "chat_completions"
+  api_key_env: "OPENROUTER_API_KEY"
+  api_key: ""
+  primary_model: "deepseek/deepseek-chat-v3"
+  fallback_models:
+    - "deepseek/deepseek-r1"
+    - "qwen/qwen3.5-9b"
+    - "minimax/minimax-m2.5:free"
+
+# ============================================================================
+# Reasoning Methods Configuration
+# ============================================================================
+
+reasoning:
+  cost_budget_usd: 6.00
+  
+  provider_weights:
+    deepseek: 0.30
+    minimax: 0.20
+    mimo: 0.15
+    glm: 0.10
+    xai: 0.10
+    kimi: 0.05
+    perplexity: 0.05
+    qwen: 0.03
+    google: 0.02
+  
+  methods:
+    multi_perspective:
+      constructive: "xiaomi/mimo-v2-pro"
+      destructive: "deepseek/deepseek-chat-v3"
+      systemic: "z-ai/glm-5"
+      minimalist: "minimax/minimax-m2.5:free"
+      scoring: "deepseek/deepseek-r1"
+
+    pre_mortem:
+      narrative: "deepseek/deepseek-r1"
+      root_cause: "deepseek/deepseek-chat-v3"
+      early_warning: "minimax/minimax-m2.5:free"
+      hardened: "xiaomi/mimo-v2-pro"
+
+    bayesian:
+      prior: "z-ai/glm-4.7-flash"
+      likelihood: "minimax/minimax-m2.5:free"
+      sensitivity: "deepseek/deepseek-chat-v3"
+
+    debate:
+      pro: "deepseek/deepseek-chat-v3"
+      con: "deepseek/deepseek-r1"
+      judge: "x-ai/grok-4.20-beta"
+
+    dialectical:
+      thesis: "z-ai/glm-5"
+      antithesis: "deepseek/deepseek-chat-v3"
+      synthesis: "moonshotai/kimi-k2.5"
+
+    research:
+      query: "perplexity/sonar-pro-search"
+      synthesis: "deepseek/deepseek-chat-v3"
+      gap: "minimax/minimax-m2.5:free"
+      final: "xiaomi/mimo-v2-pro"
+
+    socratic:
+      clarification: "z-ai/glm-4.7-flash"
+      assumption: "z-ai/glm-4.7-flash"
+      evidence: "minimax/minimax-m2.5:free"
+      perspective: "deepseek/deepseek-chat-v3"
+      meta: "moonshotai/kimi-k2.5"
+
+    scientific:
+      observation: "z-ai/glm-4.7"
+      hypothesis: "deepseek/deepseek-r1"
+      prediction: "deepseek/deepseek-chat-v3"
+      experiment: "moonshotai/kimi-k2.5"
+      analysis: "minimax/minimax-m2.5:free"
+
+    jury:
+      juror: "x-ai/grok-4.20-multi-agent-beta"
+      foreman: "deepseek/deepseek-chat-v3"
+      verdict: "z-ai/glm-5"
+
+# ============================================================================
+# Experiment Configuration
+# ============================================================================
+
+experiment:
+  mode: "colab_drive"
+  time_budget_sec: 300
+  max_iterations: 10
+  metric_key: "primary_metric"
+  metric_direction: "minimize"
+
+  sandbox:
+    python_path: ".venv/Scripts/python.exe"
+    gpu_required: false
+    max_memory_mb: 4096
+
+  colab_drive:
+    drive_root: "C:/Users/tesse/My Drive/berb"
+    poll_interval_sec: 30
+    timeout_sec: 3600
+    setup_script: "pip install torch torchvision numpy scipy -q"
+
+# ============================================================================
+# Security
+# ============================================================================
+
+security:
+  hitl_required_stages: [5, 9, 20]
+  allow_publish_without_approval: false
+  redact_sensitive_logs: true
+
+# ============================================================================
+# OpenCode Beast Mode
+# ============================================================================
+
+opencode:
+  enabled: true
+  auto: true
+  complexity_threshold: 0.2
+  timeout_sec: 600
+  max_retries: 1
+  workspace_cleanup: true
+
+# ============================================================================
+# Figure Agent
+# ============================================================================
+
+figure_agent:
+  enabled: true
+  min_figures: 3
+  max_figures: 10
+  max_iterations: 3
+  render_timeout_sec: 30
+  output_format: "python"
+  nano_banana_enabled: true
+  gemini_model: "gemini-2.5-flash-image"
+  strict_mode: false
+  dpi: 300
+
+# ============================================================================
+# Web Search Configuration
+# ============================================================================
+
+web_search:
+  enabled: true
+  tavily_api_key_env: "TAVILY_API_KEY"
+  enable_scholar: true
+  enable_crawling: true
+  enable_pdf_extraction: true
+  max_web_results: 10
+  max_scholar_results: 10
+  max_crawl_urls: 5

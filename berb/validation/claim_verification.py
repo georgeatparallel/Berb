@@ -13,6 +13,7 @@ This module provides end-to-end claim verification (Jenni AI style):
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 

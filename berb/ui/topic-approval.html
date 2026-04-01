@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Berb - Topic Approval</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f7;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        h1 { color: #1d1d1f; }
+        h2 { color: #6e6e73; font-size: 18px; }
+        .topic {
+            background: #e1f0ff;
+            padding: 16px;
+            border-radius: 8px;
+            margin: 16px 0;
+            border-left: 4px solid #0071e3;
+        }
+        .original { border-color: #86868b; background: #f5f5f7; }
+        .expanded { border-color: #34c759; background: #e8f9ed; }
+        .buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .approve {
+            background: #34c759;
+            color: white;
+        }
+        .approve:hover { background: #30b350; }
+        .reject {
+            background: #f5f5f7;
+            color: #1d1d1f;
+            border: 1px solid #d2d2d7;
+        }
+        .reject:hover { background: #e8e8ed; }
+        .logs {
+            background: #1d1d1f;
+            color: #34c759;
+            padding: 16px;
+            border-radius: 8px;
+            font-family: 'SF Mono', monospace;
+            font-size: 13px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 100px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 12px;
+        }
+        .status-pending { background: #fff5e1; color: #ff9f0a; }
+        .status-running { background: #e1f0ff; color: #0071e3; }
+        .status-completed { background: #e8f9ed; color: #34c759; }
+        #jobId {
+            font-family: 'SF Mono', monospace;
+            font-size: 13px;
+            color: #86868b;
+        }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🫒 Berb Topic Approval</h1>
+        <p style="color: #6e6e73;">Collaborative mode - Review and approve the expanded topic</p>
+        
+        <div style="margin-top: 20px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 500;">Job ID:</label>
+            <input type="text" id="jobIdInput" placeholder="Enter job ID or create new" 
+                   style="width: 100%; padding: 12px; border: 1px solid #d2d2d7; border-radius: 8px; font-size: 14px;">
+        </div>
+        
+        <div class="buttons">
+            <button onclick="createNewJob()" class="approve">Create New Research</button>
+            <button onclick="checkStatus()" class="reject">Check Status</button>
+        </div>
+    </div>
+    
+    <div id="approvalCard" class="card hidden">
+        <h2>Topic Expansion Ready <span id="statusBadge" class="status status-pending">Pending</span></h2>
+        
+        <div class="topic original">
+            <strong>Original Topic:</strong><br>
+            <span id="originalTopic">Loading...</span>
+        </div>
+        
+        <div class="topic expanded">
+            <strong>Expanded Topic (LLM suggestion):</strong><br>
+            <span id="expandedTopic">Loading...</span>
+        </div>
+        
+        <p style="color: #6e6e73; font-size: 14px;">
+            The expanded topic stays within <strong>Humanities/Qualitative</strong> research. 
+            Do you approve this expansion?
+        </p>
+        
+        <div class="buttons">
+            <button onclick="approveTopic(true)" class="approve">✓ Approve & Continue</button>
+            <button onclick="approveTopic(false)" class="reject">✗ Use Original Topic</button>
+        </div>
+    </div>
+    
+    <div id="logsCard" class="card hidden">
+        <h2>Logs</h2>
+        <div id="logs" class="logs"></div>
+    </div>
+    
+    <script>
+        // UI served on 8080, API on 8082
+        const API_BASE = 'http://localhost:8082';
+        let currentJobId = null;
+        
+        async function createNewJob() {
+            const topic = prompt('Enter your research topic:', "Augustine's Theory of Time and Eternity");
+            if (!topic) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/research`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        topic: topic,
+                        preset: 'humanities',
+                        mode: 'collaborative'
+                    })
+                });
+                
+                const data = await response.json();
+                currentJobId = data.id;
+                document.getElementById('jobIdInput').value = data.id;
+                alert(`Job created: ${data.id}\n\nWait ~15 seconds for topic expansion, then click "Check Status"`);
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+        
+        async function checkStatus() {
+            const jobId = document.getElementById('jobIdInput').value;
+            if (!jobId) {
+                alert('Please enter a job ID');
+                return;
+            }
+            
+            currentJobId = jobId;
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/research/${jobId}`);
+                const job = await response.json();
+                
+                // Show logs
+                document.getElementById('logsCard').classList.remove('hidden');
+                document.getElementById('logs').innerHTML = job.logs?.map(l => `<div>• ${l}</div>`).join('') || 'No logs yet';
+                
+                if (job.status === 'pending_approval' && job.topic_expanded) {
+                    // Show approval card
+                    document.getElementById('approvalCard').classList.remove('hidden');
+                    document.getElementById('originalTopic').textContent = job.topic;
+                    document.getElementById('expandedTopic').textContent = job.topic_expanded;
+                } else if (job.status === 'starting' || job.status === 'running') {
+                    alert(`Pipeline is ${job.status} - Progress: ${job.progress}%`);
+                } else if (job.status === 'completed') {
+                    alert(`Research completed! Check artifacts folder.`);
+                } else {
+                    alert(`Status: ${job.status}`);
+                }
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+        
+        async function approveTopic(approve) {
+            if (!currentJobId) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/research/${currentJobId}/topic-approve?approve=${approve}`, {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                alert(data.status === 'approved' 
+                    ? `✓ Topic approved! Pipeline starting...\n\nTopic: ${data.topic}`
+                    : `✗ Using original topic\n\nTopic: ${data.topic}`);
+                
+                document.getElementById('approvalCard').classList.add('hidden');
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+        
+        // Auto-refresh logs every 5 seconds
+        setInterval(() => {
+            if (currentJobId) {
+                checkStatus();
+            }
+        }, 5000);
+    </script>
+</body>
+</html>
