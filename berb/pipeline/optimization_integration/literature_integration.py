@@ -109,33 +109,35 @@ class LiteratureFSIntegration:
     
     async def get_summary(self, paper_id: str) -> str | None:
         """Get summary for specific paper.
-        
+
         Args:
             paper_id: Paper identifier
-            
+
         Returns:
             Summary text or None
         """
         if not self._current_workspace:
+            logger.warning("get_summary called before organize_literature. No workspace loaded.")
             return None
-        
+
         return await self.processor.get_summary(
             self._current_workspace,
             paper_id,
         )
-    
+
     async def get_claims(self, paper_id: str) -> list[dict] | None:
         """Get claims for specific paper.
-        
+
         Args:
             paper_id: Paper identifier
-            
+
         Returns:
             List of claims or None
         """
         if not self._current_workspace:
+            logger.warning("get_claims called before organize_literature. No workspace loaded.")
             return None
-        
+
         return await self.processor.get_claims(
             self._current_workspace,
             paper_id,

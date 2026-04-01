@@ -24,10 +24,12 @@ from .literature_integration import (
 from .council_integration import (
     CouncilIntegration,
     run_council_stage,
+    CouncilStageResult,
 )
 from .experiment_integration import (
     ExperimentPoolIntegration,
     execute_experiment_parallel,
+    ExperimentExecutionResult,
 )
 from .writing_integration import (
     WritingIntegration,
@@ -36,10 +38,12 @@ from .writing_integration import (
 from .validation_integration import (
     ValidationIntegration,
     evaluate_with_hce,
+    HCEStageResult,
 )
 from .benchmark_integration import (
     BenchmarkIntegration,
     run_benchmark_evaluation,
+    BenchmarkReport,
 )
 
 __all__ = [
@@ -49,16 +53,20 @@ __all__ = [
     # Council Integration (Upgrade 3)
     "CouncilIntegration",
     "run_council_stage",
+    "CouncilStageResult",
     # Experiment Integration (Upgrades 1, 5, 7, 10)
     "ExperimentPoolIntegration",
     "execute_experiment_parallel",
+    "ExperimentExecutionResult",
     # Writing Integration (Upgrade 9)
     "WritingIntegration",
     "write_paper_parallel",
     # Validation Integration (Upgrade 2)
     "ValidationIntegration",
     "evaluate_with_hce",
+    "HCEStageResult",
     # Benchmark Integration (Upgrade 12)
     "BenchmarkIntegration",
     "run_benchmark_evaluation",
+    "BenchmarkReport",
 ]

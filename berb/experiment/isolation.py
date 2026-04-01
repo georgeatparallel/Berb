@@ -25,6 +25,7 @@ Usage:
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import logging
 import os
 import shutil
@@ -592,16 +593,15 @@ def create_isolation(
         "worktree": WorktreeIsolationConfig,
         "sandbox": SandboxIsolationConfig,
     }
-    
+
     config_class = config_classes[mode]
-    
+
     # Filter kwargs to only valid fields for each config class
-    import dataclasses
     valid_fields = {f.name for f in dataclasses.fields(config_class)}
     filtered_kwargs = {k: v for k, v in kwargs.items() if k in valid_fields}
-    
+
     config = config_class(**filtered_kwargs)
-    
+
     return strategies[mode](config)
 
 
