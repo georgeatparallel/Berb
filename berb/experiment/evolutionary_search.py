@@ -274,24 +274,38 @@ class EvolutionaryExperimentSearch:
             from berb.validation.hidden_eval import HiddenConsistentEvaluation
             
             hce = HiddenConsistentEvaluation()
-            
+
             for variant in population:
                 # Create dummy paper for evaluation
                 from berb.validation.hidden_eval import PaperDocument
-                
+
                 paper = PaperDocument(
                     id=variant.id,
                     title=f"Experiment: {variant.design.description}",
                     abstract=str(variant.design),
                     content=str(variant.design),
                 )
-                
-                result = await hce.evaluate_for_search(paper)
-                variant.fitness = result.overall_score
+
+                try:
+                    result = await hce.evaluate_for_search(paper)
+                    variant.fitness = result.overall_score
+                except Exception as e:
+                    logger.warning(
+                        f"HCE evaluation failed for {variant.id}: {e}. "
+                        f"Using default fitness=5.0"
+                    )
+                    variant.fitness = 5.0  # Default neutral fitness
         else:
             # Use custom fitness function
             for variant in population:
-                variant.fitness = await fitness_fn(variant)
+                try:
+                    variant.fitness = await fitness_fn(variant)
+                except Exception as e:
+                    logger.warning(
+                        f"Fitness function failed for {variant.id}: {e}. "
+                        f"Using default fitness=5.0"
+                    )
+                    variant.fitness = 5.0
         
         # Log fitness stats
         fitnesses = [v.fitness for v in population]

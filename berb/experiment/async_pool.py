@@ -249,14 +249,15 @@ class AsyncExperimentPool:
         timeout: int,
     ) -> None:
         """Worker main loop - process queue until stopped.
-        
+
         Args:
             worker: Worker instance
             timeout: Timeout per experiment in seconds
         """
         worker_name = worker.worker_id
-        
+
         while self._running or not self._queue.empty():
+            design = None
             try:
                 # Get next experiment (non-blocking check)
                 try:
@@ -264,15 +265,15 @@ class AsyncExperimentPool:
                 except asyncio.QueueEmpty:
                     await asyncio.sleep(0.1)
                     continue
-                
+
                 # Update status
                 status = self._status[worker_name]
                 status.is_busy = True
                 status.current_experiment = design.id
                 status.last_heartbeat = time.time()
-                
+
                 logger.info(f"{worker_name} executing {design.id}")
-                
+
                 # Execute experiment with timeout
                 try:
                     result = await asyncio.wait_for(
@@ -282,7 +283,7 @@ class AsyncExperimentPool:
                     self._result_db[design.id] = result
                     status.completed_count += 1
                     logger.info(f"{worker_name} completed {design.id}")
-                    
+
                 except asyncio.TimeoutError:
                     logger.error(f"{worker_name} timeout on {design.id}")
                     result = ExperimentResult(
@@ -300,7 +301,7 @@ class AsyncExperimentPool:
                     )
                     self._result_db[design.id] = result
                     status.failed_count += 1
-                    
+
                 except Exception as e:
                     logger.exception(f"{worker_name} failed on {design.id}: {e}")
                     result = ExperimentResult(
@@ -318,23 +319,24 @@ class AsyncExperimentPool:
                     )
                     self._result_db[design.id] = result
                     status.failed_count += 1
-                
-                # Mark task done
-                self._queue.task_done()
-                
-                # Update status
-                status.is_busy = False
-                status.current_experiment = None
-                status.last_heartbeat = time.time()
-                
+
             except Exception as e:
                 logger.exception(f"{worker_name} loop error: {e}")
-                if not self._queue.empty():
-                    # Mark task done to avoid deadlock
+
+            finally:
+                # Always mark task done if we successfully got an item
+                if design is not None:
                     try:
                         self._queue.task_done()
                     except ValueError:
-                        pass
+                        pass  # Already marked done
+
+                # Update status
+                if worker_name in self._status:
+                    status = self._status[worker_name]
+                    status.is_busy = False
+                    status.current_experiment = None
+                    status.last_heartbeat = time.time()
     
     def get_pool_status(self) -> dict[str, Any]:
         """Get current pool status.
