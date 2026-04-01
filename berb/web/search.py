@@ -244,6 +244,73 @@ class WebSearchClient:
             source="searxng",
         )
 
+    def search_scholar(
+        self,
+        query: str,
+        *,
+        max_results: int | None = None,
+        scholar_proxy_api_key: str = "",
+    ) -> WebSearchResponse:
+        """Search for academic papers with automatic Scholar → SearXNG fallback.
+
+        Tries ``GoogleScholarClient`` first.  If it is unavailable or fails
+        (auto-disabled after repeated blocks), falls back to SearXNG using
+        the ``google_scholar`` engine.  If SearXNG is also unavailable, falls
+        back to Semantic Scholar via the main ``search()`` method.
+
+        Args:
+            query: Academic search query.
+            max_results: Maximum results to return.
+            scholar_proxy_api_key: ScraperAPI key for Scholar proxy (optional).
+
+        Returns:
+            WebSearchResponse tagged with the source that responded.
+        """
+        limit = max_results or self.max_results
+        t0 = time.monotonic()
+
+        # 1. Try Google Scholar (scholarly library)
+        try:
+            from .scholar import GoogleScholarClient
+            client = GoogleScholarClient(proxy_api_key=scholar_proxy_api_key)
+            if client.available:
+                papers = client.search(query, limit=limit)
+                if papers:
+                    results = [
+                        SearchResult(
+                            title=p.title,
+                            url=p.url,
+                            snippet=p.abstract[:300] if p.abstract else "",
+                            content=p.abstract,
+                            score=min(1.0, (p.citation_count or 0) / 1000),
+                            source="google_scholar",
+                        )
+                        for p in papers
+                    ]
+                    return WebSearchResponse(
+                        query=query,
+                        results=results,
+                        elapsed_seconds=time.monotonic() - t0,
+                        source="google_scholar",
+                    )
+        except ImportError:
+            pass
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("GoogleScholar search failed, trying SearXNG: %s", exc)
+
+        # 2. SearXNG fallback with google_scholar engine
+        if self.searxng_url:
+            try:
+                return self._search_searxng(
+                    query, limit, t0, engines=["google_scholar", "arxiv"]
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("SearXNG scholar fallback failed: %s", exc)
+
+        # 3. Last resort: standard web search (picks up Tavily / DDG)
+        logger.warning("All Scholar sources failed — falling back to generic web search")
+        return self.search(query, max_results=limit)
+
     def search_multi(
         self,
         queries: list[str],

@@ -328,23 +328,31 @@ class CascadingLLMClient:
     
     def get_stats(self) -> dict[str, Any]:
         """Get cascade statistics.
-        
+
         Returns:
             Dictionary with cascade statistics
         """
-        total_cascade_exits = sum(self._cascade_exits.values())
-        
+        # BUG-C fix: snapshot the dict before iterating.  Without this,
+        # concurrent chat() calls that hold _stats_lock and mutate _cascade_exits
+        # can cause "RuntimeError: dictionary changed size during iteration" here,
+        # because get_stats() is synchronous and cannot acquire the asyncio.Lock.
+        # dict() creates a shallow copy atomically under the CPython GIL, making
+        # subsequent iteration safe regardless of concurrent modifications.
+        exits = dict(self._cascade_exits)
+
+        total_cascade_exits = sum(exits.values())
+
         # Calculate average exit step
         if total_cascade_exits > 0:
             avg_exit = sum(
-                step * count for step, count in self._cascade_exits.items()
+                step * count for step, count in exits.items()
             ) / total_cascade_exits
         else:
             avg_exit = 0.0
-        
+
         return {
             "total_requests": self._total_requests,
-            "cascade_exits": dict(self._cascade_exits),
+            "cascade_exits": exits,
             "average_exit_step": avg_exit,
             "estimated_savings": self._total_saved,
         }

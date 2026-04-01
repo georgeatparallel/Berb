@@ -1,0 +1,112 @@
+# Preset: Food-AI Innovation / Product Development
+# Domain: AI-driven food product formulation, ingredient upscaling, sustainability,
+#         process optimisation in food manufacturing.
+# Inspired by PIPA's FIOS (Food Innovation OS) and EU grant projects.
+
+name: food-ai-innovation
+description: >
+  AI-driven food product innovation — covering ingredient optimisation, sustainable
+  formulation, sensory prediction, shelf-life modelling, and food process engineering.
+  Suited for FIOS-style platforms and EU-funded food technology research.
+tags:
+  - food-technology
+  - product-development
+  - sustainability
+  - formulation
+  - fios
+  - pipa
+  - eu-funded
+
+# Literature
+primary_sources:
+  - semantic_scholar
+  - openalex
+  - scopus
+search_engines:
+  - google_scholar
+  - core_ac_uk
+grey_sources:
+  - eu_cordis
+  - efsa_reports
+  - fao_reports
+  - industry_white_papers
+full_text_access:
+  - arxiv
+  - europe_pmc
+  - open_access_button
+
+# Model routing
+primary_model: claude-sonnet-4-6
+reasoning_model: claude-opus-4-6
+budget_model: claude-haiku-4-5-20251001
+fallback_models:
+  - gpt-4o
+
+# Pipeline (all 23 stages)
+enabled_stages:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  - 9
+  - 10
+  - 11
+  - 12
+  - 13
+  - 14
+  - 15
+  - 16
+  - 17
+  - 18
+  - 19
+  - 20
+  - 21
+  - 22
+  - 23
+
+stage_overrides:
+  3:  # Literature — food innovation databases
+    extra_sources: ["mintel_gnpd_open", "fao_food_data", "eu_cordis_projects"]
+  9:  # Experiment design — formulation trials
+    default_validation:
+      - sensory_panel_simulation
+      - shelf_life_accelerated
+      - nutritional_label_check
+  14: # Analysis — multivariate formulation analysis
+    stat_methods: ["mixture_design", "response_surface_methodology", "pls_regression"]
+  16: # Writing — EU grant report style awareness
+    emphasise_sustainability: true
+    include_lca_section: true
+
+# Experiment execution
+experiment_mode: docker
+experiment_frameworks:
+  - scikit-learn
+  - pandas
+  - scipy
+  - matplotlib
+  - statsmodels
+validation_methods:
+  - response_surface_methodology
+  - nutritional_profile_check
+  - cost_benefit_analysis
+
+# Paper writing
+paper_format: elsevier
+target_venue: Journal of Food Engineering
+max_pages: 14
+style_profile: food-technology
+citation_style: numeric
+
+# Quality
+min_literature_papers: 40
+min_quality_score: 7.0
+min_novelty_score: 6.0
+
+# Budget
+max_budget_usd: 2.00
+cost_optimization: balanced

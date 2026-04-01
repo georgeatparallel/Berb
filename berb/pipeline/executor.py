@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import json
 import logging
 import math
@@ -264,13 +265,22 @@ def execute_stage(
         _ = advance(stage, StageStatus.PENDING, TransitionEvent.START)
         executor = _STAGE_EXECUTORS[stage]
         prompts = PromptManager(config.prompts.custom_file or None)  # type: ignore[attr-defined]
+        # Detect at call-time whether this executor accepts a 'prompts' kwarg by
+        # inspecting its signature.  The previous approach caught TypeError and
+        # checked the exception message string, which is fragile (message text
+        # differs across Python versions) and silently masked real TypeErrors
+        # raised *inside* the executor (BUG-003).
         try:
+            sig = inspect.signature(executor)
+            _accepts_prompts = "prompts" in sig.parameters
+        except (ValueError, TypeError):
+            # inspect.signature can fail for C extensions; assume no prompts.
+            _accepts_prompts = False
+        if _accepts_prompts:
             result = executor(
                 stage_dir, run_dir, config, adapters, llm=llm, prompts=prompts
             )
-        except TypeError as exc:
-            if "unexpected keyword argument 'prompts'" not in str(exc):
-                raise
+        else:
             result = executor(stage_dir, run_dir, config, adapters, llm=llm)
     except Exception as exc:  # noqa: BLE001
         logger.exception("Stage %s failed", stage.name)
