@@ -1,0 +1,74 @@
+# EU Sovereign / GDPR-Compliant Preset
+# Research with European data sovereignty and GDPR compliance
+
+name: eu-sovereign
+description: "Research with European data sovereignty and GDPR compliance"
+tags:
+  - eu-sovereign
+  - gdpr
+  - privacy
+  - european
+
+# Literature search
+primary_sources:
+  - openalex
+  - semantic_scholar
+search_engines:
+  - google_scholar
+  - base_bielefeld
+  - core_ac_uk
+grey_sources:
+  - zenodo
+  - eu_publications
+  - hal_archives
+full_text_access:
+  - unpaywall
+  - core
+  - zenodo
+
+# Model routing - EU-hosted models preferred
+primary_model: "mistral-large-3"
+fallback_models:
+  - qwen3-max
+  - deepseek-v3.2
+reasoning_model: "mistral-large-3"
+budget_model: "qwen3-turbo"
+
+# Pipeline behavior
+enabled_stages:
+  - 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23
+stage_overrides:
+  1:  # TOPIC_INIT
+    gdpr_compliance: true
+    data_processing_agreement: true
+  9:  # EXPERIMENT_DESIGN
+    require_privacy_impact_assessment: true
+  17: # PAPER_DRAFT
+    require_data_availability_statement: true
+    require_ethics_statement: true
+
+# Experiment execution
+experiment_mode: "docker"
+experiment_frameworks:
+  - scipy
+  - numpy
+  - pandas
+validation_methods:
+  - statistical
+  - privacy_preserving
+
+# Paper writing
+paper_format: "custom"
+target_venue: null
+max_pages: 15
+style_profile: "auto"
+citation_style: "numeric"
+
+# Quality thresholds
+min_literature_papers: 40
+min_quality_score: 8.0
+min_novelty_score: 6.5
+
+# Budget
+max_budget_usd: 1.50
+cost_optimization: "balanced"

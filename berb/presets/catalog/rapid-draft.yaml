@@ -1,78 +1,57 @@
-# Preset: Rapid Draft
-# Minimal-cost, fast iteration — idea validation and pre-submission drafts.
+# Rapid Prototype / Quick Draft Preset
+# Fast, cheap first draft for brainstorming — not publication-ready
 
 name: rapid-draft
-description: >
-  Speed-optimised preset for fast idea validation and rough drafts. Skips
-  expensive stages (full review ensemble, reproducibility packaging) and
-  uses budget models wherever quality tolerance allows.
+description: "Fast, cheap first draft for brainstorming — not publication-ready"
 tags:
-  - rapid
+  - rapid-prototype
   - draft
-  - low-cost
-  - iteration
+  - brainstorming
+  - budget
 
-# Literature
+# Literature search - minimal
 primary_sources:
   - semantic_scholar
 search_engines:
   - google_scholar
-grey_sources:
-  - arxiv
+grey_sources: []
 full_text_access:
   - arxiv
 
-# Model routing — lean toward budget
-primary_model: claude-haiku-4-5-20251001
-reasoning_model: claude-sonnet-4-6
-budget_model: claude-haiku-4-5-20251001
-fallback_models: []
+# Model routing - budget models
+primary_model: "deepseek-v3.2"
+fallback_models:
+  - qwen3-turbo
+reasoning_model: "deepseek-v3.2"
+budget_model: "qwen3-turbo"
 
-# Pipeline — skip slow/expensive stages
+# Pipeline behavior - skip experiment and review stages
 enabled_stages:
-  - 1
-  - 2
-  - 3
-  - 4
-  - 5
-  - 7
-  - 8
-  - 9
-  - 10
-  - 12
-  - 14
-  - 16
-  - 17
-  - 18
-  - 20
-  - 23
-
+  - 1, 2, 3, 4, 5, 6, 7, 8, 16, 17, 22
 stage_overrides:
-  3:
-    max_papers: 20
-  17:
-    reviewer_count: 2
+  4:  # LITERATURE_COLLECT
+    max_papers: 15
+  17: # PAPER_DRAFT
+    draft_quality: "exploratory"
+    skip_revision: true
 
-# Experiment execution
-experiment_mode: sandbox
-experiment_frameworks:
-  - scikit-learn
-  - pandas
-validation_methods:
-  - basic_sanity_check
+# Experiment execution - simulated only
+experiment_mode: "simulated"
+experiment_frameworks: []
+validation_methods: []
 
 # Paper writing
-paper_format: arxiv
+paper_format: "markdown"
 target_venue: null
-max_pages: 8
-style_profile: auto
-citation_style: numeric
+max_pages: 6
+style_profile: "auto"
+citation_style: "author-year"
 
-# Quality (relaxed for speed)
-min_literature_papers: 20
-min_quality_score: 6.0
-min_novelty_score: 5.5
+# Quality thresholds - relaxed
+min_literature_papers: 10
+min_quality_score: 5.0
+min_novelty_score: 3.0
 
-# Budget
-max_budget_usd: 0.50
-cost_optimization: aggressive
+# Budget - minimal
+max_budget_usd: 0.15
+cost_optimization: "aggressive"

@@ -9,6 +9,24 @@ This module implements Socratic questioning for deep understanding:
 6. Meta-question the questioning
 
 Author: Georgios-Chrysovalantis Chatzivantsidis
+
+Usage:
+    # Option 1: Direct import (backward compatible)
+    from berb.reasoning import SocraticMethod
+    method = SocraticMethod(llm_client)
+    result = await method.execute(context)
+
+    # Option 2: With router (recommended for cost optimization)
+    from berb.reasoning import SocraticMethod
+    from berb.llm.extended_router import ExtendedNadirClawRouter
+    router = ExtendedNadirClawRouter(...)
+    method = SocraticMethod(router=router)
+    result = await method.execute(context)
+
+    # Option 3: Registry singleton (recommended)
+    from berb.reasoning.registry import get_reasoner
+    method = get_reasoner("socratic", router)
+    result = await method.execute(context)
 """
 
 from __future__ import annotations
@@ -24,6 +42,7 @@ from .base import (
     ReasoningResult,
     MethodType,
 )
+from .registry import ReasonerRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +97,8 @@ class SocraticMethod(ReasoningMethod):
 
     def __init__(
         self,
-        llm_client: Any = None,
+        router: Any = None,      # NEW: Primary (ExtendedNadirClawRouter)
+        llm_client: Any = None,  # DEPRECATED: Fallback only
         depth: int = 2,  # Questions per category
         **kwargs: Any,
     ):
@@ -86,7 +106,8 @@ class SocraticMethod(ReasoningMethod):
         Initialize Socratic method.
 
         Args:
-            llm_client: LLM client for questioning
+            router: LLM router for cost-optimized model selection (recommended)
+            llm_client: LLM client for questioning (fallback)
             depth: Questions per category (default: 2)
             **kwargs: Additional arguments for ReasoningMethod
         """
@@ -95,8 +116,10 @@ class SocraticMethod(ReasoningMethod):
             description="Socratic questioning for deep understanding",
             **kwargs,
         )
+        self.router = router
         self.llm_client = llm_client
         self.depth = depth
+        self._run_id: str | None = None  # For cost tracking
 
     async def execute(self, context: ReasoningContext) -> ReasoningResult:
         """
@@ -111,7 +134,10 @@ class SocraticMethod(ReasoningMethod):
         Raises:
             Exception: If questioning fails
         """
+        import uuid
+        
         start_time = time.time()
+        self._run_id = f"socratic-{uuid.uuid4().hex[:8]}"
 
         try:
             if not self.validate_context(context):
@@ -160,7 +186,7 @@ class SocraticMethod(ReasoningMethod):
 
             duration = time.time() - start_time
 
-            return ReasoningResult.success_result(
+            socratic_result = ReasoningResult.success_result(
                 MethodType.SOCRATIC,
                 output={
                     "original_question": question,
@@ -180,6 +206,11 @@ class SocraticMethod(ReasoningMethod):
                 duration_sec=duration,
                 model_used=context.metadata.get("model", "unknown"),
             )
+            
+            # Track cost if router supports it
+            self._track_cost(duration)
+            
+            return socratic_result
 
         except Exception as e:
             logger.exception("Socratic questioning failed")
@@ -330,3 +361,30 @@ Respond in JSON format:
                 logger.warning(f"Remaining questions identification failed: {e}")
 
         return ["Further empirical validation needed"]
+    
+    def _track_cost(self, duration_sec: float) -> None:
+        """Track cost for Socratic execution."""
+        if self.router is None or self._run_id is None:
+            return
+        
+        if hasattr(self.router, 'track_cost'):
+            # Estimate tokens for Socratic (6 categories × depth questions)
+            estimated_input = 400 * 6 * self.depth + 1000  # questions + synthesis
+            estimated_output = 300 * 6 * self.depth + 800
+            
+            self.router.track_cost(
+                method="socratic",
+                phase="all",
+                model=self.router.role_models.get("clarification", self.router.simple_model),
+                input_tokens=estimated_input,
+                output_tokens=estimated_output,
+                duration_ms=int(duration_sec * 1000),
+                run_id=self._run_id,
+            )
+
+
+# Auto-register with the reasoner registry
+ReasonerRegistry.register(
+    MethodType.SOCRATIC,
+    SocraticMethod,
+)

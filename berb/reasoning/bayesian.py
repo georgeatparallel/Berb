@@ -20,11 +20,16 @@ Applications: Clinical trials, intelligence analysis, model selection
 # Author: Georgios-Chrysovalantis Chatzivantsidis
 
 Usage:
+    # Option 1: Direct import (for one-off usage)
     from berb.reasoning import BayesianMethod
-    
     method = BayesianMethod(router)
     result = await method.execute(context)
-    
+
+    # Option 2: Registry singleton (recommended for reuse)
+    from berb.reasoning.registry import get_reasoner
+    method = get_reasoner("bayesian", router)
+    result = await method.execute(context)
+
     # Access results
     posteriors = result.output["posteriors"]
     sensitivity = result.output["sensitivity"]
@@ -42,6 +47,7 @@ from berb.reasoning.base import (
     ReasoningMethod,
     ReasoningResult,
 )
+from berb.reasoning.registry import ReasonerRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -142,9 +148,10 @@ class BayesianMethod(ReasoningMethod):
     ):
         """
         Initialize Bayesian reasoning method.
-        
+
         Args:
             router: LLM model router (provides get_provider_for_role)
+            llm_client: LLM client for direct API calls (backward compatibility)
             name: Human-readable name
             description: Description of the method
         """
@@ -155,6 +162,7 @@ class BayesianMethod(ReasoningMethod):
             ),
         )
         self.router = router
+        self.llm_client = llm_client
     
     async def execute(self, context: ReasoningContext) -> ReasoningResult:
         """
@@ -598,10 +606,17 @@ Output format (JSON):
                                 h_data = ev_data[h.name]
                                 ev.likelihood_given_h[h.name] = h_data.get("p_e_given_h", 0.5)
                                 ev.likelihood_given_not_h[h.name] = h_data.get("p_e_given_not_h", 0.5)
-                
+
                 return evidence
             except (json.JSONDecodeError, ValueError):
                 pass
-        
+
         # Fallback: neutral likelihoods
         return evidence
+
+
+# Auto-register with the reasoner registry
+ReasonerRegistry.register(
+    MethodType.BAYESIAN,
+    BayesianMethod,
+)

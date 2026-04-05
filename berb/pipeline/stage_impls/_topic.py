@@ -35,6 +35,7 @@ def _execute_topic_init(
     prompts: PromptManager | None = None,
 ) -> StageResult:
     topic = config.research.topic
+    _original_topic = topic  # Store for auto-refine replacement
     domains = (
         ", ".join(config.research.domains) if config.research.domains else "general"
     )
@@ -164,8 +165,9 @@ Derived from `goal.md` for topic: {config.research.topic}
 """
     (stage_dir / "problem_tree.md").write_text(body, encoding="utf-8")
 
-    # IMP-35: Topic/title quality pre-evaluation
+    # IMP-35: Topic/title quality pre-evaluation + auto-refinement
     # Quick LLM check: is the topic well-scoped for a conference paper?
+    # If score < 5, automatically optimize the topic
     if llm is not None:
         try:
             _eval_resp = llm.chat(
@@ -191,11 +193,23 @@ Derived from `goal.md` for topic: {config.research.topic}
             if isinstance(_eval_data, dict):
                 overall = _eval_data.get("overall", 10)
                 if isinstance(overall, (int, float)) and overall < 5:
-                    logger.warning(
-                        "IMP-35: Topic quality score %s/10 — consider refining: %s",
-                        overall,
-                        _eval_data.get("suggestion", ""),
-                    )
+                    _suggestion = _eval_data.get("suggestion", "").strip()
+                    if _suggestion:
+                        logger.warning(
+                            "IMP-35: Topic quality score %s/10 — auto-optimizing to: %s",
+                            overall,
+                            _suggestion,
+                        )
+                        # Auto-refine: update config with improved topic
+                        config.research.topic = _suggestion
+                        # Re-write goal.md with optimized topic
+                        _goal_path = run_dir / "goal.md"
+                        if _goal_path.exists():
+                            _goal_content = _goal_path.read_text(encoding="utf-8")
+                            _goal_content = _goal_content.replace(
+                                _original_topic, _suggestion
+                            )
+                            _goal_path.write_text(_goal_content, encoding="utf-8")
                 else:
                     logger.info("IMP-35: Topic quality score %s/10", overall)
                 (stage_dir / "topic_evaluation.json").write_text(

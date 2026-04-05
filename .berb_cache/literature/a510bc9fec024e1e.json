@@ -2,7 +2,7 @@
   "query": "Test research topic",
   "source": "openalex",
   "limit": 15,
-  "timestamp": 1774735281.8774045,
+  "timestamp": 1774779499.366303,
   "papers": [
     {
       "paper_id": "oalex-W2582377764",

@@ -1,0 +1,86 @@
+# Research-Grounded / Search-Heavy Preset
+# Maximum literature coverage with search-augmented reasoning
+
+name: research-grounded
+description: "Maximum literature coverage with search-augmented reasoning"
+tags:
+  - research-grounded
+  - search-heavy
+  - comprehensive
+  - literature-intensive
+
+# Literature search - exhaustive
+primary_sources:
+  - semantic_scholar
+  - openalex
+  - pubmed
+  - arxiv
+search_engines:
+  - google_scholar
+  - arxiv
+  - pubmed
+  - base_bielefeld
+  - core_ac_uk
+grey_sources:
+  - arxiv_preprints
+  - openreview
+  - ssrn
+  - zenodo
+  - conference_proceedings
+full_text_access:
+  - arxiv
+  - openreview
+  - pmc
+  - unpaywall
+
+# Model routing - search-native primary
+primary_model: "sonar-pro"
+fallback_models:
+  - claude-sonnet-4-6
+  - gpt-4o
+reasoning_model: "claude-opus-4-6"
+budget_model: "gemini-2.5-flash"
+
+# Pipeline behavior
+enabled_stages:
+  - 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23
+stage_overrides:
+  4:  # LITERATURE_COLLECT
+    search_depth: "exhaustive"
+    citation_traversal: true
+    max_papers: 400
+  6:  # KNOWLEDGE_EXTRACT
+    extract_figures: true
+    extract_tables: true
+    extract_methods: true
+  7:  # SYNTHESIS
+    reasoning_method: "research"
+    max_synthesis_iterations: 5
+
+# Experiment execution
+experiment_mode: "docker"
+experiment_frameworks:
+  - pytorch
+  - scipy
+  - numpy
+  - pandas
+validation_methods:
+  - statistical
+  - literature_comparison
+  - reproducibility_check
+
+# Paper writing
+paper_format: "article"
+target_venue: null
+max_pages: 20
+style_profile: "auto"
+citation_style: "author-year"
+
+# Quality thresholds
+min_literature_papers: 200
+min_quality_score: 8.5
+min_novelty_score: 7.0
+
+# Budget
+max_budget_usd: 3.00
+cost_optimization: "balanced"

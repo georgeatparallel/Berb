@@ -1,0 +1,88 @@
+# Social Sciences Preset
+# Psychology, sociology, political science, economics, education
+
+name: social-sciences
+description: "Psychology, sociology, political science, economics, education"
+tags:
+  - social-sciences
+  - psychology
+  - sociology
+  - economics
+  - apa
+
+# Literature search
+primary_sources:
+  - semantic_scholar
+  - openalex
+  - jstor
+search_engines:
+  - google_scholar
+  - jstor
+  - ssrn
+  - eric
+grey_sources:
+  - ssrn_preprints
+  - nber_working_papers
+  - world_bank_reports
+  - oecd_papers
+full_text_access:
+  - unpaywall
+  - ssrn
+
+# Model routing
+primary_model: "claude-sonnet-4-6"
+fallback_models:
+  - gpt-4o
+  - deepseek-v3.2
+reasoning_model: "claude-opus-4-6"
+budget_model: "gemini-2.5-flash"
+
+# Pipeline behavior
+enabled_stages:
+  - 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23
+stage_overrides:
+  5:  # LITERATURE_SCREEN
+    screen_criteria:
+      - study_design
+      - sample_size
+      - methodology
+      - relevance
+  9:  # EXPERIMENT_DESIGN
+    require_irb_statement: true
+    require_power_analysis: true
+    statistical_framework: "frequentist"
+  14: # RESULT_ANALYSIS
+    require_effect_sizes: true
+    require_multiple_comparisons_correction: true
+  17: # PAPER_DRAFT
+    require_limitations_section: true
+    require_implications_section: true
+
+# Experiment execution
+experiment_mode: "sandbox"
+experiment_frameworks:
+  - statsmodels
+  - scipy
+  - pandas
+  - sklearn
+validation_methods:
+  - statistical
+  - robustness_checks
+  - sensitivity_analysis
+  - qualitative_coding
+
+# Paper writing
+paper_format: "apa"
+target_venue: null
+max_pages: 30
+style_profile: "auto"
+citation_style: "author-year"
+
+# Quality thresholds
+min_literature_papers: 50
+min_quality_score: 7.5
+min_novelty_score: 6.0
+
+# Budget
+max_budget_usd: 1.50
+cost_optimization: "balanced"

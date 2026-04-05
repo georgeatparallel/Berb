@@ -1,19 +1,15 @@
-# Preset: Biomedical Research
-# Domain: Clinical, translational, and computational biomedical science.
+# Biomedical Research Preset
+# Clinical research, drug discovery, genomics, epidemiology
 
 name: biomedical
-description: >
-  Comprehensive biomedical research pipeline — covering clinical studies,
-  translational medicine, genomics, proteomics, and computational biology.
-  Targets journals such as Nature Medicine, PLOS Medicine, Bioinformatics.
+description: "Clinical research, drug discovery, genomics, epidemiology"
 tags:
   - biomedical
   - clinical
+  - medicine
   - genomics
-  - translational
-  - life-sciences
 
-# Literature
+# Literature search
 primary_sources:
   - pubmed
   - semantic_scholar
@@ -21,79 +17,71 @@ primary_sources:
 search_engines:
   - pubmed
   - google_scholar
-grey_sources:
-  - bioarxiv
-  - medrxiv
   - clinicaltrials_gov
+  - who_ictrp
+grey_sources:
+  - medrxiv
+  - biorxiv
+  - clinicaltrials
+  - who_reports
 full_text_access:
-  - pubmed_central
-  - europe_pmc
-  - arxiv
+  - pmc
+  - unpaywall
+  - biorxiv
 
 # Model routing
-primary_model: claude-sonnet-4-6
-reasoning_model: claude-opus-4-6
-budget_model: claude-haiku-4-5-20251001
-fallback_models: []
+primary_model: "claude-sonnet-4-6"
+fallback_models:
+  - gpt-4o
+  - gemini-2.5-pro
+reasoning_model: "claude-opus-4-6"
+budget_model: "gemini-2.5-flash"
 
-# Pipeline (all 23 stages)
+# Pipeline behavior
 enabled_stages:
-  - 1
-  - 2
-  - 3
-  - 4
-  - 5
-  - 6
-  - 7
-  - 8
-  - 9
-  - 10
-  - 11
-  - 12
-  - 13
-  - 14
-  - 15
-  - 16
-  - 17
-  - 18
-  - 19
-  - 20
-  - 21
-  - 22
-  - 23
-
+  - 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23
 stage_overrides:
-  9:
-    default_validation: ["cohort_study", "case_control", "rct_simulation"]
-  14:
-    stat_methods: ["kaplan_meier", "cox_regression", "mixed_effects", "meta_analysis"]
+  5:  # LITERATURE_SCREEN
+    require_prisma: true
+    screen_criteria:
+      - study_type
+      - population
+      - intervention
+      - outcome
+  9:  # EXPERIMENT_DESIGN
+    require_power_analysis: true
+    require_ethics_statement: true
+  14: # RESULT_ANALYSIS
+    require_effect_sizes: true
+    require_confidence_intervals: true
+  18: # PEER_REVIEW
+    review_format: "consort"
 
 # Experiment execution
-experiment_mode: docker
+experiment_mode: "simulated"
 experiment_frameworks:
-  - biopython
-  - scanpy
   - scipy
-  - lifelines
   - statsmodels
-  - pandas
+  - lifelines
+  - scanpy
 validation_methods:
-  - statistical_significance
-  - effect_size
-  - confidence_intervals
+  - statistical
+  - cross_validation
+  - sensitivity_analysis
+  - meta_analysis
 
 # Paper writing
-paper_format: plos
-target_venue: PLOS Medicine
-max_pages: 14
-style_profile: life-sciences
-citation_style: numeric
+paper_format: "nature"
+target_venue: null
+max_pages: 15
+style_profile: "auto"
+citation_style: "numeric"
 
-# Quality
+# Quality thresholds
 min_literature_papers: 60
-min_quality_score: 8.0
-min_novelty_score: 7.0
+min_quality_score: 8.5
+min_novelty_score: 6.5
 
 # Budget
-max_budget_usd: 2.50
-cost_optimization: quality-first
+max_budget_usd: 2.00
+cost_optimization: "quality-first"

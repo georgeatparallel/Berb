@@ -1,0 +1,79 @@
+# Humanities / Qualitative Research Preset
+# Philosophy, history, literary criticism, cultural studies, qualitative research
+
+name: humanities
+description: "Philosophy, history, literary criticism, cultural studies, qualitative research"
+tags:
+  - humanities
+  - philosophy
+  - history
+  - qualitative
+  - chicago
+
+# Literature search
+primary_sources:
+  - openalex
+  - jstor
+  - semantic_scholar
+search_engines:
+  - google_scholar
+  - jstor
+  - philpapers
+  - project_muse
+grey_sources:
+  - ssrn_preprints
+  - academia_edu
+  - hathitrust
+full_text_access:
+  - unpaywall
+  - jstor_open
+
+# Model routing
+primary_model: "claude-opus-4-6"
+fallback_models:
+  - gpt-4o
+  - claude-sonnet-4-6
+reasoning_model: "claude-opus-4-6"
+budget_model: "gemini-2.5-flash"
+
+# Pipeline behavior - skip experiment execution stages
+enabled_stages:
+  - 1, 2, 3, 4, 5, 6, 7, 8, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23
+stage_overrides:
+  7:  # SYNTHESIS
+    reasoning_method: "dialectical"
+    require_theoretical_framework: true
+  8:  # HYPOTHESIS_GEN
+    output_type: "thesis_argument"
+    reasoning_method: "socratic"
+  17: # PAPER_DRAFT
+    writing_style: "argumentative"
+    require_theoretical_grounding: true
+    allow_first_person: true
+
+# Experiment execution
+experiment_mode: "sandbox"
+experiment_frameworks:
+  - nltk
+  - spacy
+  - pandas
+validation_methods:
+  - thematic_analysis
+  - discourse_analysis
+  - close_reading
+
+# Paper writing
+paper_format: "chicago"
+target_venue: null
+max_pages: 30
+style_profile: "auto"
+citation_style: "footnote"
+
+# Quality thresholds
+min_literature_papers: 30
+min_quality_score: 8.0
+min_novelty_score: 6.0
+
+# Budget
+max_budget_usd: 2.00
+cost_optimization: "quality-first"

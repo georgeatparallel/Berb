@@ -30,11 +30,12 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
 from berb.memory.shared_memory import SharedResearchMemory, get_shared_memory
+from berb.utils.time import utc_timestamp
 
 logger = logging.getLogger(__name__)
 
@@ -191,9 +192,9 @@ class CodeBuilderAgent:
             if template:
                 # Customize template with specification
                 code = self._customize_template(template, specification)
-                
-                # Store snapshot
-                version = f"v{datetime.now().timestamp()}"
+
+                # Store snapshot (use UTC timestamp for uniqueness)
+                version = f"v{utc_timestamp()}"
                 self._memory.store_code_snapshot(
                     version, code, "code_builder_agent",
                     metadata={"specification": specification},
@@ -650,12 +651,12 @@ class SelfCorrectingExecutor:
         max_iterations: int = 5,
     ) -> None:
         """Initialize self-correcting executor.
-        
+
         Args:
             project_id: Project identifier for shared memory
             max_iterations: Maximum Plan-Act-Reflect-Revise cycles
         """
-        self._project_id = project_id or f"sim_{datetime.now().timestamp()}"
+        self._project_id = project_id or f"sim_{utc_timestamp()}"
         self._memory = get_shared_memory(self._project_id)
         self._max_iterations = max_iterations
         
@@ -690,44 +691,44 @@ class SelfCorrectingExecutor:
         Args:
             prompt: Natural language description
             domain: Domain (physics, mechanics, etc.)
-            
+
         Returns:
             SimulationResult
         """
-        start_time = datetime.now()
-        
+        start_time = datetime.now(timezone.utc)
+
         logger.info(f"Starting self-correcting simulation: {prompt[:50]}...")
-        
+
         # Plan phase: Clarify input
         self._memory.update_agent_status("clarifier_agent", "working", "clarify_prompt")
         specification = await self._clarifier.clarify(prompt, domain)
         self._memory.update_agent_status("clarifier_agent", "idle")
-        
+
         # Iterative Plan-Act-Reflect-Revise loop
         errors_encountered: list[str] = []
         fixes_applied: list[str] = []
         current_code: str | None = None
         execution_output: str | None = None
-        
+
         for iteration in range(1, self._max_iterations + 1):
             logger.info(f"Iteration {iteration}/{self._max_iterations}")
-            
+
             # Act phase 1: Generate/revise code
             self._memory.update_agent_status("code_builder_agent", "working", "generate_code")
             current_code = await self._code_builder.generate_code(specification)
             self._memory.update_agent_status("code_builder_agent", "idle")
-            
+
             # Act phase 2: Execute
             self._memory.update_agent_status("executor_agent", "working", "execute_simulation")
             exec_result = await self._executor.execute(current_code)
             self._memory.update_agent_status("executor_agent", "idle")
-            
+
             execution_output = exec_result.get("output", "")
-            
+
             # Reflect phase: Check success
             if exec_result["success"]:
                 logger.info(f"Simulation succeeded at iteration {iteration}")
-                
+
                 # Generate report
                 result = SimulationResult(
                     success=True,
@@ -737,7 +738,7 @@ class SelfCorrectingExecutor:
                     execution_output=execution_output,
                     errors_encountered=errors_encountered,
                     fixes_applied=fixes_applied,
-                    total_time_sec=(datetime.now() - start_time).total_seconds(),
+                    total_time_sec=(datetime.now(timezone.utc) - start_time).total_seconds(),
                     memory_used=True,
                 )
                 
@@ -776,7 +777,7 @@ class SelfCorrectingExecutor:
         
         # Max iterations reached without success
         logger.warning(f"Simulation failed after {self._max_iterations} iterations")
-        
+
         return SimulationResult(
             success=False,
             status=SimulationStatus.FAILED,
@@ -785,7 +786,7 @@ class SelfCorrectingExecutor:
             execution_output=execution_output,
             errors_encountered=errors_encountered,
             fixes_applied=fixes_applied,
-            total_time_sec=(datetime.now() - start_time).total_seconds(),
+            total_time_sec=(datetime.now(timezone.utc) - start_time).total_seconds(),
             memory_used=True,
         )
     

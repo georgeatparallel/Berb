@@ -17,11 +17,16 @@ Key Features:
 # Author: Georgios-Chrysovalantis Chatzivantsidis
 
 Usage:
+    # Option 1: Direct import (for one-off usage)
     from berb.reasoning.multi_perspective import MultiPerspectiveMethod
-    
     method = MultiPerspectiveMethod(router)
     result = await method.execute(context)
-    
+
+    # Option 2: Registry singleton (recommended for reuse)
+    from berb.reasoning.registry import get_reasoner
+    method = get_reasoner("multi_perspective", router)
+    result = await method.execute(context)
+
     # Access results
     perspectives = result.output["perspectives"]
     scores = result.output["scores"]
@@ -42,6 +47,7 @@ from berb.reasoning.base import (
     ReasoningMethod,
     ReasoningResult,
 )
+from berb.reasoning.registry import ReasonerRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -134,10 +140,11 @@ class MultiPerspectiveMethod(ReasoningMethod):
     """
     
     method_type = MethodType.MULTI_PERSPECTIVE
-    
+
     def __init__(
         self,
         router: Any | None = None,
+        llm_client: Any | None = None,  # Backward compatibility
         parallel: bool = True,
         top_k: int = 2,
         name: str | None = None,
@@ -145,9 +152,11 @@ class MultiPerspectiveMethod(ReasoningMethod):
     ):
         """
         Initialize multi-perspective method.
-        
+
         Args:
-            router: LLM model router (provides get_provider_for_role)
+            router: LLM model router (provides get_provider_for_role).
+                    Use ExtendedNadirClawRouter for cost-optimized routing.
+            llm_client: LLM client for direct API calls (backward compatibility)
             parallel: Run perspectives in parallel (default: True)
             top_k: Number of top candidates to return (default: 2)
             name: Human-readable name
@@ -161,8 +170,10 @@ class MultiPerspectiveMethod(ReasoningMethod):
             ),
         )
         self.router = router
+        self.llm_client = llm_client
         self.parallel = parallel
         self.top_k = top_k
+        self._run_id: str | None = None  # For cost tracking
     
     async def execute(self, context: ReasoningContext) -> ReasoningResult:
         """
@@ -193,21 +204,25 @@ class MultiPerspectiveMethod(ReasoningMethod):
             )
         
         try:
+            # Generate start time and run ID for cost tracking
+            import uuid
+            self._run_id = f"mp-{uuid.uuid4().hex[:8]}"
+            
             # Generate perspectives
             perspectives = await self._generate_perspectives(problem)
-            
+
             # Critique and score
             scores = await self._critique_and_score(perspectives, problem)
-            
+
             # Select top-k candidates
             top_candidates = self._select_top_candidates(perspectives, scores, self.top_k)
-            
+
             # Generate steel-man arguments for weakest
             await self._generate_steel_man(perspectives, scores)
-            
+
             elapsed = time.monotonic() - t0
-            
-            return ReasoningResult.success_result(
+
+            result = ReasoningResult.success_result(
                 method_type=self.method_type,
                 output={
                     "perspectives": [p.to_dict() for p in perspectives],
@@ -220,8 +235,14 @@ class MultiPerspectiveMethod(ReasoningMethod):
                     "parallel": self.parallel,
                     "top_k": self.top_k,
                     "duration_sec": elapsed,
+                    "run_id": self._run_id,
                 },
             )
+            
+            # Track cost if router supports it
+            self._track_cost(elapsed)
+            
+            return result
             
         except Exception as e:
             self._logger.error("Multi-perspective analysis failed: %s", e)
@@ -544,21 +565,53 @@ What is the most compelling case for this perspective, even if you disagree?"""
         
         response = await provider.complete(prompt)
         weakest_score.steel_man = response.content
+    
+    def _track_cost(self, duration_sec: float) -> None:
+        """Track cost for multi-perspective execution.
+        
+        Args:
+            duration_sec: Execution duration in seconds
+        """
+        if self.router is None or self._run_id is None:
+            return
+        
+        # Check if router has cost tracking (ExtendedNadirClawRouter)
+        if hasattr(self.router, 'track_cost'):
+            # Estimate tokens (rough estimate: 1 perspective ≈ 500 tokens)
+            estimated_input = 500 * 4  # 4 perspectives
+            estimated_output = 300 * 4
+            
+            self.router.track_cost(
+                method="multi_perspective",
+                phase="all",
+                model=self.router.role_models.get("constructive", self.router.mid_model),
+                input_tokens=estimated_input,
+                output_tokens=estimated_output,
+                duration_ms=int(duration_sec * 1000),
+                run_id=self._run_id,
+            )
 
 
 class _FallbackProvider:
     """Fallback LLM provider when router is not configured."""
-    
+
     model = "fallback"
-    
+
     async def complete(self, prompt: str) -> Any:
         """Return mock response."""
         from dataclasses import dataclass
-        
+
         @dataclass
         class MockResponse:
             content: str = '{"solution": "Fallback solution", "key_insights": ["fallback"]}'
             tokens: int = 0
             cost: float = 0.0
-        
+
         return MockResponse()
+
+
+# Auto-register with the reasoner registry
+ReasonerRegistry.register(
+    MethodType.MULTI_PERSPECTIVE,
+    MultiPerspectiveMethod,
+)

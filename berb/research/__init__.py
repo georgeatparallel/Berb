@@ -2,6 +2,9 @@
 
 Parallelized agentic tree search for exploring multiple research directions.
 Open-ended discovery for template-free exploration.
+Research gap analysis with multi-perspective reasoning.
+
+# Author: Georgios-Chrysovalantis Chatzivantsidis
 """
 
 from .tree_search import (
@@ -30,8 +33,18 @@ from .open_ended_discovery import (
     NoveltyVerifier,
     run_open_ended_discovery,
 )
+from .gap_analysis import (
+    ResearchGapAnalyzer,
+    GapAnalysisResult,
+    ResearchGap,
+    GapType,
+    GapAnalysisConfig,
+    GapToHypothesisConverter,
+    analyze_research_gaps,
+)
 
 __all__ = [
+    # Tree search
     "ParallelizedTreeSearch",
     "SearchConfig",
     "SearchPath",
@@ -39,12 +52,14 @@ __all__ = [
     "BranchStatus",
     "DecisionPoint",
     "explore_research_space",
+    # Idea scoring
     "IdeaQualityScorer",
     "ScoringConfig",
     "ResearchIdea",
     "ScoredIdea",
     "NoveltyLevel",
     "score_and_rank_ideas",
+    # Open-ended discovery
     "OpenEndedDiscoveryAgent",
     "DiscoveryNode",
     "DiscoveryResult",
@@ -52,4 +67,12 @@ __all__ = [
     "ExperimentManagerAgent",
     "NoveltyVerifier",
     "run_open_ended_discovery",
+    # Gap analysis
+    "ResearchGapAnalyzer",
+    "GapAnalysisResult",
+    "ResearchGap",
+    "GapType",
+    "GapAnalysisConfig",
+    "GapToHypothesisConverter",
+    "analyze_research_gaps",
 ]

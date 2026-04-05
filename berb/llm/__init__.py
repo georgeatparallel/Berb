@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Union
 
+# Re-export LLMProvider enum and utilities for cross-model review
+from berb.llm.client import LLMProvider, get_provider_from_model, validate_model_for_provider
+
 if TYPE_CHECKING:
     from berb.config import RCConfig
     from berb.llm.acp_client import ACPClient

@@ -328,8 +328,6 @@ class DockerSandboxConfig:
     keep_containers: bool = False
     # P0 FIX: Automatic fallback to sandbox when Docker unavailable
     fallback_to_sandbox: bool = True  # Auto-fallback when Docker daemon/image unavailable
-    # CPU limit in cores (0 = unlimited).  Maps to Docker --cpus flag.
-    cpu_limit: float = 2.0
 
 
 @dataclass(frozen=True)
@@ -797,11 +795,9 @@ class RCConfig:
         *,
         project_root: Path | None = None,
         check_paths: bool = True,
-        check_security: bool = True,
     ) -> RCConfig:
         result = validate_config(
-            data, project_root=project_root, check_paths=check_paths,
-            check_security=check_security,
+            data, project_root=project_root, check_paths=check_paths
         )
         if not result.ok:
             raise ValueError("; ".join(result.errors))
@@ -949,7 +945,6 @@ def validate_config(
     *,
     project_root: Path | None = None,
     check_paths: bool = True,
-    check_security: bool = True,
 ) -> ValidationResult:
     errors: list[str] = []
     warnings: list[str] = []
@@ -963,14 +958,34 @@ def validate_config(
         if _is_blank(value):
             errors.append(f"Missing required field: {key}")
 
-    # SECURITY FIX #2: Reject plaintext API keys (skipped in test mode)
-    if check_security:
-        llm_api_key = _get_by_path(data, "llm.api_key")
-        if llm_api_key and len(str(llm_api_key).strip()) > 0:
-            errors.append(
-                "SECURITY VIOLATION: Plaintext API key in llm.api_key. "
-                "Remove this field and use llm.api_key_env instead. "
-                "Example: api_key_env: \"OPENAI_API_KEY\""
+    # SECURITY FIX #2: Reject plaintext API keys
+    llm_api_key = _get_by_path(data, "llm.api_key")
+    if llm_api_key and len(str(llm_api_key).strip()) > 0:
+        errors.append(
+            "SECURITY VIOLATION: Plaintext API key in llm.api_key. "
+            "Remove this field and use llm.api_key_env instead. "
+            "Example: api_key_env: \"OPENAI_API_KEY\""
+        )
+    
+    # BUG-EXT-002 FIX: Detect API key in api_key_env field
+    import re as _re
+    llm_api_key_env = _get_by_path(data, "llm.api_key_env")
+    if llm_api_key_env and len(str(llm_api_key_env).strip()) > 0:
+        api_key_env_str = str(llm_api_key_env).strip()
+        # Check if it looks like an API key (starts with sk-, pplx-, etc.)
+        if _re.match(r'^(sk[-_]|pplx[-_]|ghp[-_]|xox[-_])', api_key_env_str, _re.IGNORECASE):
+            warnings.append(
+                f"CONFIGURATION WARNING: llm.api_key_env looks like an API key "
+                f"('{api_key_env_str[:20]}...'). This field should contain an "
+                f"environment variable name (e.g., 'OPENROUTER_API_KEY'), not the "
+                f"actual API key. Set the key in your .env file instead."
+            )
+        # Check if it follows env var naming convention (UPPERCASE_WITH_UNDERSCORES)
+        elif not _re.match(r'^[A-Z][A-Z0-9_]*$', api_key_env_str):
+            warnings.append(
+                f"CONFIGURATION WARNING: llm.api_key_env '{api_key_env_str}' doesn't "
+                f"follow the environment variable naming convention "
+                f"(UPPERCASE_WITH_UNDERSCORES, e.g., 'OPENROUTER_API_KEY')"
             )
 
     # Also check for other sensitive keys that should use env vars

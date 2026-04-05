@@ -10,6 +10,24 @@ This module implements scientific method reasoning:
 7. Iteration (refine hypothesis)
 
 Author: Georgios-Chrysovalantis Chatzivantsidis
+
+Usage:
+    # Option 1: Direct import (backward compatible)
+    from berb.reasoning import ScientificMethod
+    method = ScientificMethod(llm_client)
+    result = await method.execute(context)
+
+    # Option 2: With router (recommended for cost optimization)
+    from berb.reasoning import ScientificMethod
+    from berb.llm.extended_router import ExtendedNadirClawRouter
+    router = ExtendedNadirClawRouter(...)
+    method = ScientificMethod(router=router)
+    result = await method.execute(context)
+
+    # Option 3: Registry singleton (recommended)
+    from berb.reasoning.registry import get_reasoner
+    method = get_reasoner("scientific", router)
+    result = await method.execute(context)
 """
 
 from __future__ import annotations
@@ -25,6 +43,7 @@ from .base import (
     ReasoningResult,
     MethodType,
 )
+from .registry import ReasonerRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +89,12 @@ class ScientificMethod(ReasoningMethod):
     Implements the scientific method for hypothesis-driven inquiry.
 
     Usage:
-        scientific = ScientificMethod(llm_client)
+        # With router (recommended)
+        scientific = ScientificMethod(router=router)
+        result = await scientific.execute(context)
+
+        # Backward compatible (llm_client fallback)
+        scientific = ScientificMethod(llm_client=llm_client)
         result = await scientific.execute(context)
 
         # Access results
@@ -82,14 +106,16 @@ class ScientificMethod(ReasoningMethod):
 
     def __init__(
         self,
-        llm_client: Any = None,
+        router: Any = None,      # NEW: Primary (ExtendedNadirClawRouter)
+        llm_client: Any = None,  # DEPRECATED: Fallback only
         **kwargs: Any,
     ):
         """
         Initialize scientific method.
 
         Args:
-            llm_client: LLM client for reasoning
+            router: LLM router for cost-optimized model selection (recommended)
+            llm_client: LLM client for reasoning (fallback)
             **kwargs: Additional arguments for ReasoningMethod
         """
         super().__init__(
@@ -97,7 +123,9 @@ class ScientificMethod(ReasoningMethod):
             description="Scientific method: observation → hypothesis → prediction → test → conclusion",
             **kwargs,
         )
+        self.router = router
         self.llm_client = llm_client
+        self._run_id: str | None = None  # For cost tracking
 
     async def execute(self, context: ReasoningContext) -> ReasoningResult:
         """
@@ -112,7 +140,10 @@ class ScientificMethod(ReasoningMethod):
         Raises:
             Exception: If reasoning fails
         """
+        import uuid
+        
         start_time = time.time()
+        self._run_id = f"scientific-{uuid.uuid4().hex[:8]}"
 
         try:
             if not self.validate_context(context):
@@ -159,7 +190,7 @@ class ScientificMethod(ReasoningMethod):
 
             duration = time.time() - start_time
 
-            return ReasoningResult.success_result(
+            scientific_result = ReasoningResult.success_result(
                 MethodType.SCIENTIFIC,
                 output={
                     "observation": observation,
@@ -183,6 +214,11 @@ class ScientificMethod(ReasoningMethod):
                 duration_sec=duration,
                 model_used=context.metadata.get("model", "unknown"),
             )
+            
+            # Track cost if router supports it
+            self._track_cost(duration)
+            
+            return scientific_result
 
         except Exception as e:
             logger.exception("Scientific reasoning failed")
@@ -430,3 +466,30 @@ Respond in JSON format:
             "Test boundary conditions",
             "Explore underlying mechanisms",
         ]
+    
+    def _track_cost(self, duration_sec: float) -> None:
+        """Track cost for scientific execution."""
+        if self.router is None or self._run_id is None:
+            return
+        
+        if hasattr(self.router, 'track_cost'):
+            # Estimate tokens for scientific method (5 phases)
+            estimated_input = 600 + 800 + 600 + 1000 + 800  # observation→hypothesis→prediction→experiment→analysis
+            estimated_output = 500 + 600 + 400 + 800 + 600
+            
+            self.router.track_cost(
+                method="scientific",
+                phase="all",
+                model=self.router.role_models.get("hypothesis", self.router.complex_model),
+                input_tokens=estimated_input,
+                output_tokens=estimated_output,
+                duration_ms=int(duration_sec * 1000),
+                run_id=self._run_id,
+            )
+
+
+# Auto-register with the reasoner registry
+ReasonerRegistry.register(
+    MethodType.SCIENTIFIC,
+    ScientificMethod,
+)

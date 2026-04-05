@@ -2,7 +2,7 @@
   "query": "Integration test",
   "source": "openalex",
   "limit": 15,
-  "timestamp": 1774735668.4878218,
+  "timestamp": 1774779565.1355252,
   "papers": [
     {
       "paper_id": "oalex-W2110603299",

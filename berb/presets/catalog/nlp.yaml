@@ -1,0 +1,79 @@
+# Natural Language Processing Preset
+# Computational linguistics, LLM research, text analysis
+
+name: nlp
+description: "Computational linguistics, LLM research, text analysis"
+tags:
+  - nlp
+  - linguistics
+  - llm
+  - transformers
+
+# Literature search
+primary_sources:
+  - semantic_scholar
+  - acl_anthology
+  - arxiv
+search_engines:
+  - arxiv
+  - acl_anthology
+  - google_scholar
+grey_sources:
+  - arxiv_preprints
+  - huggingface_papers
+  - github
+full_text_access:
+  - arxiv
+  - acl_anthology
+
+# Model routing
+primary_model: "claude-sonnet-4-6"
+fallback_models:
+  - gpt-4o
+  - deepseek-v3.2
+reasoning_model: "claude-opus-4-6"
+budget_model: "qwen3-turbo"
+
+# Pipeline behavior
+enabled_stages:
+  - 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23
+stage_overrides:
+  8:  # HYPOTHESIS_GEN
+    require_multilingual_consideration: true
+  9:  # EXPERIMENT_DESIGN
+    require_baselines:
+      - fine_tuned_bert
+      - gpt_baseline
+      - few_shot
+    require_multiple_datasets: true
+    min_datasets: 3
+  12: # EXPERIMENT_RUN
+    huggingface_hub_integration: true
+
+# Experiment execution
+experiment_mode: "docker"
+experiment_frameworks:
+  - pytorch
+  - transformers
+  - datasets
+  - evaluate
+validation_methods:
+  - benchmark_comparison
+  - human_evaluation
+  - statistical
+
+# Paper writing
+paper_format: "acl"
+target_venue: null
+max_pages: 8
+style_profile: "auto"
+citation_style: "author-year"
+
+# Quality thresholds
+min_literature_papers: 35
+min_quality_score: 7.5
+min_novelty_score: 7.5
+
+# Budget
+max_budget_usd: 1.50
+cost_optimization: "balanced"

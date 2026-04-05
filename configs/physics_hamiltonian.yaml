@@ -1,0 +1,221 @@
+# Physics Domain Profile - Hamiltonian Systems
+# For use with Berb autonomous research pipeline
+
+domain:
+  name: "Physics - Hamiltonian Mechanics"
+  id: "physics_hamiltonian"
+  version: "1.0.0"
+
+research_focus:
+  primary: "Hamiltonian mechanics and symplectic integration"
+  secondary:
+    - "Symplectic integrators"
+    - "Phase space analysis"
+    - "Integrable vs. non-integrable systems"
+    - "KAM theory"
+    - "Action-angle variables"
+
+pipeline_configuration:
+  # Stage 1: TOPIC_INIT
+  topic_init:
+    keywords:
+      - "Hamiltonian mechanics"
+      - "symplectic integration"
+      - "phase space"
+      - "canonical transformations"
+      - "integrable systems"
+      - "KAM theory"
+    journals:
+      - "Journal of Physics A"
+      - "Celestial Mechanics and Dynamical Astronomy"
+      - "Physica D"
+      - "Nonlinearity"
+      - "Regular and Chaotic Dynamics"
+
+  # Stage 3-6: Literature Search
+  literature_search:
+    databases:
+      - "arXiv (math-ph, nlin.SI, physics.class-ph)"
+      - "Web of Science"
+      - "Scopus"
+      - "ADS"
+    search_strings:
+      - "symplectic integrator"
+      - "Hamiltonian system"
+      - "geometric integration"
+      - "variational integrator"
+      - "splitting method"
+
+  # Stage 8: HYPOTHESIS_GEN
+  hypothesis_generation:
+    reasoning_method: "multi_perspective"
+    perspectives:
+      - "constructive"
+      - "destructive"
+      - "systemic"
+      - "minimalist"
+    templates:
+      - "We propose a new [order]-order symplectic integrator that achieves [X]× better energy conservation than [baseline]."
+      - "The [system] exhibits [behavior] due to [mechanism], which can be analyzed using [method]."
+
+  # Stage 9: EXPERIMENT_DESIGN
+  experiment_design:
+    reasoning_method: "pre_mortem"
+    required_components:
+      - "Symplectic integrator (Verlet, Yoshida, etc.)"
+      - "Hamiltonian system templates"
+      - "Energy conservation monitoring"
+      - "Phase space visualization"
+      - "Poincaré section computation"
+    validation_criteria:
+      - "Energy drift < 10⁻⁶ over 10⁴ periods"
+      - "Phase space volume preservation"
+      - "Time reversibility (for symmetric methods)"
+
+  # Stage 12-13: Experiment Execution
+  experiment_execution:
+    sandbox_mode: "docker"
+    gpu_required: false
+    required_packages:
+      - "numpy>=1.24"
+      - "scipy>=1.10"
+      - "matplotlib>=3.7"
+    time_limit_hours: 4
+
+  # Stage 14-15: Analysis & Decision
+  analysis:
+    reasoning_method: "bayesian"
+    metrics:
+      - "Energy conservation (drift per period)"
+      - "Phase space error"
+      - "Computational efficiency (steps/second)"
+      - "Long-term stability"
+    statistical_tests:
+      - "Energy drift comparison"
+      - "Convergence order verification"
+      - "Efficiency analysis"
+
+  # Stage 16-20: Writing
+  writing:
+    venue_templates:
+      - "Journal of Physics A"
+      - "Celestial Mechanics and Dynamical Astronomy"
+    style_guide: "IOP Publishing Guidelines"
+    anti_ai_check: true
+    citation_verification: true
+
+tools:
+  integrators:
+    - "Verlet (2nd order, symmetric)"
+    - "Yoshida (4th order, symmetric)"
+    - "Adaptive Verlet"
+    - "Ruth-Forest (3rd order)"
+    - "McLachlan-Atela (higher order)"
+
+  hamiltonian_systems:
+    - "harmonic_oscillator"
+    - "simple_pendulum"
+    - "double_pendulum"
+    - "henon_heiles"
+    - "kepler_problem"
+    - "coupled_oscillators"
+    - "duffing_oscillator"
+    - "standard_map"
+
+  analysis:
+    - "energy_conservation"
+    - "phase_space_plot"
+    - "poincare_section"
+    - "frequency_analysis"
+    - "action_angle_variables"
+
+benchmark_systems:
+  harmonic_oscillator:
+    hamiltonian: "H = p²/(2m) + ½kq²"
+    solution: "q(t) = A·cos(ωt + φ)"
+    frequency: "ω = √(k/m)"
+    description: "Exactly solvable, tests basic integrator"
+
+  kepler_problem:
+    hamiltonian: "H = p²/(2μ) - G·M·μ/r"
+    properties:
+      - "Integrable"
+      - "Conserved: E, L, Laplace-Runge-Lenz vector"
+      - "Closed elliptical orbits"
+    description: "Tests angular momentum conservation"
+
+  henon_heiles:
+    hamiltonian: "H = ½(p₁² + p₂² + q₁² + q₂²) + q₁²q₂ - ⅓q₂³"
+    properties:
+      - "Non-integrable"
+      - "Chaos transition at E ≈ 1/6"
+      - "Mixed phase space"
+    description: "Tests chaotic regime handling"
+
+  double_pendulum:
+    properties:
+      - "2 degrees of freedom"
+      - "Chaotic for most energies"
+      - "Rich phase space structure"
+    description: "Tests complex dynamics"
+
+quality_gates:
+  stage_8_hypothesis:
+    min_novelty_score: 7.0
+    min_feasibility_score: 8.0
+    required_components:
+      - "Clear mathematical formulation"
+      - "Expected order of accuracy"
+      - "Comparison with existing methods"
+
+  stage_20_paper:
+    min_quality_score: 8.5
+    required_checks:
+      - "Energy conservation plots"
+      - "Phase space visualization"
+      - "Convergence analysis"
+      - "Comparison with analytical solution (when available)"
+
+presets:
+  integrator_testing:
+    description: "Test symplectic integrators"
+    stages: [1, 2, 8, 9, 12, 13, 14, 15]
+    systems: ["harmonic_oscillator", "kepler_problem"]
+    metrics: ["energy_drift", "phase_error"]
+
+  chaos_study:
+    description: "Study chaotic Hamiltonian systems"
+    stages: [1, 2, 8, 9, 12, 13, 14, 15]
+    systems: ["henon_heiles", "double_pendulum"]
+    metrics: ["lyapunov", "poincare", "energy_drift"]
+
+  method_development:
+    description: "Develop new integration method"
+    stages: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    systems: "all"
+    metrics: "all"
+
+  educational:
+    description: "Educational demonstration"
+    stages: [1, 2, 9, 12, 13, 14]
+    systems: ["harmonic_oscillator", "pendulum", "henon_heiles"]
+    focus: "visualization"
+
+implementation_notes:
+  symplectic_integration:
+    - "Use composition methods for higher order"
+    - "Preserve time symmetry when possible"
+    - "Monitor energy drift, not absolute energy"
+    - "Use adaptive stepping for efficiency"
+
+  hamiltonian_formulation:
+    - "Ensure canonical coordinates"
+    - "Check Poisson brackets"
+    - "Verify Liouville's theorem"
+    - "Use generating functions for transformations"
+
+  numerical_considerations:
+    - "Use double precision (float64)"
+    - "Avoid subtractive cancellation"
+    - "Monitor round-off accumulation"
+    - "Consider extended precision for long integrations"

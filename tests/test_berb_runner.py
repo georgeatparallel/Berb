@@ -27,7 +27,6 @@ def rc_config(tmp_path: Path) -> RCConfig:
             "provider": "openai-compatible",
             "base_url": "http://localhost:1234/v1",
             "api_key_env": "RC_TEST_KEY",
-            "api_key": "inline",
         },
     }
     return RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
@@ -214,9 +213,7 @@ def test_pipeline_summary_has_expected_fields_and_values(
     )
     assert summary["run_id"] == "run-summary-fields"
     assert summary["stages_executed"] == len(results)
-    assert summary["stages_done"] == sum(
-        1 for r in results if r.status == StageStatus.DONE
-    )
+    assert summary["stages_done"] == sum(1 for r in results if r.status == StageStatus.DONE)
     assert summary["stages_blocked"] == 1
     assert summary["stages_failed"] == 1
     assert summary["from_stage"] == 1
@@ -365,9 +362,7 @@ def test_pipeline_prints_stage_progress(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     mock_results = [
-        StageResult(
-            stage=Stage.TOPIC_INIT, status=StageStatus.DONE, artifacts=("topic.json",)
-        ),
+        StageResult(stage=Stage.TOPIC_INIT, status=StageStatus.DONE, artifacts=("topic.json",)),
         StageResult(
             stage=Stage.PROBLEM_DECOMPOSE,
             status=StageStatus.DONE,
@@ -427,9 +422,7 @@ def test_pipeline_prints_elapsed_time(
     )
     results_iter = iter([mock_result, mock_fail])
 
-    monkeypatch.setattr(
-        rc_runner, "execute_stage", lambda *args, **kwargs: next(results_iter)
-    )
+    monkeypatch.setattr(rc_runner, "execute_stage", lambda *args, **kwargs: next(results_iter))
     monkeypatch.setattr(rc_runner, "write_stage_to_kb", lambda *args, **kwargs: [])
 
     _ = rc_runner.execute_pipeline(
@@ -442,9 +435,7 @@ def test_pipeline_prints_elapsed_time(
     captured = capsys.readouterr()
     import re
 
-    assert re.search(r"\d+\.\d+s\)", captured.out), (
-        f"No elapsed time found in: {captured.out}"
-    )
+    assert re.search(r"\d+\.\d+s\)", captured.out), f"No elapsed time found in: {captured.out}"
 
 
 # ── PIVOT/PROCEED/REFINE decision loop tests ──
@@ -553,6 +544,7 @@ def test_max_pivot_count_prevents_infinite_loop(
     )
     # RESEARCH_DECISION should appear at most MAX_DECISION_PIVOTS + 1 times
     from berb.pipeline.stages import MAX_DECISION_PIVOTS
+
     decision_count = sum(1 for s in seen if s == Stage.RESEARCH_DECISION)
     assert decision_count <= MAX_DECISION_PIVOTS + 1
 
@@ -603,7 +595,9 @@ def _setup_stage_artifacts(run_dir: Path) -> None:
     s22 = run_dir / "stage-22"
     s22.mkdir(parents=True, exist_ok=True)
     (s22 / "paper_final.md").write_text("# My Paper\nContent here.", encoding="utf-8")
-    (s22 / "paper.tex").write_text("\\documentclass{article}\n\\begin{document}\nHello\n\\end{document}", encoding="utf-8")
+    (s22 / "paper.tex").write_text(
+        "\\documentclass{article}\n\\begin{document}\nHello\n\\end{document}", encoding="utf-8"
+    )
     (s22 / "references.bib").write_text("@article{smith2024,\n  title={Test}\n}", encoding="utf-8")
     code_dir = s22 / "code"
     code_dir.mkdir()
@@ -613,16 +607,18 @@ def _setup_stage_artifacts(run_dir: Path) -> None:
 
     s23 = run_dir / "stage-23"
     s23.mkdir(parents=True, exist_ok=True)
-    (s23 / "paper_final_verified.md").write_text("# My Paper (verified)\nContent.", encoding="utf-8")
-    (s23 / "references_verified.bib").write_text("@article{smith2024,\n  title={Test}\n}", encoding="utf-8")
+    (s23 / "paper_final_verified.md").write_text(
+        "# My Paper (verified)\nContent.", encoding="utf-8"
+    )
+    (s23 / "references_verified.bib").write_text(
+        "@article{smith2024,\n  title={Test}\n}", encoding="utf-8"
+    )
     (s23 / "verification_report.json").write_text(
         json.dumps({"summary": {"total": 5, "verified": 4}}), encoding="utf-8"
     )
 
 
-def test_package_deliverables_collects_all_artifacts(
-    run_dir: Path, rc_config: RCConfig
-) -> None:
+def test_package_deliverables_collects_all_artifacts(run_dir: Path, rc_config: RCConfig) -> None:
     _setup_stage_artifacts(run_dir)
     dest = rc_runner._package_deliverables(run_dir, "run-pkg-test", rc_config)
     assert dest is not None
@@ -638,9 +634,7 @@ def test_package_deliverables_collects_all_artifacts(
     assert "paper_final.md" in manifest["files"]
 
 
-def test_package_deliverables_prefers_verified_versions(
-    run_dir: Path, rc_config: RCConfig
-) -> None:
+def test_package_deliverables_prefers_verified_versions(run_dir: Path, rc_config: RCConfig) -> None:
     _setup_stage_artifacts(run_dir)
     rc_runner._package_deliverables(run_dir, "run-verified", rc_config)
     dest = run_dir / "deliverables"
@@ -651,9 +645,7 @@ def test_package_deliverables_prefers_verified_versions(
     assert "smith2024" in bib
 
 
-def test_package_deliverables_falls_back_to_stage22(
-    run_dir: Path, rc_config: RCConfig
-) -> None:
+def test_package_deliverables_falls_back_to_stage22(run_dir: Path, rc_config: RCConfig) -> None:
     """When stage 23 outputs are missing, falls back to stage 22 versions."""
     s22 = run_dir / "stage-22"
     s22.mkdir(parents=True, exist_ok=True)
@@ -667,7 +659,8 @@ def test_package_deliverables_falls_back_to_stage22(
 
 
 def test_package_deliverables_returns_none_when_no_stage_artifacts(
-    run_dir: Path, tmp_path: Path,
+    run_dir: Path,
+    tmp_path: Path,
 ) -> None:
     """Returns None when no stage artifacts exist and no style files found."""
     # Use a config with an unknown conference so style files aren't bundled
@@ -692,9 +685,7 @@ def test_package_deliverables_returns_none_when_no_stage_artifacts(
     assert not (run_dir / "deliverables").exists()
 
 
-def test_package_deliverables_includes_style_files(
-    run_dir: Path, rc_config: RCConfig
-) -> None:
+def test_package_deliverables_includes_style_files(run_dir: Path, rc_config: RCConfig) -> None:
     """Style files (.sty, .bst) for the target conference are bundled."""
     _setup_stage_artifacts(run_dir)
     dest = rc_runner._package_deliverables(run_dir, "run-styles", rc_config)
@@ -841,6 +832,7 @@ def test_package_deliverables_called_after_pipeline(
 # BUG-223: _promote_best_stage14 must always write experiment_summary_best.json
 # ---------------------------------------------------------------------------
 
+
 def _make_stage14_summary(run_dir: Path, suffix: str, pm_value: float) -> None:
     """Helper: create a stage-14{suffix}/experiment_summary.json."""
     d = run_dir / f"stage-14{suffix}"
@@ -895,9 +887,7 @@ class TestPromoteBestStage14BestJson:
         pm = data["metrics_summary"]["primary_metric"]
         assert pm["mean"] == 95.0
 
-    def test_best_json_written_with_equal_values(
-        self, run_dir: Path, max_config: RCConfig
-    ) -> None:
+    def test_best_json_written_with_equal_values(self, run_dir: Path, max_config: RCConfig) -> None:
         """BUG-223 exact scenario: stage-14 and stage-14_v1 have equal
         metrics, stage-14_v2 is regressed."""
         _make_stage14_summary(run_dir, "", 64.46)
@@ -969,8 +959,8 @@ class TestPromoteBestStage14DegenerateDetection:
     def test_degenerate_minimize_skipped(self, run_dir: Path, rc_config: RCConfig) -> None:
         """When minimize, a value 1000x smaller than second-best is degenerate."""
         # metric_direction defaults to "minimize"
-        _make_stage14_summary(run_dir, "", 7.26e-8)   # degenerate (broken normalization)
-        _make_stage14_summary(run_dir, "_v2", 0.37)   # valid
+        _make_stage14_summary(run_dir, "", 7.26e-8)  # degenerate (broken normalization)
+        _make_stage14_summary(run_dir, "_v2", 0.37)  # valid
 
         rc_runner._promote_best_stage14(run_dir, rc_config)  # type: ignore[attr-defined]
 

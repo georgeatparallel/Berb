@@ -1,71 +1,95 @@
-"""Experiment execution — sandbox, runner, git manager."""
+"""Experiment execution module for Berb.
 
-from berb.experiment.factory import create_sandbox
-from berb.experiment.sandbox import (
-    ExperimentSandbox,
-    SandboxProtocol,
-    SandboxResult,
-    parse_metrics,
+Includes sandbox execution, Docker support, compute guards,
+experiment monitoring, async parallel execution, physics
+code quality guards, evolutionary search, and ReAct agents.
+
+# Author: Georgios-Chrysovalantis Chatzivantsidis
+"""
+
+from .async_pool import (
+    AsyncExperimentPool,
+    PoolConfig,
+    WorkerStatus,
+    create_pool,
 )
-from berb.experiment.progress import (
-    ExperimentProgressManager,
-    ExperimentProgressConfig,
-    ExperimentStage,
-    StageConfig,
-    StageResult,
-    ExperimentReport,
-    run_structured_experiment,
+from .compute_guard import (
+    ComputeGuard,
+    ComputeGuardConfig,
+    ExperimentMonitor,
+    ExperimentCostEstimate,
+    ExperimentProgress,
+    ExperimentResults,
+    ExperimentStatus,
+    check_experiment_affordability,
 )
-from berb.experiment.auto_debugger import (
-    AutomatedDebugger,
-    ErrorCategory,
-    ErrorSeverity,
-    ErrorDiagnosis,
-    FixSuggestion,
-    DebugResult,
-    auto_debug,
+from .evolutionary_search import (
+    EvolutionaryExperimentSearch,
+    ExperimentVariant,
+    EvolutionResult,
 )
-from berb.experiment.self_correcting import (
-    SelfCorrectingExecutor,
-    SimulationStatus,
-    SimulationResult,
-    InputClarifierAgent,
-    CodeBuilderAgent,
-    SimulationExecutorAgent,
-    ErrorDiagnosisAgent,
-    InputRewriterAgent,
-    MechanicalInsightAgent,
-    run_self_correcting_simulation,
+from .isolation import (
+    IsolationContext,
+    IsolationStrategy,
+    DockerIsolation,
+    DockerIsolationConfig,
+    WorktreeIsolation,
+    WorktreeIsolationConfig,
+    SandboxIsolation,
+    SandboxIsolationConfig,
+    create_isolation,
+)
+from .physics_guards import (
+    PhysicsCodeGuard,
+    CodeQualityIssue,
+)
+from .react_agent import (
+    ExperimentReActAgent,
+    ReActTrajectory,
+    ReActStep,
+)
+from .worker import (
+    ExperimentWorkerImpl,
+    WorkerConfig,
 )
 
 __all__ = [
-    "ExperimentSandbox",
-    "SandboxProtocol",
-    "SandboxResult",
-    "create_sandbox",
-    "parse_metrics",
-    "ExperimentProgressManager",
-    "ExperimentProgressConfig",
-    "ExperimentStage",
-    "StageConfig",
-    "StageResult",
-    "ExperimentReport",
-    "run_structured_experiment",
-    "AutomatedDebugger",
-    "ErrorCategory",
-    "ErrorSeverity",
-    "ErrorDiagnosis",
-    "FixSuggestion",
-    "DebugResult",
-    "auto_debug",
-    "SelfCorrectingExecutor",
-    "SimulationStatus",
-    "SimulationResult",
-    "InputClarifierAgent",
-    "CodeBuilderAgent",
-    "SimulationExecutorAgent",
-    "ErrorDiagnosisAgent",
-    "InputRewriterAgent",
-    "MechanicalInsightAgent",
-    "run_self_correcting_simulation",
+    # Async Pool
+    "AsyncExperimentPool",
+    "PoolConfig",
+    "WorkerStatus",
+    "create_pool",
+    # Compute Guard
+    "ComputeGuard",
+    "ComputeGuardConfig",
+    "ExperimentMonitor",
+    "ExperimentCostEstimate",
+    "ExperimentProgress",
+    "ExperimentResults",
+    "ExperimentStatus",
+    "check_experiment_affordability",
+    # Evolutionary Search
+    "EvolutionaryExperimentSearch",
+    "ExperimentVariant",
+    "EvolutionResult",
+    # Isolation
+    "IsolationContext",
+    "IsolationStrategy",
+    "DockerIsolation",
+    "DockerIsolationConfig",
+    "WorktreeIsolation",
+    "WorktreeIsolationConfig",
+    "SandboxIsolation",
+    "SandboxIsolationConfig",
+    "create_isolation",
+    # Physics Guards
+    "PhysicsCodeGuard",
+    "CodeQualityIssue",
+    # ReAct Agent
+    "ExperimentReActAgent",
+    "ReActTrajectory",
+    "ReActStep",
+    # Worker
+    "ExperimentWorkerImpl",
+    "WorkerConfig",
 ]
