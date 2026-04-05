@@ -368,6 +368,8 @@ class OpenRouterProvider:
                     completion_tokens=usage.get("completion_tokens", 0),
                     total_tokens=usage.get("total_tokens", 0),
                     finish_reason=data.get("choices", [{}])[0].get("finish_reason", ""),
+                    truncated=data.get("choices", [{}])[0].get("finish_reason") == "length",
+                    raw=data,
                 )
                 
             except httpx.HTTPStatusError as e:

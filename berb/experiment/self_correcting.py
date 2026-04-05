@@ -32,6 +32,7 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
+from pathlib import Path
 from typing import Any
 
 from berb.memory.shared_memory import SharedResearchMemory, get_shared_memory
@@ -396,6 +397,11 @@ class SimulationExecutorAgent:
                 "error": str(e),
                 "execution_time": time.time() - start_time,
             }
+        finally:
+            try:
+                Path(temp_path).unlink(missing_ok=True)
+            except OSError:
+                pass
 
 
 class ErrorDiagnosisAgent:
