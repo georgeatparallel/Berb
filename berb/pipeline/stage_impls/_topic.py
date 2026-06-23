@@ -21,8 +21,6 @@ from berb.pipeline._helpers import (
 )
 from berb.pipeline.contracts import StageContract
 from berb.pipeline.registry import register_stage
-from berb.pipeline.contracts import StageContract
-from berb.pipeline.registry import register_stage
 from berb.pipeline.stages import Stage, StageStatus
 from berb.prompts import PromptManager
 
