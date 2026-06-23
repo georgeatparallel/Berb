@@ -307,7 +307,7 @@ def _check_experiment_quality(run_dir: Path, pivot_count: int) -> tuple[bool, st
     return True, "Quality checks passed"
 
 
-def execute_iterative_pipeline(
+async def execute_iterative_pipeline(
     *,
     run_dir: Path,
     run_id: str,
@@ -339,7 +339,7 @@ def execute_iterative_pipeline(
 
     # First full pass
     logger.info("Iteration 1/%d: running full pipeline (stages 1-22)", max_iterations)
-    results = execute_pipeline(
+    results = await execute_pipeline(
         run_dir=run_dir,
         run_id=f"{run_id}-iter1",
         config=config,
@@ -384,7 +384,7 @@ def execute_iterative_pipeline(
             iteration,
             max_iterations,
         )
-        results = execute_pipeline(
+        results = await execute_pipeline(
             run_dir=run_dir,
             run_id=f"{run_id}-iter{iteration}",
             config=config,

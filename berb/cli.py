@@ -307,16 +307,20 @@ def cmd_run(args: argparse.Namespace) -> int:
 
     print()
 
-    results = execute_pipeline(
-        run_dir=run_dir,
-        run_id=run_id,
-        config=config,
-        adapters=adapters,
-        from_stage=from_stage,
-        auto_approve_gates=auto_approve,
-        stop_on_gate=stop_on_gate,
-        skip_noncritical=skip_noncritical,
-        kb_root=kb_root_path,
+    import asyncio as _asyncio
+
+    results = _asyncio.run(
+        execute_pipeline(
+            run_dir=run_dir,
+            run_id=run_id,
+            config=config,
+            adapters=adapters,
+            from_stage=from_stage,
+            auto_approve_gates=auto_approve,
+            stop_on_gate=stop_on_gate,
+            skip_noncritical=skip_noncritical,
+            kb_root=kb_root_path,
+        )
     )
 
     done = sum(1 for r in results if r.status.value == "done")
