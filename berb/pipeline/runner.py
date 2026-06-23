@@ -19,7 +19,7 @@ from berb.adapters import AdapterBundle
 from berb.config import RCConfig
 from berb.evolution import EvolutionStore, extract_lessons
 from berb.knowledge.base import write_stage_to_kb
-from berb.pipeline.asyncio_utils import CheckpointManager, gather_stages
+from berb.pipeline.checkpoint import CheckpointManager
 from berb.pipeline.checkpoint import write_heartbeat
 from berb.pipeline.executor import StageResult, execute_stage
 from berb.pipeline.iterative import (
@@ -32,7 +32,7 @@ from berb.pipeline.iterative import (
 )
 from berb.pipeline.metaclaw_post import metaclaw_post_pipeline
 from berb.pipeline.packaging import package_deliverables
-from berb.pipeline.resolution import eligible_stages, resolve_stage_order
+from berb.pipeline.resolution import resolve_stage_order
 from berb.pipeline.stages import (
     DECISION_ROLLBACK,
     MAX_DECISION_PIVOTS,
@@ -367,44 +367,8 @@ async def execute_pipeline(
             if result.status == StageStatus.BLOCKED_APPROVAL and stop_on_gate:
                 break
         else:
-            # inner loop completed without break — continue to next level
             continue
-        # inner loop broke — stop level iteration
         break
-
-        # Heartbeat
-        write_heartbeat(run_dir, stage, run_id)
-
-        # PIVOT/REFINE decision handling
-        if (
-            stage == Stage.RESEARCH_DECISION
-            and result.status == StageStatus.DONE
-            and _should_pivot(result, _pivot_depth)
-        ):
-            pivot_results = await _handle_pivot(
-                run_dir=run_dir,
-                run_id=run_id,
-                config=config,
-                adapters=adapters,
-                stage=stage,
-                result=result,
-                pivot_depth=_pivot_depth,
-                auto_approve_gates=auto_approve_gates,
-                stop_on_gate=stop_on_gate,
-                skip_noncritical=skip_noncritical,
-                kb_root=kb_root,
-                event_store=event_store,
-            )
-            results.extend(pivot_results)
-            break
-
-        if result.status == StageStatus.FAILED:
-            if skip_noncritical and stage in NONCRITICAL_STAGES:
-                logger.warning("Noncritical stage %s failed — skipping", stage.name)
-            else:
-                break
-        if result.status == StageStatus.BLOCKED_APPROVAL and stop_on_gate:
-            break
 
     summary = build_pipeline_summary(
         run_id=run_id,
@@ -461,7 +425,7 @@ async def _run_sync_stage_internal(
     checkpoint_mgr: CheckpointManager,
     auto_approve_gates: bool = False,
 ) -> StageResult:
-    """Run a stage via asyncio.to_thread and write checkpoint on success."""
+    """Run a stage via asyncio.to_thread, write checkpoint and heartbeat on success."""
     import asyncio as _asyncio
 
     result = await _asyncio.to_thread(
@@ -475,6 +439,7 @@ async def _run_sync_stage_internal(
     )
     if result.status == StageStatus.DONE:
         checkpoint_mgr.write(run_dir, stage, run_id)
+    write_heartbeat(run_dir, stage, run_id)
     return result
 
 
