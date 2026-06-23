@@ -34,6 +34,8 @@ from berb.pipeline._helpers import (
     _utcnow_iso,
     reconcile_figure_refs,
 )
+from berb.pipeline.contracts import StageContract
+from berb.pipeline.registry import register_stage
 from berb.pipeline.stages import Stage, StageStatus
 from berb.prompts import PromptManager
 
@@ -49,17 +51,20 @@ logger = logging.getLogger(__name__)
 
 def _get_collect_raw_experiment_metrics():
     from berb.pipeline.stage_impls._paper_writing import _collect_raw_experiment_metrics
+
     return _collect_raw_experiment_metrics
 
 
 def _get_review_compiled_pdf():
     from berb.pipeline.stage_impls._paper_writing import _review_compiled_pdf
+
     return _review_compiled_pdf
 
 
 # ---------------------------------------------------------------------------
 # _collect_experiment_evidence
 # ---------------------------------------------------------------------------
+
 
 def _collect_experiment_evidence(run_dir: Path) -> str:
     """Collect actual experiment parameters and results for peer review."""
@@ -71,7 +76,9 @@ def _collect_experiment_evidence(run_dir: Path) -> str:
         main_py = Path(exp_dir) / "main.py"
         if main_py.exists():
             code = main_py.read_text(encoding="utf-8")
-            evidence_parts.append(f"### Actual Experiment Code (main.py)\n```python\n{code[:3000]}\n```")
+            evidence_parts.append(
+                f"### Actual Experiment Code (main.py)\n```python\n{code[:3000]}\n```"
+            )
 
     # 2. Read sandbox run results (actual metrics, runtime, stderr)
     runs_text = _read_prior_artifact(run_dir, "runs/")
@@ -135,6 +142,18 @@ def _collect_experiment_evidence(run_dir: Path) -> str:
 # Stage 18: Peer Review
 # ---------------------------------------------------------------------------
 
+
+@register_stage(
+    stage=Stage.PEER_REVIEW,
+    depends_on=frozenset({Stage.PAPER_DRAFT}),
+    contract=StageContract(
+        stage=Stage.PEER_REVIEW,
+        input_files=("paper_draft.md",),
+        output_files=("reviews.md",),
+        dod=">=2 simulated review perspectives with actionable feedback",
+        error_code="E18_REVIEW_FAIL",
+    ),
+)
 def _execute_peer_review(
     stage_dir: Path,
     run_dir: Path,
@@ -208,6 +227,18 @@ def _execute_peer_review(
 # Stage 19: Paper Revision
 # ---------------------------------------------------------------------------
 
+
+@register_stage(
+    stage=Stage.PAPER_REVISION,
+    depends_on=frozenset({Stage.PAPER_DRAFT, Stage.PEER_REVIEW}),
+    contract=StageContract(
+        stage=Stage.PAPER_REVISION,
+        input_files=("paper_draft.md", "reviews.md"),
+        output_files=("paper_revised.md",),
+        dod="All review comments addressed with tracked changes",
+        error_code="E19_REVISION_FAIL",
+    ),
+)
 def _execute_paper_revision(
     stage_dir: Path,
     run_dir: Path,
@@ -224,12 +255,15 @@ def _execute_paper_revision(
     # R4-2: Collect real metrics for anti-fabrication guard in revision
     # BUG-47: _collect_raw_experiment_metrics returns tuple[str, bool], must unpack
     _raw_metrics_tuple = _get_collect_raw_experiment_metrics()(run_dir)
-    raw_metrics_revision = _raw_metrics_tuple[0] if isinstance(_raw_metrics_tuple, tuple) else (_raw_metrics_tuple or "")
+    raw_metrics_revision = (
+        _raw_metrics_tuple[0]
+        if isinstance(_raw_metrics_tuple, tuple)
+        else (_raw_metrics_tuple or "")
+    )
     data_integrity_revision = ""
     if raw_metrics_revision:
         data_integrity_revision = (
-            raw_metrics_revision
-            + "\nDATA INTEGRITY: Do NOT add new numbers that are not in the "
+            raw_metrics_revision + "\nDATA INTEGRITY: Do NOT add new numbers that are not in the "
             "experiment data above. If a reviewer asks for additional results "
             "you do not have, state 'Due to computational constraints, "
             "this analysis was not conducted' instead of fabricating data.\n"
@@ -243,8 +277,12 @@ def _execute_paper_revision(
             _ws_revision = ""
         # IMP-20/25/31/24: Load style blocks for revision prompt
         _rev_blocks: dict[str, str] = {}
-        for _bname in ("academic_style_guide", "narrative_writing_rules",
-                        "anti_hedging_rules", "anti_repetition_rules"):
+        for _bname in (
+            "academic_style_guide",
+            "narrative_writing_rules",
+            "anti_hedging_rules",
+            "anti_repetition_rules",
+        ):
             try:
                 _rev_blocks[_bname] = _pm.block(_bname)
             except (KeyError, Exception):  # noqa: BLE001
@@ -312,12 +350,14 @@ def _execute_paper_revision(
                 f"Your revision MUST be at least {draft_word_count} words — ideally longer. "
                 f"Do NOT summarize or condense ANY section. Copy each section verbatim "
                 f"and ONLY make targeted improvements to address reviewer comments. "
-                f"If a section has no reviewer comments, include it UNCHANGED.\n\n"
-                + sp.user
+                f"If a section has no reviewer comments, include it UNCHANGED.\n\n" + sp.user
             )
             resp2 = _chat_with_prompt(
-                llm, sp.system, retry_user,
-                json_mode=sp.json_mode, max_tokens=revision_max_tokens,
+                llm,
+                sp.system,
+                retry_user,
+                json_mode=sp.json_mode,
+                max_tokens=revision_max_tokens,
             )
             revised2 = resp2.content
             revised2_word_count = len(revised2.split())
@@ -367,6 +407,19 @@ def _execute_paper_revision(
 # Stage 20: Quality Gate
 # ---------------------------------------------------------------------------
 
+
+@register_stage(
+    stage=Stage.QUALITY_GATE,
+    depends_on=frozenset({Stage.PAPER_REVISION}),
+    contract=StageContract(
+        stage=Stage.QUALITY_GATE,
+        input_files=("paper_revised.md",),
+        output_files=("quality_report.json",),
+        dod="Quality score meets threshold and approved",
+        error_code="E20_GATE_REJECT",
+        max_retries=0,
+    ),
+)
 def _execute_quality_gate(
     stage_dir: Path,
     run_dir: Path,
@@ -421,10 +474,7 @@ def _execute_quality_gate(
     if isinstance(_exp_summary, dict):
         _best_run = _exp_summary.get("best_run", {})
         if isinstance(_best_run, dict):
-            _exp_failed = (
-                _best_run.get("status") == "failed"
-                and not _best_run.get("metrics")
-            )
+            _exp_failed = _best_run.get("status") == "failed" and not _best_run.get("metrics")
         # Also check if metrics_summary is empty
         if not _exp_summary.get("metrics_summary"):
             _exp_failed = True
@@ -442,10 +492,13 @@ def _execute_quality_gate(
         _exp_context = ""
         if _exp_summary and isinstance(_exp_summary, dict):
             _exp_status_keys = {
-                k: _exp_summary.get(k) for k in (
-                    "total_conditions", "total_metric_keys",
+                k: _exp_summary.get(k)
+                for k in (
+                    "total_conditions",
+                    "total_metric_keys",
                     "metrics_summary",
-                ) if _exp_summary.get(k) is not None
+                )
+                if _exp_summary.get(k) is not None
             }
             # BUG-180: Include condition count from condition_summaries
             _cond_summ = _exp_summary.get("condition_summaries", {})
@@ -497,9 +550,7 @@ def _execute_quality_gate(
     if report is None:
         report = _default_quality_report(config.research.quality_threshold)
     report.setdefault("generated", _utcnow_iso())
-    (stage_dir / "quality_report.json").write_text(
-        json.dumps(report, indent=2), encoding="utf-8"
-    )
+    (stage_dir / "quality_report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
 
     # T2.1: Enforce quality gate — fail if score below threshold
     score = report.get("score_1_to_10", 0)
@@ -522,7 +573,7 @@ def _execute_quality_gate(
         # Collect ALL real numeric values from experiment_summary.json
         _cond_summaries = _exp_summary.get("condition_summaries", {})
         if isinstance(_cond_summaries, dict):
-            for cond_name, cond_data in _cond_summaries.items():
+            for _cond_name, cond_data in _cond_summaries.items():
                 if not isinstance(cond_data, dict):
                     continue
                 cond_status = cond_data.get("status", "")
@@ -530,11 +581,11 @@ def _execute_quality_gate(
                     continue  # skip failed conditions
                 for k, v in cond_data.items():
                     if isinstance(v, (int, float)) and k not in (
-                        "seed_count", "total_steps", "training_steps",
+                        "seed_count",
+                        "total_steps",
+                        "training_steps",
                     ):
-                        _fabrication_info["real_metric_values"].append(
-                            round(float(v), 4)
-                        )
+                        _fabrication_info["real_metric_values"].append(round(float(v), 4))
         _ms = _exp_summary.get("metrics_summary", {})
         if isinstance(_ms, dict):
             for _mk, _mv in _ms.items():
@@ -542,12 +593,8 @@ def _execute_quality_gate(
                     for _stat in ("mean", "min", "max"):
                         _sv = _mv.get(_stat)
                         if isinstance(_sv, (int, float)):
-                            _fabrication_info["real_metric_values"].append(
-                                round(float(_sv), 4)
-                            )
-    _fabrication_info["has_real_data"] = bool(
-        _fabrication_info["real_metric_values"]
-    )
+                            _fabrication_info["real_metric_values"].append(round(float(_sv), 4))
+    _fabrication_info["has_real_data"] = bool(_fabrication_info["real_metric_values"])
     _fabrication_info["fabrication_suspected"] = (
         _exp_failed and not _fabrication_info["has_real_data"]
     )
@@ -562,8 +609,15 @@ def _execute_quality_gate(
         except (json.JSONDecodeError, OSError):
             pass
     try:
-        from berb.pipeline.verified_registry import VerifiedRegistry as _VR20
-        _vr20 = _VR20.from_run_dir(run_dir, metric_direction=config.experiment.metric_direction, best_only=True) if isinstance(_exp_summary, dict) else None
+        from berb.pipeline.verified_registry import VerifiedRegistry as _VR20  # noqa: N814
+
+        _vr20 = (
+            _VR20.from_run_dir(
+                run_dir, metric_direction=config.experiment.metric_direction, best_only=True
+            )
+            if isinstance(_exp_summary, dict)
+            else None
+        )
         if _vr20:
             _fabrication_info["verified_values_count"] = len(_vr20.values)
             _fabrication_info["verified_conditions"] = sorted(_vr20.condition_names)
@@ -578,7 +632,8 @@ def _execute_quality_gate(
             logger.warning(
                 "Quality gate DEGRADED: score %.1f < threshold %.1f — "
                 "continuing with sanitization (graceful_degradation=True)",
-                score, threshold,
+                score,
+                threshold,
             )
             # Write degradation signal for downstream stages
             signal = {
@@ -600,7 +655,9 @@ def _execute_quality_gate(
             )
         logger.warning(
             "Quality gate FAILED: score %.1f < threshold %.1f (verdict=%s)",
-            score, threshold, verdict,
+            score,
+            threshold,
+            verdict,
         )
         return StageResult(
             stage=Stage.QUALITY_GATE,
@@ -608,12 +665,13 @@ def _execute_quality_gate(
             artifacts=("quality_report.json", "fabrication_flags.json"),
             evidence_refs=("stage-20/quality_report.json",),
             error=f"Quality score {score:.1f}/10 below threshold {threshold:.1f}. "
-                  f"Paper needs revision before export.",
+            f"Paper needs revision before export.",
         )
 
     logger.info(
         "Quality gate PASSED: score %.1f >= threshold %.1f",
-        score, threshold,
+        score,
+        threshold,
     )
     return StageResult(
         stage=Stage.QUALITY_GATE,
@@ -627,6 +685,18 @@ def _execute_quality_gate(
 # Stage 21: Knowledge Archive
 # ---------------------------------------------------------------------------
 
+
+@register_stage(
+    stage=Stage.KNOWLEDGE_ARCHIVE,
+    depends_on=frozenset({Stage.QUALITY_GATE}),
+    contract=StageContract(
+        stage=Stage.KNOWLEDGE_ARCHIVE,
+        input_files=(),
+        output_files=("archive.md", "bundle_index.json"),
+        dod="Retrospective + reproducibility bundle archived",
+        error_code="E21_ARCHIVE_FAIL",
+    ),
+)
 def _execute_knowledge_archive(
     stage_dir: Path,
     run_dir: Path,
@@ -688,9 +758,7 @@ Generated: {_utcnow_iso()}
         "artifact_count": len(files),
         "artifacts": files,
     }
-    (stage_dir / "bundle_index.json").write_text(
-        json.dumps(index, indent=2), encoding="utf-8"
-    )
+    (stage_dir / "bundle_index.json").write_text(json.dumps(index, indent=2), encoding="utf-8")
     return StageResult(
         stage=Stage.KNOWLEDGE_ARCHIVE,
         status=StageStatus.DONE,
@@ -702,6 +770,7 @@ Generated: {_utcnow_iso()}
 # ---------------------------------------------------------------------------
 # _sanitize_fabricated_data helper
 # ---------------------------------------------------------------------------
+
 
 def _sanitize_fabricated_data(
     paper: str,
@@ -746,7 +815,11 @@ def _sanitize_fabricated_data(
         exp_path = _root_best
     else:
         _candidates = list(run_dir.glob("stage-14*/experiment_summary.json"))
-        exp_path = max(_candidates, key=_richness) if _candidates else run_dir / "stage-14" / "experiment_summary.json"
+        exp_path = (
+            max(_candidates, key=_richness)
+            if _candidates
+            else run_dir / "stage-14" / "experiment_summary.json"
+        )
 
     if exp_path.exists():
         try:
@@ -759,6 +832,7 @@ def _sanitize_fabricated_data(
                 return
             if isinstance(obj, (int, float)) and not isinstance(obj, bool):
                 import math as _math_vv
+
                 if _math_vv.isfinite(float(obj)):
                     verified_values.add(float(obj))
             elif isinstance(obj, dict):
@@ -770,8 +844,12 @@ def _sanitize_fabricated_data(
 
         # Extract from well-known keys
         for key in (
-            "metrics_summary", "condition_summaries", "best_run",
-            "condition_metrics", "conditions", "ablation_results",
+            "metrics_summary",
+            "condition_summaries",
+            "best_run",
+            "condition_metrics",
+            "conditions",
+            "ablation_results",
         ):
             if key in exp_data:
                 _collect_numbers(exp_data[key])
@@ -816,19 +894,64 @@ def _sanitize_fabricated_data(
     # BUG-175: Always-allowed set — common constants, hyperparameters, and
     # structural values that should never be sanitized (matches paper_verifier.py).
     _SANITIZER_ALWAYS_ALLOWED: set[float] = {
-        0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 10.0, 20.0, 50.0, 100.0, 200.0,
-        0.5, 0.01, 0.001, 0.0001, 0.1, 0.05, 0.95, 0.99,
-        2024.0, 2025.0, 2026.0, 2027.0,
-        8.0, 16.0, 32.0, 64.0, 128.0, 256.0, 512.0, 1024.0, 2048.0,
-        224.0, 299.0, 384.0,  # Common image sizes
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        10.0,
+        20.0,
+        50.0,
+        100.0,
+        200.0,
+        0.5,
+        0.01,
+        0.001,
+        0.0001,
+        0.1,
+        0.05,
+        0.95,
+        0.99,
+        2024.0,
+        2025.0,
+        2026.0,
+        2027.0,
+        8.0,
+        16.0,
+        32.0,
+        64.0,
+        128.0,
+        256.0,
+        512.0,
+        1024.0,
+        2048.0,
+        224.0,
+        299.0,
+        384.0,  # Common image sizes
         # BUG-192: Common hyperparameter values
-        0.0003, 3e-4, 0.0005, 5e-4, 0.002, 2e-3,  # learning rates
-        0.2, 0.3, 0.25, 0.7, 0.6, 0.8,  # clip epsilon, dropout, gradient clip, GCE q, common HP
-        0.9, 0.999, 0.9999,  # Adam betas, momentum
-        0.02, 0.03,  # weight init std
-        1e-5, 1e-6, 1e-8,  # epsilon, weight decay
-        300.0, 400.0, 500.0,  # epochs
-        4096.0, 8192.0,  # larger batch sizes / hidden dims
+        0.0003,
+        0.0005,
+        0.002,  # learning rates
+        0.2,
+        0.3,
+        0.25,
+        0.7,
+        0.6,
+        0.8,  # clip epsilon, dropout, gradient clip, GCE q, common HP
+        0.9,
+        0.999,
+        0.9999,  # Adam betas, momentum
+        0.02,
+        0.03,  # weight init std
+        1e-5,
+        1e-6,
+        1e-8,  # epsilon, weight decay
+        300.0,
+        400.0,
+        500.0,  # epochs
+        4096.0,
+        8192.0,  # larger batch sizes / hidden dims
     }
     # Match markdown table blocks (header + separator + data rows)
     table_pat = _re_san.compile(
@@ -890,35 +1013,77 @@ def _sanitize_fabricated_data(
 
         # Check if this looks like a results/experiment table
         # (heuristic: has a separator row with dashes)
-        has_separator = any(
-            _re_san.match(r"^[ \t]*\|[\s:|-]+\|[ \t]*$", line)
-            for line in lines
-        )
+        has_separator = any(_re_san.match(r"^[ \t]*\|[\s:|-]+\|[ \t]*$", line) for line in lines)
         if not has_separator:
             return table_text
 
         # BUG-192: Detect hyperparameter/config tables and SKIP sanitization.
         # These tables contain design choices, not experimental results.
         _HP_TABLE_KW = {
-            "hyperparameter", "hyper-parameter", "configuration", "config",
-            "setting", "parameter", "learning rate", "lr", "batch size",
-            "optimizer", "architecture", "schedule", "warmup", "decay",
-            "dropout", "weight decay", "momentum", "epsilon", "clip",
+            "hyperparameter",
+            "hyper-parameter",
+            "configuration",
+            "config",
+            "setting",
+            "parameter",
+            "learning rate",
+            "lr",
+            "batch size",
+            "optimizer",
+            "architecture",
+            "schedule",
+            "warmup",
+            "decay",
+            "dropout",
+            "weight decay",
+            "momentum",
+            "epsilon",
+            "clip",
         }
         # BUG-224: Statistical analysis tables contain derived values
         # (t-statistics, p-values, effect sizes) that are computed from
         # the experiment data but never appear in experiment_summary.json.
         # These tables should NOT be sanitized.
         _STAT_TABLE_KW = {
-            "t-statistic", "t-stat", "t statistic", "p-value", "p value",
-            "paired", "cohen", "effect size", "wilcoxon", "mann-whitney",
-            "statistical", "significance", "confidence interval",
+            "t-statistic",
+            "t-stat",
+            "t statistic",
+            "p-value",
+            "p value",
+            "paired",
+            "cohen",
+            "effect size",
+            "wilcoxon",
+            "mann-whitney",
+            "statistical",
+            "significance",
+            "confidence interval",
         }
         _RESULT_TABLE_KW = {
-            "accuracy", "acc", "loss", "f1", "auroc", "auc", "precision",
-            "recall", "bleu", "rouge", "reward", "return", "rmse", "mae",
-            "mse", "error", "score", "metric", "performance", "improvement",
-            "top-1", "top1", "top-5", "top5",
+            "accuracy",
+            "acc",
+            "loss",
+            "f1",
+            "auroc",
+            "auc",
+            "precision",
+            "recall",
+            "bleu",
+            "rouge",
+            "reward",
+            "return",
+            "rmse",
+            "mae",
+            "mse",
+            "error",
+            "score",
+            "metric",
+            "performance",
+            "improvement",
+            "top-1",
+            "top1",
+            "top-5",
+            "top5",
         }
         _header_lower = lines[0].lower() if lines else ""
         _is_hp_table = any(kw in _header_lower for kw in _HP_TABLE_KW)
@@ -936,16 +1101,55 @@ def _sanitize_fabricated_data(
         # This handles mixed tables like "| Method | LR | Acc | F1 |"
         # where LR should be preserved but Acc/F1 are verified.
         _HP_COL_KW = {
-            "lr", "learning rate", "batch", "epoch", "optimizer",
-            "schedule", "warmup", "decay", "dropout", "momentum",
-            "clip", "epsilon", "eps", "beta", "alpha", "gamma",
-            "lambda", "weight decay", "wd", "temperature", "temp",
-            "hidden", "dim", "layers", "heads", "steps", "iterations",
-            "seed", "patience", "#param", "params", "size", "depth",
-            "width", "channels", "kernel", "stride", "padding",
+            "lr",
+            "learning rate",
+            "batch",
+            "epoch",
+            "optimizer",
+            "schedule",
+            "warmup",
+            "decay",
+            "dropout",
+            "momentum",
+            "clip",
+            "epsilon",
+            "eps",
+            "beta",
+            "alpha",
+            "gamma",
+            "lambda",
+            "weight decay",
+            "wd",
+            "temperature",
+            "temp",
+            "hidden",
+            "dim",
+            "layers",
+            "heads",
+            "steps",
+            "iterations",
+            "seed",
+            "patience",
+            "#param",
+            "params",
+            "size",
+            "depth",
+            "width",
+            "channels",
+            "kernel",
+            "stride",
+            "padding",
             # BUG-224: Statistical test columns (derived, not in experiment data)
-            "t-stat", "t stat", "p-value", "p value", "p-val",
-            "cohen", "effect", "ci lower", "ci upper", "difference",
+            "t-stat",
+            "t stat",
+            "p-value",
+            "p value",
+            "p-val",
+            "cohen",
+            "effect",
+            "ci lower",
+            "ci upper",
+            "difference",
         }
         _hp_cols: set[int] = set()  # column indices that are HP columns
         if lines:
@@ -959,9 +1163,7 @@ def _sanitize_fabricated_data(
         sanitized_lines: list[str] = []
         for i, line in enumerate(lines):
             # Skip header row and separator row
-            is_separator = bool(
-                _re_san.match(r"^[ \t]*\|[\s:|-]+\|[ \t]*$", line)
-            )
+            is_separator = bool(_re_san.match(r"^[ \t]*\|[\s:|-]+\|[ \t]*$", line))
             is_header = i == 0  # first line is typically the header
             if is_separator or is_header:
                 sanitized_lines.append(line)
@@ -979,9 +1181,7 @@ def _sanitize_fabricated_data(
                 if ci <= 1 or not cell.strip() or ci in _hp_cols:
                     sanitized_cells.append(cell)
                 else:
-                    sanitized_cells.append(
-                        num_pat.sub(_replace_num, cell)
-                    )
+                    sanitized_cells.append(num_pat.sub(_replace_num, cell))
             sanitized_lines.append("|".join(sanitized_cells))
         return "\n".join(sanitized_lines)
 
@@ -999,17 +1199,43 @@ def _sanitize_fabricated_data(
 
     # Keywords for HP-table vs result-table classification (reuse from above)
     _LTX_HP_KW = {
-        "hyperparameter", "hyper-parameter", "configuration", "config",
-        "setting", "learning rate", "lr", "batch size", "optimizer",
+        "hyperparameter",
+        "hyper-parameter",
+        "configuration",
+        "config",
+        "setting",
+        "learning rate",
+        "lr",
+        "batch size",
+        "optimizer",
     }
     _LTX_RESULT_KW = {
-        "accuracy", "acc", "loss", "f1", "auroc", "auc", "precision",
-        "recall", "reward", "score", "metric", "performance", "result",
+        "accuracy",
+        "acc",
+        "loss",
+        "f1",
+        "auroc",
+        "auc",
+        "precision",
+        "recall",
+        "reward",
+        "score",
+        "metric",
+        "performance",
+        "result",
     }
     # BUG-224: Statistical analysis LaTeX tables — derived values
     _LTX_STAT_KW = {
-        "t-statistic", "t-stat", "t statistic", "p-value", "p value",
-        "paired", "cohen", "effect size", "statistical", "significance",
+        "t-statistic",
+        "t-stat",
+        "t statistic",
+        "p-value",
+        "p value",
+        "paired",
+        "cohen",
+        "effect size",
+        "statistical",
+        "significance",
     }
 
     def _sanitize_latex_table(match: _re_san.Match[str]) -> str:
@@ -1021,7 +1247,7 @@ def _sanitize_fabricated_data(
         # the match is part of a \begin{table} environment — we can look
         # backwards a bit in the full text for the caption.
         _start = match.start()
-        _context = sanitized[max(0, _start - 300):_start + 300].lower()
+        _context = sanitized[max(0, _start - 300) : _start + 300].lower()
         _is_hp = any(kw in _context for kw in _LTX_HP_KW)
         _is_res = any(kw in _context for kw in _LTX_RESULT_KW)
         # BUG-224: Statistical test tables — derived values not in experiment data
@@ -1113,10 +1339,13 @@ def _sanitize_fabricated_data(
         elif _any_header.match(_line) and _in_results_section:
             # Check if we're leaving Results for a different top-level section
             _header_text = _line.lstrip("#").strip().lower()
-            if _header_text and not any(kw in _header_text for kw in
-                    ("result", "experiment", "ablation", "evaluation", "comparison")):
+            if _header_text and not any(
+                kw in _header_text
+                for kw in ("result", "experiment", "ablation", "evaluation", "comparison")
+            ):
                 _in_results_section = False
         if _in_results_section and "|" not in _line:  # skip table rows
+
             def _replace_prose_num(m: _re_san.Match[str]) -> str:
                 nonlocal prose_numbers_replaced
                 num_str = m.group(1)
@@ -1133,6 +1362,7 @@ def _sanitize_fabricated_data(
                     return m.group(0)
                 prose_numbers_replaced += 1
                 return m.group(0).replace(num_str + (m.group(2) or ""), "[value removed]")
+
             _line = _prose_pattern.sub(_replace_prose_num, _line)
         _sanitized_lines.append(_line)
     sanitized = "\n".join(_sanitized_lines)
@@ -1176,6 +1406,7 @@ def _load_seminal_papers_by_key() -> dict[str, dict]:
     """
     try:
         from berb.data import _load_all as _load_seminal_all
+
         all_papers = _load_seminal_all()
         return {p["cite_key"]: p for p in all_papers if "cite_key" in p}
     except Exception:  # noqa: BLE001
@@ -1191,11 +1422,29 @@ def _seminal_to_bibtex(paper: dict, cite_key: str) -> str:
 
     # Decide entry type
     venue_lower = (venue or "").lower()
-    is_conf = any(kw in venue_lower for kw in (
-        "neurips", "nips", "icml", "iclr", "cvpr", "eccv", "iccv",
-        "aaai", "acl", "emnlp", "naacl", "sigir", "kdd", "www",
-        "ijcai", "conference", "proc", "workshop",
-    ))
+    is_conf = any(
+        kw in venue_lower
+        for kw in (
+            "neurips",
+            "nips",
+            "icml",
+            "iclr",
+            "cvpr",
+            "eccv",
+            "iccv",
+            "aaai",
+            "acl",
+            "emnlp",
+            "naacl",
+            "sigir",
+            "kdd",
+            "www",
+            "ijcai",
+            "conference",
+            "proc",
+            "workshop",
+        )
+    )
     if is_conf:
         return (
             f"@inproceedings{{{cite_key},\n"
@@ -1263,9 +1512,7 @@ def _resolve_missing_citations(
         """
         if not query_words:
             return 0.0
-        title_lower = set(
-            _re176.sub(r"[^a-z0-9\s]", "", title.lower()).split()
-        ) - {""}
+        title_lower = set(_re176.sub(r"[^a-z0-9\s]", "", title.lower()).split()) - {""}
         if not title_lower:
             return 0.0
         matched = sum(1 for w in query_words if w.lower() in title_lower)
@@ -1282,14 +1529,14 @@ def _resolve_missing_citations(
             resolved.add(key)
             logger.info(
                 "BUG-194: Resolved %r via seminal_papers.yaml → %r (%s)",
-                key, sp.get("title", "")[:60], sp.get("year", ""),
+                key,
+                sp.get("title", "")[:60],
+                sp.get("year", ""),
             )
 
     # Remaining keys that weren't in the seminal database AND aren't already
     # present in the existing bib (no point re-resolving keys we already have).
-    remaining = sorted(
-        k for k in (missing_keys - resolved) if k not in existing_bib
-    )
+    remaining = sorted(k for k in (missing_keys - resolved) if k not in existing_bib)
     if not remaining:
         return resolved, new_entries
 
@@ -1327,7 +1574,8 @@ def _resolve_missing_citations(
         if not results:
             logger.debug(
                 "BUG-194: No search results for %r (query=%r), skipping",
-                key, query,
+                key,
+                query,
             )
             continue
 
@@ -1357,8 +1605,11 @@ def _resolve_missing_citations(
             logger.info(
                 "BUG-194: Rejecting search result for %r — title %r has "
                 "too-low overlap (%.2f < %.2f) with query words %r",
-                key, best.title[:60], overlap,
-                _CITATION_RESOLVE_MIN_SIMILARITY, query_words,
+                key,
+                best.title[:60],
+                overlap,
+                _CITATION_RESOLVE_MIN_SIMILARITY,
+                query_words,
             )
             continue
 
@@ -1368,9 +1619,11 @@ def _resolve_missing_citations(
             year_diff = abs(int(year) - int(best.year))
             if year_diff > 1:
                 logger.info(
-                    "BUG-194: Rejecting search result for %r — year mismatch "
-                    "(%s vs %s, diff=%d)",
-                    key, year, best.year, year_diff,
+                    "BUG-194: Rejecting search result for %r — year mismatch (%s vs %s, diff=%d)",
+                    key,
+                    year,
+                    best.year,
+                    year_diff,
                 )
                 continue
 
@@ -1391,11 +1644,15 @@ def _resolve_missing_citations(
             resolved.add(key)
             logger.info(
                 "BUG-194: Resolved %r via API → %r (%s, overlap=%.2f)",
-                key, best.title[:60], best.year, overlap,
+                key,
+                best.title[:60],
+                best.year,
+                overlap,
             )
         else:
             logger.debug(
-                "BUG-194: Key %r already in bib, skipping API result", key,
+                "BUG-194: Key %r already in bib, skipping API result",
+                key,
             )
 
         # Rate limit: 0.5s between API calls
@@ -1408,6 +1665,18 @@ def _resolve_missing_citations(
 # Stage 22: Export & Publish
 # ---------------------------------------------------------------------------
 
+
+@register_stage(
+    stage=Stage.EXPORT_PUBLISH,
+    depends_on=frozenset({Stage.PAPER_REVISION}),
+    contract=StageContract(
+        stage=Stage.EXPORT_PUBLISH,
+        input_files=("paper_revised.md",),
+        output_files=("paper_final.md", "code/"),
+        dod="Final paper exported in target format",
+        error_code="E22_EXPORT_FAIL",
+    ),
+)
 def _execute_export_publish(
     stage_dir: Path,
     run_dir: Path,
@@ -1444,14 +1713,10 @@ def _execute_export_publish(
 
     # --- Always-on fabrication sanitization (Phase 1 anti-fabrication) ---
     # Back up pre-sanitized version
-    (stage_dir / "paper_presanitized.md").write_text(
-        final_paper, encoding="utf-8"
-    )
+    (stage_dir / "paper_presanitized.md").write_text(final_paper, encoding="utf-8")
 
     # Sanitize unverified data in tables — always-on, not just degraded mode
-    final_paper, _san_report = _sanitize_fabricated_data(
-        final_paper, run_dir
-    )
+    final_paper, _san_report = _sanitize_fabricated_data(final_paper, run_dir)
     (stage_dir / "sanitization_report.json").write_text(
         json.dumps(_san_report, indent=2), encoding="utf-8"
     )
@@ -1466,9 +1731,7 @@ def _execute_export_publish(
     _degradation_signal_path = run_dir / "degradation_signal.json"
     if _degradation_signal_path.exists():
         try:
-            _deg_signal = json.loads(
-                _degradation_signal_path.read_text(encoding="utf-8")
-            )
+            _deg_signal = json.loads(_degradation_signal_path.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
             _deg_signal = {}
 
@@ -1490,15 +1753,12 @@ def _execute_export_publish(
                 # Find the end of the abstract paragraph
                 _next_section = final_paper.find("\n## ", _marker_end)
                 _next_heading = final_paper.find("\n# ", _marker_end)
-                _insert_pos = min(
-                    p for p in (_next_section, _next_heading)
-                    if p > 0
-                ) if any(p > 0 for p in (_next_section, _next_heading)) else len(final_paper)
-                final_paper = (
-                    final_paper[:_insert_pos]
-                    + _deg_notice
-                    + final_paper[_insert_pos:]
+                _insert_pos = (
+                    min(p for p in (_next_section, _next_heading) if p > 0)
+                    if any(p > 0 for p in (_next_section, _next_heading))
+                    else len(final_paper)
                 )
+                final_paper = final_paper[:_insert_pos] + _deg_notice + final_paper[_insert_pos:]
                 _notice_inserted = True
                 break
         if not _notice_inserted:
@@ -1507,14 +1767,14 @@ def _execute_export_publish(
 
         logger.info(
             "Stage 22: Applied degraded-mode notice (score=%s, threshold=%s)",
-            _deg_score, _deg_threshold,
+            _deg_score,
+            _deg_threshold,
         )
 
     # IMP-3: Deduplicate "due to computational constraints" — keep at most 1
     import re as _re_imp3
-    _CONSTRAINT_PAT = _re_imp3.compile(
-        r"[Dd]ue to computational constraints", _re_imp3.IGNORECASE
-    )
+
+    _CONSTRAINT_PAT = _re_imp3.compile(r"[Dd]ue to computational constraints", _re_imp3.IGNORECASE)
     _matches = list(_CONSTRAINT_PAT.finditer(final_paper))
     if len(_matches) > 1:
         # Keep only the first occurrence; remove subsequent ones by
@@ -1530,13 +1790,13 @@ def _execute_export_publish(
                 final_paper = final_paper[:start] + final_paper[end:]
         final_paper = re.sub(r"[^\S\n]{2,}", " ", final_paper)
         logger.info(
-            "Stage 22: Removed %d duplicate 'computational constraints' "
-            "disclaimers",
+            "Stage 22: Removed %d duplicate 'computational constraints' disclaimers",
             len(_matches) - 1,
         )
 
     # IMP-19 Layer 2: Ensure at least figures are referenced in the paper
     import re as _re_fig
+
     chart_files = []
     # BUG-215: Also search stage-14* versioned dirs (stage-14_v1, etc.)
     # in case stage-14/ was renamed and never recreated.
@@ -1559,9 +1819,9 @@ def _execute_export_publish(
     if chart_files:
         # Distribute figures to relevant sections based on filename keywords
         _fig_placement: dict[str, list[str]] = {
-            "method": [],       # architecture, method, model, pipeline diagrams
-            "result": [],       # experiment, comparison, ablation charts
-            "intro": [],        # concept, overview, illustration
+            "method": [],  # architecture, method, model, pipeline diagrams
+            "result": [],  # experiment, comparison, ablation charts
+            "intro": [],  # concept, overview, illustration
         }
         _fig_counter = len(_already_referenced)  # start numbering after existing figs
         for cf in chart_files[:6]:
@@ -1569,11 +1829,19 @@ def _execute_export_publish(
             stem_lower = cf.stem.lower()
             label = cf.stem.replace("_", " ").title()
             fig_md = f"![Figure {_fig_counter}: {label}](charts/{cf.name})"
-            if any(k in stem_lower for k in ("architecture", "model", "pipeline", "method", "flowchart")):
+            if any(
+                k in stem_lower
+                for k in ("architecture", "model", "pipeline", "method", "flowchart")
+            ):
                 _fig_placement["method"].append(fig_md)
-            elif any(k in stem_lower for k in ("experiment", "comparison", "ablation", "result", "metric")):
+            elif any(
+                k in stem_lower
+                for k in ("experiment", "comparison", "ablation", "result", "metric")
+            ):
                 _fig_placement["result"].append(fig_md)
-            elif any(k in stem_lower for k in ("concept", "overview", "illustration", "threat", "attack")):
+            elif any(
+                k in stem_lower for k in ("concept", "overview", "illustration", "threat", "attack")
+            ):
                 _fig_placement["intro"].append(fig_md)
             else:
                 _fig_placement["result"].append(fig_md)  # default to results
@@ -1582,14 +1850,37 @@ def _execute_export_publish(
         # BUG-200: Match both H1 (#) and H2 (##) headings — LLMs generate
         # either level depending on the writing_structure prompt.
         _section_markers = {
-            "method": ["# Method", "## Method", "# Methodology", "## Methodology",
-                        "# Approach", "## Approach", "# Framework", "## Framework",
-                        "## 3. Method", "## 3 Method"],
-            "result": ["# Results", "## Results", "# Experiments", "## Experiments",
-                        "# Evaluation", "## Evaluation",
-                        "## 5. Results", "## 4. Experiments", "## 5 Results"],
-            "intro": ["# Related Work", "## Related Work", "# Background",
-                       "## Background", "## 2. Related", "## 2 Related Work"],
+            "method": [
+                "# Method",
+                "## Method",
+                "# Methodology",
+                "## Methodology",
+                "# Approach",
+                "## Approach",
+                "# Framework",
+                "## Framework",
+                "## 3. Method",
+                "## 3 Method",
+            ],
+            "result": [
+                "# Results",
+                "## Results",
+                "# Experiments",
+                "## Experiments",
+                "# Evaluation",
+                "## Evaluation",
+                "## 5. Results",
+                "## 4. Experiments",
+                "## 5 Results",
+            ],
+            "intro": [
+                "# Related Work",
+                "## Related Work",
+                "# Background",
+                "## Background",
+                "## 2. Related",
+                "## 2 Related Work",
+            ],
         }
         _total_inserted = 0
         for category, figs in _fig_placement.items():
@@ -1606,9 +1897,14 @@ def _execute_export_publish(
                     break
             if not inserted:
                 # Fallback: insert before Conclusion/Limitations/Discussion
-                for fallback in ["# Conclusion", "## Conclusion",
-                                 "# Limitations", "## Limitations",
-                                 "# Discussion", "## Discussion"]:
+                for fallback in [
+                    "# Conclusion",
+                    "## Conclusion",
+                    "# Limitations",
+                    "## Limitations",
+                    "# Discussion",
+                    "## Discussion",
+                ]:
                     if fallback in final_paper:
                         final_paper = final_paper.replace(fallback, fig_block + fallback, 1)
                         inserted = True
@@ -1620,9 +1916,7 @@ def _execute_export_publish(
                 # the markdown fence and gets dropped by converter).
                 _fence_end = final_paper.rfind("\n```")
                 if _fence_end > 0:
-                    final_paper = (
-                        final_paper[:_fence_end] + fig_block + final_paper[_fence_end:]
-                    )
+                    final_paper = final_paper[:_fence_end] + fig_block + final_paper[_fence_end:]
                 else:
                     final_paper += fig_block
                 _total_inserted += len(figs)
@@ -1655,6 +1949,7 @@ def _execute_export_publish(
         and _san_report.get("numbers_replaced", 0) == 0  # Phase 1 didn't run/replace
     ):
         import re as _re_fab
+
         _real_vals = set()
         for rv in _fab_flags.get("real_metric_values", []):
             if isinstance(rv, (int, float)) and math.isfinite(rv):
@@ -1676,9 +1971,7 @@ def _execute_export_publish(
                     str(round(num_val, 4)),
                     str(round(num_val, 2)),
                     str(round(num_val, 1)),
-                    *(
-                        [str(int(num_val))] if num_val == int(num_val) else []
-                    ),
+                    *([str(int(num_val))] if num_val == int(num_val) else []),
                 }
                 if rounded_strs & _real_vals:
                     return num_str  # real value — keep it
@@ -1697,6 +1990,7 @@ def _execute_export_publish(
         def _sanitize_section(sec_match: _re_fab.Match) -> str:  # type: ignore[name-defined]
             nonlocal _sanitized_count
             section_text = sec_match.group(0)
+
             # Replace decimal numbers (e.g., 73.42, 0.891) but NOT integers
             # that are likely structural (year, section number, figure number)
             def _replace_in_section(m: _re_fab.Match) -> str:  # type: ignore[name-defined]
@@ -1705,9 +1999,8 @@ def _execute_export_publish(
                 if result == "--":
                     _sanitized_count += 1
                 return result
-            return _re_fab.sub(
-                r"\b\d+\.\d{1,6}\b", _replace_in_section, section_text
-            )
+
+            return _re_fab.sub(r"\b\d+\.\d{1,6}\b", _replace_in_section, section_text)
 
         final_paper = _result_section_pat.sub(_sanitize_section, final_paper)
 
@@ -1718,9 +2011,7 @@ def _execute_export_publish(
                 _sanitized_count,
             )
             # Rewrite the sanitized paper
-            (stage_dir / "paper_final.md").write_text(
-                final_paper, encoding="utf-8"
-            )
+            (stage_dir / "paper_final.md").write_text(final_paper, encoding="utf-8")
 
     # Initialize artifacts list
     artifacts = ["paper_final.md"]
@@ -1758,12 +2049,8 @@ def _execute_export_publish(
                     continue
                 body = m.group(2)
                 # Extract author field
-                author_m = _re.search(
-                    r"author\s*=\s*[\{\"](.*?)[\}\"]", body, _re.IGNORECASE
-                )
-                year_m = _re.search(
-                    r"year\s*=\s*[\{\"]?(\d{4})[\}\"]?", body, _re.IGNORECASE
-                )
+                author_m = _re.search(r"author\s*=\s*[\{\"](.*?)[\}\"]", body, _re.IGNORECASE)
+                year_m = _re.search(r"year\s*=\s*[\{\"]?(\d{4})[\}\"]?", body, _re.IGNORECASE)
                 if not author_m or not year_m:
                     continue
                 author_raw = author_m.group(1).strip()
@@ -1797,9 +2084,7 @@ def _execute_export_publish(
                         f"{last_names[0]} et al. {year}",
                     ]
                     # Also add "Smith and Jones, 2024" for first two authors
-                    patterns.append(
-                        f"{last_names[0]} and {last_names[1]}, {year}"
-                    )
+                    patterns.append(f"{last_names[0]} and {last_names[1]}, {year}")
                 for pat in patterns:
                     mapping[pat] = key
             return mapping
@@ -1822,16 +2107,15 @@ def _execute_export_publish(
                     _ay_key = _ay_map[_ay_pat]
                     # Match [Author et al., 2024] or [Author and Jones, 2024; ...]
                     # Handle single-citation brackets
-                    final_paper = final_paper.replace(
-                        f"[{_ay_pat}]", f"[{_ay_key}]"
-                    )
-                    # Handle within multi-citation brackets [A et al., 2020; B et al., 2021]
+                    final_paper = final_paper.replace(f"[{_ay_pat}]", f"[{_ay_key}]")
+                    # Handle multi-citation brackets [A et al., 2020; B et al., 2021]
                     # Replace the author-year segment only inside [...] brackets
                     final_paper = _re.sub(
-                        r'\[([^\]]*?)' + _re.escape(_ay_pat) + r'([^\]]*?)\]',
-                        lambda _m: '[' + _m.group(1) + _ay_key + _m.group(2) + ']',
+                        r"\[([^\]]*?)" + _re.escape(_ay_pat) + r"([^\]]*?)\]",
+                        lambda _m, _key=_ay_key: "[" + _m.group(1) + _key + _m.group(2) + "]",
                         final_paper,
                     )
+
                 # Fix multi-key brackets: [key1; key2] → [key1, key2]
                 # (author-year uses semicolons, cite-keys use commas)
                 def _fix_semicolon_cites(m_sc: _re.Match[str]) -> str:
@@ -1842,12 +2126,9 @@ def _execute_export_publish(
                     if all(_re.fullmatch(_ck, p) for p in parts):
                         return "[" + ", ".join(parts) + "]"
                     return m_sc.group(0)
-                final_paper = _re.sub(
-                    r"\[([^\]]+;[^\]]+)\]", _fix_semicolon_cites, final_paper
-                )
-                (stage_dir / "paper_final.md").write_text(
-                    final_paper, encoding="utf-8"
-                )
+
+                final_paper = _re.sub(r"\[([^\]]+;[^\]]+)\]", _fix_semicolon_cites, final_paper)
+                (stage_dir / "paper_final.md").write_text(final_paper, encoding="utf-8")
 
         # R10-Fix4: Citation cross-validation
         # BUG-187: Also parse multi-key brackets like [key1, key2, key3].
@@ -1889,7 +2170,8 @@ def _execute_export_publish(
                         bib_text += "\n" + "\n\n".join(new_bib_entries) + "\n"
                         logger.info(
                             "Stage 22: Resolved %d/%d missing citations via API lookup",
-                            len(resolved_keys), len(invalid_keys),
+                            len(resolved_keys),
+                            len(invalid_keys),
                         )
 
                 still_invalid = invalid_keys - resolved_keys
@@ -1897,17 +2179,20 @@ def _execute_export_publish(
                     # IMP-29: Remove remaining unresolvable citations from
                     # BOTH single-key and multi-key brackets.
                     import re as _re_imp29
+
                     for bad_key in still_invalid:
                         # Remove single-key brackets
                         final_paper = final_paper.replace(f"[{bad_key}]", "")
+
                         # Remove from multi-key brackets: [good, BAD, good] → [good, good]
-                        def _remove_from_multi(m: _re.Match) -> str:
+                        def _remove_from_multi(m: _re.Match, _bad_key=bad_key) -> str:
                             inner = m.group(1)
                             parts = [p.strip() for p in _re.split(r"[,;]\s*", inner)]
-                            filtered = [p for p in parts if p != bad_key]
+                            filtered = [p for p in parts if p != _bad_key]
                             if not filtered:
                                 return ""
                             return "[" + ", ".join(filtered) + "]"
+
                         final_paper = _re_imp29.sub(
                             r"\[([^\]]*\b" + _re.escape(bad_key) + r"\b[^\]]*)\]",
                             _remove_from_multi,
@@ -1953,9 +2238,7 @@ def _execute_export_publish(
                     return f"\\cite{{{key}}}"
                 return m.group(0)
 
-            final_paper_latex = _re.sub(
-                rf"\[({_CITE_KEY_PAT})\]", _replace_cite, final_paper_latex
-            )
+            final_paper_latex = _re.sub(rf"\[({_CITE_KEY_PAT})\]", _replace_cite, final_paper_latex)
 
             # Step 3: Merge adjacent \cite{a} \cite{b} → \cite{a, b}
             def _merge_adjacent_cites(m: _re.Match[str]) -> str:
@@ -1968,33 +2251,26 @@ def _execute_export_publish(
                 final_paper_latex,
             )
 
-            (stage_dir / "paper_final_latex.md").write_text(
-                final_paper_latex, encoding="utf-8"
-            )
+            (stage_dir / "paper_final_latex.md").write_text(final_paper_latex, encoding="utf-8")
             artifacts.append("paper_final_latex.md")
         # IMP-1: Prune uncited bibliography entries — keep only keys
         # that actually appear in the paper text (bracket or \cite form).
         if valid_keys:
             _all_cited: set[str] = set()
             # Bracket-format citations [key]
-            _all_cited.update(
-                _re.findall(r"\[([a-zA-Z]+\d{4}[a-zA-Z0-9_-]*)\]", final_paper)
-            )
+            _all_cited.update(_re.findall(r"\[([a-zA-Z]+\d{4}[a-zA-Z0-9_-]*)\]", final_paper))
             # \cite{key, key2} format (original + latex-converted)
             for _src in (
                 final_paper,
                 final_paper_latex,
             ):
                 for _cm in _re.finditer(r"\\cite\{([^}]+)\}", _src):
-                    _all_cited.update(
-                        k.strip() for k in _cm.group(1).split(",")
-                    )
+                    _all_cited.update(k.strip() for k in _cm.group(1).split(","))
             uncited_keys = valid_keys - _all_cited
             if uncited_keys:
                 bib_text = _remove_bibtex_entries(bib_text, uncited_keys)
                 logger.info(
-                    "Stage 22: Pruned %d uncited bibliography entries "
-                    "(kept %d)",
+                    "Stage 22: Pruned %d uncited bibliography entries (kept %d)",
                     len(uncited_keys),
                     len(valid_keys) - len(uncited_keys),
                 )
@@ -2015,8 +2291,14 @@ def _execute_export_publish(
         # Use the latex-citation-processed version if available
         tex_source = final_paper_latex
         # Append NeurIPS-style checklist if target is a ML conference
-        if tpl.name in ("neurips_2024", "neurips_2025", "icml_2025", "icml_2026",
-                         "iclr_2025", "iclr_2026"):
+        if tpl.name in (
+            "neurips_2024",
+            "neurips_2025",
+            "icml_2025",
+            "icml_2026",
+            "iclr_2025",
+            "iclr_2026",
+        ):
             _has_exp = bool(_read_prior_artifact(run_dir, "experiment_summary.json"))
             _checklist = _generate_neurips_checklist(
                 has_experiments=_has_exp,
@@ -2044,10 +2326,10 @@ def _execute_export_publish(
         _vresult = None  # BUG-DA8-04: Initialize before try to avoid fragile dir() check
         try:
             from berb.pipeline.paper_verifier import verify_paper as _verify_paper
+
             # BUG-222: Use best_only=True to validate against promoted best data only
-            from berb.pipeline.verified_registry import (
-                VerifiedRegistry as _VR22,
-            )
+            from berb.pipeline.verified_registry import VerifiedRegistry as _VR22  # noqa: N814,
+
             _vr22 = _VR22.from_run_dir(
                 run_dir,
                 metric_direction=config.experiment.metric_direction,
@@ -2056,26 +2338,33 @@ def _execute_export_publish(
             if _vr22.values:
                 _vresult = _verify_paper(tex_content, _vr22)
                 (stage_dir / "paper_verification.json").write_text(
-                    json.dumps({
-                        "passed": _vresult.passed,
-                        "severity": _vresult.severity,
-                        "total_checked": _vresult.total_numbers_checked,
-                        "total_verified": _vresult.total_numbers_verified,
-                        "strict_violations": _vresult.strict_violations,
-                        "lenient_violations": _vresult.lenient_violations,
-                        "fabrication_rate": round(_vresult.fabrication_rate, 4),
-                        "unverified_numbers": [
-                            {"value": u.value, "line": u.line_number,
-                             "section": u.section, "in_table": u.in_table}
-                            for u in _vresult.unverified_numbers[:20]
-                        ],
-                        "fabricated_conditions": [
-                            {"name": fc.name, "line": fc.line_number}
-                            for fc in _vresult.fabricated_conditions
-                        ],
-                        "config_warnings": getattr(_vresult, "config_warnings", []),
-                        "summary": _vresult.summary,
-                    }, indent=2),
+                    json.dumps(
+                        {
+                            "passed": _vresult.passed,
+                            "severity": _vresult.severity,
+                            "total_checked": _vresult.total_numbers_checked,
+                            "total_verified": _vresult.total_numbers_verified,
+                            "strict_violations": _vresult.strict_violations,
+                            "lenient_violations": _vresult.lenient_violations,
+                            "fabrication_rate": round(_vresult.fabrication_rate, 4),
+                            "unverified_numbers": [
+                                {
+                                    "value": u.value,
+                                    "line": u.line_number,
+                                    "section": u.section,
+                                    "in_table": u.in_table,
+                                }
+                                for u in _vresult.unverified_numbers[:20]
+                            ],
+                            "fabricated_conditions": [
+                                {"name": fc.name, "line": fc.line_number}
+                                for fc in _vresult.fabricated_conditions
+                            ],
+                            "config_warnings": getattr(_vresult, "config_warnings", []),
+                            "summary": _vresult.summary,
+                        },
+                        indent=2,
+                    ),
                     encoding="utf-8",
                 )
                 logger.info(
@@ -2105,9 +2394,15 @@ def _execute_export_publish(
             # actually protocol/setup sections should NOT trigger strict
             # sanitization.  Exempt sections containing "dataset", "setup",
             # "protocol", "hyperparameter", or "implementation".
-            _STRICT_EXEMPT_KW = {"dataset", "setup", "protocol",
-                                 "hyperparameter", "implementation",
-                                 "hardware", "infrastructure"}
+            _STRICT_EXEMPT_KW = {
+                "dataset",
+                "setup",
+                "protocol",
+                "hyperparameter",
+                "implementation",
+                "hardware",
+                "infrastructure",
+            }
 
             _sanitized_tex = tex_content
             _san2_count = 0
@@ -2116,13 +2411,17 @@ def _execute_export_publish(
                 _uv_section_lower = (_uv.section or "").lower()
                 _uv_is_strict = any(
                     s in _uv_section_lower
-                    for s in ("results", "experiment", "evaluation",
-                              "ablation", "comparison", "analysis")
+                    for s in (
+                        "results",
+                        "experiment",
+                        "evaluation",
+                        "ablation",
+                        "comparison",
+                        "analysis",
+                    )
                 )
                 # BUG-R49-02: Exempt protocol/setup sections from strict mode
-                if _uv_is_strict and any(
-                    kw in _uv_section_lower for kw in _STRICT_EXEMPT_KW
-                ):
+                if _uv_is_strict and any(kw in _uv_section_lower for kw in _STRICT_EXEMPT_KW):
                     _uv_is_strict = False
                 if _uv_is_strict or _uv.in_table:
                     _lines = _sanitized_tex.split("\n")
@@ -2158,7 +2457,10 @@ def _execute_export_publish(
                             )
                             if _re_san2.search(_pat, _orig_line):
                                 _lines[_uv.line_number - 1] = _re_san2.sub(
-                                    _pat, "---", _orig_line, count=1,
+                                    _pat,
+                                    "---",
+                                    _orig_line,
+                                    count=1,
                                 )
                                 _san2_count += 1
                                 break
@@ -2167,14 +2469,14 @@ def _execute_export_publish(
                 tex_content = _sanitized_tex
                 (stage_dir / "paper.tex").write_text(tex_content, encoding="utf-8")
                 logger.info(
-                    "Stage 22: Sanitized paper.tex — replaced %d unverified "
-                    "numbers with '---'",
+                    "Stage 22: Sanitized paper.tex — replaced %d unverified numbers with '---'",
                     _san2_count,
                 )
 
         # Copy bundled style files alongside paper.tex
         for sf in tpl.get_style_files():
             import shutil as _shutil_sty
+
             _shutil_sty.copy2(sf, stage_dir / sf.name)
 
         # --- Pre-compilation: copy charts and fix figure paths ---
@@ -2191,6 +2493,7 @@ def _execute_export_publish(
                 _fa_pngs = list(_fa_dir.glob("fig_*.png"))
                 if _fa_pngs:
                     import shutil
+
                     for _fa_png in _fa_pngs:
                         dest = chart_dir / _fa_png.name
                         shutil.copy2(_fa_png, dest)
@@ -2198,12 +2501,14 @@ def _execute_export_publish(
                     _fa_charts_found = True
                     logger.info(
                         "Stage 22: Copied %d FigureAgent charts from %s",
-                        len(_fa_pngs), _fa_dir,
+                        len(_fa_pngs),
+                        _fa_dir,
                     )
                     break
 
             # Generate structured charts from visualize.py
             from berb.experiment.visualize import generate_all_charts
+
             _metric_dir = getattr(config.experiment, "metric_direction", "minimize")
             _viz_charts = generate_all_charts(
                 run_dir,
@@ -2230,13 +2535,15 @@ def _execute_export_publish(
             tex_path = stage_dir / "paper.tex"
             if tex_path.exists():
                 from berb.templates.compiler import remove_missing_figures
+
                 _tex_text = tex_path.read_text(encoding="utf-8")
                 _fixed_tex, _removed_figs = remove_missing_figures(_tex_text, stage_dir)
                 if _removed_figs:
                     tex_path.write_text(_fixed_tex, encoding="utf-8")
                     logger.warning(
                         "Stage 22: Removed %d figure block(s) with missing images: %s",
-                        len(_removed_figs), _removed_figs,
+                        len(_removed_figs),
+                        _removed_figs,
                     )
         except Exception as _rmf_exc:  # noqa: BLE001
             logger.debug("Stage 22: remove_missing_figures skipped: %s", _rmf_exc)
@@ -2244,6 +2551,7 @@ def _execute_export_publish(
         # Compile verification
         try:
             from berb.templates.compiler import compile_latex
+
             _compile_result = compile_latex(stage_dir / "paper.tex", max_attempts=2)
             if _compile_result.success:
                 logger.info("Stage 22: LaTeX compilation verification PASSED")
@@ -2278,6 +2586,7 @@ def _execute_export_publish(
                 # Post-compilation quality checks
                 try:
                     from berb.templates.compiler import check_compiled_quality
+
                     _qc = check_compiled_quality(stage_dir / "paper.tex")
                     if _qc.warnings_summary:
                         logger.warning(
@@ -2285,15 +2594,18 @@ def _execute_export_publish(
                             "; ".join(_qc.warnings_summary),
                         )
                     (stage_dir / "compilation_quality.json").write_text(
-                        json.dumps({
-                            "page_count": _qc.page_count,
-                            "unresolved_refs": _qc.unresolved_refs,
-                            "unresolved_cites": _qc.unresolved_cites,
-                            "overfull_hboxes": len(_qc.overfull_hboxes),
-                            "orphan_figures": _qc.orphan_figures,
-                            "orphan_labels": _qc.orphan_labels,
-                            "warnings": _qc.warnings_summary,
-                        }, indent=2),
+                        json.dumps(
+                            {
+                                "page_count": _qc.page_count,
+                                "unresolved_refs": _qc.unresolved_refs,
+                                "unresolved_cites": _qc.unresolved_cites,
+                                "overfull_hboxes": len(_qc.overfull_hboxes),
+                                "orphan_figures": _qc.orphan_figures,
+                                "orphan_labels": _qc.orphan_labels,
+                                "warnings": _qc.warnings_summary,
+                            },
+                            indent=2,
+                        ),
                         encoding="utf-8",
                     )
                     artifacts.append("compilation_quality.json")
@@ -2303,12 +2615,16 @@ def _execute_export_publish(
                         logger.warning(
                             "BUG-27: Paper is %d pages (limit %d). "
                             "Consider tightening content in revision.",
-                            _qc.page_count, _page_limit,
+                            _qc.page_count,
+                            _page_limit,
                         )
                 except Exception as _qc_exc:  # noqa: BLE001
                     logger.debug("Stage 22: Quality checks skipped: %s", _qc_exc)
             else:
-                logger.warning("Stage 22: LaTeX compilation verification FAILED: %s", _compile_result.errors[:3])
+                logger.warning(
+                    "Stage 22: LaTeX compilation verification FAILED: %s",
+                    _compile_result.errors[:3],
+                )
                 # Add compilation failure comment to .tex
                 _tex_path = stage_dir / "paper.tex"
                 if _tex_path.exists():
@@ -2464,18 +2780,81 @@ def _execute_export_publish(
             )
     # WS-5.5: Generate framework diagram prompt for methodology section
     try:
-        _framework_prompt = _generate_framework_diagram_prompt(
-            final_paper, config, llm=llm
-        )
+        _framework_prompt = _generate_framework_diagram_prompt(final_paper, config, llm=llm)
         if _framework_prompt:
             _chart_dir = stage_dir / "charts"
             _chart_dir.mkdir(parents=True, exist_ok=True)
             (_chart_dir / "framework_diagram_prompt.md").write_text(
                 _framework_prompt, encoding="utf-8"
             )
-            logger.info("Stage 22: Generated framework diagram prompt → charts/framework_diagram_prompt.md")
+            logger.info(
+                "Stage 22: Generated framework diagram prompt → charts/framework_diagram_prompt.md"
+            )
     except Exception as exc:  # noqa: BLE001
         logger.debug("Stage 22: Framework diagram prompt generation skipped: %s", exc)
+
+    # Export to PDF/LaTeX/other formats using MultiFormatExporter
+    try:
+        from berb.export import ExportConfig, ExportFormat, MultiFormatExporter
+
+        _export_config = config.export
+        _output_dir = run_dir / _export_config.output_dir
+        _output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Parse paper content for export
+        _paper_content = {
+            "title": _extract_paper_title(final_paper),
+            "content": final_paper,
+            "authors": _export_config.authors,
+        }
+
+        # Get references
+        _bib_path = stage_dir / "references.bib"
+        _references = []
+        if _bib_path.exists():
+            try:
+                import re as _bib_re
+                _bib_text = _bib_path.read_text(encoding="utf-8")
+                # Parse bib entries into dict format
+                for _entry in _bib_re.findall(r"@(\w+)\{([^,]+),\s*(.*?)\n\}", _bib_text, _bib_re.DOTALL):
+                    _references.append({"type": _entry[0], "key": _entry[1], "content": _entry[2]})
+            except Exception:
+                pass
+
+        # Get figures
+        _figures = []
+        for _chart_dir in sorted(stage_dir.glob("charts")):
+            if _chart_dir.is_dir():
+                _figures.extend([str(f) for f in _chart_dir.glob("*.png")])
+
+        # Create exporter config and run export
+        _exp_config = ExportConfig(
+            formats=[ExportFormat(f) for f in _export_config.formats if f in [e.value for e in ExportFormat]],
+            output_dir=str(_output_dir),
+            template=_export_config.template,
+        )
+        _exporter = MultiFormatExporter(config=_exp_config)
+
+        # Run async export
+        import asyncio
+        _export_result = asyncio.run(
+            _exporter.export(_paper_content, _references, _figures)
+        )
+
+        if _export_result.exported_formats:
+            logger.info(
+                "Stage 22: Exported paper to formats: %s",
+                ", ".join(_export_result.exported_formats),
+            )
+            # Add exported files to artifacts
+            for _fmt in _export_result.exported_formats:
+                _fmt_dir = _output_dir / _fmt
+                if _fmt_dir.exists():
+                    for _f in _fmt_dir.rglob("*"):
+                        if _f.is_file() and _f.suffix in [".pdf", ".tex", ".html", ".docx"]:
+                            artifacts.append(str(_f.relative_to(run_dir)))
+    except Exception as _exc:  # noqa: BLE001
+        logger.warning("Stage 22: Export to PDF/LaTeX failed: %s", _exc)
 
     return StageResult(
         stage=Stage.EXPORT_PUBLISH,
@@ -2489,6 +2868,7 @@ def _execute_export_publish(
 # Citation helpers
 # ---------------------------------------------------------------------------
 
+
 def _check_citation_relevance(
     llm: Any,
     topic: str,
@@ -2501,7 +2881,7 @@ def _check_citation_relevance(
     """
     citation_lines = []
     for cr in results:
-        citation_lines.append(f"- [{cr.cite_key}] \"{cr.title}\"")
+        citation_lines.append(f'- [{cr.cite_key}] "{cr.title}"')
     if not citation_lines:
         return {}
 
@@ -2509,7 +2889,7 @@ def _check_citation_relevance(
     _BATCH_SIZE = 30
 
     for batch_start in range(0, len(citation_lines), _BATCH_SIZE):
-        batch = citation_lines[batch_start:batch_start + _BATCH_SIZE]
+        batch = citation_lines[batch_start : batch_start + _BATCH_SIZE]
         citations_text = "\n".join(batch)
 
         prompt = (
@@ -2517,7 +2897,7 @@ def _check_citation_relevance(
             f"Rate the relevance of each citation to the research topic "
             f"on a scale of 0.0 to 1.0.\n"
             f"Return ONLY a JSON object mapping cite_key to relevance score.\n"
-            f"Example: {{\"smith2020\": 0.9, \"jones2019\": 0.2}}\n\n"
+            f'Example: {{"smith2020": 0.9, "jones2019": 0.2}}\n\n'
             f"Citations:\n{citations_text}"
         )
 
@@ -2535,7 +2915,8 @@ def _check_citation_relevance(
         except Exception:  # noqa: BLE001
             logger.debug(
                 "Citation relevance check failed for batch %d–%d, skipping",
-                batch_start, batch_start + len(batch),
+                batch_start,
+                batch_start + len(batch),
             )
 
     return all_scores
@@ -2589,6 +2970,18 @@ def _remove_citations_from_text(text: str, keys_to_remove: set[str]) -> str:
 # Stage 23: Citation Verify
 # ---------------------------------------------------------------------------
 
+
+@register_stage(
+    stage=Stage.CITATION_VERIFY,
+    depends_on=frozenset({Stage.EXPORT_PUBLISH}),
+    contract=StageContract(
+        stage=Stage.CITATION_VERIFY,
+        input_files=("paper_final.md",),
+        output_files=("verification_report.json", "references_verified.bib"),
+        dod="All citations verified against real APIs; hallucinated refs flagged",
+        error_code="E23_VERIFY_FAIL",
+    ),
+)
 def _execute_citation_verify(
     stage_dir: Path,
     run_dir: Path,
@@ -2640,10 +3033,10 @@ def _execute_citation_verify(
     s2_api_key = getattr(config.llm, "s2_api_key", "") or ""
 
     from berb.literature.verify import parse_bibtex_entries
+
     _n_entries = len(parse_bibtex_entries(bib_text))
     logger.info(
-        "[citation-verify] Verifying %d references "
-        "(DOI→CrossRef > OpenAlex > arXiv > S2)…",
+        "[citation-verify] Verifying %d references (DOI→CrossRef > OpenAlex > arXiv > S2)…",
         _n_entries,
     )
     report = verify_citations(bib_text, s2_api_key=s2_api_key)
@@ -2659,9 +3052,7 @@ def _execute_citation_verify(
 
     # --- Relevance check: assess topical relevance of verified citations ---
     if llm is not None and report.results:
-        relevance_scores = _check_citation_relevance(
-            llm, config.research.topic, report.results
-        )
+        relevance_scores = _check_citation_relevance(llm, config.research.topic, report.results)
         for cr in report.results:
             score = relevance_scores.get(cr.cite_key)
             if score is not None:
@@ -2681,15 +3072,17 @@ def _execute_citation_verify(
     # Previously they defaulted to 0.0 which caused mass-deletion.
     _DEFAULT_RELEVANCE = 0.7
     remaining = [
-        cr for cr in report.results
-        if cr.cite_key not in low_relevance_keys
-        and cr.status != VerifyStatus.HALLUCINATED
+        cr
+        for cr in report.results
+        if cr.cite_key not in low_relevance_keys and cr.status != VerifyStatus.HALLUCINATED
     ]
     if len(remaining) > MAX_CITATIONS:
         remaining.sort(
-            key=lambda c: c.relevance_score if c.relevance_score is not None else _DEFAULT_RELEVANCE,
+            key=lambda c: (
+                c.relevance_score if c.relevance_score is not None else _DEFAULT_RELEVANCE
+            ),
         )
-        overflow = remaining[:len(remaining) - MAX_CITATIONS]
+        overflow = remaining[: len(remaining) - MAX_CITATIONS]
         for cr in overflow:
             low_relevance_keys.add(cr.cite_key)
         logger.info(
@@ -2723,7 +3116,8 @@ def _execute_citation_verify(
         logger.warning(
             "Stage 23: Verification stripped %d→%d entries (>50%% loss). "
             "Keeping original bib to avoid breaking references.",
-            original_count, verified_count,
+            original_count,
+            verified_count,
         )
         verified_bib = bib_text
 
@@ -2733,30 +3127,23 @@ def _execute_citation_verify(
     if paper_text.strip():
         _vbib_keys = set(re.findall(r"@\w+\{([^,]+),", verified_bib))
         _cited_in_paper: set[str] = set()
-        _cited_in_paper.update(
-            re.findall(r"\[([a-zA-Z]+\d{4}[a-zA-Z0-9_-]*)\]", paper_text)
-        )
+        _cited_in_paper.update(re.findall(r"\[([a-zA-Z]+\d{4}[a-zA-Z0-9_-]*)\]", paper_text))
         for _cm in re.finditer(r"\\cite\{([^}]+)\}", paper_text):
-            _cited_in_paper.update(
-                k.strip() for k in _cm.group(1).split(",")
-            )
+            _cited_in_paper.update(k.strip() for k in _cm.group(1).split(","))
         # BUG-182: Also read stage-22/paper.tex for \cite{} keys
         _latex_paper = stage_dir.parent / "stage-22" / "paper.tex"
         if _latex_paper.exists():
             try:
                 _latex_text = _latex_paper.read_text(encoding="utf-8")
                 for _cm in re.finditer(r"\\cite[pt]?\{([^}]+)\}", _latex_text):
-                    _cited_in_paper.update(
-                        k.strip() for k in _cm.group(1).split(",")
-                    )
+                    _cited_in_paper.update(k.strip() for k in _cm.group(1).split(","))
             except OSError:
                 pass
         _uncited_vbib = _vbib_keys - _cited_in_paper
         if _uncited_vbib:
             verified_bib = _remove_bibtex_entries(verified_bib, _uncited_vbib)
             logger.info(
-                "Stage 23: Pruned %d uncited entries from verified bib "
-                "(kept %d)",
+                "Stage 23: Pruned %d uncited entries from verified bib (kept %d)",
                 len(_uncited_vbib),
                 len(_vbib_keys) - len(_uncited_vbib),
             )
@@ -2765,9 +3152,7 @@ def _execute_citation_verify(
     # write a comment instead of an empty file to avoid "Missing or empty output" error.
     if not verified_bib.strip():
         verified_bib = "% All citations were filtered out during verification\n"
-        logger.warning(
-            "Stage 23: All BibTeX entries filtered out — writing placeholder"
-        )
+        logger.warning("Stage 23: All BibTeX entries filtered out — writing placeholder")
 
     (stage_dir / "references_verified.bib").write_text(verified_bib, encoding="utf-8")
 

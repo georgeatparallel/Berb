@@ -6,6 +6,10 @@ Each StageContract declares:
   - dod: Definition of Done — human-readable acceptance criterion
   - error_code: unique error identifier for diagnostics
   - max_retries: how many times the stage may be retried on failure
+
+Phase 3 Step 8: ``CONTRACTS`` can be rebuilt from the plugin registry
+via ``rebuild_from_registry()``.  Adding a new stage no longer requires
+editing this module — the registry's decorator carries the contract inline.
 """
 
 from __future__ import annotations
@@ -229,3 +233,25 @@ CONTRACTS: dict[Stage, StageContract] = {
         depends_on=frozenset({Stage.EXPORT_PUBLISH}),
     ),
 }
+
+
+def rebuild_from_registry() -> int:
+    """Rebuild the CONTRACTS dict from the plugin stage registry.
+
+    Phase 3 Step 8: After all stage_impls modules are imported and their
+    ``@register_stage`` decorators have fired, call this to populate
+    CONTRACTS from the registry's contract data.
+
+    Returns the number of contracts rebuilt.
+
+    Adding a new stage no longer requires editing this file — the
+    decorator in the stage implementation carries the contract inline.
+    """
+    from berb.pipeline.registry import get_all_registrations
+
+    count = 0
+    for stage, reg in get_all_registrations().items():
+        if reg.contract is not None:
+            CONTRACTS[stage] = reg.contract
+            count += 1
+    return count

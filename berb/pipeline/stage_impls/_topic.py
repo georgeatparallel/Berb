@@ -19,12 +19,28 @@ from berb.pipeline._helpers import (
     _safe_json_loads,
     _utcnow_iso,
 )
+from berb.pipeline.contracts import StageContract
+from berb.pipeline.registry import register_stage
+from berb.pipeline.contracts import StageContract
+from berb.pipeline.registry import register_stage
 from berb.pipeline.stages import Stage, StageStatus
 from berb.prompts import PromptManager
 
 logger = logging.getLogger(__name__)
 
 
+@register_stage(
+    stage=Stage.TOPIC_INIT,
+    depends_on=frozenset(),
+    contract=StageContract(
+        stage=Stage.TOPIC_INIT,
+        input_files=(),
+        output_files=("goal.md", "hardware_profile.json"),
+        dod="SMART goal statement with topic, scope, and constraints",
+        error_code="E01_INVALID_GOAL",
+        max_retries=0,
+    ),
+)
 def _execute_topic_init(
     stage_dir: Path,
     run_dir: Path,
@@ -111,6 +127,17 @@ Investigate the topic with emphasis on reproducible methods and measurable outco
     )
 
 
+@register_stage(
+    stage=Stage.PROBLEM_DECOMPOSE,
+    depends_on=frozenset({Stage.TOPIC_INIT}),
+    contract=StageContract(
+        stage=Stage.PROBLEM_DECOMPOSE,
+        input_files=("goal.md",),
+        output_files=("problem_tree.md",),
+        dod=">=3 prioritized sub-questions identified",
+        error_code="E02_DECOMP_FAIL",
+    ),
+)
 def _execute_problem_decompose(
     stage_dir: Path,
     run_dir: Path,

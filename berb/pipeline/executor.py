@@ -32,6 +32,7 @@ from berb.pipeline.stages import (
     advance,
     gate_required,
 )
+from berb.pipeline.registry import get_all_registrations, get_registration
 from berb.prompts import PromptManager
 
 logger = logging.getLogger(__name__)
@@ -210,7 +211,13 @@ def execute_stage(
 
     try:
         _ = advance(stage, StageStatus.PENDING, TransitionEvent.START)
-        executor = _STAGE_EXECUTORS[stage]
+        # Phase 3 Step 8: Check plugin registry first, fall back to hardcoded dict
+        reg = get_registration(stage)
+        executor: Callable[..., StageResult]
+        if reg is not None:
+            executor = reg.fn
+        else:
+            executor = _STAGE_EXECUTORS[stage]
         prompts = PromptManager(config.prompts.custom_file or None)  # type: ignore[attr-defined]
         # Detect at call-time whether this executor accepts a 'prompts' kwarg by
         # inspecting its signature.  The previous approach caught TypeError and

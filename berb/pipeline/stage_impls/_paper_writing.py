@@ -4,39 +4,44 @@ from __future__ import annotations
 
 import json
 import logging
-import math
 import re
 from pathlib import Path
 from typing import Any
 
-import yaml
-
 from berb.adapters import AdapterBundle
 from berb.config import RCConfig
 from berb.llm.client import LLMClient
-from berb.pipeline._domain import _detect_domain, _is_ml_domain
+from berb.pipeline._domain import _detect_domain
 from berb.pipeline._helpers import (
     StageResult,
     _build_context_preamble,
     _chat_with_prompt,
-    _collect_experiment_results,
     _default_paper_outline,
-    _extract_paper_title,
-    _generate_framework_diagram_prompt,
-    _generate_neurips_checklist,
     _get_evolution_overlay,
     _read_best_analysis,
     _read_prior_artifact,
     _safe_json_loads,
-    _topic_constraint_block,
     _utcnow_iso,
 )
+from berb.pipeline.contracts import StageContract
+from berb.pipeline.registry import register_stage
 from berb.pipeline.stages import Stage, StageStatus
 from berb.prompts import PromptManager
 
 logger = logging.getLogger(__name__)
 
 
+@register_stage(
+    stage=Stage.PAPER_OUTLINE,
+    depends_on=frozenset({Stage.RESULT_ANALYSIS, Stage.RESEARCH_DECISION}),
+    contract=StageContract(
+        stage=Stage.PAPER_OUTLINE,
+        input_files=("analysis.md", "decision.md"),
+        output_files=("outline.md",),
+        dod="Complete paper outline with section-level detail",
+        error_code="E16_OUTLINE_FAIL",
+    ),
+)
 def _execute_paper_outline(
     stage_dir: Path,
     run_dir: Path,
@@ -164,10 +169,18 @@ def _collect_raw_experiment_metrics(run_dir: Path) -> tuple[str, bool]:
             # Also extract from stdout for full detail
             # BUG-23: Filter out infrastructure lines that are NOT experiment results
             _INFRA_KEYS = {
-                "SEED_COUNT", "TIME_ESTIMATE", "TRAINING_STEPS",
-                "REGISTERED_CONDITIONS", "METRIC_DEF", "GPU_MEMORY",
-                "BATCH_SIZE", "NUM_WORKERS", "TOTAL_PARAMS",
-                "time_budget_sec", "max_epochs", "num_seeds",
+                "SEED_COUNT",
+                "TIME_ESTIMATE",
+                "TRAINING_STEPS",
+                "REGISTERED_CONDITIONS",
+                "METRIC_DEF",
+                "GPU_MEMORY",
+                "BATCH_SIZE",
+                "NUM_WORKERS",
+                "TOTAL_PARAMS",
+                "time_budget_sec",
+                "max_epochs",
+                "num_seeds",
             }
             stdout = payload.get("stdout", "")
             if stdout:
@@ -298,9 +311,7 @@ def _collect_raw_experiment_metrics(run_dir: Path) -> tuple[str, bool]:
 
     return (
         f"\n\nACTUAL EXPERIMENT DATA (from {run_count} run(s) — use ONLY these numbers):\n"
-        "```\n"
-        + "\n".join(formatted_lines[:200])
-        + "\n```\n"
+        "```\n" + "\n".join(formatted_lines[:200]) + "\n```\n"
         "CRITICAL: Every number in the Results table MUST come from the data above. "
         "Do NOT round excessively, do NOT invent numbers, do NOT change values. "
         f"The experiment ran {run_count} time(s) — state this accurately in the methodology.\n"
@@ -522,7 +533,9 @@ def _write_paper_sections(
             "## Conclusion\n[PLACEHOLDER]"
         )
     sections.append(part3)
-    logger.info("Stage 17: Part 3 (Results+Discussion+Limitations+Conclusion) — %d chars", len(part3))
+    logger.info(
+        "Stage 17: Part 3 (Results+Discussion+Limitations+Conclusion) — %d chars", len(part3)
+    )
 
     # Combine all sections
     draft = "\n\n".join(sections)
@@ -531,9 +544,10 @@ def _write_paper_sections(
     # the actual paper.  The preamble typically starts with "## Tested Conditions"
     # or similar headings and ends before "## Title".
     import re as _re_strip
+
     _title_match = _re_strip.search(r"^## Title\b", draft, _re_strip.MULTILINE)
     if _title_match and _title_match.start() > 200:
-        _stripped = draft[_title_match.start():]
+        _stripped = draft[_title_match.start() :]
         logger.info(
             "R32: Stripped %d-char preamble before '## Title'",
             _title_match.start(),
@@ -551,16 +565,27 @@ def _write_paper_sections(
 # ---------------------------------------------------------------------------
 
 # Sections where bullets/numbered lists are acceptable.
-_BULLET_LENIENT_SECTIONS = frozenset({
-    "introduction", "limitations", "limitation",
-    "limitations and future work", "abstract",
-})
+_BULLET_LENIENT_SECTIONS = frozenset(
+    {
+        "introduction",
+        "limitations",
+        "limitation",
+        "limitations and future work",
+        "abstract",
+    }
+)
 
 # Main body sections used for balance ratio check.
-_BALANCE_SECTIONS = frozenset({
-    "introduction", "related work", "method", "experiments", "results",
-    "discussion",
-})
+_BALANCE_SECTIONS = frozenset(
+    {
+        "introduction",
+        "related work",
+        "method",
+        "experiments",
+        "results",
+        "discussion",
+    }
+)
 
 
 def _validate_draft_quality(
@@ -578,7 +603,7 @@ def _validate_draft_quality(
     ``revision_directives``.  Optionally writes ``draft_quality.json`` to
     *stage_dir*.
     """
-    from berb.prompts import SECTION_WORD_TARGETS, _SECTION_TARGET_ALIASES
+    from berb.prompts import _SECTION_TARGET_ALIASES, SECTION_WORD_TARGETS
 
     _heading_re = re.compile(r"^(#{1,4})\s+(.+)$", re.MULTILINE)
     matches = list(_heading_re.finditer(draft))
@@ -590,12 +615,14 @@ def _validate_draft_quality(
         start = m.end()
         end = matches[i + 1].start() if i + 1 < len(matches) else len(draft)
         body = draft[start:end].strip()
-        sections_data.append({
-            "heading": heading,
-            "heading_lower": heading.strip().lower(),
-            "level": level,
-            "body": body,
-        })
+        sections_data.append(
+            {
+                "heading": heading,
+                "heading_lower": heading.strip().lower(),
+                "level": level,
+                "body": body,
+            }
+        )
 
     section_analysis: list[dict[str, Any]] = []
     overall_warnings: list[str] = []
@@ -614,8 +641,8 @@ def _validate_draft_quality(
             _subsection_words.setdefault(_current_parent, 0)
         else:
             # Add subsection words to parent
-            _subsection_words[_current_parent] = (
-                _subsection_words.get(_current_parent, 0) + len(sec["body"].split())
+            _subsection_words[_current_parent] = _subsection_words.get(_current_parent, 0) + len(
+                sec["body"].split()
             )
 
     for sec in sections_data:
@@ -648,8 +675,7 @@ def _validate_draft_quality(
                 entry["status"] = "severely_short"
             elif word_count < lo:
                 overall_warnings.append(
-                    f"{sec['heading']} is under target "
-                    f"({word_count} words, target {lo}-{hi})"
+                    f"{sec['heading']} is under target ({word_count} words, target {lo}-{hi})"
                 )
                 revision_directives.append(
                     f"Expand {sec['heading']} from {word_count} to {lo}+ words."
@@ -657,8 +683,7 @@ def _validate_draft_quality(
                 entry["status"] = "short"
             elif word_count > int(hi * 1.3):
                 overall_warnings.append(
-                    f"{sec['heading']} exceeds target "
-                    f"({word_count} words, target {lo}-{hi})"
+                    f"{sec['heading']} exceeds target ({word_count} words, target {lo}-{hi})"
                 )
                 revision_directives.append(
                     f"Compress {sec['heading']} from {word_count} to {hi} words or fewer."
@@ -722,9 +747,11 @@ def _validate_draft_quality(
         # Check recency: count citations with year >= current_year - 2
         _year_pat = re.compile(r"(\d{4})")
         import datetime as _dt_cit
+
         _cur_year = _dt_cit.datetime.now().year
         recent_count = sum(
-            1 for k in cited_keys
+            1
+            for k in cited_keys
             for m in [_year_pat.search(k)]
             if m and int(m.group(1)) >= _cur_year - 2
         )
@@ -741,9 +768,7 @@ def _validate_draft_quality(
         body_text: str = sec["body"]
         wc = len(body_text.split())
         if hl == "abstract" and wc > 250:
-            overall_warnings.append(
-                f"Abstract is too long: {wc} words (target: 150-220 words)"
-            )
+            overall_warnings.append(f"Abstract is too long: {wc} words (target: 150-220 words)")
             revision_directives.append(
                 f"COMPRESS the Abstract from {wc} to 150-220 words. "
                 f"Remove raw metric values, redundant context, and self-references."
@@ -797,43 +822,64 @@ def _validate_draft_quality(
         )
     if dup_count > 0:
         overall_warnings.append(
-            f"Duplicate adjacent words found: {dup_count} instance(s) "
-            f"(e.g., 'the the', 'is is')"
+            f"Duplicate adjacent words found: {dup_count} instance(s) (e.g., 'the the', 'is is')"
         )
-        revision_directives.append(
-            "Fix duplicate adjacent words (likely typos)."
-        )
+        revision_directives.append("Fix duplicate adjacent words (likely typos).")
 
     # --- AI-slop / boilerplate detection ---
     _BOILERPLATE_PHRASES = [
-        "delves into", "delve into", "it is worth noting",
-        "it should be noted", "it is important to note",
-        "leverage the power of", "leverages the power of",
-        "in this paper, we propose", "in this work, we propose",
+        "delves into",
+        "delve into",
+        "it is worth noting",
+        "it should be noted",
+        "it is important to note",
+        "leverage the power of",
+        "leverages the power of",
+        "in this paper, we propose",
+        "in this work, we propose",
         "to the best of our knowledge",
-        "in the realm of", "in the landscape of",
-        "plays a crucial role", "plays a pivotal role",
-        "groundbreaking", "cutting-edge", "state-of-the-art",
-        "game-changing", "paradigm shift",
-        "a myriad of", "a plethora of",
-        "aims to bridge the gap", "bridge the gap",
-        "shed light on", "sheds light on",
-        "pave the way", "paves the way",
-        "the advent of", "with the advent of",
-        "in recent years", "in recent times",
+        "in the realm of",
+        "in the landscape of",
+        "plays a crucial role",
+        "plays a pivotal role",
+        "groundbreaking",
+        "cutting-edge",
+        "state-of-the-art",
+        "game-changing",
+        "paradigm shift",
+        "a myriad of",
+        "a plethora of",
+        "aims to bridge the gap",
+        "bridge the gap",
+        "shed light on",
+        "sheds light on",
+        "pave the way",
+        "paves the way",
+        "the advent of",
+        "with the advent of",
+        "in recent years",
+        "in recent times",
         "has gained significant attention",
         "has attracted considerable interest",
         "has emerged as a promising",
         "a comprehensive overview",
-        "a holistic approach", "holistic understanding",
-        "showcasing the efficacy", "demonstrate the efficacy",
-        "multifaceted", "underscores the importance",
+        "a holistic approach",
+        "holistic understanding",
+        "showcasing the efficacy",
+        "demonstrate the efficacy",
+        "multifaceted",
+        "underscores the importance",
         "navigate the complexities",
-        "harness the potential", "harnessing the power",
-        "it is imperative to", "it is crucial to",
-        "a nuanced understanding", "nuanced approach",
-        "robust and scalable", "seamlessly integrates",
-        "the intricacies of", "intricate interplay",
+        "harness the potential",
+        "harnessing the power",
+        "it is imperative to",
+        "it is crucial to",
+        "a nuanced understanding",
+        "nuanced approach",
+        "robust and scalable",
+        "seamlessly integrates",
+        "the intricacies of",
+        "intricate interplay",
         "facilitate a deeper understanding",
         "a testament to",
     ]
@@ -892,9 +938,21 @@ def _validate_draft_quality(
         if sec["heading_lower"] in _results_headings and sec["level"] <= 2:
             results_body += sec["body"] + "\n"
     if results_body and len(results_body.split()) > 100:
-        has_std = bool(re.search(r"\u00b1|\\pm|\bstd\b|\\std\b|standard deviation", results_body, re.IGNORECASE))
-        has_ci = bool(re.search(r"confidence interval|\bCI\b|95%|p-value|p\s*<", results_body, re.IGNORECASE))
-        has_seeds = bool(re.search(r"(?:seed|run|trial)s?\s*[:=]\s*\d|averaged?\s+over\s+\d+\s+(?:seed|run|trial)", results_body, re.IGNORECASE))
+        has_std = bool(
+            re.search(
+                r"\u00b1|\\pm|\bstd\b|\\std\b|standard deviation", results_body, re.IGNORECASE
+            )
+        )
+        has_ci = bool(
+            re.search(r"confidence interval|\bCI\b|95%|p-value|p\s*<", results_body, re.IGNORECASE)
+        )
+        has_seeds = bool(
+            re.search(
+                r"(?:seed|run|trial)s?\s*[:=]\s*\d|averaged?\s+over\s+\d+\s+(?:seed|run|trial)",
+                results_body,
+                re.IGNORECASE,
+            )
+        )
         if not has_std and not has_ci and not has_seeds:
             overall_warnings.append(
                 "No statistical measures found in results (no std, CI, p-values, or multi-seed reporting)"
@@ -1014,8 +1072,12 @@ def _review_compiled_pdf(
             dim_scores = {
                 k: review_data.get(k, 0)
                 for k in (
-                    "soundness", "presentation", "contribution",
-                    "originality", "clarity", "significance",
+                    "soundness",
+                    "presentation",
+                    "contribution",
+                    "originality",
+                    "clarity",
+                    "significance",
                     "reproducibility",
                 )
             }
@@ -1063,7 +1125,7 @@ def _check_ablation_effectiveness(
                     baseline_mean = float(mv)
                     break
             if baseline_mean is None:
-                for mk, mv in metrics.items():
+                for _mk, mv in metrics.items():
                     try:
                         baseline_name = name
                         baseline_mean = float(mv)
@@ -1120,11 +1182,14 @@ def _check_ablation_effectiveness(
     # Improvement C: Prepend CRITICAL summary if >50% trivial
     trivial_count = sum(1 for w in warnings if w.startswith("TRIVIAL:"))
     if trivial_count > 0 and len(warnings) > 0 and trivial_count / len(warnings) > 0.5:
-        warnings.insert(0, (
-            f"CRITICAL: {trivial_count}/{len(warnings)} ablations are trivially "
-            f"similar to baseline (<{threshold:.0%} relative, <1pp absolute). "
-            f"The ablation design is likely broken — components are not effectively removed."
-        ))
+        warnings.insert(
+            0,
+            (
+                f"CRITICAL: {trivial_count}/{len(warnings)} ablations are trivially "
+                f"similar to baseline (<{threshold:.0%} relative, <1pp absolute). "
+                f"The ablation design is likely broken — components are not effectively removed."
+            ),
+        )
 
     return warnings
 
@@ -1182,16 +1247,26 @@ def _detect_result_contradictions(
     for name, val in means.items():
         name_lower = name.lower()
         if any(tag in name_lower for tag in ("baseline", "control", "random", "vanilla")):
-            if baseline_val is None or (_maximize and val > baseline_val) or (not _maximize and val < baseline_val):
+            if (
+                baseline_val is None
+                or (_maximize and val > baseline_val)
+                or (not _maximize and val < baseline_val)
+            ):
                 baseline_val = val
                 baseline_name = name
         elif any(tag in name_lower for tag in ("proposed", "our", "novel", "method")):
-            if proposed_val is None or (_maximize and val > proposed_val) or (not _maximize and val < proposed_val):
+            if (
+                proposed_val is None
+                or (_maximize and val > proposed_val)
+                or (not _maximize and val < proposed_val)
+            ):
                 proposed_val = val
                 proposed_name = name
 
     if baseline_val is not None and proposed_val is not None:
-        _baseline_wins = (baseline_val > proposed_val) if _maximize else (baseline_val < proposed_val)
+        _baseline_wins = (
+            (baseline_val > proposed_val) if _maximize else (baseline_val < proposed_val)
+        )
         if _baseline_wins:
             advisories.append(
                 f"NEGATIVE RESULT: Baseline '{baseline_name}' ({baseline_val:.4f}) "
@@ -1204,6 +1279,17 @@ def _detect_result_contradictions(
     return advisories
 
 
+@register_stage(
+    stage=Stage.PAPER_DRAFT,
+    depends_on=frozenset({Stage.PAPER_OUTLINE}),
+    contract=StageContract(
+        stage=Stage.PAPER_DRAFT,
+        input_files=("outline.md",),
+        output_files=("paper_draft.md",),
+        dod="Full paper draft with all sections written",
+        error_code="E17_DRAFT_FAIL",
+    ),
+)
 def _execute_paper_draft(
     stage_dir: Path,
     run_dir: Path,
@@ -1263,7 +1349,8 @@ def _execute_paper_draft(
                         exp_summary_text = _text
                         logger.info(
                             "R21-1 fallback: Selected %s (score=%d)",
-                            _s14_dir.name, _score,
+                            _s14_dir.name,
+                            _score,
                         )
         if exp_summary_text is None:
             exp_summary_text = _read_prior_artifact(run_dir, "experiment_summary.json")
@@ -1285,6 +1372,7 @@ def _execute_paper_draft(
         if isinstance(exp_summary, dict):
             try:
                 from berb.pipeline.verified_registry import VerifiedRegistry
+
                 # BUG-222: Use best_only=True to ensure paper tables reflect
                 # only the promoted best iteration, not regressed data
                 _verified_registry = VerifiedRegistry.from_run_dir(
@@ -1314,9 +1402,9 @@ def _execute_paper_draft(
         # BUG-23: Raw stdout alone is not sufficient — require either
         # metrics_summary data, parsed metrics from run JSONs,
         # OR at least 3 condition= patterns in raw block
-        _has_condition_pattern = len(re.findall(
-            r"condition[=:]", raw_metrics_block, re.IGNORECASE
-        )) >= 3
+        _has_condition_pattern = (
+            len(re.findall(r"condition[=:]", raw_metrics_block, re.IGNORECASE)) >= 3
+        )
         if has_real_metrics or _has_parsed_metrics or _has_condition_pattern:
             has_real_metrics = True
         exp_metrics_instruction += raw_metrics_block
@@ -1375,7 +1463,9 @@ def _execute_paper_draft(
                     ci_hi = cdata.get("ci95_high")
                     if ci_lo is not None and ci_hi is not None:
                         try:
-                            cond_block += f"- Bootstrap 95% CI: [{float(ci_lo):.4f}, {float(ci_hi):.4f}]\n"
+                            cond_block += (
+                                f"- Bootstrap 95% CI: [{float(ci_lo):.4f}, {float(ci_hi):.4f}]\n"
+                            )
                         except (ValueError, TypeError):
                             cond_block += f"- Bootstrap 95% CI: [{ci_lo}, {ci_hi}]\n"
                     cm = cdata.get("metrics") or {}
@@ -1418,7 +1508,11 @@ def _execute_paper_draft(
                 exp_metrics_instruction += paired_block
 
             # R24: Method naming map — translate generic condition labels
-            _cond_names = list(cond_summaries.keys()) if isinstance(cond_summaries, dict) and cond_summaries else []
+            _cond_names = (
+                list(cond_summaries.keys())
+                if isinstance(cond_summaries, dict) and cond_summaries
+                else []
+            )
             if _cond_names:
                 naming_block = (
                     "\n\n## METHOD NAMING (CRITICAL — do NOT use generic labels in the paper)\n"
@@ -1479,10 +1573,11 @@ def _execute_paper_draft(
             )
 
             # R27: Multi-seed framing enforcement
-            _any_seeds = any(
-                (cond_summaries.get(c) or {}).get("n_seed_metrics", 0) > 1
-                for c in _cond_names
-            ) if _cond_names else False
+            _any_seeds = (
+                any((cond_summaries.get(c) or {}).get("n_seed_metrics", 0) > 1 for c in _cond_names)
+                if _cond_names
+                else False
+            )
             if _any_seeds:
                 exp_metrics_instruction += (
                     "\n\n## MULTI-SEED EXPERIMENT FRAMING (CRITICAL)\n"
@@ -1503,7 +1598,7 @@ def _execute_paper_draft(
             for _cname in (_ds_parsed.get("condition_summaries") or {}).keys():
                 _datasets.add(str(_cname))
             # Extract from explicit "datasets" field if present
-            for _ds in (_ds_parsed.get("datasets") or []):
+            for _ds in _ds_parsed.get("datasets") or []:
                 if isinstance(_ds, str):
                     _datasets.add(_ds)
             # Extract from "benchmark" or "dataset" fields
@@ -1632,6 +1727,7 @@ def _execute_paper_draft(
 
     # Check 1: Was the analysis quality rating very low?
     import re as _re_q
+
     _rating_match = _re_q.search(
         r"(?:quality\s+rating|result\s+quality)[:\s]*\**(\d+)\s*/\s*10",
         analysis_text,
@@ -1640,9 +1736,7 @@ def _execute_paper_draft(
     if _rating_match:
         _analysis_rating = int(_rating_match.group(1))
         if _analysis_rating <= 3:
-            _quality_warnings.append(
-                f"Analysis rated experiment quality {_analysis_rating}/10"
-            )
+            _quality_warnings.append(f"Analysis rated experiment quality {_analysis_rating}/10")
         # BUG-23: If quality rating is ≤ 2, force has_real_metrics = False
         # to prevent fabricated results even if stdout had stray numbers.
         # R5-BUG-05: Skip override when _has_parsed_metrics is True — the
@@ -1659,25 +1753,39 @@ def _execute_paper_draft(
     # Check 2: Are baselines missing?
     _analysis_lower = analysis_text.lower()
     if "no" in _analysis_lower and "baseline" in _analysis_lower:
-        if any(phrase in _analysis_lower for phrase in [
-            "no baseline", "no bo", "no random", "baselines are missing",
-            "missing baselines", "baseline coverage is missing",
-        ]):
+        if any(
+            phrase in _analysis_lower
+            for phrase in [
+                "no baseline",
+                "no bo",
+                "no random",
+                "baselines are missing",
+                "missing baselines",
+                "baseline coverage is missing",
+            ]
+        ):
             _quality_warnings.append("Baselines appear to be missing from results")
 
     # Check 3: Is the metric undefined?
-    if any(phrase in _analysis_lower for phrase in [
-        "metric is undefined", "primary_metric is undefined",
-        "undefined metric", "metric undefined",
-    ]):
+    if any(
+        phrase in _analysis_lower
+        for phrase in [
+            "metric is undefined",
+            "primary_metric is undefined",
+            "undefined metric",
+            "metric undefined",
+        ]
+    ):
         _quality_warnings.append("Primary metric is undefined (direction/units/formula unknown)")
 
     # Check 4: Very few conditions completed
-    _condition_count = len(_re_q.findall(
-        r"condition[=:\s]+\w+.*?(?:mean|primary_metric)",
-        raw_metrics_block or "",
-        _re_q.IGNORECASE,
-    ))
+    _condition_count = len(
+        _re_q.findall(
+            r"condition[=:\s]+\w+.*?(?:mean|primary_metric)",
+            raw_metrics_block or "",
+            _re_q.IGNORECASE,
+        )
+    )
 
     if _quality_warnings:
         _warning_block = "\n".join(f"  - {w}" for w in _quality_warnings)
@@ -1705,9 +1813,10 @@ def _execute_paper_draft(
     if _verified_registry is not None:
         try:
             from berb.templates.results_table_builder import (
-                build_results_tables,
                 build_condition_whitelist,
+                build_results_tables,
             )
+
             _prebuilt_tables = build_results_tables(
                 _verified_registry,
                 metric_direction=_verified_registry.metric_direction,
@@ -1778,9 +1887,7 @@ def _execute_paper_draft(
                             _ftitle = _fig.get("title", "")
                             _fcap = _fig.get("caption", "")
                             _fsec = _fig.get("section", "results")
-                            _desc_parts.append(
-                                f"- **{_fid}** ({_fsec}): {_ftitle}\n  {_fcap}"
-                            )
+                            _desc_parts.append(f"- **{_fid}** ({_fsec}): {_ftitle}\n  {_fcap}")
                     if len(_desc_parts) > 1:
                         _fa_descriptions = "\n".join(_desc_parts)
             except (json.JSONDecodeError, OSError):
@@ -1848,7 +1955,9 @@ def _execute_paper_draft(
                 if isinstance(_run_data, dict) and _run_data.get("hyperparameters"):
                     _hp = _run_data["hyperparameters"]
                     if isinstance(_hp, dict) and _hp:
-                        _hp_table = "\n\n## HYPERPARAMETERS (include as a table in the Method section)\n"
+                        _hp_table = (
+                            "\n\n## HYPERPARAMETERS (include as a table in the Method section)\n"
+                        )
                         _hp_table += "| Hyperparameter | Value |\n|---|---|\n"
                         for _hk, _hv in sorted(_hp.items()):
                             _hp_table += f"| {_hk} | {_hv} |\n"
@@ -1893,22 +2002,23 @@ def _execute_paper_draft(
     if bib_text and bib_text.strip():
         from berb.literature.verify import (
             filter_verified_bibtex,
+        )
+        from berb.literature.verify import (
             verify_citations as _verify_cit,
         )
+
         try:
             _pre_report = _verify_cit(bib_text, inter_verify_delay=0.5)
             _kept = _pre_report.verified + _pre_report.suspicious
             _removed = _pre_report.hallucinated
             if _removed > 0:
-                bib_text = filter_verified_bibtex(
-                    bib_text, _pre_report, include_suspicious=True
-                )
-                (stage_dir / "references_preverified.bib").write_text(
-                    bib_text, encoding="utf-8"
-                )
+                bib_text = filter_verified_bibtex(bib_text, _pre_report, include_suspicious=True)
+                (stage_dir / "references_preverified.bib").write_text(bib_text, encoding="utf-8")
                 logger.info(
                     "P3: Pre-verification kept %d/%d citations (removed %d hallucinated)",
-                    _kept, _pre_report.total, _removed,
+                    _kept,
+                    _pre_report.total,
+                    _removed,
                 )
         except Exception as exc:
             logger.warning("P3: Pre-verification failed, using original bib: %s", exc)
@@ -1932,7 +2042,7 @@ def _execute_paper_draft(
                         authors_info += " et al."
                 title = row.get("title", "")
                 cite_lines.append(
-                    f"- [{row['cite_key']}] \u2192 TITLE: \"{title}\" "
+                    f'- [{row["cite_key"]}] \u2192 TITLE: "{title}" '
                     f"| {authors_info} "
                     f"({row.get('venue', '')}, {row.get('year', '')}, "
                     f"cited {row.get('citation_count', 0)} times) "
@@ -1984,12 +2094,11 @@ def _execute_paper_draft(
 
         # R7: Strip LLM-generated References section — it often fabricates arXiv IDs.
         import re as _re_r7
-        ref_pattern = _re_r7.compile(
-            r'^(#{1,2}\s*References.*)', _re_r7.MULTILINE | _re_r7.DOTALL
-        )
+
+        ref_pattern = _re_r7.compile(r"^(#{1,2}\s*References.*)", _re_r7.MULTILINE | _re_r7.DOTALL)
         ref_match = ref_pattern.search(draft)
         if ref_match:
-            draft = draft[:ref_match.start()].rstrip()
+            draft = draft[: ref_match.start()].rstrip()
             logger.info("Stage 17: Stripped LLM-generated References section (R7 fix)")
     else:
         # Build template with real data if available

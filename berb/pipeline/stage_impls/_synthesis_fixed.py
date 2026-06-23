@@ -30,31 +30,32 @@ from berb.pipeline._helpers import (
     _synthesize_perspectives,  # Fallback
     _utcnow_iso,
 )
+from berb.pipeline.contracts import StageContract
+from berb.pipeline.registry import register_stage
 from berb.pipeline.stages import Stage, StageStatus
 from berb.prompts import PromptManager
+from berb.reasoning.base import create_context
 from berb.reasoning.multi_perspective import (
     MultiPerspectiveMethod,
-    PerspectiveCandidate,
 )
-from berb.reasoning.base import create_context
 
 logger = logging.getLogger(__name__)
 
 
 class _SimpleRouter:
     """Simple router adapter for LLMClient to work with MultiPerspectiveMethod.
-    
+
     The reasoning module expects a router with get_provider_for_role().
     This adapter wraps LLMClient to provide that interface.
     """
-    
+
     def __init__(self, llm: LLMClient):
         self.llm = llm
         self._providers = {}
-    
+
     def get_provider_for_role(self, role: str) -> Any:
         """Get provider for a perspective role.
-        
+
         For now, return the same LLMClient for all roles.
         Future enhancement: route different roles to different models.
         """
@@ -66,35 +67,46 @@ class _SimpleRouter:
 
 class _LLMProviderWrapper:
     """Wrapper to adapt LLMClient for reasoning module.
-    
+
     MultiPerspectiveMethod expects providers with async complete() method.
     LLMClient has sync chat() method.
     """
-    
+
     def __init__(self, llm: LLMClient):
         self.llm = llm
-        self.model = llm.config.primary_model if hasattr(llm, 'config') else "unknown"
-    
+        self.model = llm.config.primary_model if hasattr(llm, "config") else "unknown"
+
     async def complete(self, prompt: str) -> Any:
         """Complete a prompt (async for compatibility)."""
         import asyncio
         from concurrent.futures import ThreadPoolExecutor
-        
+
         # Run sync chat() in executor to make it async-compatible
         loop = asyncio.get_event_loop()
-        
+
         def _chat():
             return self.llm.chat(
                 [{"role": "user", "content": prompt}],
                 max_tokens=4096,
             )
-        
+
         with ThreadPoolExecutor() as executor:
             response = await loop.run_in_executor(executor, _chat)
-        
+
         return response
 
 
+@register_stage(
+    stage=Stage.SYNTHESIS,
+    depends_on=frozenset({Stage.KNOWLEDGE_EXTRACT}),
+    contract=StageContract(
+        stage=Stage.SYNTHESIS,
+        input_files=("cards/",),
+        output_files=("synthesis.md",),
+        dod="Topic clusters + >=2 research gaps identified",
+        error_code="E07_SYNTHESIS_WEAK",
+    ),
+)
 def _execute_synthesis(
     stage_dir: Path,
     run_dir: Path,
@@ -156,6 +168,17 @@ Under-reported failure behavior under distribution shift.
     )
 
 
+@register_stage(
+    stage=Stage.HYPOTHESIS_GEN,
+    depends_on=frozenset({Stage.SYNTHESIS}),
+    contract=StageContract(
+        stage=Stage.HYPOTHESIS_GEN,
+        input_files=("synthesis.md",),
+        output_files=("hypotheses.md",),
+        dod=">=2 falsifiable research hypotheses",
+        error_code="E08_HYP_INVALID",
+    ),
+)
 def _execute_hypothesis_gen(
     stage_dir: Path,
     run_dir: Path,
@@ -166,30 +189,30 @@ def _execute_hypothesis_gen(
     prompts: PromptManager | None = None,
 ) -> StageResult:
     """Execute Stage 8: Hypothesis Generation — FIXED VERSION.
-    
+
     Uses MultiPerspectiveMethod for proper scoring, critique, and top-k selection.
     Falls back to helper function if reasoning module fails.
     """
     import asyncio
-    
+
     synthesis = _read_prior_artifact(run_dir, "synthesis.md") or ""
     hypotheses_md = ""
-    
+
     if llm is not None:
         try:
             # FIX: Use MultiPerspectiveMethod instead of helper
             logger.info("Using MultiPerspectiveMethod for hypothesis generation")
-            
+
             # Create router adapter
             router = _SimpleRouter(llm)
-            
+
             # Create reasoning method
             method = MultiPerspectiveMethod(
                 router=router,
                 parallel=True,  # Run perspectives in parallel
                 top_k=2,  # Select top 2 candidates
             )
-            
+
             # Build context
             problem = f"Research topic: {config.research.topic}\n\nSynthesis:\n{synthesis}"
             context = create_context(
@@ -197,20 +220,20 @@ def _execute_hypothesis_gen(
                 input_data={"problem": problem, "topic": config.research.topic},
                 query=problem,
             )
-            
+
             # Execute reasoning method (async)
             async def _run_reasoning():
                 return await method.execute(context)
-            
+
             # Run async reasoning
             result = asyncio.run(_run_reasoning())
-            
+
             if result.success and result.output:
                 # Extract top candidates from reasoning result
                 top_candidates = result.output.get("top_candidates", [])
                 perspectives = result.output.get("perspectives", [])
                 scores = result.output.get("scores", [])
-                
+
                 # Log reasoning quality metrics
                 logger.info(
                     "MultiPerspectiveMethod: %d perspectives, %d top candidates, confidence=%.2f",
@@ -218,49 +241,63 @@ def _execute_hypothesis_gen(
                     len(top_candidates),
                     result.confidence,
                 )
-                
+
                 # Synthesize hypotheses from top candidates
                 if top_candidates:
                     hypotheses_parts = []
                     for i, candidate in enumerate(top_candidates, 1):
-                        candidate_dict = candidate.to_dict() if hasattr(candidate, 'to_dict') else candidate
+                        candidate_dict = (
+                            candidate.to_dict() if hasattr(candidate, "to_dict") else candidate
+                        )
                         hypotheses_parts.append(
                             f"## Hypothesis {i}\n\n{candidate_dict.get('content', candidate_dict.get('solution', ''))}"
                         )
-                    
+
                     hypotheses_md = "\n\n".join(hypotheses_parts)
-                    
+
                     # Add scoring summary
                     if scores:
                         hypotheses_md += "\n\n---\n\n## Perspective Scores\n\n"
                         for score in scores:
-                            score_dict = score.to_dict() if hasattr(score, 'to_dict') else score
+                            score_dict = score.to_dict() if hasattr(score, "to_dict") else score
                             hypotheses_md += f"- {score_dict.get('perspective', 'unknown')}: {score_dict.get('total', 0):.1f}/10\n"
                 else:
                     # No top candidates, use fallback
                     logger.warning("No top candidates from MultiPerspectiveMethod, using fallback")
                     perspectives_dict = {
-                        f"perspective_{i}": p.content if hasattr(p, 'content') else p.get('content', '')
+                        f"perspective_{i}": p.content
+                        if hasattr(p, "content")
+                        else p.get("content", "")
                         for i, p in enumerate(perspectives, 1)
                     }
                     if perspectives_dict:
                         _pm = prompts or PromptManager()
-                        hypotheses_md = _synthesize_perspectives(llm, perspectives_dict, "hypothesis_synthesize", _pm)
+                        hypotheses_md = _synthesize_perspectives(
+                            llm, perspectives_dict, "hypothesis_synthesize", _pm
+                        )
                     else:
                         hypotheses_md = _default_hypotheses(config.research.topic)
             else:
                 # Reasoning failed, use fallback
-                logger.warning("MultiPerspectiveMethod failed: %s, using fallback", result.error or "unknown error")
+                logger.warning(
+                    "MultiPerspectiveMethod failed: %s, using fallback",
+                    result.error or "unknown error",
+                )
                 perspectives_dir = stage_dir / "perspectives"
                 from berb.prompts import DEBATE_ROLES_HYPOTHESIS
+
                 variables = {"topic": config.research.topic, "synthesis": synthesis}
-                perspectives = _multi_perspective_generate(llm, DEBATE_ROLES_HYPOTHESIS, variables, perspectives_dir)
+                perspectives = _multi_perspective_generate(
+                    llm, DEBATE_ROLES_HYPOTHESIS, variables, perspectives_dir
+                )
                 if perspectives:
                     _pm = prompts or PromptManager()
-                    hypotheses_md = _synthesize_perspectives(llm, perspectives, "hypothesis_synthesize", _pm)
+                    hypotheses_md = _synthesize_perspectives(
+                        llm, perspectives, "hypothesis_synthesize", _pm
+                    )
                 else:
                     hypotheses_md = _default_hypotheses(config.research.topic)
-                    
+
         except Exception as e:
             # Critical failure, use fallback
             logger.error("MultiPerspectiveMethod integration failed: %s", e, exc_info=True)
@@ -268,7 +305,7 @@ def _execute_hypothesis_gen(
     else:
         # No LLM available
         hypotheses_md = _default_hypotheses(config.research.topic)
-    
+
     # Write output
     (stage_dir / "hypotheses.md").write_text(hypotheses_md, encoding="utf-8")
 

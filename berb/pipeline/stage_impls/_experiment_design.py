@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import logging
-import re
 from pathlib import Path
 from typing import Any
 
@@ -22,15 +21,28 @@ from berb.pipeline._helpers import (
     _get_evolution_overlay,
     _load_hardware_profile,
     _read_prior_artifact,
-    _safe_json_loads,
     _utcnow_iso,
 )
+from berb.pipeline.contracts import StageContract
+from berb.pipeline.registry import register_stage
 from berb.pipeline.stages import Stage, StageStatus
 from berb.prompts import PromptManager
 
 logger = logging.getLogger(__name__)
 
 
+@register_stage(
+    stage=Stage.EXPERIMENT_DESIGN,
+    depends_on=frozenset({Stage.HYPOTHESIS_GEN}),
+    contract=StageContract(
+        stage=Stage.EXPERIMENT_DESIGN,
+        input_files=("hypotheses.md",),
+        output_files=("exp_plan.yaml",),
+        dod="Experiment plan with baselines, ablations, metrics approved",
+        error_code="E09_GATE_REJECT",
+        max_retries=0,
+    ),
+)
 def _execute_experiment_design(
     stage_dir: Path,
     run_dir: Path,
@@ -41,9 +53,7 @@ def _execute_experiment_design(
     prompts: PromptManager | None = None,
 ) -> StageResult:
     hypotheses = _read_prior_artifact(run_dir, "hypotheses.md") or ""
-    preamble = _build_context_preamble(
-        config, run_dir, include_goal=True, include_hypotheses=True
-    )
+    preamble = _build_context_preamble(config, run_dir, include_goal=True, include_hypotheses=True)
     plan: dict[str, Any] | None = None
 
     # ── Domain detection ──────────────────────────────────────────────────
@@ -52,6 +62,7 @@ def _execute_experiment_design(
     _domain_profile = None
     try:
         from berb.domains.detector import detect_domain as _detect_domain_adv
+
         _domain_profile = _detect_domain_adv(
             topic=config.research.topic,
             hypotheses=hypotheses,
@@ -63,14 +74,18 @@ def _execute_experiment_design(
         )
         # Persist domain profile for Stage 10
         import json as _json_dd
+
         (stage_dir / "domain_profile.json").write_text(
-            _json_dd.dumps({
-                "domain_id": _domain_profile.domain_id,
-                "display_name": _domain_profile.display_name,
-                "experiment_paradigm": _domain_profile.experiment_paradigm,
-                "core_libraries": _domain_profile.core_libraries,
-                "gpu_required": _domain_profile.gpu_required,
-            }, indent=2),
+            _json_dd.dumps(
+                {
+                    "domain_id": _domain_profile.domain_id,
+                    "display_name": _domain_profile.display_name,
+                    "experiment_paradigm": _domain_profile.experiment_paradigm,
+                    "core_libraries": _domain_profile.core_libraries,
+                    "gpu_required": _domain_profile.gpu_required,
+                },
+                indent=2,
+            ),
             encoding="utf-8",
         )
     except Exception:  # noqa: BLE001
@@ -83,9 +98,19 @@ def _execute_experiment_design(
         except (KeyError, Exception):  # noqa: BLE001
             _dg_block = ""
         # I-08: Inject RL step guidance for RL topics
-        _rl_kws = ("reinforcement learning", "ppo", "sac", "td3", "ddpg",
-                    "dqn", "mujoco", "continuous control", "actor-critic",
-                    "policy gradient", "exploration bonus")
+        _rl_kws = (
+            "reinforcement learning",
+            "ppo",
+            "sac",
+            "td3",
+            "ddpg",
+            "dqn",
+            "mujoco",
+            "continuous control",
+            "actor-critic",
+            "policy gradient",
+            "exploration bonus",
+        )
         _is_rl_topic = any(kw in config.research.topic.lower() for kw in _rl_kws)
         if _is_rl_topic:
             try:
@@ -110,6 +135,7 @@ def _execute_experiment_design(
         # F-01: Inject framework docs for experiment design
         try:
             from berb.data import detect_frameworks, load_framework_docs
+
             _fw_ids = detect_frameworks(config.research.topic, hypotheses)
             if _fw_ids:
                 _fw_docs = load_framework_docs(_fw_ids, max_chars=4000)
@@ -119,9 +145,7 @@ def _execute_experiment_design(
             pass
         # Improvement A: Compute hardware profile + per-condition budget
         _hw_profile_str = (
-            "- GPU: NVIDIA RTX 6000 Ada (49140 MB VRAM)\n"
-            "- GPU count: 1\n"
-            "- CPU: shared server"
+            "- GPU: NVIDIA RTX 6000 Ada (49140 MB VRAM)\n- GPU count: 1\n- CPU: shared server"
         )
         _per_condition_sec = int(config.experiment.time_budget_sec * 0.7 / 6)
         _tier1 = "CIFAR-10, CIFAR-100, MNIST, FashionMNIST, STL-10, SVHN"
@@ -224,19 +248,23 @@ def _execute_experiment_design(
         _hyp_text = _read_prior_artifact(run_dir, "hypotheses.md") or ""
         if _hyp_text:
             import re as _re_hyp
+
             # Extract method-like names from hypothesis text
             _method_candidates = _re_hyp.findall(
                 r"(?:proposed|our|novel|new)\s+(?:method|approach|algorithm|framework|model)[:\s]+[\"']?([A-Za-z][\w-]+)",
-                _hyp_text, _re_hyp.IGNORECASE,
+                _hyp_text,
+                _re_hyp.IGNORECASE,
             )
             _baseline_candidates = _re_hyp.findall(
                 r"(?:baseline|compare|existing|standard|traditional)\s+(?:method|approach|model)?[:\s]+[\"']?([A-Za-z][\w-]+)",
-                _hyp_text, _re_hyp.IGNORECASE,
+                _hyp_text,
+                _re_hyp.IGNORECASE,
             )
             if _method_candidates or _baseline_candidates:
                 logger.info(
                     "Stage 09: Extracted names from hypotheses: methods=%s, baselines=%s",
-                    _method_candidates[:3], _baseline_candidates[:3],
+                    _method_candidates[:3],
+                    _baseline_candidates[:3],
                 )
                 plan = {
                     "topic": config.research.topic,
@@ -283,7 +311,8 @@ def _execute_experiment_design(
     if not _ba_domain_ok:
         logger.info(
             "BenchmarkAgent skipped: domain '%s' is not ML (topic: %s)",
-            _ba_domain_id, config.research.topic[:80],
+            _ba_domain_id,
+            config.research.topic[:80],
         )
     if (
         _ba_domain_ok
@@ -316,9 +345,7 @@ def _execute_experiment_design(
             _ba = BenchmarkOrchestrator(
                 llm,
                 config=_ba_cfg,
-                gpu_memory_mb=(
-                    _hw.get("gpu_memory_mb", 49000) if _hw else 49000
-                ),
+                gpu_memory_mb=(_hw.get("gpu_memory_mb", 49000) if _hw else 49000),
                 time_budget_sec=config.experiment.time_budget_sec,
                 network_policy=(
                     config.experiment.docker.network_policy
@@ -327,11 +354,13 @@ def _execute_experiment_design(
                 ),
                 stage_dir=stage_dir / "benchmark_agent",
             )
-            _benchmark_plan = _ba.orchestrate({
-                "topic": config.research.topic,
-                "hypothesis": hypotheses,
-                "experiment_plan": plan.get("objectives", "") if isinstance(plan, dict) else "",
-            })
+            _benchmark_plan = _ba.orchestrate(
+                {
+                    "topic": config.research.topic,
+                    "hypothesis": hypotheses,
+                    "experiment_plan": plan.get("objectives", "") if isinstance(plan, dict) else "",
+                }
+            )
 
             # Inject BenchmarkAgent selections into experiment plan
             if isinstance(plan, dict) and _benchmark_plan.selected_benchmarks:
@@ -381,9 +410,7 @@ def _execute_experiment_design(
 
     # BUG-R41-09: Enforce condition count limit based on time budget.
     # Too many conditions (30+) guarantee timeouts and wasted compute.
-    _time_budget = getattr(
-        getattr(config, "experiment", None), "time_budget_sec", 3600
-    )
+    _time_budget = getattr(getattr(config, "experiment", None), "time_budget_sec", 3600)
     _max_conditions = 8  # default for budgets ≤ 3600s
     if _time_budget > 3600:
         _max_conditions = 12
@@ -403,9 +430,10 @@ def _execute_experiment_design(
 
     if _total > _max_conditions:
         logger.warning(
-            "Stage 9: Plan has %d conditions (limit %d for %ds budget). "
-            "Trimming to fit.",
-            _total, _max_conditions, _time_budget,
+            "Stage 9: Plan has %d conditions (limit %d for %ds budget). Trimming to fit.",
+            _total,
+            _max_conditions,
+            _time_budget,
         )
         # Keep all proposed methods (up to max), trim baselines and ablations
         _proposed_count = min(len(_proposed), max(1, _max_conditions - 4))
@@ -416,20 +444,23 @@ def _execute_experiment_design(
             plan["proposed_methods"] = _proposed[:_proposed_count]
             logger.info(
                 "Stage 9: Trimmed proposed methods %d → %d",
-                len(_proposed), _proposed_count,
+                len(_proposed),
+                _proposed_count,
             )
 
         if len(_baselines) > _baseline_budget:
             plan["baselines"] = _baselines[:_baseline_budget]
             logger.info(
                 "Stage 9: Trimmed baselines %d → %d",
-                len(_baselines), _baseline_budget,
+                len(_baselines),
+                _baseline_budget,
             )
         if len(_ablations) > _ablation_budget:
             plan["ablations"] = _ablations[:_ablation_budget]
             logger.info(
                 "Stage 9: Trimmed ablations %d → %d",
-                len(_ablations), _ablation_budget,
+                len(_ablations),
+                _ablation_budget,
             )
 
     (stage_dir / "exp_plan.yaml").write_text(
