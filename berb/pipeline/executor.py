@@ -32,7 +32,7 @@ from berb.pipeline.stages import (
     advance,
     gate_required,
 )
-from berb.pipeline.registry import get_all_registrations, get_registration
+from berb.pipeline.registry import get_registration
 from berb.prompts import PromptManager
 
 logger = logging.getLogger(__name__)
@@ -130,32 +130,8 @@ from berb.pipeline.stage_impls._topic import (  # noqa: E402
     _execute_topic_init,
 )
 
-_STAGE_EXECUTORS: dict[Stage, Callable[..., StageResult]] = {
-    Stage.TOPIC_INIT: _execute_topic_init,
-    Stage.PROBLEM_DECOMPOSE: _execute_problem_decompose,
-    Stage.SEARCH_STRATEGY: _execute_search_strategy,
-    Stage.LITERATURE_COLLECT: _execute_literature_collect,
-    Stage.LITERATURE_SCREEN: _execute_literature_screen,
-    Stage.KNOWLEDGE_EXTRACT: _execute_knowledge_extract,
-    Stage.SYNTHESIS: _execute_synthesis,
-    Stage.HYPOTHESIS_GEN: _execute_hypothesis_gen,
-    Stage.EXPERIMENT_DESIGN: _execute_experiment_design,
-    Stage.CODE_GENERATION: _execute_code_generation,
-    Stage.RESOURCE_PLANNING: _execute_resource_planning,
-    Stage.EXPERIMENT_RUN: _execute_experiment_run,
-    Stage.ITERATIVE_REFINE: _execute_iterative_refine,
-    Stage.RESULT_ANALYSIS: _execute_result_analysis,
-    Stage.RESEARCH_DECISION: _execute_research_decision,
-    Stage.PAPER_OUTLINE: _execute_paper_outline,
-    Stage.PAPER_DRAFT: _execute_paper_draft,
-    Stage.PEER_REVIEW: _execute_peer_review,
-    Stage.PAPER_REVISION: _execute_paper_revision,
-    Stage.QUALITY_GATE: _execute_quality_gate,
-    Stage.KNOWLEDGE_ARCHIVE: _execute_knowledge_archive,
-    Stage.EXPORT_PUBLISH: _execute_export_publish,
-    Stage.CITATION_VERIFY: _execute_citation_verify,
-}
-
+# _STAGE_EXECUTORS removed in cleanup — registry is the sole source.
+# Stage _execute_* imports above trigger @register_stage decorators.
 
 def execute_stage(
     stage: Stage,
@@ -211,13 +187,14 @@ def execute_stage(
 
     try:
         _ = advance(stage, StageStatus.PENDING, TransitionEvent.START)
-        # Phase 3 Step 8: Check plugin registry first, fall back to hardcoded dict
+        # Lookup stage implementation from plugin registry
         reg = get_registration(stage)
-        executor: Callable[..., StageResult]
-        if reg is not None:
-            executor = reg.fn
-        else:
-            executor = _STAGE_EXECUTORS[stage]
+        if reg is None:
+            raise KeyError(
+                f"No stage implementation registered for {stage.name} ({int(stage)}). "
+                f"Ensure the stage_impls module is imported."
+            )
+        executor = reg.fn
         prompts = PromptManager(config.prompts.custom_file or None)  # type: ignore[attr-defined]
         # Detect at call-time whether this executor accepts a 'prompts' kwarg by
         # inspecting its signature.  The previous approach caught TypeError and
