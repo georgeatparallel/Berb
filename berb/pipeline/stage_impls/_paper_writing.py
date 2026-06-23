@@ -10,6 +10,7 @@ from typing import Any
 
 from berb.adapters import AdapterBundle
 from berb.config import RCConfig
+from berb.adapters import LLMProvider
 from berb.llm.client import LLMClient
 from berb.pipeline._domain import _detect_domain
 from berb.pipeline._helpers import (

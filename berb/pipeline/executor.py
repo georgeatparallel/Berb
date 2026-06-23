@@ -187,6 +187,8 @@ def execute_stage(
 
     try:
         _ = advance(stage, StageStatus.PENDING, TransitionEvent.START)
+        # Wire port to concrete llm so stage impls can use adapters.llm
+        adapters.llm = llm  # type: ignore[assignment]
         # Lookup stage implementation from plugin registry
         reg = get_registration(stage)
         if reg is None:

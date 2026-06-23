@@ -92,4 +92,3 @@ jobs:
 
       - name: Mypy
         run: mypy berb/ --python-version 3.11
-        continue-on-error: true  # type errors are warnings until full annotation coverage

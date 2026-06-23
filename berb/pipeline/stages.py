@@ -526,7 +526,8 @@ class EventStore:
         import json
         from pathlib import Path
 
-        path = Path(self.storage_path)
+        self_path = self.storage_path
+        path = Path(self_path) if self_path else Path("event_log.json")
         path.parent.mkdir(parents=True, exist_ok=True)
 
         data = {
@@ -548,7 +549,8 @@ class EventStore:
         import json
         from pathlib import Path
 
-        path = Path(self.storage_path)
+        self_path = self.storage_path
+        path = Path(self_path) if self_path else Path("event_log.json")
         if not path.exists():
             return
 
