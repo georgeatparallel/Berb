@@ -2,16 +2,14 @@
 
 from __future__ import annotations
 
+import sys
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
-import sys
 import yaml
 
-DEFAULT_PYTHON_PATH = (
-    ".venv/Scripts/python.exe" if sys.platform == "win32" else ".venv/bin/python3"
-)
+DEFAULT_PYTHON_PATH = ".venv/Scripts/python.exe" if sys.platform == "win32" else ".venv/bin/python3"
 
 CONFIG_SEARCH_ORDER: tuple[str, ...] = ("config.arc.yaml", "config.yaml")
 
@@ -62,7 +60,7 @@ def _safe_float(val: Any, default: float) -> float:
         return default
 
 
-EXAMPLE_CONFIG = "config.berb.example.yaml"
+EXAMPLE_CONFIG = "configs/config.arc.example.yaml"
 
 
 def resolve_config_path(explicit: str | None) -> Path | None:
@@ -192,9 +190,10 @@ class LlmConfig:
 
     SECURITY FIX #2: API keys must come from environment variables.
     Plaintext api_key values are rejected during validation.
-    
+
     P1 FIX: Multi-provider failover support.
     """
+
     provider: str
     base_url: str = ""
     wire_api: str = "chat_completions"
@@ -250,7 +249,7 @@ class LlmConfig:
                 False,
                 "SECURITY VIOLATION: Plaintext API key detected in config. "
                 "Remove 'api_key' field and use 'api_key_env' instead. "
-                "Example: api_key_env: \"OPENAI_API_KEY\""
+                'Example: api_key_env: "OPENAI_API_KEY"',
             )
         return (True, "")
 
@@ -363,7 +362,7 @@ class CodeAgentConfig:
     # Phase 2.5: Hard validation gates (AST-based)
     hard_validation: bool = True
     hard_validation_max_repairs: int = 4
-    # Phase 3: Execution-in-the-loop (run → parse error → fix)
+    # Phase 3: Execution-in-the-loop (run -> parse error -> fix)
     exec_fix_max_iterations: int = 3
     exec_fix_timeout_sec: int = 60
     # Phase 4: Solution tree search (off by default — higher cost)
@@ -560,6 +559,12 @@ class ExportConfig:
     target_conference: str = "neurips_2025"
     authors: str = "Anonymous"
     bib_file: str = "references"
+    # Export formats to generate (pdf, latex, markdown, html, word, bibtex)
+    formats: list[str] = field(default_factory=lambda: ["latex", "markdown", "pdf"])
+    # Output directory for exported files
+    output_dir: str = "output"
+    # LaTeX template to use (article, book, revtex, etc.)
+    template: str = "article"
 
 
 @dataclass(frozen=True)
@@ -780,9 +785,7 @@ class RCConfig:
     # Agent D: Research Enhancement
     trends: TrendsConfig = field(default_factory=TrendsConfig)
     copilot: CoPilotConfig = field(default_factory=CoPilotConfig)
-    quality_assessor: QualityAssessorConfig = field(
-        default_factory=QualityAssessorConfig
-    )
+    quality_assessor: QualityAssessorConfig = field(default_factory=QualityAssessorConfig)
     calendar: CalendarConfig = field(default_factory=CalendarConfig)
 
     def to_dict(self) -> dict[str, Any]:
@@ -796,9 +799,7 @@ class RCConfig:
         project_root: Path | None = None,
         check_paths: bool = True,
     ) -> RCConfig:
-        result = validate_config(
-            data, project_root=project_root, check_paths=check_paths
-        )
+        result = validate_config(data, project_root=project_root, check_paths=check_paths)
         if not result.ok:
             raise ValueError("; ".join(result.errors))
 
@@ -830,9 +831,7 @@ class RCConfig:
         calendar_data = data.get("calendar") or {}
 
         return cls(
-            project=ProjectConfig(
-                name=project["name"], mode=project.get("mode", "docs-first")
-            ),
+            project=ProjectConfig(name=project["name"], mode=project.get("mode", "docs-first")),
             research=ResearchConfig(
                 topic=research["topic"],
                 domains=tuple(research.get("domains") or ()),
@@ -881,6 +880,9 @@ class RCConfig:
                 target_conference=export.get("target_conference", "neurips_2025"),
                 authors=export.get("authors", "Anonymous"),
                 bib_file=export.get("bib_file", "references"),
+                formats=export.get("formats", ["latex", "markdown", "pdf"]),
+                output_dir=export.get("output_dir", "output"),
+                template=export.get("template", "article"),
             ),
             prompts=PromptsConfig(
                 custom_file=prompts.get("custom_file", ""),
@@ -888,14 +890,10 @@ class RCConfig:
             web_search=WebSearchConfig(
                 enabled=bool(web_search.get("enabled", True)),
                 tavily_api_key=str(web_search.get("tavily_api_key", "")),
-                tavily_api_key_env=str(
-                    web_search.get("tavily_api_key_env", "TAVILY_API_KEY")
-                ),
+                tavily_api_key_env=str(web_search.get("tavily_api_key_env", "TAVILY_API_KEY")),
                 enable_scholar=bool(web_search.get("enable_scholar", True)),
                 enable_crawling=bool(web_search.get("enable_crawling", True)),
-                enable_pdf_extraction=bool(
-                    web_search.get("enable_pdf_extraction", True)
-                ),
+                enable_pdf_extraction=bool(web_search.get("enable_pdf_extraction", True)),
                 max_web_results=int(web_search.get("max_web_results", 10)),
                 max_scholar_results=int(web_search.get("max_scholar_results", 10)),
                 max_crawl_urls=int(web_search.get("max_crawl_urls", 5)),
@@ -933,9 +931,7 @@ class RCConfig:
                 f"Check that {config_path} is valid YAML."
             )
         resolved_root = (
-            Path(project_root).expanduser().resolve()
-            if project_root
-            else config_path.parent
+            Path(project_root).expanduser().resolve() if project_root else config_path.parent
         )
         return cls.from_dict(data, project_root=resolved_root, check_paths=check_paths)
 
@@ -964,16 +960,17 @@ def validate_config(
         errors.append(
             "SECURITY VIOLATION: Plaintext API key in llm.api_key. "
             "Remove this field and use llm.api_key_env instead. "
-            "Example: api_key_env: \"OPENAI_API_KEY\""
+            'Example: api_key_env: "OPENAI_API_KEY"'
         )
-    
+
     # BUG-EXT-002 FIX: Detect API key in api_key_env field
     import re as _re
+
     llm_api_key_env = _get_by_path(data, "llm.api_key_env")
     if llm_api_key_env and len(str(llm_api_key_env).strip()) > 0:
         api_key_env_str = str(llm_api_key_env).strip()
         # Check if it looks like an API key (starts with sk-, pplx-, etc.)
-        if _re.match(r'^(sk[-_]|pplx[-_]|ghp[-_]|xox[-_])', api_key_env_str, _re.IGNORECASE):
+        if _re.match(r"^(sk[-_]|pplx[-_]|ghp[-_]|xox[-_])", api_key_env_str, _re.IGNORECASE):
             warnings.append(
                 f"CONFIGURATION WARNING: llm.api_key_env looks like an API key "
                 f"('{api_key_env_str[:20]}...'). This field should contain an "
@@ -981,7 +978,7 @@ def validate_config(
                 f"actual API key. Set the key in your .env file instead."
             )
         # Check if it follows env var naming convention (UPPERCASE_WITH_UNDERSCORES)
-        elif not _re.match(r'^[A-Z][A-Z0-9_]*$', api_key_env_str):
+        elif not _re.match(r"^[A-Z][A-Z0-9_]*$", api_key_env_str):
             warnings.append(
                 f"CONFIGURATION WARNING: llm.api_key_env '{api_key_env_str}' doesn't "
                 f"follow the environment variable naming convention "
@@ -1025,9 +1022,7 @@ def validate_config(
         else:
             for stage in hitl_required_stages:
                 if not isinstance(stage, int) or not 1 <= stage <= 23:
-                    errors.append(
-                        f"Invalid security.hitl_required_stages entry: {stage}"
-                    )
+                    errors.append(f"Invalid security.hitl_required_stages entry: {stage}")
 
     exp_mode = _get_by_path(data, "experiment.mode")
     if not _is_blank(exp_mode) and exp_mode not in EXPERIMENT_MODES:
@@ -1038,10 +1033,7 @@ def validate_config(
         errors.append(f"Invalid experiment.metric_direction: {exp_direction}")
 
     cli_agent_provider = _get_by_path(data, "experiment.cli_agent.provider")
-    if (
-        not _is_blank(cli_agent_provider)
-        and cli_agent_provider not in CLI_AGENT_PROVIDERS
-    ):
+    if not _is_blank(cli_agent_provider) and cli_agent_provider not in CLI_AGENT_PROVIDERS:
         errors.append(f"Invalid experiment.cli_agent.provider: {cli_agent_provider}")
 
     kb_root_raw = _get_by_path(data, "knowledge_base.root")
@@ -1055,9 +1047,7 @@ def validate_config(
                 if not candidate.exists():
                     warnings.append(f"Missing recommended kb subdir: {candidate}")
 
-    return ValidationResult(
-        ok=not errors, errors=tuple(errors), warnings=tuple(warnings)
-    )
+    return ValidationResult(ok=not errors, errors=tuple(errors), warnings=tuple(warnings))
 
 
 def _parse_llm_config(data: dict[str, Any]) -> LlmConfig:
@@ -1090,9 +1080,7 @@ def _parse_agentic_config(data: dict[str, Any]) -> AgenticConfig:
     return AgenticConfig(
         image=data.get("image", "berb/experiment:latest"),
         agent_cli=data.get("agent_cli", "claude"),
-        agent_install_cmd=data.get(
-            "agent_install_cmd", "npm install -g @anthropic-ai/claude-code"
-        ),
+        agent_install_cmd=data.get("agent_install_cmd", "npm install -g @anthropic-ai/claude-code"),
         network_policy=data.get("network_policy", "full"),
         timeout_sec=int(data.get("timeout_sec", 1800)),
         memory_limit_mb=int(data.get("memory_limit_mb", 8192)),
@@ -1146,9 +1134,7 @@ def _parse_experiment_config(data: dict[str, Any]) -> ExperimentConfig:
             port=_safe_int(ssh_data.get("port"), 22),
             key_path=ssh_data.get("key_path", ""),
             gpu_ids=tuple(int(g) for g in ssh_data.get("gpu_ids", ())),
-            remote_workdir=ssh_data.get(
-                "remote_workdir", "/tmp/berb_experiments"
-            ),
+            remote_workdir=ssh_data.get("remote_workdir", "/tmp/berb_experiments"),
             remote_python=ssh_data.get("remote_python", "python3"),
             setup_commands=tuple(ssh_data.get("setup_commands") or ()),
             use_docker=bool(ssh_data.get("use_docker", False)),
@@ -1156,9 +1142,7 @@ def _parse_experiment_config(data: dict[str, Any]) -> ExperimentConfig:
             docker_network_policy=_validate_network_policy(
                 ssh_data.get("docker_network_policy", "none"),
             ),
-            docker_memory_limit_mb=_safe_int(
-                ssh_data.get("docker_memory_limit_mb"), 8192
-            ),
+            docker_memory_limit_mb=_safe_int(ssh_data.get("docker_memory_limit_mb"), 8192),
             docker_shm_size_mb=_safe_int(ssh_data.get("docker_shm_size_mb"), 2048),
             timeout_sec=_safe_int(ssh_data.get("timeout_sec"), 600),
             scp_timeout_sec=_safe_int(ssh_data.get("scp_timeout_sec"), 300),
@@ -1175,9 +1159,7 @@ def _parse_experiment_config(data: dict[str, Any]) -> ExperimentConfig:
         agentic=_parse_agentic_config(data.get("agentic") or {}),
         code_agent=_parse_code_agent_config(data.get("code_agent") or {}),
         opencode=_parse_opencode_config(data.get("opencode") or {}),
-        benchmark_agent=_parse_benchmark_agent_config(
-            data.get("benchmark_agent") or {}
-        ),
+        benchmark_agent=_parse_benchmark_agent_config(data.get("benchmark_agent") or {}),
         figure_agent=_parse_figure_agent_config(data.get("figure_agent") or {}),
         repair=_parse_experiment_repair_config(data.get("repair") or {}),
         cli_agent=_parse_cli_agent_config(data.get("cli_agent") or {}),
@@ -1257,17 +1239,13 @@ def _parse_code_agent_config(data: dict[str, Any]) -> CodeAgentConfig:
         architecture_planning=bool(data.get("architecture_planning", True)),
         sequential_generation=bool(data.get("sequential_generation", True)),
         hard_validation=bool(data.get("hard_validation", True)),
-        hard_validation_max_repairs=_safe_int(
-            data.get("hard_validation_max_repairs"), 4
-        ),
+        hard_validation_max_repairs=_safe_int(data.get("hard_validation_max_repairs"), 4),
         exec_fix_max_iterations=_safe_int(data.get("exec_fix_max_iterations"), 3),
         exec_fix_timeout_sec=_safe_int(data.get("exec_fix_timeout_sec"), 60),
         tree_search_enabled=bool(data.get("tree_search_enabled", False)),
         tree_search_candidates=_safe_int(data.get("tree_search_candidates"), 3),
         tree_search_max_depth=_safe_int(data.get("tree_search_max_depth"), 2),
-        tree_search_eval_timeout_sec=_safe_int(
-            data.get("tree_search_eval_timeout_sec"), 120
-        ),
+        tree_search_eval_timeout_sec=_safe_int(data.get("tree_search_eval_timeout_sec"), 120),
         review_max_rounds=_safe_int(data.get("review_max_rounds"), 2),
     )
 
@@ -1303,9 +1281,7 @@ def _parse_metaclaw_bridge_config(data: dict[str, Any]) -> MetaClawBridgeConfig:
             model=prm_data.get("model", "gpt-5.4"),
             votes=_safe_int(prm_data.get("votes"), 3),
             temperature=_safe_float(prm_data.get("temperature"), 0.6),
-            gate_stages=tuple(
-                int(s) for s in prm_data.get("gate_stages", (5, 9, 15, 20))
-            ),
+            gate_stages=tuple(int(s) for s in prm_data.get("gate_stages", (5, 9, 15, 20))),
         ),
         lesson_to_skill=MetaClawLessonToSkillConfig(
             enabled=bool(l2s_data.get("enabled", True)),
@@ -1486,9 +1462,7 @@ def _parse_copilot_config(data: dict[str, Any]) -> CoPilotConfig:
 def _parse_quality_assessor_config(data: dict[str, Any]) -> QualityAssessorConfig:
     if not data:
         return QualityAssessorConfig()
-    dimensions = data.get(
-        "dimensions", ("novelty", "rigor", "clarity", "impact", "experiments")
-    )
+    dimensions = data.get("dimensions", ("novelty", "rigor", "clarity", "impact", "experiments"))
     if isinstance(dimensions, list):
         dimensions = tuple(dimensions)
     return QualityAssessorConfig(

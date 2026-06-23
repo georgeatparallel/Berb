@@ -23,6 +23,7 @@ class StageContract:
     dod: str
     error_code: str
     max_retries: int = 1
+    depends_on: frozenset[Stage] = frozenset()
 
 
 CONTRACTS: dict[Stage, StageContract] = {
@@ -34,6 +35,7 @@ CONTRACTS: dict[Stage, StageContract] = {
         dod="SMART goal statement with topic, scope, and constraints",
         error_code="E01_INVALID_GOAL",
         max_retries=0,
+        depends_on=frozenset(),
     ),
     Stage.PROBLEM_DECOMPOSE: StageContract(
         stage=Stage.PROBLEM_DECOMPOSE,
@@ -41,6 +43,7 @@ CONTRACTS: dict[Stage, StageContract] = {
         output_files=("problem_tree.md",),
         dod=">=3 prioritized sub-questions identified",
         error_code="E02_DECOMP_FAIL",
+        depends_on=frozenset({Stage.TOPIC_INIT}),
     ),
     # Phase B: Literature Discovery
     Stage.SEARCH_STRATEGY: StageContract(
@@ -49,6 +52,7 @@ CONTRACTS: dict[Stage, StageContract] = {
         output_files=("search_plan.yaml", "sources.json", "queries.json"),
         dod=">=2 search strategies defined with verified data sources",
         error_code="E03_STRATEGY_BAD",
+        depends_on=frozenset({Stage.PROBLEM_DECOMPOSE}),
     ),
     Stage.LITERATURE_COLLECT: StageContract(
         stage=Stage.LITERATURE_COLLECT,
@@ -57,6 +61,7 @@ CONTRACTS: dict[Stage, StageContract] = {
         dod=">=N candidate papers collected from specified sources",
         error_code="E04_COLLECT_EMPTY",
         max_retries=2,
+        depends_on=frozenset({Stage.SEARCH_STRATEGY}),
     ),
     Stage.LITERATURE_SCREEN: StageContract(
         stage=Stage.LITERATURE_SCREEN,
@@ -65,6 +70,7 @@ CONTRACTS: dict[Stage, StageContract] = {
         dod="Relevance + quality dual screening completed and approved",
         error_code="E05_GATE_REJECT",
         max_retries=0,
+        depends_on=frozenset({Stage.LITERATURE_COLLECT}),
     ),
     Stage.KNOWLEDGE_EXTRACT: StageContract(
         stage=Stage.KNOWLEDGE_EXTRACT,
@@ -72,6 +78,7 @@ CONTRACTS: dict[Stage, StageContract] = {
         output_files=("cards/",),
         dod="Structured knowledge card per shortlisted paper",
         error_code="E06_EXTRACT_FAIL",
+        depends_on=frozenset({Stage.LITERATURE_SCREEN}),
     ),
     # Phase C: Knowledge Synthesis
     Stage.SYNTHESIS: StageContract(
@@ -80,6 +87,7 @@ CONTRACTS: dict[Stage, StageContract] = {
         output_files=("synthesis.md",),
         dod="Topic clusters + >=2 research gaps identified",
         error_code="E07_SYNTHESIS_WEAK",
+        depends_on=frozenset({Stage.KNOWLEDGE_EXTRACT}),
     ),
     Stage.HYPOTHESIS_GEN: StageContract(
         stage=Stage.HYPOTHESIS_GEN,
@@ -87,6 +95,7 @@ CONTRACTS: dict[Stage, StageContract] = {
         output_files=("hypotheses.md",),
         dod=">=2 falsifiable research hypotheses",
         error_code="E08_HYP_INVALID",
+        depends_on=frozenset({Stage.SYNTHESIS}),
     ),
     # Phase D: Experiment Design
     Stage.EXPERIMENT_DESIGN: StageContract(
@@ -96,6 +105,7 @@ CONTRACTS: dict[Stage, StageContract] = {
         dod="Experiment plan with baselines, ablations, metrics approved",
         error_code="E09_GATE_REJECT",
         max_retries=0,
+        depends_on=frozenset({Stage.HYPOTHESIS_GEN}),
     ),
     Stage.CODE_GENERATION: StageContract(
         stage=Stage.CODE_GENERATION,
@@ -104,6 +114,7 @@ CONTRACTS: dict[Stage, StageContract] = {
         dod="Multi-file experiment project + spec document",
         error_code="E10_CODEGEN_FAIL",
         max_retries=2,
+        depends_on=frozenset({Stage.EXPERIMENT_DESIGN}),
     ),
     Stage.RESOURCE_PLANNING: StageContract(
         stage=Stage.RESOURCE_PLANNING,
@@ -111,8 +122,10 @@ CONTRACTS: dict[Stage, StageContract] = {
         output_files=("schedule.json",),
         dod="Resource schedule with GPU/time estimates",
         error_code="E11_SCHED_CONFLICT",
+        depends_on=frozenset({Stage.EXPERIMENT_DESIGN}),
     ),
     # Phase E: Experiment Execution
+    # EXPERIMENT_RUN depends on both CODE_GENERATION and RESOURCE_PLANNING
     Stage.EXPERIMENT_RUN: StageContract(
         stage=Stage.EXPERIMENT_RUN,
         input_files=("schedule.json", "experiment/"),
@@ -120,6 +133,7 @@ CONTRACTS: dict[Stage, StageContract] = {
         dod="All scheduled experiment runs completed with artifacts",
         error_code="E12_RUN_FAIL",
         max_retries=2,
+        depends_on=frozenset({Stage.CODE_GENERATION, Stage.RESOURCE_PLANNING}),
     ),
     Stage.ITERATIVE_REFINE: StageContract(
         stage=Stage.ITERATIVE_REFINE,
@@ -128,6 +142,7 @@ CONTRACTS: dict[Stage, StageContract] = {
         dod="Edit-run-eval loop converged or max iterations reached",
         error_code="E13_REFINE_FAIL",
         max_retries=2,
+        depends_on=frozenset({Stage.EXPERIMENT_RUN}),
     ),
     # Phase F: Analysis & Decision
     Stage.RESULT_ANALYSIS: StageContract(
@@ -136,6 +151,7 @@ CONTRACTS: dict[Stage, StageContract] = {
         output_files=("analysis.md",),
         dod="Metrics analyzed with statistical tests and conclusions",
         error_code="E14_ANALYSIS_ERR",
+        depends_on=frozenset({Stage.EXPERIMENT_RUN}),
     ),
     Stage.RESEARCH_DECISION: StageContract(
         stage=Stage.RESEARCH_DECISION,
@@ -143,6 +159,7 @@ CONTRACTS: dict[Stage, StageContract] = {
         output_files=("decision.md",),
         dod="PROCEED/PIVOT decision with evidence-based justification",
         error_code="E15_DECISION_FAIL",
+        depends_on=frozenset({Stage.RESULT_ANALYSIS}),
     ),
     # Phase G: Paper Writing
     Stage.PAPER_OUTLINE: StageContract(
@@ -151,6 +168,7 @@ CONTRACTS: dict[Stage, StageContract] = {
         output_files=("outline.md",),
         dod="Complete paper outline with section-level detail",
         error_code="E16_OUTLINE_FAIL",
+        depends_on=frozenset({Stage.RESULT_ANALYSIS, Stage.RESEARCH_DECISION}),
     ),
     Stage.PAPER_DRAFT: StageContract(
         stage=Stage.PAPER_DRAFT,
@@ -158,6 +176,7 @@ CONTRACTS: dict[Stage, StageContract] = {
         output_files=("paper_draft.md",),
         dod="Full paper draft with all sections written",
         error_code="E17_DRAFT_FAIL",
+        depends_on=frozenset({Stage.PAPER_OUTLINE}),
     ),
     Stage.PEER_REVIEW: StageContract(
         stage=Stage.PEER_REVIEW,
@@ -165,6 +184,7 @@ CONTRACTS: dict[Stage, StageContract] = {
         output_files=("reviews.md",),
         dod=">=2 simulated review perspectives with actionable feedback",
         error_code="E18_REVIEW_FAIL",
+        depends_on=frozenset({Stage.PAPER_DRAFT}),
     ),
     Stage.PAPER_REVISION: StageContract(
         stage=Stage.PAPER_REVISION,
@@ -172,6 +192,7 @@ CONTRACTS: dict[Stage, StageContract] = {
         output_files=("paper_revised.md",),
         dod="All review comments addressed with tracked changes",
         error_code="E19_REVISION_FAIL",
+        depends_on=frozenset({Stage.PAPER_DRAFT, Stage.PEER_REVIEW}),
     ),
     # Phase H: Finalization
     Stage.QUALITY_GATE: StageContract(
@@ -181,6 +202,7 @@ CONTRACTS: dict[Stage, StageContract] = {
         dod="Quality score meets threshold and approved",
         error_code="E20_GATE_REJECT",
         max_retries=0,
+        depends_on=frozenset({Stage.PAPER_REVISION}),
     ),
     Stage.KNOWLEDGE_ARCHIVE: StageContract(
         stage=Stage.KNOWLEDGE_ARCHIVE,
@@ -188,6 +210,7 @@ CONTRACTS: dict[Stage, StageContract] = {
         output_files=("archive.md", "bundle_index.json"),
         dod="Retrospective + reproducibility bundle archived",
         error_code="E21_ARCHIVE_FAIL",
+        depends_on=frozenset({Stage.QUALITY_GATE}),
     ),
     Stage.EXPORT_PUBLISH: StageContract(
         stage=Stage.EXPORT_PUBLISH,
@@ -195,12 +218,14 @@ CONTRACTS: dict[Stage, StageContract] = {
         output_files=("paper_final.md", "code/"),
         dod="Final paper exported in target format",
         error_code="E22_EXPORT_FAIL",
+        depends_on=frozenset({Stage.PAPER_REVISION}),
     ),
     Stage.CITATION_VERIFY: StageContract(
         stage=Stage.CITATION_VERIFY,
-        input_files=("paper_final.md",),  # references.bib is optional (BUG-50)
+        input_files=("paper_final.md",),
         output_files=("verification_report.json", "references_verified.bib"),
         dod="All citations verified against real APIs; hallucinated refs flagged",
         error_code="E23_VERIFY_FAIL",
+        depends_on=frozenset({Stage.EXPORT_PUBLISH}),
     ),
 }

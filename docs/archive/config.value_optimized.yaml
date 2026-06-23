@@ -1,0 +1,446 @@
+# Berb Configuration - Value Optimized
+# Best value-for-money models for each stage and method
+# Generated: 2026-04-06
+# Philosophy: Use cheaper models for parallelizable tasks, 
+#             invest in premium models for critical decision points
+
+project:
+  name: "my-research"
+  mode: "full-auto"
+
+research:
+  topic: "Machine learning methods in chaos detection in standard map"
+  domains:
+    - "machine-learning"
+    - "physics"
+  daily_paper_count: 5
+  quality_threshold: 4.0
+
+runtime:
+  timezone: "UTC"
+  max_parallel_tasks: 3
+  approval_timeout_hours: 12
+  retry_limit: 2
+
+notifications:
+  channel: "console"
+  target: ""
+  on_stage_start: false
+  on_stage_fail: true
+  on_gate_required: true
+
+knowledge_base:
+  backend: "markdown"
+  root: "docs/kb"
+
+# ============================================================================
+# Export Configuration
+# ============================================================================
+
+export:
+  target_conference: "neurips_2025"
+  authors: "Anonymous"
+  bib_file: "references"
+  formats:
+    - "latex"
+    - "markdown"
+    - "pdf"
+  output_dir: "output"
+  template: "article"
+
+# ============================================================================
+# LLM Configuration - VALUE OPTIMIZED
+# ============================================================================
+
+llm:
+  provider: "openrouter"
+  base_url: "https://openrouter.ai/api/v1"
+  wire_api: "chat_completions"
+  api_key_env: "OPENROUTER_API_KEY"
+  
+  # Primary: DeepSeek V3.2 - Best value for general use
+  # Strong reasoning, coding, 163K context, $0.26/M tokens
+  primary_model: "deepseek/deepseek-v3.2"
+  
+  fallback_models:
+    # Fallback 1: Qwen 3.5 Plus - Good value, 128K context
+    - "qwen/qwen3.5-plus"
+    # Fallback 2: Gemini 2.5 Flash - 1M context, great for long docs
+    - "google/gemini-2.5-flash"
+    # Fallback 3: Free tier for cost savings
+    - "meta-llama/llama-3.3-70b-instruct:free"
+  
+  max_retries: 5
+
+# ============================================================================
+# Stage-Specific Model Overrides (Value Optimized)
+# ============================================================================
+
+stage_models:
+  # Phase A: Research Scoping (Stages 1-2)
+  # Requirements: Reasoning, structured output
+  # Strategy: Use cheaper models, good enough for planning
+  topic_init:
+    primary: "deepseek/deepseek-v3.2"           # $0.26/M, good reasoning
+    fallback: "qwen/qwen3.5-flash"              # $0.065/M, fast
+  
+  problem_decompose:
+    primary: "deepseek/deepseek-v3.2"
+    fallback: "alibaba/qwen-turbo"              # $0.03/M, cheapest
+
+  # Phase B: Literature Discovery (Stages 3-6)
+  # Requirements: Long context, search, analysis
+  # Strategy: Mix of cheap and capable
+  search_strategy:
+    primary: "deepseek/deepseek-v3.2"
+    fallback: "google/gemini-2.5-flash-lite"    # $0.10/M, 1M context
+  
+  literature_collect:
+    primary: "perplexity/sonar"                 # $1.00/M, search-grounded
+    fallback: "google/gemini-2.5-flash"         # $0.30/M, 1M context
+  
+  literature_screen:
+    primary: "qwen/qwen3.5-plus"                # $0.26/M, good analysis
+    fallback: "meta-llama/llama-3.3-70b-instruct:free"  # Free
+  
+  knowledge_extract:
+    primary: "deepseek/deepseek-v3.2"
+    fallback: "z-ai/glm-4.5"                    # $0.60/M, good extraction
+
+  # Phase C: Knowledge Synthesis (Stages 7-8)
+  # Requirements: Complex reasoning, creativity
+  # Strategy: Invest in quality - these stages determine research direction
+  synthesis:
+    primary: "anthropic/claude-sonnet-4.6"      # $3.00/M, best analysis
+    fallback: "deepseek/deepseek-v3.2"          # $0.26/M, good value
+  
+  hypothesis_gen:
+    primary: "anthropic/claude-sonnet-4.6"      # Worth the cost for novelty
+    fallback: "deepseek/deepseek-r1"            # $0.70/M, reasoning focused
+
+  # Phase D: Experiment Design (Stages 9-11)
+  # Requirements: Technical precision, coding
+  # Strategy: Balance cost and capability
+  experiment_design:
+    primary: "anthropic/claude-sonnet-4.6"      # Critical stage, worth premium
+    fallback: "deepseek/deepseek-v3.2"
+  
+  code_generation:
+    primary: "deepseek/deepseek-v3.2"           # Excellent coder, cheap
+    fallback: "qwen/qwen3-coder-plus"           # $0.65/M, coding specialized
+  
+  resource_planning:
+    primary: "alibaba/qwen-turbo"               # $0.03/M, simple task
+    fallback: "deepseek/deepseek-v3.2"
+
+  # Phase E: Experiment Execution (Stages 12-13)
+  # Requirements: Code execution, debugging
+  # Strategy: Cheaper models, iterative process
+  experiment_run:
+    primary: "deepseek/deepseek-v3.2"
+    fallback: "qwen/qwen3.5-flash"
+  
+  iterative_refine:
+    primary: "deepseek/deepseek-v3.2"
+    fallback: "xiaomi/mimo-v2-flash"            # $0.09/M, good for iteration
+
+  # Phase F: Analysis & Decision (Stages 14-15)
+  # Requirements: Critical analysis, decision making
+  # Strategy: Invest in quality
+  result_analysis:
+    primary: "anthropic/claude-sonnet-4.6"
+    fallback: "deepseek/deepseek-v3.2"
+  
+  research_decision:
+    primary: "anthropic/claude-opus-4.6"        # $5.00/M, critical decision
+    fallback: "anthropic/claude-sonnet-4.6"
+
+  # Phase G: Paper Writing (Stages 16-19)
+  # Requirements: Writing quality, academic style
+  # Strategy: Premium models for writing, cheaper for structure
+  paper_outline:
+    primary: "deepseek/deepseek-v3.2"
+    fallback: "qwen/qwen3.5-plus"
+  
+  paper_draft:
+    primary: "anthropic/claude-sonnet-4.6"      # Best writing quality
+    fallback: "deepseek/deepseek-v3.2"
+  
+  peer_review:
+    primary: "anthropic/claude-opus-4.6"        # Thorough evaluation
+    fallback: "anthropic/claude-sonnet-4.6"
+  
+  paper_revision:
+    primary: "anthropic/claude-sonnet-4.6"
+    fallback: "deepseek/deepseek-v3.2"
+
+  # Phase H: Finalization (Stages 20-23)
+  # Requirements: Accuracy, reliability
+  # Strategy: Mix based on task
+  quality_gate:
+    primary: "anthropic/claude-opus-4.6"        # Final quality check
+    fallback: "anthropic/claude-sonnet-4.6"
+  
+  knowledge_archive:
+    primary: "deepseek/deepseek-v3.2"           # Simple archival
+    fallback: "alibaba/qwen-turbo"
+  
+  export_publish:
+    primary: "deepseek/deepseek-v3.2"
+    fallback: "qwen/qwen3.5-flash"
+  
+  citation_verify:
+    primary: "perplexity/sonar-pro"             # $3.00/M, search-grounded
+    fallback: "deepseek/deepseek-v3.2"
+
+# ============================================================================
+# Reasoning Methods - VALUE OPTIMIZED
+# ============================================================================
+# Strategy: Use cheaper models for reasoning methods since they run in parallel
+
+reasoning:
+  cost_budget_usd: 3.00                          # Reduced from $6.00
+  
+  provider_weights:
+    deepseek: 0.40
+    qwen: 0.25
+    google: 0.15
+    minimax: 0.10
+    anthropic: 0.10
+  
+  methods:
+    # Multi-perspective: Parallel analysis, use cheap models
+    multi_perspective:
+      constructive: "qwen/qwen3.5-flash"         # $0.065/M
+      destructive: "xiaomi/mimo-v2-flash"        # $0.09/M
+      systemic: "deepseek/deepseek-v3.1"         # $0.15/M
+      minimalist: "minimax/minimax-m2.5"          # $0.19/M
+      scoring: "qwen/qwen3.5-plus"               # $0.26/M
+
+    # Pre-mortem: Risk analysis
+    pre_mortem:
+      narrative: "qwen/qwen3.5-flash"
+      root_cause: "deepseek/deepseek-v3.2"
+      early_warning: "minimax/minimax-m2.5"
+      hardened: "z-ai/glm-4.5"                   # $0.60/M
+
+    # Bayesian: Statistical reasoning
+    bayesian:
+      prior: "qwen/qwen3.5-flash"
+      likelihood: "deepseek/deepseek-v3.2"
+      sensitivity: "moonshotai/kimi-k2.5"        # $0.42/M
+
+    # Debate: Argumentation
+    debate:
+      pro: "qwen/qwen3.5-flash"
+      con: "xiaomi/mimo-v2-flash"
+      judge: "deepseek/deepseek-v3.2"            # Needs good reasoning
+
+    # Dialectical: Thesis-antithesis-synthesis
+    dialectical:
+      thesis: "qwen/qwen3.5-flash"
+      antithesis: "xiaomi/mimo-v2-flash"
+      synthesis: "deepseek/deepseek-v3.2"
+
+    # Research: Query and synthesis
+    research:
+      query: "google/gemini-2.5-flash-lite"      # $0.10/M, 1M context
+      synthesis: "deepseek/deepseek-v3.2"
+      gap: "minimax/minimax-m2.5"
+      final: "qwen/qwen3.5-plus"
+
+    # Socratic: Questioning
+    socratic:
+      clarification: "qwen/qwen3.5-flash"
+      assumption: "deepseek/deepseek-v3.2"
+      evidence: "minimax/minimax-m2.5"
+      perspective: "z-ai/glm-4.5"
+      meta: "qwen/qwen3.5-flash"
+
+    # Scientific: Research method
+    scientific:
+      observation: "qwen/qwen3.5-flash"
+      hypothesis: "deepseek/deepseek-v3.2"
+      prediction: "xiaomi/mimo-v2-flash"
+      experiment: "qwen/qwen3.5-flash"
+      analysis: "deepseek/deepseek-v3.2"
+
+    # Jury: Multiple evaluators
+    jury:
+      juror: "qwen/qwen3.5-flash"                # Cheap, run multiple
+      foreman: "deepseek/deepseek-v3.2"
+      verdict: "z-ai/glm-4.5"
+
+# ============================================================================
+# Validation Models - VALUE OPTIMIZED
+# ============================================================================
+
+validation:
+  hidden_eval:
+    # Use Sonnet instead of Opus for cost savings
+    search_model: "anthropic/claude-sonnet-4.6"
+    selection_model: "anthropic/claude-sonnet-4.6"
+    hidden_model: "anthropic/claude-opus-4.6"    # Keep Opus for hidden
+  
+  math:
+    # DeepSeek good for math, much cheaper
+    model: "deepseek/deepseek-v3.2"              # Was claude-opus-4.6
+
+# ============================================================================
+# Experiment Models - VALUE OPTIMIZED
+# ============================================================================
+
+experiment:
+  react_agent:
+    # DeepSeek excellent for coding
+    model: "deepseek/deepseek-v3.2"              # Was claude-sonnet-4.6
+  
+  physics_guards:
+    # Physics validation needs accuracy
+    model: "anthropic/claude-sonnet-4.6"         # Keep for accuracy
+    enabled: true
+
+# ============================================================================
+# OpenCode Beast Mode
+# ============================================================================
+
+opencode:
+  enabled: true
+  auto: true
+  complexity_threshold: 0.2
+  timeout_sec: 600
+  max_retries: 1
+  workspace_cleanup: true
+
+# ============================================================================
+# Figure Agent
+# ============================================================================
+
+figure_agent:
+  enabled: true
+  min_figures: 3
+  max_figures: 10
+  max_iterations: 3
+  render_timeout_sec: 30
+  output_format: "python"
+  nano_banana_enabled: true
+  # Use cheaper vision model
+  gemini_model: "google/gemini-2.5-flash-lite"   # $0.10/M vs flash $0.30/M
+  strict_mode: false
+  dpi: 300
+
+# ============================================================================
+# Web Search Configuration
+# ============================================================================
+
+web_search:
+  enabled: true
+  tavily_api_key_env: "TAVILY_API_KEY"
+  enable_scholar: true
+  enable_crawling: true
+  enable_pdf_extraction: true
+  max_web_results: 10
+  max_scholar_results: 10
+  max_crawl_urls: 5
+
+# ============================================================================
+# Multi-Model Configuration - VALUE OPTIMIZED
+# ============================================================================
+
+multi_model:
+  # Critique Pattern: Generation -> Evaluation
+  critique:
+    enabled: true
+    stages: [17, 19]
+    
+    # Generator: Use cheaper but capable model
+    generator: "deepseek/deepseek-v3.2"           # Was claude-sonnet-4.6
+    
+    # Evaluator: Use reliable model
+    evaluator: "qwen/qwen3.5-plus"                # Was gpt-4o
+    
+    dimensions:
+      - "factual_accuracy"
+      - "completeness"
+      - "citation_quality"
+      - "clarity"
+    
+    auto_apply_threshold: 0.8
+
+  # Council Pattern: Multiple models -> Synthesis
+  council:
+    enabled: true
+    stages: [7, 8, 15]
+    
+    # Use mix of cheap and premium
+    models:
+      - "anthropic/claude-sonnet-4.6"             # Premium for quality
+      - "deepseek/deepseek-v3.2"                  # Value workhorse
+      - "qwen/qwen3.5-plus"                       # Mid-tier
+    
+    # Judge: Use capable but not most expensive
+    judge: "deepseek/deepseek-v3.2"               # Was claude-sonnet-4.6
+    
+    consensus_threshold: 0.8
+    include_divergences: true
+
+# ============================================================================
+# Hidden Consistent Evaluation (HCE)
+# ============================================================================
+
+hidden_eval:
+  enabled: true
+  use_in_improvement_loop: true
+  use_for_selection: true
+  track_hidden_scores: true
+
+# ============================================================================
+# Async Experiment Pool
+# ============================================================================
+
+experiment_pool:
+  enabled: true
+  max_workers: 4
+  isolation: "docker"
+  gpu_enabled: true
+  docker_image: "berb/experiment:latest"
+  timeout_per_experiment: 3600
+
+# ============================================================================
+# Literature Search Configuration
+# ============================================================================
+
+literature:
+  sources:
+    - "openalex"
+    - "arxiv"
+    - "semantic_scholar"
+  
+  cache:
+    enabled: true
+    ttl_hours: 24
+  
+  rate_limiter:
+    requests_per_minute: 10
+    burst_size: 3
+
+# ============================================================================
+# Security
+# ============================================================================
+
+security:
+  hitl_required_stages: [5, 9, 20]
+  allow_publish_without_approval: false
+  redact_sensitive_logs: true
+
+# ============================================================================
+# Cost Tracking
+# ============================================================================
+
+# Estimated costs per paper with this configuration:
+# - Budget scenario: $0.80-1.20 (using mostly DeepSeek + Qwen)
+# - Balanced scenario: $1.50-2.50 (mix of premium and value)
+# - Quality scenario: $3.00-5.00 (premium models for critical stages)
+# 
+# vs Original config: $2.00-8.00
+# Savings: 40-60%

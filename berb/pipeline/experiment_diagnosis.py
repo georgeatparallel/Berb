@@ -15,7 +15,6 @@ import logging
 import math
 import re
 from dataclasses import dataclass, field
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -70,8 +69,10 @@ class ExperimentDiagnosis:
     def to_repair_prompt(self) -> str:
         """Generate a structured repair prompt for OpenCode."""
         lines = ["## EXPERIMENT DIAGNOSIS\n"]
-        lines.append(f"Completion rate: {self.completion_rate:.0%} "
-                     f"({len(self.conditions_completed)}/{self.total_planned} conditions)\n")
+        lines.append(
+            f"Completion rate: {self.completion_rate:.0%} "
+            f"({len(self.conditions_completed)}/{self.total_planned} conditions)\n"
+        )
 
         if self.conditions_completed:
             lines.append(f"Completed: {', '.join(self.conditions_completed)}")
@@ -79,7 +80,10 @@ class ExperimentDiagnosis:
             lines.append(f"Failed: {', '.join(self.conditions_failed)}\n")
 
         lines.append("## DEFICIENCIES (ordered by severity)\n")
-        for d in sorted(self.deficiencies, key=lambda x: {"critical": 0, "major": 1, "minor": 2}.get(x.severity, 3)):
+        for d in sorted(
+            self.deficiencies,
+            key=lambda x: {"critical": 0, "major": 1, "minor": 2}.get(x.severity, 3),
+        ):
             lines.append(f"### [{d.severity.upper()}] {d.type.value}")
             lines.append(f"**Problem**: {d.description}")
             if d.error_message:
@@ -211,18 +215,25 @@ def _select_paper_mode(
     conditions_with_enough_seeds = 0
     for cond_name in diagnosis.conditions_completed:
         cond_data = cond_summaries.get(cond_name, {})
-        n_seeds = cond_data.get("n_seeds", 1)
+        cond_data.get("n_seeds", 1)
         # Heuristic: count per-seed keys in best_run metrics
         metrics = experiment_summary.get("best_run", {}).get("metrics", {})
-        seed_keys = [k for k in metrics if k.startswith(f"{cond_name}/") and re.match(r".*/\d+/", k)]
+        seed_keys = [
+            k for k in metrics if k.startswith(f"{cond_name}/") and re.match(r".*/\d+/", k)
+        ]
         # BUG-R6-05: Guard against re.match returning None
-        actual_seeds = len(set(
-            m.group(1) for k in seed_keys if (m := re.match(r".*/(\d+)/", k)) is not None
-        )) if seed_keys else 1
+        actual_seeds = (
+            len({m.group(1) for k in seed_keys if (m := re.match(r".*/(\d+)/", k)) is not None})
+            if seed_keys
+            else 1
+        )
         if actual_seeds >= min_seeds:
             conditions_with_enough_seeds += 1
 
-    if len(diagnosis.conditions_completed) >= min_conditions and conditions_with_enough_seeds >= min_conditions:
+    if (
+        len(diagnosis.conditions_completed) >= min_conditions
+        and conditions_with_enough_seeds >= min_conditions
+    ):
         # Check for negative result
         best_run = experiment_summary.get("best_run", {})
         metrics = best_run.get("metrics", {})
@@ -316,12 +327,14 @@ def diagnose_experiment(
 
     # 12. No conditions at all
     if not completed_conditions:
-        diag.deficiencies.append(Deficiency(
-            type=DeficiencyType.NO_CONDITIONS_COMPLETED,
-            severity="critical",
-            description="No experimental conditions completed successfully.",
-            suggested_fix="Fix the root cause errors above, then re-run.",
-        ))
+        diag.deficiencies.append(
+            Deficiency(
+                type=DeficiencyType.NO_CONDITIONS_COMPLETED,
+                severity="critical",
+                description="No experimental conditions completed successfully.",
+                suggested_fix="Fix the root cause errors above, then re-run.",
+            )
+        )
 
     # Determine repairability
     _assess_repairability(diag, prior_diagnoses)
@@ -346,61 +359,72 @@ def _check_missing_deps(diag: ExperimentDiagnosis, output: str) -> None:
     pattern = re.compile(r"ModuleNotFoundError: No module named '([^']+)'")
     for m in pattern.finditer(output):
         module = m.group(1)
-        diag.deficiencies.append(Deficiency(
-            type=DeficiencyType.MISSING_DEPENDENCY,
-            severity="critical",
-            description=f"Missing Python package: {module}",
-            error_message=m.group(0),
-            suggested_fix=f"Add '{module}' to requirements.txt and re-run.",
-        ))
+        diag.deficiencies.append(
+            Deficiency(
+                type=DeficiencyType.MISSING_DEPENDENCY,
+                severity="critical",
+                description=f"Missing Python package: {module}",
+                error_message=m.group(0),
+                suggested_fix=f"Add '{module}' to requirements.txt and re-run.",
+            )
+        )
 
     # Also check for missing system libraries (Box2D, etc.)
     if "box2d" in output.lower() or "Box2D" in output:
         if "not available" in output.lower() or "not installed" in output.lower():
-            diag.deficiencies.append(Deficiency(
-                type=DeficiencyType.MISSING_DEPENDENCY,
-                severity="critical",
-                description="Box2D library not available — LunarLander environments will fail.",
-                suggested_fix="Add 'box2d-py' and 'gymnasium[box2d]' to requirements.txt.",
-            ))
+            diag.deficiencies.append(
+                Deficiency(
+                    type=DeficiencyType.MISSING_DEPENDENCY,
+                    severity="critical",
+                    description="Box2D library not available — LunarLander environments will fail.",
+                    suggested_fix="Add 'box2d-py' and 'gymnasium[box2d]' to requirements.txt.",
+                )
+            )
 
 
 def _check_permission_errors(diag: ExperimentDiagnosis, output: str) -> None:
     """Detect file/network permission errors."""
     patterns = [
-        (r"PermissionError.*?(?:huggingface|hf|model|download)", "HuggingFace model download blocked"),
+        (
+            r"PermissionError.*?(?:huggingface|hf|model|download)",
+            "HuggingFace model download blocked",
+        ),
         (r"PermissionError", "File permission error"),
         (r"403.*?Forbidden.*?(?:huggingface|hf)", "HuggingFace API access denied"),
     ]
     for pat, desc in patterns:
         if re.search(pat, output, re.IGNORECASE):
-            diag.deficiencies.append(Deficiency(
-                type=DeficiencyType.PERMISSION_ERROR,
-                severity="critical",
-                description=desc,
-                error_message=_extract_context(output, pat),
-                suggested_fix=(
-                    "Pre-cache the model in setup.py, or switch to a smaller "
-                    "model (e.g., distilgpt2 instead of gpt2). Ensure HF_TOKEN "
-                    "is set if using gated models."
-                ),
-            ))
+            diag.deficiencies.append(
+                Deficiency(
+                    type=DeficiencyType.PERMISSION_ERROR,
+                    severity="critical",
+                    description=desc,
+                    error_message=_extract_context(output, pat),
+                    suggested_fix=(
+                        "Pre-cache the model in setup.py, or switch to a smaller "
+                        "model (e.g., distilgpt2 instead of gpt2). Ensure HF_TOKEN "
+                        "is set if using gated models."
+                    ),
+                )
+            )
             break  # One permission error is enough
 
 
 def _check_gpu_oom(diag: ExperimentDiagnosis, output: str) -> None:
     """Detect GPU out-of-memory errors."""
     if re.search(r"CUDA out of memory|RuntimeError.*?OOM|torch\.cuda\.OutOfMemoryError", output):
-        diag.deficiencies.append(Deficiency(
-            type=DeficiencyType.GPU_OOM,
-            severity="major",
-            description="GPU out of memory during training.",
-            error_message=_extract_context(output, r"CUDA out of memory"),
-            suggested_fix=(
-                "Reduce batch size by 50%. If still OOM, reduce model size "
-                "or use gradient checkpointing."
-            ),
-        ))
+        diag.deficiencies.append(
+            Deficiency(
+                type=DeficiencyType.GPU_OOM,
+                severity="major",
+                description="GPU out of memory during training.",
+                error_message=_extract_context(output, r"CUDA out of memory"),
+                suggested_fix=(
+                    "Reduce batch size by 50%. If still OOM, reduce model size "
+                    "or use gradient checkpointing."
+                ),
+            )
+        )
 
 
 def _check_time_guard(
@@ -411,25 +435,27 @@ def _check_time_guard(
 ) -> None:
     """Detect time guard killing too many conditions."""
     # Count TIME_GUARD mentions
-    time_guard_hits = len(re.findall(r"TIME_GUARD|time.guard|time guard", output, re.IGNORECASE))
+    len(re.findall(r"TIME_GUARD|time.guard|time guard", output, re.IGNORECASE))
     skipped_conditions = planned - completed
     skipped_pct = len(skipped_conditions) / max(len(planned), 1)
 
     if skipped_pct > 0.5 and len(skipped_conditions) > 1:
-        diag.deficiencies.append(Deficiency(
-            type=DeficiencyType.TIME_GUARD_DOMINANT,
-            severity="major",
-            description=(
-                f"Time guard killed {len(skipped_conditions)}/{len(planned)} conditions "
-                f"({skipped_pct:.0%}). Too many conditions for the time budget."
-            ),
-            affected_conditions=sorted(skipped_conditions),
-            suggested_fix=(
-                f"Reduce from {len(planned)} to {min(5, len(planned))} conditions "
-                f"(keep baseline + proposed + 1 ablation). "
-                f"Reduce epochs by 50%. Reduce seeds from 3 to 2."
-            ),
-        ))
+        diag.deficiencies.append(
+            Deficiency(
+                type=DeficiencyType.TIME_GUARD_DOMINANT,
+                severity="major",
+                description=(
+                    f"Time guard killed {len(skipped_conditions)}/{len(planned)} conditions "
+                    f"({skipped_pct:.0%}). Too many conditions for the time budget."
+                ),
+                affected_conditions=sorted(skipped_conditions),
+                suggested_fix=(
+                    f"Reduce from {len(planned)} to {min(5, len(planned))} conditions "
+                    f"(keep baseline + proposed + 1 ablation). "
+                    f"Reduce epochs by 50%. Reduce seeds from 3 to 2."
+                ),
+            )
+        )
 
 
 def _check_synthetic_data(diag: ExperimentDiagnosis, output: str) -> None:
@@ -442,17 +468,19 @@ def _check_synthetic_data(diag: ExperimentDiagnosis, output: str) -> None:
     ]
     for pat in patterns:
         if re.search(pat, output, re.IGNORECASE):
-            diag.deficiencies.append(Deficiency(
-                type=DeficiencyType.SYNTHETIC_DATA_FALLBACK,
-                severity="critical",
-                description="Experiment fell back to synthetic/random data instead of real dataset.",
-                error_message=_extract_context(output, pat),
-                suggested_fix=(
-                    "Fix dataset loading. Use a pre-cached dataset "
-                    "(CIFAR-10/MNIST are available at /opt/datasets). "
-                    "Ensure download happens in setup.py, not main.py."
-                ),
-            ))
+            diag.deficiencies.append(
+                Deficiency(
+                    type=DeficiencyType.SYNTHETIC_DATA_FALLBACK,
+                    severity="critical",
+                    description="Experiment fell back to synthetic/random data instead of real dataset.",
+                    error_message=_extract_context(output, pat),
+                    suggested_fix=(
+                        "Fix dataset loading. Use a pre-cached dataset "
+                        "(CIFAR-10/MNIST are available at /opt/datasets). "
+                        "Ensure download happens in setup.py, not main.py."
+                    ),
+                )
+            )
             break
 
 
@@ -466,19 +494,21 @@ def _check_dataset_issues(diag: ExperimentDiagnosis, output: str) -> None:
     ]
     for pat, desc in patterns:
         if re.search(pat, output, re.IGNORECASE):
-            diag.deficiencies.append(Deficiency(
-                type=DeficiencyType.DATASET_UNAVAILABLE,
-                severity="critical",
-                description=desc,
-                error_message=_extract_context(output, pat),
-                suggested_fix=(
-                    "The dataset does not exist on HuggingFace Hub. "
-                    "Use ONLY pre-cached datasets: CIFAR-10, CIFAR-100, MNIST, "
-                    "FashionMNIST, STL-10 (available at /opt/datasets). "
-                    "Remove the failing download from setup.py and use "
-                    "torchvision.datasets with root='/opt/datasets' instead."
-                ),
-            ))
+            diag.deficiencies.append(
+                Deficiency(
+                    type=DeficiencyType.DATASET_UNAVAILABLE,
+                    severity="critical",
+                    description=desc,
+                    error_message=_extract_context(output, pat),
+                    suggested_fix=(
+                        "The dataset does not exist on HuggingFace Hub. "
+                        "Use ONLY pre-cached datasets: CIFAR-10, CIFAR-100, MNIST, "
+                        "FashionMNIST, STL-10 (available at /opt/datasets). "
+                        "Remove the failing download from setup.py and use "
+                        "torchvision.datasets with root='/opt/datasets' instead."
+                    ),
+                )
+            )
 
 
 def _check_code_crashes(diag: ExperimentDiagnosis, stderr: str, output: str) -> None:
@@ -504,25 +534,29 @@ def _check_code_crashes(diag: ExperimentDiagnosis, stderr: str, output: str) -> 
         if error_msg in seen_errors:
             continue
         seen_errors.add(error_msg)
-        diag.deficiencies.append(Deficiency(
-            type=DeficiencyType.CODE_CRASH,
-            severity="major",
-            description=f"Runtime error: {error_msg}",
-            error_message=m.group(0)[:500],
-            suggested_fix="Fix the code error. See traceback for details.",
-        ))
+        diag.deficiencies.append(
+            Deficiency(
+                type=DeficiencyType.CODE_CRASH,
+                severity="major",
+                description=f"Runtime error: {error_msg}",
+                error_message=m.group(0)[:500],
+                suggested_fix="Fix the code error. See traceback for details.",
+            )
+        )
 
 
 def _check_hyperparams(diag: ExperimentDiagnosis, output: str, summary: dict) -> None:
     """Detect hyperparameter issues (diverging loss, NaN gradients)."""
     # NaN in training — use word boundary to avoid matching "Shannan" etc.
     if re.search(r"loss.*?\bnan\b|\bnan\b.*?loss|gradient.*?\bnan\b", output, re.IGNORECASE):
-        diag.deficiencies.append(Deficiency(
-            type=DeficiencyType.HYPERPARAMETER_ISSUE,
-            severity="major",
-            description="NaN detected in loss or gradients — likely learning rate too high.",
-            suggested_fix="Reduce learning rate by 10×. Add gradient clipping (max_norm=1.0).",
-        ))
+        diag.deficiencies.append(
+            Deficiency(
+                type=DeficiencyType.HYPERPARAMETER_ISSUE,
+                severity="major",
+                description="NaN detected in loss or gradients — likely learning rate too high.",
+                suggested_fix="Reduce learning rate by 10×. Add gradient clipping (max_norm=1.0).",
+            )
+        )
 
     # Diverging loss — parse each value individually so one malformed value
     # doesn't silence the entire check (EDGE-1 fix)
@@ -534,13 +568,15 @@ def _check_hyperparams(diag: ExperimentDiagnosis, output: str, summary: dict) ->
                 losses.append(float(v))
             except (ValueError, TypeError):
                 continue
-        if losses and any(l > 100 for l in losses):
-            diag.deficiencies.append(Deficiency(
-                type=DeficiencyType.HYPERPARAMETER_ISSUE,
-                severity="major",
-                description=f"Loss diverging (max={max(losses):.1f}). Training is unstable.",
-                suggested_fix="Reduce learning rate. Add gradient clipping. Check data normalization.",
-            ))
+        if losses and any(loss > 100 for loss in losses):
+            diag.deficiencies.append(
+                Deficiency(
+                    type=DeficiencyType.HYPERPARAMETER_ISSUE,
+                    severity="major",
+                    description=f"Loss diverging (max={max(losses):.1f}). Training is unstable.",
+                    suggested_fix="Reduce learning rate. Add gradient clipping. Check data normalization.",
+                )
+            )
 
 
 def _check_near_random_accuracy(diag: ExperimentDiagnosis, summary: dict) -> None:
@@ -570,20 +606,22 @@ def _check_near_random_accuracy(diag: ExperimentDiagnosis, summary: dict) -> Non
                 acc_key = key
 
     if best_acc is not None and 0 < best_acc < 15.0:
-        diag.deficiencies.append(Deficiency(
-            type=DeficiencyType.HYPERPARAMETER_ISSUE,
-            severity="critical",
-            description=(
-                f"Best accuracy is {best_acc:.1f}% ({acc_key}), near random chance. "
-                f"The model is not learning."
-            ),
-            suggested_fix=(
-                "Check: (1) Learning rate too high/low — try 0.001 for Adam, 0.1 for SGD. "
-                "(2) Data preprocessing — normalize to [0,1] or ImageNet stats. "
-                "(3) Forward pass — ensure loss backward reaches all parameters. "
-                "(4) KD — ensure teacher is loaded with correct pretrained weights."
-            ),
-        ))
+        diag.deficiencies.append(
+            Deficiency(
+                type=DeficiencyType.HYPERPARAMETER_ISSUE,
+                severity="critical",
+                description=(
+                    f"Best accuracy is {best_acc:.1f}% ({acc_key}), near random chance. "
+                    f"The model is not learning."
+                ),
+                suggested_fix=(
+                    "Check: (1) Learning rate too high/low — try 0.001 for Adam, 0.1 for SGD. "
+                    "(2) Data preprocessing — normalize to [0,1] or ImageNet stats. "
+                    "(3) Forward pass — ensure loss backward reaches all parameters. "
+                    "(4) KD — ensure teacher is loaded with correct pretrained weights."
+                ),
+            )
+        )
 
 
 def _check_identical_conditions(diag: ExperimentDiagnosis, summary: dict) -> None:
@@ -595,19 +633,21 @@ def _check_identical_conditions(diag: ExperimentDiagnosis, summary: dict) -> Non
             m = re.search(r"Conditions '([^']+)' and '([^']+)'", w)
             if m:
                 affected.extend([m.group(1), m.group(2)])
-        diag.deficiencies.append(Deficiency(
-            type=DeficiencyType.IDENTICAL_CONDITIONS,
-            severity="major",
-            description=(
-                f"{len(warnings)} ablation pair(s) produce identical outputs. "
-                "The differentiating parameter is likely not wired into the code."
-            ),
-            affected_conditions=sorted(set(affected)),
-            suggested_fix=(
-                "Check that each ablation condition actually modifies the model/training. "
-                "The condition parameter must affect the forward pass, not just be logged."
-            ),
-        ))
+        diag.deficiencies.append(
+            Deficiency(
+                type=DeficiencyType.IDENTICAL_CONDITIONS,
+                severity="major",
+                description=(
+                    f"{len(warnings)} ablation pair(s) produce identical outputs. "
+                    "The differentiating parameter is likely not wired into the code."
+                ),
+                affected_conditions=sorted(set(affected)),
+                suggested_fix=(
+                    "Check that each ablation condition actually modifies the model/training. "
+                    "The condition parameter must affect the forward pass, not just be logged."
+                ),
+            )
+        )
 
 
 def _check_insufficient_seeds(diag: ExperimentDiagnosis, summary: dict) -> None:
@@ -623,13 +663,15 @@ def _check_insufficient_seeds(diag: ExperimentDiagnosis, summary: dict) -> None:
 
     single_seed_conds = [c for c, seeds in cond_seeds.items() if len(seeds) < 2]
     if single_seed_conds:
-        diag.deficiencies.append(Deficiency(
-            type=DeficiencyType.INSUFFICIENT_SEEDS,
-            severity="minor",
-            description=f"{len(single_seed_conds)} condition(s) have only 1 seed (no variance estimate).",
-            affected_conditions=single_seed_conds,
-            suggested_fix="Increase seeds to at least 2 per condition, or reduce epoch count to fit time budget.",
-        ))
+        diag.deficiencies.append(
+            Deficiency(
+                type=DeficiencyType.INSUFFICIENT_SEEDS,
+                severity="minor",
+                description=f"{len(single_seed_conds)} condition(s) have only 1 seed (no variance estimate).",
+                affected_conditions=single_seed_conds,
+                suggested_fix="Increase seeds to at least 2 per condition, or reduce epoch count to fit time budget.",
+            )
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -727,3 +769,130 @@ def _assess_repairability(diag: ExperimentDiagnosis, prior: list[dict] | None) -
 
     # All types are potentially repairable
     diag.repairable = True
+
+
+def run_experiment_diagnosis(run_dir: Path, config: RCConfig, run_id: str) -> None:
+    """Run experiment diagnosis after Stage 14 and save reports.
+
+    Produces:
+    - ``run_dir/experiment_diagnosis.json`` — structured diagnosis + quality assessment
+    - ``run_dir/repair_prompt.txt`` — repair instructions (if quality is insufficient)
+
+    Extracted from pipeline/runner.py as part of the Phase 2 runner split.
+    """
+    import json
+    import logging
+
+    import yaml as _yaml_diag
+
+    from berb.config import RCConfig
+    from berb.pipeline.checkpoint import _utcnow_iso
+    from berb.pipeline.experiment_repair import build_repair_prompt
+
+    logger = logging.getLogger(__name__)
+
+    try:
+        summary_path = None
+        for candidate in sorted(run_dir.glob("stage-14*/experiment_summary.json")):
+            summary_path = candidate
+        if not summary_path or not summary_path.exists():
+            return
+
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+
+        stdout, stderr = "", ""
+        runs_dir = summary_path.parent / "runs"
+        if runs_dir.is_dir():
+            for run_file in sorted(runs_dir.glob("*.json"))[:5]:
+                try:
+                    run_data = json.loads(run_file.read_text(encoding="utf-8"))
+                    if isinstance(run_data, dict):
+                        stdout += run_data.get("stdout", "") + "\n"
+                        stderr += run_data.get("stderr", "") + "\n"
+                except (json.JSONDecodeError, OSError):
+                    continue
+
+        plan = None
+        for candidate in sorted(run_dir.glob("stage-09*/exp_plan.yaml")):
+            try:
+                plan = _yaml_diag.safe_load(candidate.read_text(encoding="utf-8"))
+            except Exception as exc:
+                logger.debug("YAML plan load failed (%s: %s)", type(exc).__name__, exc)
+        if plan is None:
+            for candidate in sorted(run_dir.glob("stage-09*/experiment_design.json")):
+                try:
+                    plan = json.loads(candidate.read_text(encoding="utf-8"))
+                except (json.JSONDecodeError, OSError):
+                    pass
+
+        ref_log = None
+        for candidate in sorted(run_dir.glob("stage-13*/refinement_log.json")):
+            try:
+                ref_log = json.loads(candidate.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                pass
+
+        diag = diagnose_experiment(
+            experiment_summary=summary,
+            experiment_plan=plan,
+            refinement_log=ref_log,
+            stdout=stdout.strip(),
+            stderr=stderr.strip(),
+        )
+
+        qa = assess_experiment_quality(summary, ref_log)
+
+        diag_report = {
+            "diagnosis": diag.to_dict(),
+            "quality_assessment": {
+                "mode": qa.mode.value,
+                "sufficient": qa.sufficient,
+                "repair_possible": qa.repair_possible,
+                "deficiency_types": [d.type.value for d in qa.deficiencies],
+            },
+            "repair_needed": not qa.sufficient,
+            "generated": _utcnow_iso(),
+        }
+        (run_dir / "experiment_diagnosis.json").write_text(
+            json.dumps(diag_report, indent=2), encoding="utf-8"
+        )
+
+        if not qa.sufficient:
+            code: dict[str, str] = {}
+            for _glob_pat in (
+                "stage-13*/experiment_final/*.py",
+                "stage-10*/experiment/*.py",
+                "stage-10*/*.py",
+            ):
+                for candidate in sorted(run_dir.glob(_glob_pat)):
+                    try:
+                        code[candidate.name] = candidate.read_text(encoding="utf-8")
+                    except (OSError, UnicodeDecodeError):
+                        pass
+                if code:
+                    break
+
+            repair_prompt = build_repair_prompt(
+                diag, code, time_budget_sec=config.experiment.time_budget_sec
+            )
+            (run_dir / "repair_prompt.txt").write_text(repair_prompt, encoding="utf-8")
+            logger.info(
+                "[%s] Experiment diagnosis: mode=%s, deficiencies=%d — repair prompt saved",
+                run_id,
+                qa.mode.value,
+                len(diag.deficiencies),
+            )
+            print(
+                f"[{run_id}] Experiment diagnosis: {qa.mode.value} "
+                f"({len(diag.deficiencies)} issues found, repair needed)"
+            )
+        else:
+            logger.info(
+                "[%s] Experiment diagnosis: mode=%s, sufficient=True — quality OK",
+                run_id,
+                qa.mode.value,
+            )
+            print(f"[{run_id}] Experiment diagnosis: {qa.mode.value} — quality OK")
+
+    except Exception as exc:
+        logger.warning("Experiment diagnosis failed: %s", exc)

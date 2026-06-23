@@ -10,6 +10,10 @@ dependencies = [
     "numpy>=1.24",
     "httpx>=0.24",
     "pydantic>=2.0",
+    # P0 2026-04-06: Fix dependency warnings
+    "requests>=2.32.0",
+    "urllib3>=2.2.0,<3.0.0",
+    "charset-normalizer>=3.3.0",
 ]
 readme = "README.md"
 license = {text = "MIT"}
@@ -54,7 +58,7 @@ all = [
     "matplotlib>=3.7",
     "scipy>=1.10",
 ]
-dev = ["pytest>=7.0", "pytest-asyncio>=0.21", "pytest-cov>=4.0", "httpx>=0.24"]
+dev = ["pytest>=7.0", "pytest-asyncio>=0.21", "pytest-cov>=4.0", "httpx>=0.24", "mypy>=1.15"]
 
 [project.scripts]
 berb = "berb.cli:main"
@@ -89,6 +93,19 @@ line-length = 100
 target-version = "py311"
 select = ["E", "F", "W", "I", "N", "UP", "B", "C4"]
 ignore = ["E501", "B008"]
+
+[tool.ruff.lint.per-file-ignores]
+# N806 (non-lowercase variables) allowed in scientific modules
+# Standard notation in chaos theory/physics: D2, C_m, C_r, q_matrix, etc.
+"berb/domains/chaos/*" = ["N806"]
+"berb/domains/physics/*" = ["N806"]
+"berb/experiment/*" = ["N806"]
+# N806 false positives for module-level constants in pipeline/templates
+"berb/pipeline/*" = ["N806"]
+"berb/templates/*" = ["N806"]
+"berb/literature/*" = ["N806"]
+"berb/llm/*" = ["N806"]
+"berb/evolution.py" = ["N806"]
 
 [tool.mypy]
 python_version = "3.11"

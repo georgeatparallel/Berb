@@ -7,17 +7,14 @@ import logging
 import math
 import re
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-import yaml
-
 from berb.config import RCConfig
-from berb.hardware import HardwareProfile, is_metric_name
+from berb.experiment.metrics import is_metric_name
 from berb.llm.client import LLMClient
 from berb.pipeline.stages import (
-    NEXT_STAGE,
     Stage,
     StageStatus,
 )
@@ -47,8 +44,16 @@ class StageResult:
 # ---------------------------------------------------------------------------
 
 _SANDBOX_SAFE_PACKAGES = {
-    "numpy", "scipy", "torch", "sklearn", "matplotlib",
-    "pandas", "seaborn", "tqdm", "gymnasium", "gym",
+    "numpy",
+    "scipy",
+    "torch",
+    "sklearn",
+    "matplotlib",
+    "pandas",
+    "seaborn",
+    "tqdm",
+    "gymnasium",
+    "gym",
 }
 
 _METACLAW_SKILLS_DIR = str(Path.home() / ".metaclaw" / "skills")
@@ -122,7 +127,6 @@ _STOP_WORDS = frozenset(
         "through",
         "during",
         "before",
-        "after",
         "under",
         "over",
         "using",
@@ -149,7 +153,7 @@ _STOP_WORDS = frozenset(
 
 
 def _utcnow_iso() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+    return datetime.now(UTC).isoformat(timespec="seconds")
 
 
 # ---------------------------------------------------------------------------
@@ -171,7 +175,9 @@ def _build_fallback_queries(topic: str) -> list[str]:
     for c in chunks:
         c = re.sub(
             r"^(and|or|the|a|an|in|of|for|with|across|multiple|three|various)\s+",
-            "", c, flags=re.IGNORECASE,
+            "",
+            c,
+            flags=re.IGNORECASE,
         )
         c = c.strip()
         if len(c) > 8:
@@ -180,11 +186,33 @@ def _build_fallback_queries(topic: str) -> list[str]:
 
     # Extract key terms (words that look like domain terms, not stopwords)
     _stop = {
-        "the", "and", "for", "with", "from", "that", "this", "into",
-        "over", "across", "multiple", "three", "result", "comprehensive",
-        "using", "based", "between", "various", "different", "several",
-        "parameter", "parameters", "analysis", "approach", "method",
-        "framework", "frameworks",
+        "the",
+        "and",
+        "for",
+        "with",
+        "from",
+        "that",
+        "this",
+        "into",
+        "over",
+        "across",
+        "multiple",
+        "three",
+        "result",
+        "comprehensive",
+        "using",
+        "based",
+        "between",
+        "various",
+        "different",
+        "several",
+        "parameter",
+        "parameters",
+        "analysis",
+        "approach",
+        "method",
+        "framework",
+        "frameworks",
     }
     words = topic.lower().split()
     key_terms = [w for w in words if len(w) > 3 and w not in _stop]
@@ -232,10 +260,8 @@ def _build_fallback_queries(topic: str) -> list[str]:
 # ---------------------------------------------------------------------------
 
 
-def _write_stage_meta(
-    stage_dir: Path, stage: Stage, run_id: str, result: "StageResult"
-) -> None:
-    next_stage = NEXT_STAGE[stage]
+def _write_stage_meta(stage_dir: Path, stage: Stage, run_id: str, result: StageResult) -> None:
+    next_stage = Stage(int(stage) + 1) if int(stage) < 23 else None
     meta = {
         "stage_id": f"{int(stage):02d}-{stage.name.lower()}",
         "run_id": run_id,
@@ -247,9 +273,7 @@ def _write_stage_meta(
         "ts": _utcnow_iso(),
         "next_stage": int(next_stage) if next_stage is not None else None,
     }
-    (stage_dir / "decision.json").write_text(
-        json.dumps(meta, indent=2), encoding="utf-8"
-    )
+    (stage_dir / "decision.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
 
 
 # ---------------------------------------------------------------------------
@@ -281,14 +305,16 @@ def _ensure_sandbox_deps(code: str, python_path: str) -> list[str]:
         try:
             r = _sp.run(
                 [str(py_path), "-c", f"import {pkg}"],
-                capture_output=True, timeout=10,
+                capture_output=True,
+                timeout=10,
             )
             if r.returncode != 0:
                 pip_name = "scikit-learn" if pkg == "sklearn" else pkg
                 logger.info("Sandbox: installing missing dependency '%s'", pip_name)
                 _sp.run(
                     [str(py_path), "-m", "pip", "install", pip_name, "--quiet"],
-                    capture_output=True, timeout=120,
+                    capture_output=True,
+                    timeout=120,
                 )
                 installed.append(pip_name)
         except Exception as exc:
@@ -342,6 +368,7 @@ def _read_prior_artifact(run_dir: Path, filename: str) -> str | None:
 
 def _find_prior_file(run_dir: Path, filename: str) -> Path | None:
     """Like ``_read_prior_artifact`` but returns the *Path* instead of content."""
+
     def _stage_sort_key(p: Path) -> tuple[str, int]:
         name = p.name
         if "_v" in name:
@@ -385,7 +412,9 @@ def _extract_yaml_block(text: str) -> str:
     # Strip ACP noise: [thinking]..., insight blocks, [plan]...
     cleaned = re.sub(
         r"\[thinking\].*?(?=\n```|\n[A-Z]|\Z)",
-        "", text, flags=re.DOTALL,
+        "",
+        text,
+        flags=re.DOTALL,
     )
     cleaned = re.sub(r"\[plan\].*?\n\n", "", cleaned, flags=re.DOTALL)
 
@@ -529,7 +558,7 @@ def _extract_multi_file_blocks(content: str) -> dict[str, str]:
     Falls back to treating the entire code block as ``main.py`` if no
     ``filename:`` markers are found.
 
-    Returns a dict mapping filename → code content.
+    Returns a dict mapping filename -> code content.
     """
     # R13-2: Multiple patterns to handle LLM format variations
     patterns = [
@@ -580,7 +609,7 @@ def _extract_multi_file_blocks(content: str) -> dict[str, str]:
                 files["main.py"] = files.pop(first_key)
             return files
 
-    # Fallback: single code block → main.py
+    # Fallback: single code block -> main.py
     code = _extract_code_block(content)
     if code.strip():
         return {"main.py": code}
@@ -618,9 +647,7 @@ def _parse_metrics_from_stdout(stdout: str) -> dict[str, Any]:
     Filters out log/status lines using :func:`is_metric_name`.
     """
     # BUG-173: regex for condition=name metric=value format
-    _CONDITION_RE = re.compile(
-        r"^condition=(\S+)\s+metric=([0-9eE.+-]+)\s*$"
-    )
+    _CONDITION_RE = re.compile(r"^condition=(\S+)\s+metric=([0-9eE.+-]+)\s*$")
     metrics: dict[str, Any] = {}
     for line in stdout.splitlines():
         line = line.strip()
@@ -695,13 +722,27 @@ def _chat_with_prompt(
     last_exc: Exception | None = None
     for attempt in range(1 + retries):
         try:
+
             def _call() -> Any:
                 if json_mode and max_tokens is not None:
-                    return llm.chat(messages, system=system, json_mode=True, max_tokens=max_tokens, strip_thinking=strip_thinking)
+                    return llm.chat(
+                        messages,
+                        system=system,
+                        json_mode=True,
+                        max_tokens=max_tokens,
+                        strip_thinking=strip_thinking,
+                    )
                 if json_mode:
-                    return llm.chat(messages, system=system, json_mode=True, strip_thinking=strip_thinking)
+                    return llm.chat(
+                        messages, system=system, json_mode=True, strip_thinking=strip_thinking
+                    )
                 if max_tokens is not None:
-                    return llm.chat(messages, system=system, max_tokens=max_tokens, strip_thinking=strip_thinking)
+                    return llm.chat(
+                        messages,
+                        system=system,
+                        max_tokens=max_tokens,
+                        strip_thinking=strip_thinking,
+                    )
                 return llm.chat(messages, system=system, strip_thinking=strip_thinking)
 
             if call_timeout_sec > 0:
@@ -711,9 +752,7 @@ def _chat_with_prompt(
             else:
                 return _call()
         except concurrent.futures.TimeoutError as exc:
-            last_exc = TimeoutError(
-                f"LLM call exceeded wall-clock limit of {call_timeout_sec}s"
-            )
+            last_exc = TimeoutError(f"LLM call exceeded wall-clock limit of {call_timeout_sec}s")
             logger.warning(str(last_exc))
             if attempt >= retries:
                 raise last_exc from exc
@@ -748,9 +787,7 @@ def _get_evolution_overlay(run_dir: Path | None, stage_name: str) -> str:
         from berb.evolution import EvolutionStore
 
         store = EvolutionStore(run_dir / "evolution")
-        return store.build_overlay(
-            stage_name, max_lessons=5, skills_dir=_METACLAW_SKILLS_DIR
-        )
+        return store.build_overlay(stage_name, max_lessons=5, skills_dir=_METACLAW_SKILLS_DIR)
     except Exception:  # noqa: BLE001
         return ""
 
@@ -813,9 +850,7 @@ def _collect_experiment_results(
         results_json = stage_subdir / "results.json"
         if results_json.exists() and structured_results is None:
             try:
-                structured_results = json.loads(
-                    results_json.read_text(encoding="utf-8")
-                )
+                structured_results = json.loads(results_json.read_text(encoding="utf-8"))
             except (json.JSONDecodeError, OSError):
                 pass
 
@@ -834,7 +869,12 @@ def _collect_experiment_results(
                 runs_data.append(parsed)
 
     if not runs_data:
-        result: dict[str, Any] = {"runs": [], "metrics_summary": {}, "best_run": None, "latex_table": ""}
+        result: dict[str, Any] = {
+            "runs": [],
+            "metrics_summary": {},
+            "best_run": None,
+            "latex_table": "",
+        }
         if structured_results is not None:
             result["structured_results"] = structured_results
         return result
@@ -998,9 +1038,7 @@ def _build_context_preamble(
                             f"min={mv.get('min', '?')}, max={mv.get('max', '?')}, n={mv.get('count', '?')}"
                         )
                 if summary.get("latex_table"):
-                    parts.append(
-                        f"\n### LaTeX Table\n```latex\n{summary['latex_table']}\n```"
-                    )
+                    parts.append(f"\n### LaTeX Table\n```latex\n{summary['latex_table']}\n```")
     return "\n".join(parts)
 
 
@@ -1009,9 +1047,7 @@ def _build_context_preamble(
 # ---------------------------------------------------------------------------
 
 
-def _extract_topic_keywords(
-    topic: str, domains: tuple[str, ...] | list[str] = ()
-) -> list[str]:
+def _extract_topic_keywords(topic: str, domains: tuple[str, ...] | list[str] = ()) -> list[str]:
     """Extract meaningful keywords from the research topic + domain list.
 
     Returns lowercased keyword list (2+ chars, no stop words).
@@ -1079,9 +1115,13 @@ def _detect_runtime_issues(sandbox_result: Any) -> str:
         try:
             fval = float(val)
             if math.isnan(fval):
-                issues.append(f"METRIC NaN: '{key}' returned NaN — likely a division by zero or invalid computation in code")
+                issues.append(
+                    f"METRIC NaN: '{key}' returned NaN — likely a division by zero or invalid computation in code"
+                )
             elif math.isinf(fval):
-                issues.append(f"METRIC Inf: '{key}' returned Infinity — likely overflow or unbounded computation")
+                issues.append(
+                    f"METRIC Inf: '{key}' returned Infinity — likely overflow or unbounded computation"
+                )
         except (TypeError, ValueError):
             pass
 
@@ -1089,15 +1129,9 @@ def _detect_runtime_issues(sandbox_result: Any) -> str:
     stdout = getattr(sandbox_result, "stdout", "") or ""
     _nan_re = re.compile(r"\bnan\b", re.IGNORECASE)
     if _nan_re.search(stdout):
-        nan_lines = [
-            line.strip()
-            for line in stdout.splitlines()
-            if _nan_re.search(line)
-        ]
+        nan_lines = [line.strip() for line in stdout.splitlines() if _nan_re.search(line)]
         if nan_lines:
-            issues.append(
-                f"NaN values detected in output:\n" + "\n".join(nan_lines[:10])
-            )
+            issues.append("NaN values detected in output:\n" + "\n".join(nan_lines[:10]))
 
     # Extract meaningful warnings from stderr
     stderr = getattr(sandbox_result, "stderr", "") or ""
@@ -1124,17 +1158,12 @@ def _detect_runtime_issues(sandbox_result: Any) -> str:
             ):
                 warning_lines.append(line_stripped)
         if warning_lines:
-            issues.append(
-                "Runtime warnings/errors from stderr:\n"
-                + "\n".join(warning_lines[:15])
-            )
+            issues.append("Runtime warnings/errors from stderr:\n" + "\n".join(warning_lines[:15]))
 
     # Check for identical metric values across all entries in stdout
     # (e.g., all algorithms reporting convergence_rate=1.0)
     stdout = getattr(sandbox_result, "stdout", "") or ""
     if stdout:
-        from collections import Counter
-
         metric_values_by_name: dict[str, list[float]] = {}
         for line in stdout.splitlines():
             line = line.strip()
@@ -1202,25 +1231,49 @@ def _generate_neurips_checklist(
     It is appended to the paper before LaTeX conversion.
     """
     items = [
-        ("Claims", "Do the main claims accurately reflect the paper's contributions and scope?", "Yes"),
+        (
+            "Claims",
+            "Do the main claims accurately reflect the paper's contributions and scope?",
+            "Yes",
+        ),
         ("Limitations", "Does the paper discuss limitations of the work?", "Yes"),
     ]
     if has_theory:
-        items.append(
-            ("Theory", "Are all assumptions stated and proofs included?", "Yes")
-        )
-    items.extend([
-        ("Experiments reproducibility", "Does the paper fully disclose experimental settings?", "Yes" if has_experiments else "NA"),
-        ("Code and data", "Is code or data provided for reproducibility?", "Yes" if has_code else "No"),
-        ("Experimental details", "Are training details and hyperparameters specified?", "Yes" if has_experiments else "NA"),
-        ("Error bars", "Are error bars or confidence intervals reported?", "Yes" if has_experiments else "NA"),
-        ("Compute resources", "Are compute requirements documented?", "Yes" if has_experiments else "NA"),
-        ("Code of ethics", "Does the work comply with the code of ethics?", "Yes"),
-        ("Broader impacts", "Are potential negative societal impacts discussed?", "Yes"),
-        ("Licenses", "Are licenses for used assets respected?", "Yes"),
-        ("New assets", "Are newly released assets documented?", "NA"),
-        ("Human subjects", "Were IRB approvals obtained if applicable?", "NA"),
-    ])
+        items.append(("Theory", "Are all assumptions stated and proofs included?", "Yes"))
+    items.extend(
+        [
+            (
+                "Experiments reproducibility",
+                "Does the paper fully disclose experimental settings?",
+                "Yes" if has_experiments else "NA",
+            ),
+            (
+                "Code and data",
+                "Is code or data provided for reproducibility?",
+                "Yes" if has_code else "No",
+            ),
+            (
+                "Experimental details",
+                "Are training details and hyperparameters specified?",
+                "Yes" if has_experiments else "NA",
+            ),
+            (
+                "Error bars",
+                "Are error bars or confidence intervals reported?",
+                "Yes" if has_experiments else "NA",
+            ),
+            (
+                "Compute resources",
+                "Are compute requirements documented?",
+                "Yes" if has_experiments else "NA",
+            ),
+            ("Code of ethics", "Does the work comply with the code of ethics?", "Yes"),
+            ("Broader impacts", "Are potential negative societal impacts discussed?", "Yes"),
+            ("Licenses", "Are licenses for used assets respected?", "Yes"),
+            ("New assets", "Are newly released assets documented?", "NA"),
+            ("Human subjects", "Were IRB approvals obtained if applicable?", "NA"),
+        ]
+    )
 
     lines = [
         "## NeurIPS Paper Checklist",
@@ -1259,14 +1312,12 @@ def _extract_paper_title(md_text: str) -> str:
     _text = md_text
     _fence_m = _re.match(r"^\s*```(?:markdown|md|latex|tex)?\s*\n", _text)
     if _fence_m:
-        _text = _text[_fence_m.end():]
+        _text = _text[_fence_m.end() :]
         # Also strip trailing fence
         _text = _re.sub(r"\n\s*```\s*$", "", _text)
 
     # Limit search to content before Abstract heading
-    abstract_pos = _re.search(
-        r"^#{1,2}\s+(Abstract|ABSTRACT)", _text, _re.MULTILINE
-    )
+    abstract_pos = _re.search(r"^#{1,2}\s+(Abstract|ABSTRACT)", _text, _re.MULTILINE)
     search_region = _text[: abstract_pos.start()] if abstract_pos else _text[:3000]
 
     _SKIP = {"title", "abstract", "references", "appendix"}
@@ -1274,13 +1325,13 @@ def _extract_paper_title(md_text: str) -> str:
     _saw_title_heading = False
 
     lines = search_region.splitlines()
-    for i, raw_line in enumerate(lines):
+    for _i, raw_line in enumerate(lines):
         line = raw_line.strip()
 
         # BUG-171: When we see a "# Title" or "## Title" heading, the actual
         # title is often on the next non-empty line as plain text or bold text.
         if _saw_title_heading and line:
-            # Strip bold markers: **Title Text** → Title Text
+            # Strip bold markers: **Title Text** -> Title Text
             candidate = _re.sub(r"\*\*(.+?)\*\*", r"\1", line).strip()
             # Make sure it's not another heading or a skip heading
             if not line.startswith("#") and candidate:
@@ -1329,9 +1380,9 @@ def _extract_paper_title(md_text: str) -> str:
 
 def _generate_framework_diagram_prompt(
     paper_text: str,
-    config: "RCConfig",
+    config: RCConfig,
     *,
-    llm: "LLMClient | None" = None,
+    llm: LLMClient | None = None,
 ) -> str:
     """Generate a text-to-image prompt for a methodology framework diagram.
 
@@ -1358,9 +1409,10 @@ def _generate_framework_diagram_prompt(
         # Fallback: use abstract + first 1500 chars
         _abs_match = _re.search(
             r"(?:^#{1,2}\s+Abstract\s*\n)(.*?)(?=^#{1,2}\s+|\Z)",
-            paper_text, _re.MULTILINE | _re.DOTALL | _re.IGNORECASE,
+            paper_text,
+            _re.MULTILINE | _re.DOTALL | _re.IGNORECASE,
         )
-        _method_section = (_abs_match.group(1)[:1500] if _abs_match else paper_text[:2000])
+        _method_section = _abs_match.group(1)[:1500] if _abs_match else paper_text[:2000]
 
     title = _extract_paper_title(paper_text)
     topic = config.research.topic
@@ -1413,7 +1465,10 @@ def _generate_framework_diagram_prompt(
     # Fallback: template-based prompt without LLM
     _components = []
     _component_patterns = [
-        (r"(?:encoder|decoder|transformer|attention|convolution|MLP|GNN|ResNet|ViT)", "Neural Network Module"),
+        (
+            r"(?:encoder|decoder|transformer|attention|convolution|MLP|GNN|ResNet|ViT)",
+            "Neural Network Module",
+        ),
         (r"(?:loss|objective|criterion|training|optimization)", "Training/Optimization"),
         (r"(?:data|dataset|input|preprocessing|augmentation)", "Data Pipeline"),
         (r"(?:output|prediction|inference|evaluation)", "Output/Evaluation"),
@@ -1431,7 +1486,7 @@ def _generate_framework_diagram_prompt(
         f"**Paper**: {title}\n\n"
         f"## Image Generation Prompt\n\n"
         f"Create a clean, academic-style methodology framework diagram for a research paper "
-        f"titled \"{title}\". "
+        f'titled "{title}". '
         f"The diagram should show a left-to-right data flow pipeline with these main components: "
         f"{', '.join(_components)}. "
         f"Use a professional color palette with muted blues (#4477AA), teals (#44AA99), "
@@ -1591,14 +1646,16 @@ def _multi_perspective_generate(
                 system=system,
             )
             results[role_name] = resp.content
-            (perspectives_dir / f"{role_name}.md").write_text(
-                resp.content, encoding="utf-8"
+            (perspectives_dir / f"{role_name}.md").write_text(resp.content, encoding="utf-8")
+            logger.info(
+                "Debate perspective '%s' generated (%d chars)", role_name, len(resp.content)
             )
-            logger.info("Debate perspective '%s' generated (%d chars)", role_name, len(resp.content))
         except Exception as exc:  # noqa: BLE001
             logger.warning("Debate perspective '%s' failed: %s", role_name, exc)
     if len(results) < 2:
-        logger.error("Multi-perspective debate: only %d/%d roles succeeded", len(results), len(roles))
+        logger.error(
+            "Multi-perspective debate: only %d/%d roles succeeded", len(results), len(roles)
+        )
     return results
 
 
@@ -1639,9 +1696,7 @@ def reconcile_figure_refs(
         return {}
 
     tex_text = tex_path.read_text(encoding="utf-8")
-    fig_refs = re.findall(
-        r"\\includegraphics(?:\[[^\]]*\])?\{([^}]+)\}", tex_text
-    )
+    fig_refs = re.findall(r"\\includegraphics(?:\[[^\]]*\])?\{([^}]+)\}", tex_text)
     if not fig_refs:
         return {}
 
@@ -1650,7 +1705,11 @@ def reconcile_figure_refs(
     if charts_dir.is_dir():
         for af in charts_dir.iterdir():
             if af.is_file() and af.suffix.lower() in (
-                ".png", ".jpg", ".jpeg", ".pdf", ".svg",
+                ".png",
+                ".jpg",
+                ".jpeg",
+                ".pdf",
+                ".svg",
             ):
                 actual_files[af.stem.lower()] = f"charts/{af.name}"
 
@@ -1713,7 +1772,7 @@ def reconcile_figure_refs(
         logger.warning(
             "reconcile_figure_refs: Fixed %d figure path mismatch(es): %s",
             len(fixes),
-            ", ".join(f"{k} → {v}" for k, v in fixes.items()),
+            ", ".join(f"{k} -> {v}" for k, v in fixes.items()),
         )
 
     return fixes

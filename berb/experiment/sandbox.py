@@ -14,20 +14,40 @@ from pathlib import Path
 from typing import Protocol
 
 from berb.config import SandboxConfig
-from berb.hardware import is_metric_name
+from berb.experiment.metrics import is_metric_name
 
 logger = logging.getLogger(__name__)
 
 # Keys from the host environment that are safe to pass into experiment subprocesses.
 # Excludes all *_API_KEY, *_TOKEN, *_SECRET, and *_PASSWORD patterns.
-_SAFE_ENV_KEYS: frozenset[str] = frozenset({
-    "PATH", "HOME", "USER", "LOGNAME", "SHELL", "TMPDIR", "TEMP", "TMP",
-    "LANG", "LC_ALL", "LC_CTYPE", "LANGUAGE", "TZ",
-    "PYTHONPATH", "PYTHONDONTWRITEBYTECODE", "VIRTUAL_ENV",
-    "CONDA_PREFIX", "CONDA_DEFAULT_ENV",
-    "CUDA_VISIBLE_DEVICES", "CUDA_HOME", "LD_LIBRARY_PATH",
-    "HF_HOME", "TRANSFORMERS_CACHE", "TORCH_HOME",
-})
+_SAFE_ENV_KEYS: frozenset[str] = frozenset(
+    {
+        "PATH",
+        "HOME",
+        "USER",
+        "LOGNAME",
+        "SHELL",
+        "TMPDIR",
+        "TEMP",
+        "TMP",
+        "LANG",
+        "LC_ALL",
+        "LC_CTYPE",
+        "LANGUAGE",
+        "TZ",
+        "PYTHONPATH",
+        "PYTHONDONTWRITEBYTECODE",
+        "VIRTUAL_ENV",
+        "CONDA_PREFIX",
+        "CONDA_DEFAULT_ENV",
+        "CUDA_VISIBLE_DEVICES",
+        "CUDA_HOME",
+        "LD_LIBRARY_PATH",
+        "HF_HOME",
+        "TRANSFORMERS_CACHE",
+        "TORCH_HOME",
+    }
+)
 
 _SECRET_PATTERNS = ("_API_KEY", "_TOKEN", "_SECRET", "_PASSWORD", "_CREDENTIAL")
 
@@ -80,11 +100,10 @@ def validate_entry_point_resolved(staging: Path, entry_point: str) -> str | None
         return f"Entry point escapes staging directory: {entry_point}"
     return None
 
+
 # Matches both plain "metric: value" and "condition=xxx metric: value" formats
 _FLOAT_RE = r"[+-]?\d+\.?\d*(?:[eE][+-]?\d+)?"
-_METRIC_PATTERN = re.compile(
-    rf"^(?:\S+=\S+\s+)?(\w[\w.]*)\s*:\s*({_FLOAT_RE})\s*$"
-)
+_METRIC_PATTERN = re.compile(rf"^(?:\S+=\S+\s+)?(\w[\w.]*)\s*:\s*({_FLOAT_RE})\s*$")
 # R17: Extract per-condition metrics with optional extra tags:
 #   "condition=<name> [regime=<r>] [H=<h>] [seed=<s>] metric: value"
 # Captures: (condition_name, extra_tags_string, metric_name, value)
@@ -104,9 +123,7 @@ _SUMMARY_PATTERN = re.compile(
     + r")"
 )
 # BUG-181: Multi-metric condition line: extract all "metric: value" pairs
-_CONDITION_MULTI_METRIC_RE = re.compile(
-    r"(\w[\w.]*)\s*:\s*(" + _FLOAT_RE + r")"
-)
+_CONDITION_MULTI_METRIC_RE = re.compile(r"(\w[\w.]*)\s*:\s*(" + _FLOAT_RE + r")")
 
 
 def _to_text(value: str | bytes | None) -> str:
@@ -364,17 +381,13 @@ class ExperimentSandbox:
                 env=env,
                 check=False,
             )
-            result = self._result_from_completed(
-                completed, elapsed_sec=time.monotonic() - start
-            )
+            result = self._result_from_completed(completed, elapsed_sec=time.monotonic() - start)
         except subprocess.TimeoutExpired as exc:
             result = self._result_from_timeout(
                 exc, timeout_sec=timeout_sec, elapsed_sec=time.monotonic() - start
             )
         except Exception as exc:  # noqa: BLE001
-            result = self._result_from_exception(
-                exc, elapsed_sec=time.monotonic() - start
-            )
+            result = self._result_from_exception(exc, elapsed_sec=time.monotonic() - start)
 
         if self._should_cleanup(result):
             self._cleanup_script(script_path)
@@ -407,8 +420,11 @@ class ExperimentSandbox:
         err = validate_entry_point(entry_point)
         if err:
             return SandboxResult(
-                returncode=-1, stdout="", stderr=err,
-                elapsed_sec=0.0, metrics={},
+                returncode=-1,
+                stdout="",
+                stderr=err,
+                elapsed_sec=0.0,
+                metrics={},
             )
 
         # R5-4: Inject immutable experiment harness before copying project files
@@ -425,6 +441,7 @@ class ExperimentSandbox:
                 dest.write_bytes(src_file.read_bytes())
             elif src_file.is_dir() and not src_file.name.startswith("."):
                 import shutil as _shutil_proj
+
                 dest_dir = sandbox_project / src_file.name
                 _shutil_proj.copytree(src_file, dest_dir, dirs_exist_ok=True)
 
@@ -432,8 +449,11 @@ class ExperimentSandbox:
         err = validate_entry_point_resolved(sandbox_project, entry_point)
         if err:
             return SandboxResult(
-                returncode=-1, stdout="", stderr=err,
-                elapsed_sec=0.0, metrics={},
+                returncode=-1,
+                stdout="",
+                stderr=err,
+                elapsed_sec=0.0,
+                metrics={},
             )
 
         entry = sandbox_project / entry_point
@@ -464,17 +484,13 @@ class ExperimentSandbox:
                 env=env,
                 check=False,
             )
-            result = self._result_from_completed(
-                completed, elapsed_sec=time.monotonic() - start
-            )
+            result = self._result_from_completed(completed, elapsed_sec=time.monotonic() - start)
         except subprocess.TimeoutExpired as exc:
             result = self._result_from_timeout(
                 exc, timeout_sec=timeout_sec, elapsed_sec=time.monotonic() - start
             )
         except Exception as exc:  # noqa: BLE001
-            result = self._result_from_exception(
-                exc, elapsed_sec=time.monotonic() - start
-            )
+            result = self._result_from_exception(exc, elapsed_sec=time.monotonic() - start)
 
         return result
 
@@ -520,7 +536,7 @@ class ExperimentSandbox:
             stdout=completed.stdout,
             stderr=completed.stderr,
             elapsed_sec=elapsed_sec,
-            metrics={key: value for key, value in metrics.items()},
+            metrics=dict(metrics.items()),
         )
 
     @staticmethod
@@ -542,7 +558,7 @@ class ExperimentSandbox:
             stdout=stdout,
             stderr=stderr,
             elapsed_sec=elapsed_sec,
-            metrics={key: value for key, value in metrics.items()},
+            metrics=dict(metrics.items()),
             timed_out=True,
         )
 

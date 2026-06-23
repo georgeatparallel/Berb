@@ -12,20 +12,6 @@ logger = logging.getLogger(__name__)
 # VRAM threshold (MB) — GPUs with less than this are "limited"
 _HIGH_VRAM_THRESHOLD_MB = 8192
 
-# Words that indicate a log/status line rather than a metric
-LOG_WORDS: frozenset[str] = frozenset({
-    "running", "loading", "saving", "processing", "starting",
-    "finished", "completed", "initializing", "downloading",
-    "training", "evaluating", "epoch", "step", "iteration",
-    "experiment", "warning", "error", "info", "debug",
-    "experiments", "using", "setting", "creating", "building",
-    "computing", "reading", "writing", "opening", "closing",
-})
-
-# Maximum word count for a plausible metric name
-_MAX_METRIC_NAME_WORDS = 6
-
-
 @dataclass(frozen=True)
 class HardwareProfile:
     """Detected hardware capabilities of the local machine."""
@@ -219,14 +205,5 @@ def ensure_torch_available(python_path: str, gpu_type: str) -> bool:
         return False
 
 
-def is_metric_name(name: str) -> bool:
-    """Return True if *name* looks like a metric name rather than a log line.
-
-    Used to filter stdout lines when parsing ``name: value`` metric output.
-    """
-    words = name.lower().split()
-    if len(words) > _MAX_METRIC_NAME_WORDS:
-        return False
-    if any(w in LOG_WORDS for w in words):
-        return False
-    return True
+# Re-exported from berb.experiment.metrics for backwards compatibility.
+from berb.experiment.metrics import is_metric_name  # noqa: F401

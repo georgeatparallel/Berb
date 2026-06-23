@@ -7,12 +7,25 @@ import hashlib
 import shutil
 import subprocess
 import sys
-from datetime import datetime, timezone
-from pathlib import Path
 from collections.abc import Mapping
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import cast
 
 from berb.adapters import AdapterBundle
+from berb.commands import (
+    cmd_analyze_results,
+    cmd_anti_ai_editing,
+    cmd_mine_writing_patterns,
+    cmd_obsidian_ingest,
+    cmd_obsidian_init,
+    cmd_rebuttal_enhanced,
+    cmd_research_init,
+    cmd_verify_citations,
+    cmd_zotero_notes,
+    cmd_zotero_review,
+    setup_claude_scholar_commands,
+)
 from berb.config import (
     CONFIG_SEARCH_ORDER,
     EXAMPLE_CONFIG,
@@ -20,24 +33,11 @@ from berb.config import (
     resolve_config_path,
 )
 from berb.health import print_doctor_report, run_doctor, write_doctor_report
-from berb.commands import (
-    cmd_research_init,
-    cmd_zotero_review,
-    cmd_zotero_notes,
-    cmd_obsidian_ingest,
-    cmd_analyze_results,
-    cmd_rebuttal_enhanced,
-    cmd_mine_writing_patterns,
-    cmd_verify_citations,
-    cmd_anti_ai_editing,
-    cmd_obsidian_init,
-    setup_claude_scholar_commands,
-)
-
 
 # ---------------------------------------------------------------------------
 # OpenCode installation helpers
 # ---------------------------------------------------------------------------
+
 
 def _is_opencode_installed() -> bool:
     """Check if the ``opencode`` CLI is available on PATH."""
@@ -47,7 +47,10 @@ def _is_opencode_installed() -> bool:
     try:
         r = subprocess.run(
             [opencode_cmd, "--version"],
-            capture_output=True, text=True, encoding="utf-8", timeout=15,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=15,
         )
         return r.returncode == 0
     except Exception:  # noqa: BLE001
@@ -69,7 +72,10 @@ def _install_opencode() -> bool:
     try:
         r = subprocess.run(
             [npm_cmd, "i", "-g", "opencode-ai@latest"],
-            capture_output=True, text=True, encoding="utf-8", timeout=120,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=120,
         )
         if r.returncode == 0:
             print("  OpenCode installed successfully!")
@@ -160,7 +166,7 @@ def _resolve_config_or_exit(args: argparse.Namespace) -> Path | None:
 
 
 def _generate_run_id(topic: str) -> str:
-    ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    ts = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
     topic_hash = hashlib.sha256(topic.encode()).hexdigest()[:6]
     return f"rc-{ts}-{topic_hash}"
 
@@ -231,7 +237,8 @@ def cmd_run(args: argparse.Namespace) -> int:
         if artifacts_root.is_dir():
             candidates = sorted(
                 (
-                    d for d in artifacts_root.iterdir()
+                    d
+                    for d in artifacts_root.iterdir()
                     if d.is_dir()
                     and d.name.startswith("rc-")
                     and d.name.endswith(f"-{topic_hash}")
@@ -259,7 +266,8 @@ def cmd_run(args: argparse.Namespace) -> int:
 
     adapters = AdapterBundle()
 
-    from berb.pipeline.runner import execute_pipeline, read_checkpoint
+    from berb.pipeline.checkpoint import read_checkpoint
+    from berb.pipeline.runner import execute_pipeline
     from berb.pipeline.stages import Stage
 
     # --- Determine start stage ---
@@ -270,8 +278,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         except KeyError:
             valid = ", ".join(s.name for s in Stage)
             print(
-                f"Error: unknown stage '{from_stage_name}'. "
-                f"Valid stages: {valid}",
+                f"Error: unknown stage '{from_stage_name}'. Valid stages: {valid}",
                 file=sys.stderr,
             )
             return 1
@@ -282,6 +289,7 @@ def cmd_run(args: argparse.Namespace) -> int:
             print(f"Resuming from checkpoint: Stage {int(from_stage)}: {from_stage.name}")
 
     from berb import __version__
+
     print(f"Berb v{__version__} — Starting pipeline")
     print(f"  Run ID:  {run_id}")
     print(f"  Topic:   {config.research.topic}")
@@ -318,8 +326,9 @@ def cmd_run(args: argparse.Namespace) -> int:
 
 
 def cmd_validate(args: argparse.Namespace) -> int:
-    from berb.config import validate_config
     import yaml
+
+    from berb.config import validate_config
 
     resolved = _resolve_config_or_exit(args)
     if resolved is None:
@@ -365,6 +374,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     if output:
         write_doctor_report(report, Path(output))
     return 0 if report.overall == "pass" else 1
+
 
 def cmd_project(args: argparse.Namespace) -> int:
     """C1: Multi-project management commands."""
@@ -486,8 +496,9 @@ def cmd_serve(args: argparse.Namespace) -> int:
     port = int(cast(int, args.port) or config.server.port)
 
     try:
-        from berb.server.app import create_app
         import uvicorn
+
+        from berb.server.app import create_app
     except ImportError as exc:
         print(
             f"Error: web dependencies not installed — pip install berb[web]\n{exc}",
@@ -512,8 +523,9 @@ def cmd_dashboard(args: argparse.Namespace) -> int:
     port = int(cast(int, args.port) or config.server.port)
 
     try:
-        from berb.server.app import create_app
         import uvicorn
+
+        from berb.server.app import create_app
     except ImportError as exc:
         print(
             f"Error: web dependencies not installed — pip install berb[web]\n{exc}",
@@ -582,14 +594,13 @@ def cmd_init(args: argparse.Namespace) -> int:
     # then in CWD (for development), then bundled in the package data dir.
     _candidates = [
         Path(__file__).resolve().parent.parent / EXAMPLE_CONFIG,  # repo root
-        Path.cwd() / EXAMPLE_CONFIG,                              # cwd fallback
-        Path(__file__).resolve().parent / "data" / EXAMPLE_CONFIG, # packaged
+        Path.cwd() / EXAMPLE_CONFIG,  # cwd fallback
+        Path(__file__).resolve().parent / "data" / EXAMPLE_CONFIG,  # packaged
     ]
     example = next((p for p in _candidates if p.exists()), None)
     if example is None:
         print(
-            f"Error: example config not found.\n"
-            f"Searched: {', '.join(str(c) for c in _candidates)}",
+            f"Error: example config not found.\nSearched: {', '.join(str(c) for c in _candidates)}",
             file=sys.stderr,
         )
         return 1
@@ -615,15 +626,11 @@ def cmd_init(args: argparse.Namespace) -> int:
     content = example.read_text(encoding="utf-8")
 
     # String-based replacement to preserve YAML comments
-    content = content.replace(
-        'provider: "openai-compatible"', f'provider: "{provider}"'
-    )
+    content = content.replace('provider: "openai-compatible"', f'provider: "{provider}"')
 
     if provider == "acp":
         # ACP doesn't need base_url or api_key
-        content = content.replace(
-            'base_url: "https://api.openai.com/v1"', 'base_url: ""'
-        )
+        content = content.replace('base_url: "https://api.openai.com/v1"', 'base_url: ""')
         content = content.replace('api_key_env: "OPENAI_API_KEY"', 'api_key_env: ""')
     else:
         base_url = _PROVIDER_URLS.get(provider, "https://api.openai.com/v1")
@@ -640,9 +647,7 @@ def cmd_init(args: argparse.Namespace) -> int:
         content = content.replace('primary_model: "gpt-4o"', f'primary_model: "{primary}"')
         # Replace fallback models block
         old_fallbacks = '  fallback_models:\n    - "gpt-4.1"\n    - "gpt-4o-mini"'
-        new_fallbacks = "  fallback_models:\n" + "".join(
-            f'    - "{m}"\n' for m in fallbacks
-        )
+        new_fallbacks = "  fallback_models:\n" + "".join(f'    - "{m}"\n' for m in fallbacks)
         content = content.replace(old_fallbacks, new_fallbacks.rstrip("\n"))
 
     dest.write_text(content, encoding="utf-8")
@@ -655,7 +660,7 @@ def cmd_init(args: argparse.Namespace) -> int:
         print("  3. Run: berb doctor")
     else:
         env_var = api_key_env or "OPENAI_API_KEY"
-        print(f"\nNext steps:")
+        print("\nNext steps:")
         print(f"  1. Export your API key: export {env_var}=sk-...")
         print("  2. Edit config.arc.yaml to customize your settings")
         print("  3. Run: berb doctor")
@@ -676,7 +681,10 @@ def cmd_setup(args: argparse.Namespace) -> int:
             opencode_cmd = shutil.which("opencode") or "opencode"
             r = subprocess.run(
                 [opencode_cmd, "--version"],
-                capture_output=True, text=True, encoding="utf-8", timeout=15,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                timeout=15,
             )
             ver = r.stdout.strip() or "unknown"
         except Exception:  # noqa: BLE001
@@ -811,55 +819,100 @@ def cmd_calendar(args: argparse.Namespace) -> int:
 
 
 def cmd_literature(args: argparse.Namespace) -> int:
-    """Run literature-only workflow."""
-    from berb.modes.workflow import create_workflow_manager, WorkflowType
-    
-    config_path = Path(cast(str, args.config)) if args.config else None
-    if config_path and not config_path.exists():
-        print(f"Error: config file not found: {config_path}", file=sys.stderr)
+    """Run literature-only workflow (stages 1-8)."""
+    import sys
+
+    from berb import __version__
+    from berb.config import load_config
+    from berb.pipeline.runner import execute_pipeline
+    from berb.pipeline.stages import Stage
+    from berb.adapters import create_adapters
+
+    # Resolve config
+    config_path = args.config or "config.berb.yaml"
+    try:
+        config = load_config(config_path)
+    except Exception as e:
+        print(f"Error loading config: {e}", file=sys.stderr)
         return 1
-    
-    # Create workflow manager for literature-only
-    workflow_manager = create_workflow_manager(
-        workflow="literature-only",
-        stages=[1, 2, 3, 4, 5, 6, 7, 8],
-        operation_mode="autonomous",
+
+    # Override topic
+    config.research.topic = args.topic
+
+    # Generate run ID and directory
+    run_id = _generate_run_id(config.research.topic)
+    run_dir = Path(f"artifacts/{run_id}")
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    # Create adapters
+    adapters = create_adapters(config)
+
+    # Literature stages: 1-8
+    from_stage = Stage.TOPIC_INIT
+
+    print(f"Berb v{__version__} — Literature-only workflow")
+    print(f"  Run ID:  {run_id}")
+    print(f"  Topic:   {config.research.topic}")
+    print(f"  Output:  {run_dir}")
+    print(f"  Stages:  1-8 (TOPIC_INIT -> KNOWLEDGE_EXTRACT)")
+    print()
+
+    # Execute pipeline
+    results = execute_pipeline(
+        run_dir=run_dir,
+        run_id=run_id,
+        config=config,
+        adapters=adapters,
+        from_stage=from_stage,
+        auto_approve_gates=True,
+        stop_on_gate=False,
+        skip_noncritical=True,
+        kb_root_path=None,
     )
-    
-    print(f"Starting literature-only workflow for: {args.topic}")
-    print(f"Workflow: {workflow_manager.current_workflow.value}")
-    print(f"Stages: {workflow_manager.get_enabled_stages()}")
-    
-    # TODO: Integrate with actual pipeline execution
-    print("\nNote: Literature-only workflow is ready for integration.")
-    return 0
+
+    done = sum(1 for r in results if r.status.value == "done")
+    failed = sum(1 for r in results if r.status.value == "failed")
+    print(f"\nLiterature workflow complete: {done}/{len(results)} stages done, {failed} failed")
+
+    # Print output location
+    print(f"\nResults saved to: {run_dir}")
+    print("  - stage-01/: goal.md, hardware_profile.json")
+    print("  - stage-02/: problem_tree.md")
+    print("  - stage-03/: search_plan.yaml, sources.json, queries.json")
+    print("  - stage-04/: candidates.jsonl, web_context.md, references.bib")
+    print("  - stage-05/: shortlist.jsonl")
+    print("  - stage-06/: cards/")
+    print("  - stage-07/: synthesis.md")
+    print("  - stage-08/: hypotheses.md, novelty_report.json")
+
+    return 0 if failed == 0 else 1
 
 
 def cmd_write(args: argparse.Namespace) -> int:
     """Write paper from existing results."""
-    from berb.modes.workflow import create_workflow_manager, WorkflowType
-    
+    from berb.modes.workflow import create_workflow_manager
+
     config_path = Path(cast(str, args.config)) if args.config else None
     if config_path and not config_path.exists():
         print(f"Error: config file not found: {config_path}", file=sys.stderr)
         return 1
-    
+
     # Create workflow manager for paper-from-results
     workflow_manager = create_workflow_manager(
         workflow="paper-from-results",
         stages=[14, 15, 16, 17, 18, 19, 20, 21, 22, 23],
         operation_mode="autonomous",
     )
-    
+
     print(f"Starting paper-from-results workflow for: {args.topic}")
     print(f"Workflow: {workflow_manager.current_workflow.value}")
     print(f"Stages: {workflow_manager.get_enabled_stages()}")
-    
+
     if args.data:
         print(f"Data files: {', '.join(args.data)}")
     if args.figures:
         print(f"Figures: {', '.join(args.figures)}")
-    
+
     # TODO: Integrate with actual pipeline execution
     print("\nNote: Paper-from-results workflow is ready for integration.")
     return 0
@@ -867,28 +920,28 @@ def cmd_write(args: argparse.Namespace) -> int:
 
 def cmd_experiment(args: argparse.Namespace) -> int:
     """Run experiment-only workflow."""
-    from berb.modes.workflow import create_workflow_manager, WorkflowType
-    
+    from berb.modes.workflow import create_workflow_manager
+
     config_path = Path(cast(str, args.config)) if args.config else None
     if config_path and not config_path.exists():
         print(f"Error: config file not found: {config_path}", file=sys.stderr)
         return 1
-    
+
     # Create workflow manager for experiment-only
     workflow_manager = create_workflow_manager(
         workflow="experiment-only",
         stages=[9, 10, 11, 12, 13, 14, 15],
         operation_mode="autonomous",
     )
-    
-    print(f"Starting experiment-only workflow")
+
+    print("Starting experiment-only workflow")
     print(f"Hypothesis: {args.hypothesis}")
     print(f"Workflow: {workflow_manager.current_workflow.value}")
     print(f"Stages: {workflow_manager.get_enabled_stages()}")
-    
+
     if args.context:
         print(f"Context file: {args.context}")
-    
+
     # TODO: Integrate with actual pipeline execution
     print("\nNote: Experiment-only workflow is ready for integration.")
     return 0
@@ -896,27 +949,27 @@ def cmd_experiment(args: argparse.Namespace) -> int:
 
 def cmd_review(args: argparse.Namespace) -> int:
     """Review existing manuscript."""
-    from berb.modes.workflow import create_workflow_manager, WorkflowType
-    
+    from berb.modes.workflow import create_workflow_manager
+
     config_path = Path(cast(str, args.config)) if args.config else None
     if config_path and not config_path.exists():
         print(f"Error: config file not found: {config_path}", file=sys.stderr)
         return 1
-    
+
     # Create workflow manager for review-only
     workflow_manager = create_workflow_manager(
         workflow="review-only",
         stages=[18],
         operation_mode="autonomous",
     )
-    
+
     print(f"Starting review workflow for: {args.manuscript}")
     print(f"Workflow: {workflow_manager.current_workflow.value}")
     print(f"Stages: {workflow_manager.get_enabled_stages()}")
-    
+
     if args.venue:
         print(f"Target venue: {args.venue}")
-    
+
     # TODO: Integrate with actual pipeline execution
     print("\nNote: Review-only workflow is ready for integration.")
     return 0
@@ -924,24 +977,24 @@ def cmd_review(args: argparse.Namespace) -> int:
 
 def cmd_rebuttal(args: argparse.Namespace) -> int:
     """Generate rebuttal letter."""
-    from berb.modes.workflow import create_workflow_manager, WorkflowType
-    
+    from berb.modes.workflow import create_workflow_manager
+
     config_path = Path(cast(str, args.config)) if args.config else None
     if config_path and not config_path.exists():
         print(f"Error: config file not found: {config_path}", file=sys.stderr)
         return 1
-    
+
     # Create workflow manager for rebuttal
     workflow_manager = create_workflow_manager(
         workflow="rebuttal",
         operation_mode="autonomous",
     )
-    
-    print(f"Starting rebuttal workflow")
+
+    print("Starting rebuttal workflow")
     print(f"Manuscript: {args.manuscript}")
     print(f"Reviews: {args.reviews}")
     print(f"Workflow: {workflow_manager.current_workflow.value}")
-    
+
     # TODO: Integrate with actual pipeline execution
     print("\nNote: Rebuttal workflow is ready for integration.")
     return 0
@@ -949,24 +1002,24 @@ def cmd_rebuttal(args: argparse.Namespace) -> int:
 
 def cmd_survey(args: argparse.Namespace) -> int:
     """Write literature review paper."""
-    from berb.modes.workflow import create_workflow_manager, WorkflowType
-    
+    from berb.modes.workflow import create_workflow_manager
+
     config_path = Path(cast(str, args.config)) if args.config else None
     if config_path and not config_path.exists():
         print(f"Error: config file not found: {config_path}", file=sys.stderr)
         return 1
-    
+
     # Create workflow manager for literature-review
     workflow_manager = create_workflow_manager(
         workflow="literature-review",
         stages=[1, 2, 3, 4, 5, 6, 7, 8, 16, 17, 18, 19, 20, 21, 22, 23],
         operation_mode="autonomous",
     )
-    
+
     print(f"Starting literature review workflow for: {args.topic}")
     print(f"Workflow: {workflow_manager.current_workflow.value}")
     print(f"Stages: {workflow_manager.get_enabled_stages()}")
-    
+
     # TODO: Integrate with actual pipeline execution
     print("\nNote: Literature review workflow is ready for integration.")
     return 0
@@ -982,33 +1035,31 @@ def main(argv: list[str] | None = None) -> int:
     run_p = sub.add_parser("run", help="Run the 23-stage research pipeline")
     _ = run_p.add_argument("--topic", "-t", help="Override research topic")
     _ = run_p.add_argument(
-        "--config", "-c", default=None,
+        "--config",
+        "-c",
+        default=None,
         help="Config file (default: auto-detect config.arc.yaml or config.yaml)",
     )
     _ = run_p.add_argument("--output", "-o", help="Output directory")
+    _ = run_p.add_argument("--from-stage", help="Start from a specific stage (e.g. PAPER_OUTLINE)")
+    _ = run_p.add_argument("--auto-approve", action="store_true", help="Auto-approve gate stages")
+    _ = run_p.add_argument("--skip-preflight", action="store_true", help="Skip LLM preflight check")
+    _ = run_p.add_argument("--resume", action="store_true", help="Resume from last checkpoint")
     _ = run_p.add_argument(
-        "--from-stage", help="Start from a specific stage (e.g. PAPER_OUTLINE)"
+        "--skip-noncritical-stage",
+        action="store_true",
+        help="Skip noncritical stages on failure instead of aborting",
     )
     _ = run_p.add_argument(
-        "--auto-approve", action="store_true", help="Auto-approve gate stages"
-    )
-    _ = run_p.add_argument(
-        "--skip-preflight", action="store_true", help="Skip LLM preflight check"
-    )
-    _ = run_p.add_argument(
-        "--resume", action="store_true", help="Resume from last checkpoint"
-    )
-    _ = run_p.add_argument(
-        "--skip-noncritical-stage", action="store_true",
-        help="Skip noncritical stages on failure instead of aborting"
-    )
-    _ = run_p.add_argument(
-        "--no-graceful-degradation", action="store_true",
-        help="Disable graceful degradation: fail pipeline on quality gate failure"
+        "--no-graceful-degradation",
+        action="store_true",
+        help="Disable graceful degradation: fail pipeline on quality gate failure",
     )
     val_p = sub.add_parser("validate", help="Validate config file")
     _ = val_p.add_argument(
-        "--config", "-c", default=None,
+        "--config",
+        "-c",
+        default=None,
         help="Config file (default: auto-detect config.arc.yaml or config.yaml)",
     )
     _ = val_p.add_argument(
@@ -1017,7 +1068,9 @@ def main(argv: list[str] | None = None) -> int:
 
     doc_p = sub.add_parser("doctor", help="Check environment and configuration health")
     _ = doc_p.add_argument(
-        "--config", "-c", default=None,
+        "--config",
+        "-c",
+        default=None,
         help="Config file (default: auto-detect config.arc.yaml or config.yaml)",
     )
     _ = doc_p.add_argument("--output", "-o", help="Write JSON report to file")
@@ -1030,9 +1083,7 @@ def main(argv: list[str] | None = None) -> int:
     _ = sub.add_parser("setup", help="Check and install optional tools (OpenCode, etc.)")
 
     rpt_p = sub.add_parser("report", help="Generate human-readable run report")
-    _ = rpt_p.add_argument(
-        "--run-dir", required=True, help="Path to run artifacts directory"
-    )
+    _ = rpt_p.add_argument("--run-dir", required=True, help="Path to run artifacts directory")
     _ = rpt_p.add_argument("--output", "-o", help="Write report to file")
 
     # A: Web platform
@@ -1061,24 +1112,18 @@ def main(argv: list[str] | None = None) -> int:
     _ = proj_p.add_argument("--name", "-n", help="Project name")
     _ = proj_p.add_argument("--names", nargs="*", help="Project names (for compare)")
     _ = proj_p.add_argument("--topic", "-t", help="Research topic")
-    _ = proj_p.add_argument(
-        "--config", "-c", default="config.yaml", help="Config file path"
-    )
+    _ = proj_p.add_argument("--config", "-c", default="config.yaml", help="Config file path")
 
     # C3: MCP integration
     mcp_p = sub.add_parser("mcp", help="MCP integration")
-    _ = mcp_p.add_argument(
-        "--start", action="store_true", help="Start MCP server"
-    )
+    _ = mcp_p.add_argument("--start", action="store_true", help="Start MCP server")
 
     # C4: Overleaf sync
     ovl_p = sub.add_parser("overleaf", help="Overleaf bidirectional sync")
     _ = ovl_p.add_argument("--sync", action="store_true", help="Run sync")
     _ = ovl_p.add_argument("--status", action="store_true", help="Show status")
     _ = ovl_p.add_argument("--run-dir", help="Run artifacts directory")
-    _ = ovl_p.add_argument(
-        "--config", "-c", default="config.yaml", help="Config file path"
-    )
+    _ = ovl_p.add_argument("--config", "-c", default="config.yaml", help="Config file path")
 
     # D1: Research trend tracking
     trends_p = sub.add_parser("trends", help="Research trend tracking")
