@@ -823,22 +823,33 @@ def _execute_knowledge_extract(
         _pm = prompts or PromptManager()
         _overlay = _get_evolution_overlay(run_dir, "knowledge_extract")
         
-        # Try to use fast model by creating a temporary config
+        # Try to use fast model by creating a temporary config.
+        # FAST_MODEL is an OpenRouter-catalog model ID ("qwen/..."); it only
+        # resolves against OpenRouter's own routing. Sending it to a direct
+        # OpenAI/DeepSeek/etc. endpoint 404s, so only switch when the
+        # configured endpoint actually is OpenRouter — otherwise keep using
+        # the original llm client/model unchanged.
         fast_llm = llm
-        try:
-            from berb.llm.client import LLMClient, LLMConfig
-            fast_config = LLMConfig(
-                provider_name="openrouter",
-                base_url=llm.config.base_url,
-                api_key=llm.config.api_key,
-                primary_model=FAST_MODEL,
-                fallback_providers=llm.config.fallback_providers or [],
+        if "openrouter.ai" in (llm.config.base_url or ""):
+            try:
+                from berb.llm.client import LLMClient, LLMConfig
+                fast_config = LLMConfig(
+                    provider_name="openrouter",
+                    base_url=llm.config.base_url,
+                    api_key=llm.config.api_key,
+                    primary_model=FAST_MODEL,
+                    fallback_providers=llm.config.fallback_providers or [],
+                )
+                fast_llm = LLMClient(fast_config)
+                logger.info("Stage 6: Using fast model %s for batch processing", FAST_MODEL)
+            except Exception as e:
+                logger.warning("Stage 6: Could not switch to fast model, using default: %s", e)
+                fast_llm = llm
+        else:
+            logger.debug(
+                "Stage 6: Non-OpenRouter endpoint (%s), skipping fast-model switch",
+                llm.config.base_url,
             )
-            fast_llm = LLMClient(fast_config)
-            logger.info("Stage 6: Using fast model %s for batch processing", FAST_MODEL)
-        except Exception as e:
-            logger.warning("Stage 6: Could not switch to fast model, using default: %s", e)
-            fast_llm = llm
         
         # Process papers in batches
         for batch_idx in range(0, len(rows), BATCH_SIZE):
