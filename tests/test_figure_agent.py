@@ -480,6 +480,13 @@ class TestRendererAgent:
 
         # Use a script that creates a valid PNG without matplotlib
         # (creates a minimal 1x1 PNG file directly)
+        # NOTE: output_dir must be embedded as forward slashes — on Windows
+        # tmp_path yields backslash paths (e.g. "C:\\Users\\...") and
+        # interpolating that raw into a double-quoted Python string literal
+        # produces invalid escape sequences (e.g. "\\U..." is parsed as the
+        # start of a \\UXXXXXXXX unicode escape), causing a SyntaxError in
+        # the *generated* script rather than exercising the renderer.
+        output_dir_posix = output_dir.as_posix()
         script = textwrap.dedent("""\
             import struct, zlib
             output_path = "{output_dir}/fig_test.png"
@@ -501,7 +508,7 @@ class TestRendererAgent:
             with open(output_path, 'ab') as f:
                 f.write(b'\\x00' * 2048)
             print(f"Saved: {{output_path}}")
-        """).format(output_dir=output_dir)
+        """).format(output_dir=output_dir_posix)
 
         result = agent.execute(
             {

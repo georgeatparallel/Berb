@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import sys
 from collections.abc import Callable
 from typing import Any
 
@@ -388,22 +389,37 @@ def auto_register_all() -> None:
         return
 
     # BUG-R002 FIX: Import with error handling and logging
+    # Maps module name -> MethodType it registers, so we can detect whether
+    # the module's registration actually landed in ReasonerRegistry._registry
+    # (needed for the re-import-after-clear case below).
     modules = [
-        "multi_perspective",
-        "pre_mortem",
-        "bayesian",
-        "debate",
-        "dialectical",
-        "research",
-        "socratic",
-        "scientific",
-        "jury",
+        ("multi_perspective", MethodType.MULTI_PERSPECTIVE),
+        ("pre_mortem", MethodType.PRE_MORTEM),
+        ("bayesian", MethodType.BAYESIAN),
+        ("debate", MethodType.DEBATE),
+        ("dialectical", MethodType.DIALECTICAL),
+        ("research", MethodType.RESEARCH),
+        ("socratic", MethodType.SOCRATIC),
+        ("scientific", MethodType.SCIENTIFIC),
+        ("jury", MethodType.JURY),
     ]
 
     failed = []
-    for module_name in modules:
+    for module_name, method_type in modules:
+        full_name = f"berb.reasoning.{module_name}"
         try:
-            __import__(f"berb.reasoning.{module_name}", fromlist=[""])
+            if full_name in sys.modules and method_type not in ReasonerRegistry._registry:
+                # BUG-NEW-002 FIX: Module already imported — plain __import__ is
+                # a no-op and will NOT re-run the module-level
+                # ReasonerRegistry.register(...) call. Drop it from
+                # sys.modules first so the (possibly patched) __import__
+                # below performs a genuine fresh import, re-triggering the
+                # module-level registration. Keeps auto_register_all()
+                # repeatable after ReasonerRegistry._registry has been
+                # cleared (e.g. in tests via clear_singletons() +
+                # _registry.clear()).
+                del sys.modules[full_name]
+            __import__(full_name, fromlist=[""])
             logger.debug(f"Registered reasoning method: {module_name}")
         except Exception as e:
             failed.append((module_name, str(e)))

@@ -900,9 +900,9 @@ class TestChatWithPromptStripThinking:
     """Verify _chat_with_prompt passes strip_thinking to llm.chat()."""
 
     def test_default_strips_thinking(self):
-        """_chat_with_prompt should pass strip_thinking=True by default."""
+        """_chat_with_prompt should forward the default strip_thinking=False."""
         from unittest.mock import MagicMock
-        from berb.pipeline.executor import _chat_with_prompt
+        from berb.pipeline._prompt_helpers import _chat_with_prompt
         from berb.llm.client import LLMResponse
 
         mock_llm = MagicMock()
@@ -912,15 +912,15 @@ class TestChatWithPromptStripThinking:
             finish_reason="stop",
         )
 
-        result = _chat_with_prompt(mock_llm, system="sys", user="hello")
+        _chat_with_prompt(mock_llm, system_prompt="sys", user_prompt="hello")
 
         call_kwargs = mock_llm.chat.call_args
-        assert call_kwargs.kwargs.get("strip_thinking") is True
+        assert call_kwargs.kwargs.get("strip_thinking") is False
 
     def test_can_disable_stripping(self):
-        """_chat_with_prompt(strip_thinking=False) should forward the flag."""
+        """_chat_with_prompt(strip_thinking=True) should forward the flag."""
         from unittest.mock import MagicMock
-        from berb.pipeline.executor import _chat_with_prompt
+        from berb.pipeline._prompt_helpers import _chat_with_prompt
         from berb.llm.client import LLMResponse
 
         mock_llm = MagicMock()
@@ -932,10 +932,10 @@ class TestChatWithPromptStripThinking:
 
         _chat_with_prompt(
             mock_llm,
-            system="sys",
-            user="hello",
-            strip_thinking=False,
+            system_prompt="sys",
+            user_prompt="hello",
+            strip_thinking=True,
         )
 
         call_kwargs = mock_llm.chat.call_args
-        assert call_kwargs.kwargs.get("strip_thinking") is False
+        assert call_kwargs.kwargs.get("strip_thinking") is True

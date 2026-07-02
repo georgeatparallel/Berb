@@ -40,7 +40,7 @@ def tmp_db_path(tmp_path: Path) -> Path:
 def token_tracker(tmp_db_path: Path) -> TokenTracker:
     """Create token tracker with temporary database."""
     tracker = TokenTracker(
-        project_path=tmp_path / "test_project",
+        project_path=tmp_db_path.parent / "test_project",
         db_path=tmp_db_path,
     )
     yield tracker
@@ -472,18 +472,21 @@ class TestCrossModuleIntegration:
         messages = [{"role": "user", "content": prompt}]
         opt_result = router.optimize_context(messages)
 
-        # 3. Track usage
+        # 3. Track usage: track.saved_tokens = input_tokens - output_tokens, so
+        # feed it the optimizer's own before/after counts to reflect what was
+        # actually saved by context optimization (not a hardcoded LLM output size).
         tracker.track(
             command=f"llm_{selection.tier}",
-            input_tokens=opt_result.optimized_tokens,
-            output_tokens=50,
+            input_tokens=opt_result.original_tokens,
+            output_tokens=opt_result.optimized_tokens,
         )
 
         # 4. Get summary
         summary = tracker.get_summary()
 
         assert summary.total_commands == 1
-        assert summary.total_saved_tokens > 0
+        assert summary.total_saved_tokens == opt_result.tokens_saved
+        assert summary.total_saved_tokens >= 0
 
         tracker.close()
 

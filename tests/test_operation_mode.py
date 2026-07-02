@@ -336,9 +336,12 @@ class TestOperationModeManager:
         assert "experiment_overrides" in updated
         assert updated["experiment_overrides"]["max_iterations"] == 20
 
-    def test_get_audit_report(self):
+    def test_get_audit_report(self, tmp_path):
         """Test getting audit report."""
-        manager = OperationModeManager(mode=OperationMode.COLLABORATIVE)
+        manager = OperationModeManager(
+            mode=OperationMode.COLLABORATIVE,
+            audit_trail_path=tmp_path / "audit_trail.json",
+        )
 
         manager.audit_trail.record_approval(stage_number=5)
         manager.audit_trail.record_rejection(stage_number=8, reason="test", requested_action="fix")

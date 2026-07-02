@@ -173,25 +173,25 @@ class SimplePendulum(HamiltonianSystem):
     name = "Simple Pendulum"
     n_dims = 1
 
-    def __init__(self, m: float = 1.0, length: float = 1.0, g: float = 9.81):
+    def __init__(self, m: float = 1.0, l: float = 1.0, g: float = 9.81):
         self.m = m
-        self.length = length
+        self.l = l
         self.g = g
 
     def hamiltonian(self, q: np.ndarray, p: np.ndarray) -> float:
         """H = p²/(2ml²) - mgl·cos(θ)"""
         theta = q[0]
-        return p[0] ** 2 / (2 * self.m * self.length**2) - self.m * self.g * self.length * np.cos(
+        return p[0] ** 2 / (2 * self.m * self.l**2) - self.m * self.g * self.l * np.cos(
             theta
         )
 
     def dh_dq(self, q: np.ndarray, p: np.ndarray) -> np.ndarray:
         """∂H/∂θ = -mgl·sin(θ)"""
-        return np.array([-self.m * self.g * self.length * np.sin(q[0])])
+        return np.array([-self.m * self.g * self.l * np.sin(q[0])])
 
     def dh_dp(self, q: np.ndarray, p: np.ndarray) -> np.ndarray:
         """∂h/∂p = p/(ml²)"""
-        return np.array([p[0] / (self.m * self.length**2)])
+        return np.array([p[0] / (self.m * self.l**2)])
 
 
 class DoublePendulum(HamiltonianSystem):
@@ -361,11 +361,11 @@ class KeplerProblem(HamiltonianSystem):
     name = "Kepler Problem"
     n_dims = 3
 
-    def __init__(self, g_const: float = 1.0, m_const: float = 1.0, mu: float = 1.0):
-        self.G = g_const
-        self.M = m_const
+    def __init__(self, G: float = 1.0, M: float = 1.0, mu: float = 1.0):
+        self.G = G
+        self.M = M
         self.mu = mu
-        self.k = g_const * m_const * mu  # Gravitational parameter
+        self.k = G * M * mu  # Gravitational parameter
 
     def hamiltonian(self, q: np.ndarray, p: np.ndarray) -> float:
         """H = p²/(2μ) - k/r"""
@@ -485,8 +485,8 @@ class StandardMap(HamiltonianSystem):
     n_dims = 1
     is_discrete = True
 
-    def __init__(self, k_const: float = 1.0):
-        self.K = k_const
+    def __init__(self, K: float = 1.0):
+        self.K = K
 
     def step(self, q: float, p: float) -> tuple[float, float]:
         """Perform one map iteration."""

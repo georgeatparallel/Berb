@@ -99,18 +99,85 @@ def _extract_code_block(content: str) -> str:
 
 
 def _extract_multi_file_blocks(content: str) -> dict[str, str]:
-    """Extract multiple ```python filename.ext ... ``` blocks into {filename: code}."""
-    files: dict[str, str] = {}
-    pattern = re.compile(r"```(?:python|bash|)\s*(?:\n|$)([\s\S]*?)```", re.MULTILINE)
-    matches = pattern.findall(content)
-    for match in matches:
-        lines = match.strip().split("\n")
-        if lines and lines[0].endswith(".py"):
-            fname = lines[0].strip()
-            code = "\n".join(lines[1:]).strip()
-            if code:
-                files[fname] = code
-    return files
+    """Parse LLM response containing multiple files with filename markers.
+
+    Expected format::
+
+        ```filename:main.py
+        import model
+        ...
+        ```
+
+        ```filename:model.py
+        class MyModel:
+        ...
+        ```
+
+    Also handles common LLM format variations:
+    - ````` ```python filename:main.py````` (space before filename)
+    - ````` ``` filename:main.py````` (space after backticks)
+    - ``filename:main.py`` on next line after backticks
+    - ``# FILE: main.py`` comment markers inside code blocks
+
+    Falls back to treating the entire code block as ``main.py`` if no
+    ``filename:`` markers are found.
+
+    Returns a dict mapping filename -> code content.
+    """
+    # R13-2: Multiple patterns to handle LLM format variations
+    patterns = [
+        # Original: ```filename:xxx.py or ```python filename:xxx.py
+        re.compile(
+            r"```(?:python\s+)?filename:(\S+)\s*\n(.*?)```",
+            flags=re.DOTALL,
+        ),
+        # Variation: ``` filename:xxx.py (space after backticks)
+        re.compile(
+            r"```\s+filename:(\S+)\s*\n(.*?)```",
+            flags=re.DOTALL,
+        ),
+        # Variation: ```python\nfilename:xxx.py (filename on next line)
+        re.compile(
+            r"```(?:python)?\s*\nfilename:(\S+)\s*\n(.*?)```",
+            flags=re.DOTALL,
+        ),
+        # Variation: ```python\n# filename: xxx.py (comment marker)
+        re.compile(
+            r"```(?:python)?\s*\n#\s*(?:FILE|filename)\s*:\s*(\S+\.py)\s*\n(.*?)```",
+            flags=re.DOTALL,
+        ),
+    ]
+
+    matches: list[tuple[str, str]] = []
+    for pattern in patterns:
+        matches = pattern.findall(content)
+        if matches:
+            break
+
+    if matches:
+        files: dict[str, str] = {}
+        for fname, code in matches:
+            fname = fname.strip()
+            # Security: prevent path traversal
+            if ".." in fname or fname.startswith("/"):
+                continue
+            # Normalise to flat filenames (strip leading ./ or subdirs for safety)
+            fname = fname.replace("\\", "/").split("/")[-1]
+            if fname and fname.endswith(".py"):
+                files[fname] = code.strip()
+        if files:
+            # Ensure there is a main.py entry point
+            if "main.py" not in files:
+                # Pick the first file as main.py
+                first_key = next(iter(files))
+                files["main.py"] = files.pop(first_key)
+            return files
+
+    # Fallback: single code block -> main.py
+    code = _extract_code_block(content)
+    if code.strip():
+        return {"main.py": code}
+    return {}
 
 
 def _extract_yaml_block(text: str) -> str:

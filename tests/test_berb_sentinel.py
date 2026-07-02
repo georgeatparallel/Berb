@@ -103,11 +103,16 @@ class TestSentinelScript:
 
     def test_sentinel_script_is_valid_bash(self) -> None:
         script = Path(__file__).parent.parent / "sentinel.sh"
-        result = subprocess.run(
-            ["bash", "-n", str(script)],
-            capture_output=True,
-            text=True,
-        )
+        try:
+            result = subprocess.run(
+                ["bash", "-n", str(script)],
+                capture_output=True,
+                text=True,
+            )
+        except FileNotFoundError:
+            pytest.skip("bash not available on this system")
+        if result.returncode != 0 and "execvpe" in result.stderr:
+            pytest.skip(f"bash unavailable in this environment: {result.stderr.strip()}")
         assert result.returncode == 0, f"Bash syntax error: {result.stderr}"
 
     def test_sentinel_script_is_executable(self) -> None:

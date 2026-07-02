@@ -241,6 +241,12 @@ class TestSearXNGClient:
 class TestHelperFunctions:
     """Test helper functions."""
 
+    @pytest.fixture
+    def mock_http_client(self):
+        """Mock HTTP client for testing."""
+        with patch("berb.web.searxng_client.httpx.AsyncClient") as mock:
+            yield mock
+
     def test_parse_csv_env_empty(self, monkeypatch):
         """Test parsing empty environment variable."""
         monkeypatch.setenv("TEST_VAR", "")

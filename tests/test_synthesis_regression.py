@@ -191,12 +191,13 @@ class TestEdgeCases:
 
         context = create_context(
             stage_id="test",
+            stage_name="Test Stage",
             input_data={"problem": problem, "topic": topic},
             query=problem,
         )
 
         assert context is not None
-        assert "stage_id" in context
+        assert context.stage_id == "test"
 
     def test_unicode_in_synthesis(self):
         """Test handling of unicode in synthesis."""
@@ -285,6 +286,8 @@ class TestFailureInjection:
             api_key="test",
             primary_model="gpt-4o",
         )
+        # Fallback path writes resp.content to disk, so it must be a real str.
+        mock_llm.chat.return_value = MagicMock(content="Fallback perspective text.")
 
         with tempfile.TemporaryDirectory() as tmpdir:
             stage_dir = Path(tmpdir) / "stage"
@@ -317,9 +320,35 @@ class TestFailureInjection:
                 # Should fall back gracefully
                 assert result.status == StageStatus.DONE
 
-    def test_async_execution_timeout(self):
+    def test_async_execution_timeout(self, monkeypatch: pytest.MonkeyPatch):
         """Test handling of async execution timeout."""
+        import json
+        import urllib.request
+
         from berb.pipeline.stage_impls._synthesis import _SimpleRouter, _LLMProviderWrapper
+
+        class _DummyHTTPResponse:
+            def __init__(self, payload):
+                self._payload = payload
+
+            def read(self) -> bytes:
+                return json.dumps(self._payload).encode("utf-8")
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb) -> None:
+                return None
+
+        def fake_urlopen(req: urllib.request.Request, timeout: int) -> _DummyHTTPResponse:
+            return _DummyHTTPResponse(
+                {
+                    "choices": [{"message": {"content": "ok"}}],
+                    "model": "gpt-4o",
+                }
+            )
+
+        monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
 
         config = LLMConfig(
             base_url="https://api.openai.com/v1",

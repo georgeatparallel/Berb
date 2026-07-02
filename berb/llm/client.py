@@ -48,6 +48,17 @@ class LLMProvider(StrEnum):
     UNKNOWN = "unknown"
 
 
+# OpenRouter uses different vendor slugs than our LLMProvider enum values
+# for a few providers (e.g. "z-ai/glm-4.5", "x-ai/grok-4"). Map those
+# OpenRouter-specific prefixes onto the corresponding LLMProvider.
+_OPENROUTER_PREFIX_ALIASES: dict[str, LLMProvider] = {
+    "z-ai": LLMProvider.GLM,
+    "x-ai": LLMProvider.XAI,
+    "moonshotai": LLMProvider.KIMI,
+    "xiaomi": LLMProvider.MIMO,
+}
+
+
 def get_provider_from_model(model: str) -> LLMProvider:
     """Extract provider from model string.
 
@@ -60,6 +71,8 @@ def get_provider_from_model(model: str) -> LLMProvider:
     Example:
         >>> get_provider_from_model('qwen/qwen3.5-flash')
         <LLMProvider.QWEN: 'qwen'>
+        >>> get_provider_from_model('z-ai/glm-4.5')
+        <LLMProvider.GLM: 'glm'>
         >>> get_provider_from_model('unknown-model')
         <LLMProvider.UNKNOWN: 'unknown'>
     """
@@ -67,6 +80,10 @@ def get_provider_from_model(model: str) -> LLMProvider:
         return LLMProvider.UNKNOWN
 
     model_lower = model.lower().split("/")[0]  # Extract provider prefix
+
+    if model_lower in _OPENROUTER_PREFIX_ALIASES:
+        return _OPENROUTER_PREFIX_ALIASES[model_lower]
+
     for provider in LLMProvider:
         if provider.value != "unknown" and model_lower == provider.value:
             return provider
@@ -452,7 +469,7 @@ class LLMClient:
         return not any(model.startswith(prefix) for prefix in _NO_TEMPERATURE_MODELS)
 
     @classmethod
-    def from_rc_config(cls, rc_config: Any) -> LLMClient:
+    def from_rc_config(cls, rc_config: Any, circuit_breaker_enabled: bool = True) -> LLMClient:
         from berb.llm import PROVIDER_PRESETS
 
         provider = getattr(rc_config.llm, "provider", "openai")
@@ -484,13 +501,13 @@ class LLMClient:
             if bridge.fallback_api_key:
                 fallback_api_key = bridge.fallback_api_key
 
-        # fallback_models holds OpenRouter-prefixed model IDs (e.g.
-        # "qwen/qwen3.5-flash") that only resolve against OpenRouter's own
-        # catalog — applying them to a direct provider API (DeepSeek, xAI,
-        # ...) would just 404/401. Only wire them up for the openrouter provider.
-        model_chain_fallbacks = (
-            list(rc_config.llm.fallback_models or []) if provider == "openrouter" else []
-        )
+        # fallback_models is a same-provider model chain (e.g. MiniMax's
+        # "MiniMax-M2.5-highspeed" as a fallback for "MiniMax-M2.5", or
+        # OpenRouter's "qwen/qwen3.5-flash" slugs). It is the operator's
+        # responsibility to configure IDs that resolve against the selected
+        # provider — wire it through unconditionally rather than guessing
+        # by provider name.
+        model_chain_fallbacks = list(rc_config.llm.fallback_models or [])
 
         config = LLMConfig(
             base_url=base_url,
@@ -502,7 +519,7 @@ class LLMClient:
             fallback_api_key=fallback_api_key,
             rate_limit_enabled=False,  # Disable rate limiter for faster response
         )
-        client = cls(config, circuit_breaker_enabled=False)
+        client = cls(config, circuit_breaker_enabled=circuit_breaker_enabled)
 
         # Detect Anthropic or Kimi-Anthropic provider — use original URL/key (not the
         # MetaClaw proxy URL which is OpenAI-compatible only).

@@ -553,7 +553,7 @@ class TestExportConfig:
     def test_rcconfig_has_export(self) -> None:
         from berb.config import RCConfig
 
-        cfg = RCConfig.load("config.berb.example.yaml", check_paths=False)
+        cfg = RCConfig.load("config.berb.yaml", check_paths=False)
         assert hasattr(cfg, "export")
         assert cfg.export.target_conference == "neurips_2025"
 
@@ -562,7 +562,7 @@ class TestExportConfig:
         import yaml
         from pathlib import Path
 
-        data = yaml.safe_load(Path("config.berb.example.yaml").read_text())
+        data = yaml.safe_load(Path("config.berb.yaml").read_text())
         data["export"] = {
             "target_conference": "icml_2025",
             "authors": "Test Author",
@@ -587,7 +587,7 @@ class TestHitlStageValidation:
         import yaml
         from pathlib import Path
 
-        data = yaml.safe_load(Path("config.berb.example.yaml").read_text())
+        data = yaml.safe_load(Path("config.berb.yaml").read_text())
         data.setdefault("security", {})["hitl_required_stages"] = [1, 22, 23]
         result = validate_config(data, check_paths=False)
         assert result.ok, f"Errors: {result.errors}"
@@ -621,7 +621,7 @@ class TestHitlStageValidation:
         import yaml
         from pathlib import Path
 
-        data = yaml.safe_load(Path("config.berb.example.yaml").read_text())
+        data = yaml.safe_load(Path("config.berb.yaml").read_text())
         data.setdefault("security", {})["hitl_required_stages"] = [24]
         result = validate_config(data, check_paths=False)
         assert not result.ok

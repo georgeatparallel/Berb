@@ -20,7 +20,18 @@ Usage:
 
 from __future__ import annotations
 
+import threading
+import time
 from datetime import UTC, datetime
+
+# Guards _last_timestamp / _last_monotonic below. Windows' system clock
+# (GetSystemTimeAsFileTime) only advances in ~15.6ms ticks, so a tight loop
+# of datetime.now(UTC).timestamp() calls can return identical values —
+# breaking callers that rely on utc_timestamp() for uniqueness (e.g.
+# snapshot version strings, generated IDs).
+_ts_lock = threading.Lock()
+_last_timestamp: float = 0.0
+_last_monotonic: float = 0.0
 
 
 def utcnow() -> datetime:
@@ -57,6 +68,15 @@ def utcnow_iso(timespec: str = "seconds") -> str:
 def utc_timestamp() -> float:
     """Get current UTC time as Unix timestamp (seconds since epoch).
 
+    Guarantees strictly increasing (and therefore unique) values across
+    calls within the same process, even on platforms where the system
+    clock's resolution is coarser than typical call rates (e.g. Windows'
+    ~15.6ms tick). When the wall clock hasn't advanced since the previous
+    call, a sub-tick offset derived from ``time.monotonic()`` is added so
+    repeated rapid calls never collide. Callers that use this value for
+    version strings / generated IDs (e.g. self_correcting.py) depend on
+    this uniqueness guarantee.
+
     Returns:
         Unix timestamp as float
 
@@ -65,7 +85,23 @@ def utc_timestamp() -> float:
         >>> isinstance(ts, float)
         True
     """
-    return datetime.now(UTC).timestamp()
+    global _last_timestamp, _last_monotonic
+
+    now = datetime.now(UTC).timestamp()
+    mono = time.monotonic()
+
+    with _ts_lock:
+        if now <= _last_timestamp:
+            # Wall clock hasn't advanced (or went backwards) since the last
+            # call — nudge forward using elapsed monotonic time so the
+            # returned value is always > the previous one.
+            elapsed = max(mono - _last_monotonic, 1e-6)
+            now = _last_timestamp + elapsed
+
+        _last_timestamp = now
+        _last_monotonic = mono
+
+    return now
 
 
 def utcnow_str(fmt: str = "%Y-%m-%d %H:%M:%S") -> str:

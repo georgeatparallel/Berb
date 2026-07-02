@@ -482,13 +482,15 @@ Be conservative with high scores. Most papers score 5-7."""
 
         for desc, weakness in prior_weaknesses.items():
             if desc in current_weaknesses:
-                unchanged_weaknesses.append(desc)
+                unchanged_weaknesses.append(weakness.description[:50])
             else:
-                improvements_made.append(f"Fixed: {weakness.category} - {desc[:50]}")
+                # desc is lowercased for matching only; use original-cased
+                # weakness.description for the human-readable message.
+                improvements_made.append(f"Fixed: {weakness.category} - {weakness.description[:50]}")
 
         for desc, weakness in current_weaknesses.items():
             if desc not in prior_weaknesses:
-                new_weaknesses.append(f"New: {weakness.category} - {desc[:50]}")
+                new_weaknesses.append(f"New: {weakness.category} - {weakness.description[:50]}")
 
         # Identify regressions (new critical/major weaknesses)
         regressions = [

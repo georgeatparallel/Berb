@@ -321,7 +321,13 @@ class TestTaskAgent:
         assert agent.state.variant_id == "v0"
 
     @pytest.mark.asyncio
-    async def test_execute_raises_not_implemented(self, tmp_path):
+    async def test_execute_raises_not_implemented(self, tmp_path, monkeypatch):
+        # DOCKER_AVAILABLE reflects whether `docker` is on this machine's PATH;
+        # force it False so the NotImplementedError fallback path is exercised
+        # deterministically regardless of host environment.
+        import berb.hyperagent.task_agent as task_agent_module
+
+        monkeypatch.setattr(task_agent_module, "DOCKER_AVAILABLE", False)
         ta_cfg = TaskAgentConfig()
         cfg = MagicMock()
         agent = TaskAgent(config=cfg, task_agent_config=ta_cfg)

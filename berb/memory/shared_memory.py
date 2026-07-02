@@ -179,7 +179,7 @@ class SharedResearchMemory:
 
     def delete(self, key: str) -> bool:
         """Delete value from shared memory."""
-        with self._lock:
+        with self._sync_lock:
             if key in self._key_value_store:
                 del self._key_value_store[key]
                 logger.debug(f"Deleted {key}")
@@ -188,7 +188,7 @@ class SharedResearchMemory:
 
     def exists(self, key: str) -> bool:
         """Check if key exists in memory."""
-        with self._lock:
+        with self._sync_lock:
             return key in self._key_value_store
 
     # ========== Specialized Stores ==========
@@ -220,7 +220,7 @@ class SharedResearchMemory:
 
     def get_code_snapshot(self, version: str) -> str | None:
         """Get code snapshot by version."""
-        with self._lock:
+        with self._sync_lock:
             return self._code_snapshots.get(version)
 
     def store_error_fix(
@@ -251,7 +251,7 @@ class SharedResearchMemory:
 
     def get_error_fix(self, error_message: str) -> str | None:
         """Get fix for error (pattern matching)."""
-        with self._lock:
+        with self._sync_lock:
             if error_message in self._error_fix_mappings:
                 return self._error_fix_mappings[error_message]
             for pattern, fix in self._error_fix_mappings.items():
@@ -276,7 +276,7 @@ class SharedResearchMemory:
 
     def get_clarification(self, question: str) -> Any:
         """Get stored clarification."""
-        with self._lock:
+        with self._sync_lock:
             return self._clarifications.get(question)
 
     def store_execution_trace(
@@ -302,7 +302,7 @@ class SharedResearchMemory:
         # This prevents a concurrent store_execution_trace() from interleaving its
         # append with the length-check and list-rebind, which would corrupt the
         # trace index used in the store() key below.
-        with self._lock:
+        with self._sync_lock:
             self._execution_traces.append(trace)
             if len(self._execution_traces) > self._max_trajectory:
                 self._execution_traces = self._execution_traces[-self._max_trajectory :]
@@ -355,12 +355,12 @@ class SharedResearchMemory:
 
     def get_agent_state(self, agent_id: str) -> AgentState | None:
         """Get agent state."""
-        with self._lock:
+        with self._sync_lock:
             return self._agent_states.get(agent_id)
 
     def get_all_agent_states(self) -> list[AgentState]:
         """Get all agent states."""
-        with self._lock:
+        with self._sync_lock:
             return list(self._agent_states.values())
 
     # ========== Message Bus ==========
@@ -391,7 +391,7 @@ class SharedResearchMemory:
         # Protect the deque append and the agent-state counter update under the
         # same lock so that concurrent send_message() calls cannot interleave
         # the compound read-modify-write on messages_sent (BUG-002).
-        with self._lock:
+        with self._sync_lock:
             self._message_queue.append(message)
             if from_agent in self._agent_states:
                 # messages_sent += 1 is three bytecodes (LOAD/ADD/STORE) and is
@@ -409,7 +409,7 @@ class SharedResearchMemory:
         # Snapshot the queue and update the counter atomically under the lock
         # so that a concurrent send_message() cannot cause a lost increment on
         # messages_received (BUG-002 — same compound read-modify-write issue).
-        with self._lock:
+        with self._sync_lock:
             messages = [
                 msg
                 for msg in self._message_queue
@@ -439,7 +439,7 @@ class SharedResearchMemory:
         Returns:
             List of memory entries
         """
-        with self._lock:
+        with self._sync_lock:
             entries = list(self._entries)
 
         if entry_type:
@@ -452,7 +452,7 @@ class SharedResearchMemory:
 
     def get_statistics(self) -> dict[str, Any]:
         """Get memory statistics."""
-        with self._lock:
+        with self._sync_lock:
             entry_types: dict[str, int] = {}
             for entry in self._entries:
                 entry_types[entry.entry_type] = entry_types.get(entry.entry_type, 0) + 1
@@ -472,7 +472,7 @@ class SharedResearchMemory:
     def find_redundant_computations(self) -> list[dict[str, Any]]:
         """Find potentially redundant computations."""
         redundant = []
-        with self._lock:
+        with self._sync_lock:
             traces_snapshot = list(self._execution_traces)
 
         # Group execution traces by stage+action

@@ -327,6 +327,7 @@ class TestMiniMaxFactory:
                 api_key_env="",
                 primary_model="MiniMax-M2.5",
                 fallback_models=(),
+                fallback_providers=(),
             ),
         )
         client = create_llm_client(rc_config)
@@ -371,6 +372,7 @@ class TestMiniMaxChatFallback:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.llm
 @pytest.mark.skipif(
     not os.environ.get("MINIMAX_API_KEY"),
     reason="MINIMAX_API_KEY not set",

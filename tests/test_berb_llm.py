@@ -203,6 +203,7 @@ def test_parse_response_missing_optional_fields_graceful(
 def test_from_rc_config_builds_expected_llm_config():
     rc_config = SimpleNamespace(
         llm=SimpleNamespace(
+            provider="openrouter",
             base_url="https://proxy.example/v1",
             api_key="inline-key",
             api_key_env="OPENAI_API_KEY",
@@ -216,6 +217,27 @@ def test_from_rc_config_builds_expected_llm_config():
     assert client.config.api_key == "inline-key"
     assert client.config.wire_api == "responses"
     assert client.config.primary_model == "o3"
+    assert client.config.fallback_models == ["o3-mini", "gpt-4o"]
+
+
+def test_from_rc_config_wires_fallback_models_for_same_provider_chain():
+    # fallback_models is a same-provider model chain (e.g. MiniMax's own
+    # "MiniMax-M2.5-highspeed" fallback), not exclusively an OpenRouter
+    # concern — from_rc_config wires it through unconditionally and trusts
+    # the operator to configure IDs valid for the selected provider
+    # (see berb/llm/client.py from_rc_config).
+    rc_config = SimpleNamespace(
+        llm=SimpleNamespace(
+            provider="openai",
+            base_url="https://api.openai.com/v1",
+            api_key="inline-key",
+            api_key_env="OPENAI_API_KEY",
+            wire_api="chat_completions",
+            primary_model="gpt-4o",
+            fallback_models=("o3-mini", "gpt-4o"),
+        )
+    )
+    client = LLMClient.from_rc_config(rc_config)
     assert client.config.fallback_models == ["o3-mini", "gpt-4o"]
 
 

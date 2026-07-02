@@ -271,9 +271,12 @@ class TestOpenCodeBridge:
         assert resolved == "anthropic/claude-sonnet-4-6"
 
     def test_resolve_model_no_model_default(self):
-        """Empty model string → default Anthropic model."""
+        """Empty model string → OPENCODE_DEFAULT_MODEL (OpenRouter-routed Claude Sonnet)."""
+        from berb.pipeline.opencode_bridge import OPENCODE_DEFAULT_MODEL
+
         bridge = OpenCodeBridge()
-        assert bridge._resolve_opencode_model() == "anthropic/claude-sonnet-4-6"
+        assert bridge._resolve_opencode_model() == OPENCODE_DEFAULT_MODEL
+        assert bridge._resolve_opencode_model() == "openrouter/anthropic/claude-sonnet-4.6"
 
     def test_collect_files_ignores_pycache(self, tmp_path):
         (tmp_path / "main.py").write_text("print('hello')")

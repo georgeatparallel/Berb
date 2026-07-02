@@ -567,6 +567,7 @@ Vet this paper for quality issues."""
                 logger.warning(f"Failed to parse context vetting JSON: {e}")
                 data = {}
 
+            data.setdefault("severity", "medium")
             return data
 
         except Exception as e:

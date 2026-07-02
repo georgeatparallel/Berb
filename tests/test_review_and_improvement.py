@@ -267,6 +267,7 @@ class TestCrossModelReviewer:
                     severity=WeaknessSeverity.MAJOR,
                 )
             ],
+            confidence=0.8,
         )
 
         current = ReviewResult(
@@ -279,6 +280,7 @@ class TestCrossModelReviewer:
                     severity=WeaknessSeverity.MINOR,
                 )
             ],
+            confidence=0.8,
         )
 
         delta = reviewer.compare_with_prior(current, prior)

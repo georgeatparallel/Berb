@@ -80,7 +80,15 @@ def validate_entry_point(entry_point: str) -> str | None:
     if not entry_point or not entry_point.strip():
         return "Entry point is empty"
     ep = Path(entry_point)
-    if ep.is_absolute():
+    # SECURITY: pathlib.PureWindowsPath.is_absolute() returns False for
+    # POSIX-style absolute paths like "/etc/passwd" (no drive letter means
+    # "drive-relative", not absolute, on Windows) — so on Windows this
+    # check alone lets sandbox-escaping paths like "/etc/passwd" or
+    # "\\Windows\\System32\\..." through. Explicitly reject any entry point
+    # starting with '/' or '\' (POSIX/UNC/drive-relative root) in addition
+    # to the platform is_absolute() check, so the same input is rejected
+    # consistently on every OS.
+    if ep.is_absolute() or entry_point.strip().startswith(("/", "\\")):
         return f"Entry point must be a relative path, got: {entry_point}"
     if ".." in ep.parts:
         return f"Entry point must not contain '..': {entry_point}"

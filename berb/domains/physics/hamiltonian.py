@@ -331,19 +331,19 @@ class Pendulum(HamiltonianSystem):
         g: Gravity (default: 9.81)
 
     Usage:
-        pend = Pendulum(m=1.0, length=1.0, g=9.81)
+        pend = Pendulum(m=1.0, l=1.0, g=9.81)
         energy = pend.hamiltonian(q=np.pi/4, p=0.0)
     """
 
-    def __init__(self, m: float = 1.0, length: float = 1.0, g: float = 9.81):
+    def __init__(self, m: float = 1.0, l: float = 1.0, g: float = 9.81):
         self.m = m
-        self.length = length
+        self.l = l
         self.g = g
 
     def hamiltonian(self, q: np.ndarray, p: np.ndarray) -> float:
         """Compute total energy."""
-        kinetic = np.sum(p**2 / (2 * self.m * self.length**2))
-        potential = -self.m * self.g * self.length * np.sum(np.cos(q))
+        kinetic = np.sum(p**2 / (2 * self.m * self.l**2))
+        potential = -self.m * self.g * self.l * np.sum(np.cos(q))
         return kinetic + potential
 
     def equations(
@@ -352,8 +352,8 @@ class Pendulum(HamiltonianSystem):
         p: np.ndarray,
     ) -> tuple[np.ndarray, np.ndarray]:
         """Compute Hamilton's equations."""
-        dqdt = p / (self.m * self.length**2)
-        dpdt = -self.m * self.g * self.length * np.sin(q)
+        dqdt = p / (self.m * self.l**2)
+        dpdt = -self.m * self.g * self.l * np.sin(q)
         return dqdt, dpdt
 
 
