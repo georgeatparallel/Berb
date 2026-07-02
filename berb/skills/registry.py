@@ -19,10 +19,10 @@ Usage:
     # Load skills
     registry = SkillRegistry()
     lit_review = registry.get("literature-review")
-    
+
     # Apply skill
     result = lit_review.apply(context)
-    
+
     # List all skills
     skills = registry.list_skills()
 """
@@ -104,13 +104,13 @@ class SkillRegistry:
 
     Usage:
         registry = SkillRegistry()
-        
+
         # Get skill by ID
         skill = registry.get("literature-review")
-        
+
         # Get skills by category
         skills = registry.get_by_category("research")
-        
+
         # Get applicable skills for stage
         skills = registry.get_applicable("LITERATURE_SCREEN")
     """
@@ -124,170 +124,183 @@ class SkillRegistry:
         """
         self.skills_dir = skills_dir
         self._skills: dict[str, Skill] = {}
-        
+
         # Load built-in skills
         self._load_builtin_skills()
 
     def _load_builtin_skills(self) -> None:
         """Load built-in skills."""
         # Skill 1: Literature Review
-        self.register(Skill(
-            id="literature-review",
-            name="Literature Review",
-            description="Systematic literature search and synthesis following PRISMA guidelines",
-            category="research",
-            triggers=["SEARCH_STRATEGY", "LITERATURE_COLLECT", "LITERATURE_SCREEN", "SYNTHESIS"],
-            instructions=[
-                "1. Define search query based on research question",
-                "2. Search multiple databases (arXiv, PubMed, Google Scholar)",
-                "3. Apply inclusion/exclusion criteria",
-                "4. Extract key information from selected papers",
-                "5. Synthesize findings thematically",
-                "6. Identify research gaps",
-            ],
-            references=[
-                "PRISMA Statement: www.prisma-statement.org",
-                "Systematic Review Methods (Cooper et al.)",
-                "Literature Review in 5 Days (Academic Accelerator)",
-            ],
-            examples=[
-                {
-                    "topic": "Transformers for NLP",
-                    "search_query": "transformer attention neural machine translation",
-                    "databases": ["arXiv", "ACL Anthology", "Google Scholar"],
-                    "inclusion": ["peer-reviewed", "2017-2024", "NLP focus"],
-                    "exclusion": ["non-English", "workshop papers", "short papers"],
-                }
-            ],
-            metadata={
-                "version": "1.0",
-                "author": "Berb Team",
-                "last_updated": "2026-03-28",
-            }
-        ))
+        self.register(
+            Skill(
+                id="literature-review",
+                name="Literature Review",
+                description="Systematic literature search and synthesis following PRISMA guidelines",
+                category="research",
+                triggers=[
+                    "SEARCH_STRATEGY",
+                    "LITERATURE_COLLECT",
+                    "LITERATURE_SCREEN",
+                    "SYNTHESIS",
+                ],
+                instructions=[
+                    "1. Define search query based on research question",
+                    "2. Search multiple databases (arXiv, PubMed, Google Scholar)",
+                    "3. Apply inclusion/exclusion criteria",
+                    "4. Extract key information from selected papers",
+                    "5. Synthesize findings thematically",
+                    "6. Identify research gaps",
+                ],
+                references=[
+                    "PRISMA Statement: www.prisma-statement.org",
+                    "Systematic Review Methods (Cooper et al.)",
+                    "Literature Review in 5 Days (Academic Accelerator)",
+                ],
+                examples=[
+                    {
+                        "topic": "Transformers for NLP",
+                        "search_query": "transformer attention neural machine translation",
+                        "databases": ["arXiv", "ACL Anthology", "Google Scholar"],
+                        "inclusion": ["peer-reviewed", "2017-2024", "NLP focus"],
+                        "exclusion": ["non-English", "workshop papers", "short papers"],
+                    }
+                ],
+                metadata={
+                    "version": "1.0",
+                    "author": "Berb Team",
+                    "last_updated": "2026-03-28",
+                },
+            )
+        )
 
         # Skill 2: Experiment Analysis
-        self.register(Skill(
-            id="experiment-analysis",
-            name="Experiment Analysis",
-            description="Statistical analysis and visualization of experiment results",
-            category="analysis",
-            triggers=["EXPERIMENT_RUN", "RESULT_ANALYSIS", "ITERATIVE_REFINE"],
-            instructions=[
-                "1. Collect all experimental results",
-                "2. Compute descriptive statistics (mean, std, confidence intervals)",
-                "3. Perform statistical tests (t-test, ANOVA, etc.)",
-                "4. Create visualizations (bar charts, line plots, heatmaps)",
-                "5. Identify significant patterns",
-                "6. Document ablation study findings",
-            ],
-            references=[
-                "Statistical Methods for ML (Wilkinson)",
-                "Visualization Best Practices (Few)",
-                "Reproducible Research (Stodden et al.)",
-            ],
-            examples=[
-                {
-                    "metrics": ["accuracy", "precision", "recall", "f1"],
-                    "statistical_tests": ["paired t-test", "Wilcoxon signed-rank"],
-                    "visualizations": ["bar chart with error bars", "learning curve"],
-                    "significance_level": 0.05,
-                }
-            ],
-            metadata={
-                "version": "1.0",
-                "author": "Berb Team",
-                "last_updated": "2026-03-28",
-            }
-        ))
+        self.register(
+            Skill(
+                id="experiment-analysis",
+                name="Experiment Analysis",
+                description="Statistical analysis and visualization of experiment results",
+                category="analysis",
+                triggers=["EXPERIMENT_RUN", "RESULT_ANALYSIS", "ITERATIVE_REFINE"],
+                instructions=[
+                    "1. Collect all experimental results",
+                    "2. Compute descriptive statistics (mean, std, confidence intervals)",
+                    "3. Perform statistical tests (t-test, ANOVA, etc.)",
+                    "4. Create visualizations (bar charts, line plots, heatmaps)",
+                    "5. Identify significant patterns",
+                    "6. Document ablation study findings",
+                ],
+                references=[
+                    "Statistical Methods for ML (Wilkinson)",
+                    "Visualization Best Practices (Few)",
+                    "Reproducible Research (Stodden et al.)",
+                ],
+                examples=[
+                    {
+                        "metrics": ["accuracy", "precision", "recall", "f1"],
+                        "statistical_tests": ["paired t-test", "Wilcoxon signed-rank"],
+                        "visualizations": ["bar chart with error bars", "learning curve"],
+                        "significance_level": 0.05,
+                    }
+                ],
+                metadata={
+                    "version": "1.0",
+                    "author": "Berb Team",
+                    "last_updated": "2026-03-28",
+                },
+            )
+        )
 
         # Skill 3: Paper Writing
-        self.register(Skill(
-            id="paper-writing",
-            name="Paper Writing",
-            description="Academic paper writing following venue-specific requirements",
-            category="writing",
-            triggers=["PAPER_OUTLINE", "PAPER_DRAFT", "PAPER_REVISION"],
-            instructions=[
-                "1. Review venue requirements (format, length, style)",
-                "2. Create detailed outline with section word counts",
-                "3. Write abstract last (summarize key contributions)",
-                "4. Introduction: problem, contributions, roadmap",
-                "5. Related work: thematic organization, gap identification",
-                "6. Method: clear technical description, figures",
-                "7. Experiments: setup, results, ablation, analysis",
-                "8. Conclusion: summary, limitations, future work",
-            ],
-            references=[
-                "Writing for CS Conferences (Norvig)",
-                "Latex Templates (Overleaf)",
-                "Venue-specific guidelines (NeurIPS, ICML, ICLR)",
-            ],
-            examples=[
-                {
-                    "venue": "NeurIPS",
-                    "max_pages": 9,
-                    "structure": {
-                        "abstract": "150 words",
-                        "introduction": "1-1.5 pages",
-                        "related_work": "1-2 pages",
-                        "method": "2-3 pages",
-                        "experiments": "3-4 pages",
-                        "conclusion": "0.5 pages",
+        self.register(
+            Skill(
+                id="paper-writing",
+                name="Paper Writing",
+                description="Academic paper writing following venue-specific requirements",
+                category="writing",
+                triggers=["PAPER_OUTLINE", "PAPER_DRAFT", "PAPER_REVISION"],
+                instructions=[
+                    "1. Review venue requirements (format, length, style)",
+                    "2. Create detailed outline with section word counts",
+                    "3. Write abstract last (summarize key contributions)",
+                    "4. Introduction: problem, contributions, roadmap",
+                    "5. Related work: thematic organization, gap identification",
+                    "6. Method: clear technical description, figures",
+                    "7. Experiments: setup, results, ablation, analysis",
+                    "8. Conclusion: summary, limitations, future work",
+                ],
+                references=[
+                    "Writing for CS Conferences (Norvig)",
+                    "Latex Templates (Overleaf)",
+                    "Venue-specific guidelines (NeurIPS, ICML, ICLR)",
+                ],
+                examples=[
+                    {
+                        "venue": "NeurIPS",
+                        "max_pages": 9,
+                        "structure": {
+                            "abstract": "150 words",
+                            "introduction": "1-1.5 pages",
+                            "related_work": "1-2 pages",
+                            "method": "2-3 pages",
+                            "experiments": "3-4 pages",
+                            "conclusion": "0.5 pages",
+                        },
                     }
-                }
-            ],
-            metadata={
-                "version": "1.0",
-                "author": "Berb Team",
-                "last_updated": "2026-03-28",
-            }
-        ))
+                ],
+                metadata={
+                    "version": "1.0",
+                    "author": "Berb Team",
+                    "last_updated": "2026-03-28",
+                },
+            )
+        )
 
         # Skill 4: Citation Verification
-        self.register(Skill(
-            id="citation-verification",
-            name="Citation Verification",
-            description="4-layer citation verification to prevent hallucinations",
-            category="verification",
-            triggers=["PAPER_DRAFT", "PEER_REVIEW", "CITATION_VERIFY"],
-            instructions=[
-                "1. Extract all citations from paper",
-                "2. Layer 1: Validate DOI/arXiv ID format",
-                "3. Layer 2: Verify via CrossRef/DataCite/arXiv API",
-                "4. Layer 3: Match title/author/year metadata",
-                "5. Layer 4: Check claim-citation alignment",
-                "6. Flag or remove hallucinated citations",
-                "7. Generate verification report",
-            ],
-            references=[
-                "CrossRef API: api.crossref.org",
-                "Semantic Scholar API: semanticscholar.org/api",
-                "arXiv API: arxiv.org/help/api",
-            ],
-            examples=[
-                {
-                    "citation": {
-                        "doi": "10.1038/s41586-021-03819-2",
-                        "title": "Attention Is All You Need",
-                        "authors": ["Vaswani"],
-                        "year": 2017,
-                    },
-                    "verification": {
-                        "layer1_format": "PASS",
-                        "layer2_api": "PASS (CrossRef)",
-                        "layer3_info": "PASS (title match: 0.95)",
-                        "layer4_content": "PASS (alignment: 0.82)",
-                        "overall": "VALID",
+        self.register(
+            Skill(
+                id="citation-verification",
+                name="Citation Verification",
+                description="4-layer citation verification to prevent hallucinations",
+                category="verification",
+                triggers=["PAPER_DRAFT", "PEER_REVIEW", "CITATION_VERIFY"],
+                instructions=[
+                    "1. Extract all citations from paper",
+                    "2. Layer 1: Validate DOI/arXiv ID format",
+                    "3. Layer 2: Verify via CrossRef/DataCite/arXiv API",
+                    "4. Layer 3: Match title/author/year metadata",
+                    "5. Layer 4: Check claim-citation alignment",
+                    "6. Flag or remove hallucinated citations",
+                    "7. Generate verification report",
+                ],
+                references=[
+                    "CrossRef API: api.crossref.org",
+                    "Semantic Scholar API: semanticscholar.org/api",
+                    "arXiv API: arxiv.org/help/api",
+                ],
+                examples=[
+                    {
+                        "citation": {
+                            "doi": "10.1038/s41586-021-03819-2",
+                            "title": "Attention Is All You Need",
+                            "authors": ["Vaswani"],
+                            "year": 2017,
+                        },
+                        "verification": {
+                            "layer1_format": "PASS",
+                            "layer2_api": "PASS (CrossRef)",
+                            "layer3_info": "PASS (title match: 0.95)",
+                            "layer4_content": "PASS (alignment: 0.82)",
+                            "overall": "VALID",
+                        },
                     }
-                }
-            ],
-            metadata={
-                "version": "1.0",
-                "author": "Berb Team",
-                "last_updated": "2026-03-28",
-            }
-        ))
+                ],
+                metadata={
+                    "version": "1.0",
+                    "author": "Berb Team",
+                    "last_updated": "2026-03-28",
+                },
+            )
+        )
 
     def register(self, skill: Skill) -> None:
         """
@@ -321,10 +334,7 @@ class SkillRegistry:
         Returns:
             List of matching skills
         """
-        return [
-            skill for skill in self._skills.values()
-            if skill.category == category
-        ]
+        return [skill for skill in self._skills.values() if skill.category == category]
 
     def get_applicable(self, stage_id: str) -> list[Skill]:
         """
@@ -336,10 +346,7 @@ class SkillRegistry:
         Returns:
             List of applicable skills
         """
-        return [
-            skill for skill in self._skills.values()
-            if stage_id in skill.triggers
-        ]
+        return [skill for skill in self._skills.values() if stage_id in skill.triggers]
 
     def list_skills(self) -> list[str]:
         """
@@ -357,19 +364,17 @@ class SkillRegistry:
         Returns:
             List of categories
         """
-        return list(set(skill.category for skill in self._skills.values()))
+        return list({skill.category for skill in self._skills.values()})
 
     def to_dict(self) -> dict[str, Any]:
         """Convert registry to dictionary."""
-        return {
-            skill_id: skill.to_dict()
-            for skill_id, skill in self._skills.items()
-        }
+        return {skill_id: skill.to_dict() for skill_id, skill in self._skills.items()}
 
 
 # =============================================================================
 # Skill Application Helper
 # =============================================================================
+
 
 def apply_skills(
     context: dict[str, Any],
@@ -395,9 +400,7 @@ def apply_skills(
     for skill in applicable_skills:
         context = skill.apply(context)
 
-    logger.debug(
-        f"Applied {len(applicable_skills)} skills for stage {stage_id}"
-    )
+    logger.debug(f"Applied {len(applicable_skills)} skills for stage {stage_id}")
 
     return context
 
@@ -405,6 +408,7 @@ def apply_skills(
 # =============================================================================
 # Skill Export for MetaClaw
 # =============================================================================
+
 
 def export_skills_for_metaclaw(output_dir: Path) -> None:
     """
@@ -422,13 +426,13 @@ def export_skills_for_metaclaw(output_dir: Path) -> None:
         # Write SKILL.md
         skill_md = f"""# Skill: {skill.name}
 
-**ID:** {skill_id}  
-**Category:** {skill.category}  
+**ID:** {skill_id}
+**Category:** {skill.category}
 **Description:** {skill.description}
 
 ## Triggers
 
-This skill applies at stages: {', '.join(skill.triggers)}
+This skill applies at stages: {", ".join(skill.triggers)}
 
 ## Instructions
 

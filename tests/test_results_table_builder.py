@@ -112,9 +112,7 @@ class TestBuildResultsTables:
         assert "\\begin{table*}" in tables[0].latex_code
 
     def test_verified_values_populated(self):
-        reg = _make_registry(
-            {"A": {0: 80.0, 1: 82.0}, "B": {0: 70.0, 1: 72.0}}
-        )
+        reg = _make_registry({"A": {0: 80.0, 1: 82.0}, "B": {0: 70.0, 1: 72.0}})
         tables = build_results_tables(reg)
         main = tables[0]
         assert 81.0 in main.verified_values or any(

@@ -112,6 +112,7 @@ class BaseAgent(ABC):
 # Literature Reviewer Agent
 # =============================================================================
 
+
 @dataclass
 class LiteratureReviewResult(AgentResult):
     """Literature review result."""
@@ -197,6 +198,7 @@ Respond in JSON format:
             )
 
             import json
+
             data = json.loads(response.content)
 
             return LiteratureReviewResult(
@@ -223,7 +225,7 @@ Respond in JSON format:
         return LiteratureReviewResult(
             success=True,
             summary=f"Literature review on {topic} with {len(papers)} papers.",
-            key_findings=[f"Finding {i+1}" for i in range(min(5, len(papers)))],
+            key_findings=[f"Finding {i + 1}" for i in range(min(5, len(papers)))],
             gaps=["Gap 1", "Gap 2"],
             trends=["Trend 1", "Trend 2"],
             relevant_papers=papers[:5],
@@ -252,6 +254,7 @@ Respond in JSON format:
 # =============================================================================
 # Experiment Analyst Agent
 # =============================================================================
+
 
 @dataclass
 class ExperimentAnalysisResult(AgentResult):
@@ -336,6 +339,7 @@ Respond in JSON format:
             )
 
             import json
+
             data = json.loads(response.content)
 
             return ExperimentAnalysisResult(
@@ -369,7 +373,7 @@ Respond in JSON format:
                 "max": max(metrics.values()) if metrics else 0,
                 "min": min(metrics.values()) if metrics else 0,
             },
-            key_results=[f"Result {i+1}: {v:.4f}" for i, v in enumerate(metrics.values())],
+            key_results=[f"Result {i + 1}: {v:.4f}" for i, v in enumerate(metrics.values())],
             ablation_findings=[],
             figure_suggestions=[
                 {"type": "bar", "description": "Metric comparison"},
@@ -409,6 +413,7 @@ Respond in JSON format:
 # =============================================================================
 # Paper Writing Agent
 # =============================================================================
+
 
 @dataclass
 class PaperWritingResult(AgentResult):
@@ -506,13 +511,11 @@ Respond in JSON format:
             )
 
             import json
+
             data = json.loads(response.content)
 
             # Calculate actual word count
-            total_words = sum(
-                len(section.split())
-                for section in data.get("sections", {}).values()
-            )
+            total_words = sum(len(section.split()) for section in data.get("sections", {}).values())
 
             return PaperWritingResult(
                 success=True,
@@ -586,6 +589,7 @@ Respond in JSON format:
 # =============================================================================
 # Rebuttal Writer Agent
 # =============================================================================
+
 
 @dataclass
 class RebuttalResult(AgentResult):
@@ -673,6 +677,7 @@ Respond in JSON format:
             )
 
             import json
+
             data = json.loads(response.content)
 
             return RebuttalResult(
@@ -699,12 +704,14 @@ Respond in JSON format:
             reviewer = review.get("reviewer", "Unknown")
             comments = review.get("comments", [])
             for comment in comments:
-                point_by_point.append({
-                    "reviewer": reviewer,
-                    "comment": comment[:100],
-                    "response": "We thank the reviewer for this comment. [Detailed response needed]",
-                    "evidence": "",
-                })
+                point_by_point.append(
+                    {
+                        "reviewer": reviewer,
+                        "comment": comment[:100],
+                        "response": "We thank the reviewer for this comment. [Detailed response needed]",
+                        "evidence": "",
+                    }
+                )
 
         return RebuttalResult(
             success=True,
@@ -740,6 +747,7 @@ Respond in JSON format:
 # Factory Function
 # =============================================================================
 
+
 def create_agent(
     agent_type: str,
     llm_client: Any = None,
@@ -770,9 +778,6 @@ def create_agent(
     }
 
     if agent_type not in agents:
-        raise ValueError(
-            f"Unknown agent type: {agent_type}. "
-            f"Available: {', '.join(agents.keys())}"
-        )
+        raise ValueError(f"Unknown agent type: {agent_type}. Available: {', '.join(agents.keys())}")
 
     return agents[agent_type](config)

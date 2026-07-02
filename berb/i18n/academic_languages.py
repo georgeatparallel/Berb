@@ -18,16 +18,15 @@ Supported Languages:
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
-from enum import Enum
-from typing import Any, Literal
+from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
 
-class WritingDirection(str, Enum):
+class WritingDirection(StrEnum):
     """Text writing direction.
 
     Attributes:
@@ -61,9 +60,7 @@ class AcademicLanguageProfile(BaseModel):
     name: str
     native_name: str
     writing_direction: WritingDirection = WritingDirection.LTR
-    passive_voice_convention: Literal[
-        "preferred", "neutral", "discouraged"
-    ] = "neutral"
+    passive_voice_convention: Literal["preferred", "neutral", "discouraged"] = "neutral"
     first_person_convention: Literal["we", "I", "impersonal", "varies"] = "varies"
     typical_sentence_length: tuple[int, int] = (15, 30)
     citation_placement: Literal["inline", "footnote", "endnote"] = "inline"
@@ -719,9 +716,7 @@ class MultilingualWritingAssistant:
 
         result = {}
         for en_name, translations in section_translations.items():
-            result[en_name] = translations.get(
-                self.language_code, translations["en"]
-            )
+            result[en_name] = translations.get(self.language_code, translations["en"])
 
         return result
 

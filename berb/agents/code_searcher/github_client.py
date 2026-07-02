@@ -29,6 +29,7 @@ _GITHUB_API = "https://api.github.com"
 @dataclass
 class RepoInfo:
     """Summary of a GitHub repository."""
+
     full_name: str  # "owner/repo"
     description: str = ""
     stars: int = 0
@@ -42,6 +43,7 @@ class RepoInfo:
 @dataclass
 class CodeSnippet:
     """A code snippet found via GitHub code search."""
+
     repo_full_name: str
     file_path: str
     file_url: str = ""
@@ -52,6 +54,7 @@ class CodeSnippet:
 @dataclass
 class RepoAnalysis:
     """Analysis of a repository's structure and content."""
+
     repo: RepoInfo
     readme: str = ""
     requirements: list[str] = field(default_factory=list)
@@ -92,9 +95,9 @@ class GitHubClient:
 
     def _get(self, url: str, params: dict[str, str] | None = None) -> dict[str, Any] | None:
         """Make a GET request to the GitHub API."""
-        import urllib.request
-        import urllib.error
         import json
+        import urllib.error
+        import urllib.request
 
         if params:
             query_str = "&".join(f"{k}={quote(str(v))}" for k, v in params.items())
@@ -159,16 +162,18 @@ class GitHubClient:
 
         repos: list[RepoInfo] = []
         for item in data.get("items", [])[:max_results]:
-            repos.append(RepoInfo(
-                full_name=item.get("full_name", ""),
-                description=item.get("description", "") or "",
-                stars=item.get("stargazers_count", 0),
-                language=item.get("language", "") or "",
-                updated_at=item.get("updated_at", ""),
-                html_url=item.get("html_url", ""),
-                default_branch=item.get("default_branch", "main"),
-                topics=item.get("topics", []),
-            ))
+            repos.append(
+                RepoInfo(
+                    full_name=item.get("full_name", ""),
+                    description=item.get("description", "") or "",
+                    stars=item.get("stargazers_count", 0),
+                    language=item.get("language", "") or "",
+                    updated_at=item.get("updated_at", ""),
+                    html_url=item.get("html_url", ""),
+                    default_branch=item.get("default_branch", "main"),
+                    topics=item.get("topics", []),
+                )
+            )
 
         logger.info("Found %d repos for query: %.60s", len(repos), query)
         return repos
@@ -211,12 +216,14 @@ class GitHubClient:
         snippets: list[CodeSnippet] = []
         for item in data.get("items", [])[:max_results]:
             repo = item.get("repository", {})
-            snippets.append(CodeSnippet(
-                repo_full_name=repo.get("full_name", ""),
-                file_path=item.get("path", ""),
-                file_url=item.get("html_url", ""),
-                score=item.get("score", 0.0),
-            ))
+            snippets.append(
+                CodeSnippet(
+                    repo_full_name=repo.get("full_name", ""),
+                    file_path=item.get("path", ""),
+                    file_url=item.get("html_url", ""),
+                    score=item.get("score", 0.0),
+                )
+            )
 
         logger.info("Found %d code snippets for query: %.60s", len(snippets), query)
         return snippets

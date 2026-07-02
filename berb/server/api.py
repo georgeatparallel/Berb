@@ -17,12 +17,14 @@ WebSocket:
 
 from __future__ import annotations
 
+import asyncio
 import logging
+from datetime import UTC
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Request, Response
-from fastapi.responses import StreamingResponse
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
@@ -47,12 +49,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # Manual CORS middleware for OPTIONS requests
 @app.middleware("http")
 async def cors_middleware(request: Request, call_next):
     """Add CORS headers to all responses."""
-    origin = request.headers.get("origin", "")
-    
+    request.headers.get("origin", "")
+
     # Handle preflight OPTIONS requests
     if request.method == "OPTIONS":
         response = Response(status_code=200)
@@ -61,13 +64,14 @@ async def cors_middleware(request: Request, call_next):
         response.headers["Access-Control-Allow-Headers"] = "*"
         response.headers["Access-Control-Allow-Credentials"] = "true"
         return response
-    
+
     # Process normal requests
     response = await call_next(request)
     response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
     response.headers["Access-Control-Allow-Credentials"] = "true"
-    
+
     return response
+
 
 # In-memory job store (use Redis/DB in production)
 _jobs: dict[str, dict[str, Any]] = {}
@@ -273,20 +277,21 @@ async def run_research_pipeline(
         logger.info(f"Starting pipeline for job {job_id}, topic: {topic}, preset: {preset}")
 
         # Import pipeline runner
+        from pathlib import Path
+
+        from berb.adapters import AdapterBundle
+        from berb.config import RCConfig
         from berb.pipeline.runner import execute_pipeline
         from berb.presets import get_preset
-        from berb.config import RCConfig
-        from berb.adapters import AdapterBundle
-        from pathlib import Path
-        import asyncio
 
         # Get preset configuration
-        preset_obj = get_preset(preset) if preset else None
-        
+        get_preset(preset) if preset else None
+
         # Create run directory
         import hashlib
-        from datetime import datetime, timezone
-        ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+        from datetime import datetime
+
+        ts = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
         topic_hash = hashlib.sha256(topic.encode()).hexdigest()[:6]
         run_id = f"rc-{ts}-{topic_hash}"
         run_dir = Path("artifacts") / run_id
@@ -300,34 +305,27 @@ async def run_research_pipeline(
             research={"topic": topic, "domains": ["general"]},
         )
 
-        # Run pipeline in executor (it's synchronous)
-        loop = asyncio.get_event_loop()
-        
-        def run_pipeline_sync():
-            try:
-                results = execute_pipeline(
-                    run_dir=run_dir,
-                    run_id=run_id,
-                    config=config,
-                    adapters=AdapterBundle(),
-                    auto_approve_gates=(mode == "autonomous"),
-                    skip_noncritical=True,
-                )
-                return results
-            except Exception as e:
-                logger.error(f"Pipeline execution error: {e}")
-                raise
-
-        results = await loop.run_in_executor(None, run_pipeline_sync)
+        try:
+            results = await execute_pipeline(
+                run_dir=run_dir,
+                run_id=run_id,
+                config=config,
+                adapters=AdapterBundle(),
+                auto_approve_gates=(mode == "autonomous"),
+                skip_noncritical=True,
+            )
+        except Exception as e:
+            logger.error(f"Pipeline execution error: {e}")
+            raise
 
         # Process results
         if results:
             done = sum(1 for r in results if r.status.value == "done")
             failed = sum(1 for r in results if r.status.value == "failed")
-            
+
             _jobs[job_id]["stages_done"] = done
             _jobs[job_id]["stages_failed"] = failed
-            
+
             if failed == 0:
                 _jobs[job_id]["status"] = "completed"
                 _jobs[job_id]["progress"] = 100.0

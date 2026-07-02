@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from berb.metrics.collector import MetricsCollector, get_metrics_collector
 
@@ -39,9 +38,9 @@ class PrometheusExporter:
             lines.append(f"# TYPE {name} counter")
             for label_key, value in label_values.items():
                 if label_key:
-                    lines.append(f'{name}{{{label_key}}} {value}')
+                    lines.append(f"{name}{{{label_key}}} {value}")
                 else:
-                    lines.append(f'{name} {value}')
+                    lines.append(f"{name} {value}")
             lines.append("")
 
         # Export gauges
@@ -53,9 +52,9 @@ class PrometheusExporter:
             lines.append(f"# TYPE {name} gauge")
             for label_key, value in label_values.items():
                 if label_key:
-                    lines.append(f'{name}{{{label_key}}} {value}')
+                    lines.append(f"{name}{{{label_key}}} {value}")
                 else:
-                    lines.append(f'{name} {value}')
+                    lines.append(f"{name} {value}")
             lines.append("")
 
         # Export histograms (simplified - just export summary stats)
@@ -70,9 +69,9 @@ class PrometheusExporter:
                 for stat_name, stat_value in stats_dict.items():
                     metric_name = f"{name}_{stat_name}"
                     if label_key:
-                        lines.append(f'{metric_name}{{{label_key}}} {stat_value}')
+                        lines.append(f"{metric_name}{{{label_key}}} {stat_value}")
                     else:
-                        lines.append(f'{metric_name} {stat_value}')
+                        lines.append(f"{metric_name} {stat_value}")
             lines.append("")
 
         return "\n".join(lines)

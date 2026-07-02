@@ -10,7 +10,6 @@ from berb.config import CoPilotConfig
 from berb.copilot.branching import BranchManager
 from berb.copilot.feedback import Feedback, FeedbackHandler
 from berb.copilot.modes import ResearchMode
-from berb.pipeline.stages import GATE_STAGES
 
 logger = logging.getLogger(__name__)
 
@@ -27,9 +26,7 @@ class CoPilotController:
         self.mode = ResearchMode(config.mode)
         self.run_dir = run_dir
         self.feedback_handler = FeedbackHandler(run_dir)
-        self.branch_manager = BranchManager(
-            run_dir, max_branches=config.max_branches
-        )
+        self.branch_manager = BranchManager(run_dir, max_branches=config.max_branches)
 
     def should_pause(self, stage_num: int, is_gate: bool) -> bool:
         """Determine if the pipeline should pause at this stage."""
@@ -62,10 +59,12 @@ class CoPilotController:
         if artifacts:
             lines.append(f"Artifacts: {', '.join(artifacts)}")
 
-        lines.extend([
-            "",
-            "Available actions: approve, modify, retry, skip, branch, rollback",
-        ])
+        lines.extend(
+            [
+                "",
+                "Available actions: approve, modify, retry, skip, branch, rollback",
+            ]
+        )
 
         return "\n".join(lines)
 
@@ -124,9 +123,7 @@ class CoPilotController:
             if self.config.allow_branching:
                 branch_name = feedback.branch_name or f"branch_{feedback.stage}"
                 try:
-                    branch_path = self.branch_manager.create_branch(
-                        branch_name, feedback.stage
-                    )
+                    branch_path = self.branch_manager.create_branch(branch_name, feedback.stage)
                     result["instruction"] = "branch_created"
                     result["branch_name"] = branch_name
                     result["branch_path"] = branch_path

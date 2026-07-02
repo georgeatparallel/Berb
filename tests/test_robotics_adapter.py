@@ -82,6 +82,7 @@ class TestRoboticsAdapter:
         from berb.domains.adapters.robotics import (
             RoboticsPromptAdapter,
         )
+
         assert isinstance(adapter, RoboticsPromptAdapter)
 
     def test_code_generation_blocks_nonempty(self):

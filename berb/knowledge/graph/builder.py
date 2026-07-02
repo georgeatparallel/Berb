@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from berb.knowledge.graph.entities import Entity, EntityType
-from berb.knowledge.graph.relations import Relation, RelationType
+from berb.knowledge.graph.relations import Relation
 
 logger = logging.getLogger(__name__)
 
@@ -97,9 +97,7 @@ class KnowledgeGraphBuilder:
 
     def get_entities_by_type(self, entity_type: EntityType) -> list[Entity]:
         """Get all entities of a specific type."""
-        return [
-            e for e in self._entities.values() if e.entity_type == entity_type
-        ]
+        return [e for e in self._entities.values() if e.entity_type == entity_type]
 
     def get_relations_for(
         self,
@@ -129,9 +127,7 @@ class KnowledgeGraphBuilder:
             return False
         del self._entities[entity_id]
         self._relations = [
-            r
-            for r in self._relations
-            if r.source_id != entity_id and r.target_id != entity_id
+            r for r in self._relations if r.source_id != entity_id and r.target_id != entity_id
         ]
         return True
 
@@ -217,9 +213,7 @@ class KnowledgeGraphBuilder:
             "entities": [e.to_dict() for e in self._entities.values()],
             "relations": [r.to_dict() for r in self._relations],
         }
-        path.write_text(
-            json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8"
-        )
+        path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
         logger.info(
             "Saved knowledge graph: %d entities, %d relations to %s",
             len(self._entities),

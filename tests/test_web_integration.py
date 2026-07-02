@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -63,8 +64,7 @@ class TestWebSearchAgentResult:
         r = WebSearchAgentResult(
             topic="test",
             web_results=[
-                SearchResult(title=f"R{i}", url=f"u{i}", snippet="x" * 1000)
-                for i in range(50)
+                SearchResult(title=f"R{i}", url=f"u{i}", snippet="x" * 1000) for i in range(50)
             ],
         )
         ctx = r.to_context_string(max_length=5000)
@@ -113,10 +113,7 @@ class TestWebSearchAgent:
         agent = WebSearchAgent(max_crawl_urls=3)
         result = WebSearchAgentResult(
             topic="test",
-            web_results=[
-                SearchResult(title=f"R{i}", url=f"https://ex.com/{i}")
-                for i in range(10)
-            ],
+            web_results=[SearchResult(title=f"R{i}", url=f"https://ex.com/{i}") for i in range(10)],
         )
         urls = agent._select_urls_to_crawl(result)
         assert len(urls) <= 3
@@ -174,8 +171,23 @@ class TestWebSearchAgent:
     @patch("berb.web.search.urlopen")
     @patch("berb.web.scholar.scholarly")
     @patch("berb.web.crawler.urlopen")
-    def test_search_and_extract_with_crawling(self, mock_crawl_urlopen, mock_scholarly, mock_search_urlopen):
-        """Test with crawling enabled."""
+    def test_search_and_extract_with_crawling(
+        self, mock_crawl_urlopen, mock_scholarly, mock_search_urlopen, monkeypatch
+    ):
+        """Test with crawling enabled.
+
+        WebCrawler.crawl_many() prefers the real Crawl4AI backend
+        (AsyncWebCrawler), which launches a real headless browser and
+        navigates to the given URLs — it only falls back to the mocked
+        urllib path on ImportError. Since crawl4ai is an installed
+        dependency in this environment, real browser automation against a
+        fake URL would run (and can hang indefinitely / exceed the pytest
+        timeout uninterruptibly). Force the ImportError branch so the test
+        exercises the intended urllib-mocked fallback path instead of
+        launching a real browser.
+        """
+        monkeypatch.setitem(sys.modules, "crawl4ai", None)
+
         mock_search_resp = MagicMock()
         mock_search_resp.read.return_value = b"""
         <a class="result__a" href="https://blog.example.com/kd">KD Tutorial</a>
@@ -212,6 +224,7 @@ class TestWebSearchAgent:
 class TestWebSearchConfig:
     def test_default_config(self):
         from berb.config import WebSearchConfig
+
         cfg = WebSearchConfig()
         assert cfg.enabled is True
         assert cfg.max_web_results == 10
@@ -220,5 +233,6 @@ class TestWebSearchConfig:
     def test_config_in_rcconfig(self):
         from berb.config import RCConfig
         import dataclasses
+
         field_names = [f.name for f in dataclasses.fields(RCConfig)]
         assert "web_search" in field_names

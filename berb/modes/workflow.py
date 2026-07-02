@@ -11,7 +11,7 @@ the pipeline executes (autonomous vs collaborative).
 from __future__ import annotations
 
 import logging
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Literal
 
@@ -20,12 +20,12 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger(__name__)
 
 
-class WorkflowType(str, Enum):
+class WorkflowType(StrEnum):
     """Types of research workflows available in Berb.
-    
+
     Each workflow type represents a different research goal and determines
     which stages of the 23-stage pipeline are executed.
-    
+
     Attributes:
         FULL_RESEARCH: End-to-end research (topic → paper). All 23 stages.
         LITERATURE_ONLY: Literature search + synthesis only. No experiments.
@@ -85,10 +85,10 @@ class WorkflowType(str, Enum):
 
 class WorkflowConfig(BaseModel):
     """Configuration for a research workflow.
-    
+
     This configuration determines which stages of the pipeline are executed
     based on the selected workflow type, plus additional user preferences.
-    
+
     Attributes:
         workflow: The type of workflow to execute
         enabled_stages: Optional override for which stages to run
@@ -130,13 +130,13 @@ class WorkflowConfig(BaseModel):
     # Component toggles (user chooses what they want)
     include_math: bool = False
     """Enable mathematical content engine (O2)"""
-    
+
     include_experiments: bool = True
     """Enable experiment stages"""
-    
+
     include_code_appendix: bool = False
     """Generate pseudocode appendix (O3)"""
-    
+
     include_supplementary: bool = True
     """Generate supplementary materials (O5)"""
 
@@ -170,66 +170,90 @@ class WorkflowConfig(BaseModel):
             pass
 
         if self.workflow == WorkflowType.PAPER_FROM_RESULTS and not self.uploaded_data:
-            logger.warning(
-                "paper-from-results workflow selected but no uploaded_data provided"
-            )
+            logger.warning("paper-from-results workflow selected but no uploaded_data provided")
 
         if self.workflow == WorkflowType.REVIEW_ONLY and not self.uploaded_manuscript:
-            logger.warning(
-                "review-only workflow selected but no uploaded_manuscript provided"
-            )
+            logger.warning("review-only workflow selected but no uploaded_manuscript provided")
 
         if self.workflow == WorkflowType.REBUTTAL:
             if not self.uploaded_manuscript:
-                logger.warning(
-                    "rebuttal workflow selected but no uploaded_manuscript provided"
-                )
+                logger.warning("rebuttal workflow selected but no uploaded_manuscript provided")
             if not self.uploaded_reviews:
-                logger.warning(
-                    "rebuttal workflow selected but no uploaded_reviews provided"
-                )
+                logger.warning("rebuttal workflow selected but no uploaded_reviews provided")
 
 
 # Stage mapping per workflow type
 WORKFLOW_STAGES: dict[WorkflowType, list[int]] = {
-    WorkflowType.FULL_RESEARCH: list(range(1, 24)),
-    """All 23 stages: topic → literature → hypothesis → experiments → paper""",
-    
-    WorkflowType.LITERATURE_ONLY: [1, 2, 3, 4, 5, 6, 7, 8],
-    """Scoping + Literature + Synthesis + Hypothesis only""",
-    
-    WorkflowType.PAPER_FROM_RESULTS: [14, 15, 16, 17, 18, 19, 20, 21, 22, 23],
-    """Analysis + Writing + Finalization only""",
-    
-    WorkflowType.EXPERIMENT_ONLY: [9, 10, 11, 12, 13, 14, 15],
-    """Design + Execution + Analysis + Decision only""",
-    
-    WorkflowType.REVIEW_ONLY: [18],
-    """Peer Review only""",
-    
-    WorkflowType.REBUTTAL: [],
-    """Custom pipeline, not stage-based (uses K4 Rebuttal Generator)""",
-    
-    WorkflowType.LITERATURE_REVIEW_PAPER: [1, 2, 3, 4, 5, 6, 7, 8, 16, 17, 18, 19, 20, 21, 22, 23],
-    """Scoping + Literature + Synthesis + Paper Writing (skip experiments)""",
-    
-    WorkflowType.MATH_PAPER: list(range(1, 24)),
-    """All 23 stages + mathematical content engine (O2)""",
-    
-    WorkflowType.COMPUTATIONAL_PAPER: list(range(1, 24)),
-    """All 23 stages + pseudocode appendix (O3) + code quality (O4)""",
+    WorkflowType.FULL_RESEARCH: list(
+        range(1, 24)
+    ),  # All 23 stages: topic → literature → hypothesis → experiments → paper
+    WorkflowType.LITERATURE_ONLY: [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+    ],  # Scoping + Literature + Synthesis + Hypothesis only
+    WorkflowType.PAPER_FROM_RESULTS: [
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+    ],  # Analysis + Writing + Finalization only
+    WorkflowType.EXPERIMENT_ONLY: [
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+    ],  # Design + Execution + Analysis + Decision only
+    WorkflowType.REVIEW_ONLY: [18],  # Peer Review only
+    WorkflowType.REBUTTAL: [],  # Custom pipeline, not stage-based (uses K4 Rebuttal Generator)
+    WorkflowType.LITERATURE_REVIEW_PAPER: [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+    ],  # Scoping + Literature + Synthesis + Paper Writing (skip experiments)
+    WorkflowType.MATH_PAPER: list(range(1, 24)),  # All 23 stages + mathematical content engine (O2)
+    WorkflowType.COMPUTATIONAL_PAPER: list(
+        range(1, 24)
+    ),  # All 23 stages + pseudocode appendix (O3) + code quality (O4)
 }
 
 
 class WorkflowManager:
     """Manager for workflow selection and configuration.
-    
+
     This class handles:
     - Workflow type selection and validation
     - Stage mapping and filtering
     - Workflow-specific configuration
     - User input validation
-    
+
     Attributes:
         current_workflow: The currently selected workflow
         config: Workflow configuration
@@ -241,7 +265,7 @@ class WorkflowManager:
         config: WorkflowConfig | None = None,
     ):
         """Initialize workflow manager.
-        
+
         Args:
             workflow: The workflow type to use
             config: Optional workflow configuration
@@ -251,7 +275,7 @@ class WorkflowManager:
 
     def get_enabled_stages(self) -> list[int]:
         """Get the list of stages that will be executed.
-        
+
         Returns:
             List of stage numbers to execute
         """
@@ -259,10 +283,10 @@ class WorkflowManager:
 
     def is_stage_enabled(self, stage_number: int) -> bool:
         """Check if a specific stage is enabled for this workflow.
-        
+
         Args:
             stage_number: The stage number to check
-            
+
         Returns:
             True if the stage is enabled
         """
@@ -270,7 +294,7 @@ class WorkflowManager:
 
     def get_stage_names(self) -> dict[int, str]:
         """Get the names of all enabled stages.
-        
+
         Returns:
             Dictionary mapping stage numbers to names
         """
@@ -299,15 +323,11 @@ class WorkflowManager:
             22: "EXPORT_PUBLISH",
             23: "CITATION_VERIFY",
         }
-        return {
-            num: name
-            for num, name in stage_names.items()
-            if self.is_stage_enabled(num)
-        }
+        return {num: name for num, name in stage_names.items() if self.is_stage_enabled(num)}
 
     def to_dict(self) -> dict:
         """Convert workflow configuration to dictionary.
-        
+
         Returns:
             Dictionary representation of workflow configuration
         """
@@ -317,14 +337,10 @@ class WorkflowManager:
             "uploaded_pdfs": [str(p) for p in self.config.uploaded_pdfs],
             "uploaded_data": [str(p) for p in self.config.uploaded_data],
             "uploaded_manuscript": (
-                str(self.config.uploaded_manuscript)
-                if self.config.uploaded_manuscript
-                else None
+                str(self.config.uploaded_manuscript) if self.config.uploaded_manuscript else None
             ),
             "uploaded_reviews": (
-                str(self.config.uploaded_reviews)
-                if self.config.uploaded_reviews
-                else None
+                str(self.config.uploaded_reviews) if self.config.uploaded_reviews else None
             ),
             "include_math": self.config.include_math,
             "include_experiments": self.config.include_experiments,
@@ -336,10 +352,10 @@ class WorkflowManager:
     @classmethod
     def from_dict(cls, data: dict) -> WorkflowManager:
         """Create workflow manager from dictionary.
-        
+
         Args:
             data: Dictionary with workflow configuration
-            
+
         Returns:
             Configured WorkflowManager instance
         """
@@ -350,14 +366,10 @@ class WorkflowManager:
             uploaded_pdfs=[Path(p) for p in data.get("uploaded_pdfs", [])],
             uploaded_data=[Path(p) for p in data.get("uploaded_data", [])],
             uploaded_manuscript=(
-                Path(data["uploaded_manuscript"])
-                if data.get("uploaded_manuscript")
-                else None
+                Path(data["uploaded_manuscript"]) if data.get("uploaded_manuscript") else None
             ),
             uploaded_reviews=(
-                Path(data["uploaded_reviews"])
-                if data.get("uploaded_reviews")
-                else None
+                Path(data["uploaded_reviews"]) if data.get("uploaded_reviews") else None
             ),
             include_math=data.get("include_math", False),
             include_experiments=data.get("include_experiments", True),
@@ -371,10 +383,10 @@ class WorkflowManager:
 # Convenience functions for CLI
 def get_workflow_stages(workflow: WorkflowType) -> list[int]:
     """Get the stages for a workflow type.
-    
+
     Args:
         workflow: The workflow type
-        
+
     Returns:
         List of stage numbers
     """
@@ -395,7 +407,7 @@ def create_workflow_manager(
     operation_mode: str = "autonomous",
 ) -> WorkflowManager:
     """Create a workflow manager from CLI arguments.
-    
+
     Args:
         workflow: Workflow type string
         stages: Optional list of stage numbers to enable
@@ -408,7 +420,7 @@ def create_workflow_manager(
         include_code_appendix: Include code appendix
         include_supplementary: Include supplementary materials
         operation_mode: Autonomous or collaborative
-        
+
     Returns:
         Configured WorkflowManager instance
     """
@@ -419,12 +431,8 @@ def create_workflow_manager(
         enabled_stages=stages,
         uploaded_pdfs=[Path(p) for p in uploaded_pdfs or []],
         uploaded_data=[Path(p) for p in uploaded_data or []],
-        uploaded_manuscript=(
-            Path(uploaded_manuscript) if uploaded_manuscript else None
-        ),
-        uploaded_reviews=(
-            Path(uploaded_reviews) if uploaded_reviews else None
-        ),
+        uploaded_manuscript=(Path(uploaded_manuscript) if uploaded_manuscript else None),
+        uploaded_reviews=(Path(uploaded_reviews) if uploaded_reviews else None),
         include_math=include_math,
         include_experiments=include_experiments,
         include_code_appendix=include_code_appendix,

@@ -83,8 +83,11 @@ class SshRemoteSandbox:
         err = validate_entry_point(entry_point)
         if err:
             return SandboxResult(
-                returncode=-1, stdout="", stderr=err,
-                elapsed_sec=0.0, metrics={},
+                returncode=-1,
+                stdout="",
+                stderr=err,
+                elapsed_sec=0.0,
+                metrics={},
             )
 
         self._inject_harness(staging)
@@ -92,9 +95,7 @@ class SshRemoteSandbox:
         for src_item in project_dir.iterdir():
             dest = staging / src_item.name
             if dest.name == "experiment_harness.py":
-                logger.warning(
-                    "Project contains experiment_harness.py — skipping (immutable)"
-                )
+                logger.warning("Project contains experiment_harness.py — skipping (immutable)")
                 continue
             if src_item.is_dir():
                 shutil.copytree(src_item, dest, dirs_exist_ok=True)
@@ -105,8 +106,11 @@ class SshRemoteSandbox:
         err = validate_entry_point_resolved(staging, entry_point)
         if err:
             return SandboxResult(
-                returncode=-1, stdout="", stderr=err,
-                elapsed_sec=0.0, metrics={},
+                returncode=-1,
+                stdout="",
+                stderr=err,
+                elapsed_sec=0.0,
+                metrics={},
             )
 
         entry = staging / entry_point
@@ -134,7 +138,12 @@ class SshRemoteSandbox:
         cmd.append("echo berb-ssh-ok")
         try:
             cp = subprocess.run(
-                cmd, capture_output=True, text=True, encoding="utf-8", timeout=15, check=False,
+                cmd,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                timeout=15,
+                check=False,
             )
             if cp.returncode == 0 and "berb-ssh-ok" in cp.stdout:
                 return True, f"SSH connection to {config.host} OK"
@@ -149,17 +158,13 @@ class SshRemoteSandbox:
         harness_src = Path(__file__).parent / "harness_template.py"
         if harness_src.exists():
             dest = target_dir / "experiment_harness.py"
-            dest.write_text(
-                harness_src.read_text(encoding="utf-8"), encoding="utf-8"
-            )
+            dest.write_text(harness_src.read_text(encoding="utf-8"), encoding="utf-8")
 
     # ------------------------------------------------------------------
     # Internals
     # ------------------------------------------------------------------
 
-    def _execute(
-        self, staging_dir: Path, *, entry_point: str, timeout_sec: int
-    ) -> SandboxResult:
+    def _execute(self, staging_dir: Path, *, entry_point: str, timeout_sec: int) -> SandboxResult:
         """Core execution flow for remote experiments.
 
         Steps:
@@ -207,17 +212,21 @@ class SshRemoteSandbox:
             if setup_result.returncode != 0:
                 logger.warning(
                     "Setup command failed: %s (exit %d): %s",
-                    setup_cmd, setup_result.returncode, setup_result.stderr,
+                    setup_cmd,
+                    setup_result.returncode,
+                    setup_result.stderr,
                 )
 
         # 4. Execute experiment
         if cfg.use_docker:
             exec_cmd = self._build_docker_exec_cmd(
-                remote_dir, entry_point=entry_point,
+                remote_dir,
+                entry_point=entry_point,
             )
         else:
             exec_cmd = self._build_bare_exec_cmd(
-                remote_dir, entry_point=entry_point,
+                remote_dir,
+                entry_point=entry_point,
             )
 
         start = time.monotonic()
@@ -242,7 +251,10 @@ class SshRemoteSandbox:
         )
 
     def _build_bare_exec_cmd(
-        self, remote_dir: str, *, entry_point: str,
+        self,
+        remote_dir: str,
+        *,
+        entry_point: str,
     ) -> str:
         """Build command to run Python directly on remote host (with basic sandboxing)."""
         cfg = self.config
@@ -274,7 +286,10 @@ class SshRemoteSandbox:
         )
 
     def _build_docker_exec_cmd(
-        self, remote_dir: str, *, entry_point: str,
+        self,
+        remote_dir: str,
+        *,
+        entry_point: str,
     ) -> str:
         """Build command to run inside a Docker container on the remote host.
 
@@ -284,13 +299,20 @@ class SshRemoteSandbox:
         """
         cfg = self.config
         parts = [
-            "docker", "run", "--rm",
-            "-v", f"{shlex.quote(remote_dir)}:/workspace",
-            "-w", "/workspace",
+            "docker",
+            "run",
+            "--rm",
+            "-v",
+            f"{shlex.quote(remote_dir)}:/workspace",
+            "-w",
+            "/workspace",
             # BUG-DA8-14: Mirror local Docker sandbox security hardening
-            "-e", "HOME=/workspace/.home",
-            "-e", "TORCH_HOME=/workspace/.home/.cache/torch",
-            "-e", "MPLCONFIGDIR=/tmp/matplotlib",
+            "-e",
+            "HOME=/workspace/.home",
+            "-e",
+            "TORCH_HOME=/workspace/.home/.cache/torch",
+            "-e",
+            "MPLCONFIGDIR=/tmp/matplotlib",
             f"--memory={cfg.docker_memory_limit_mb}m",
             f"--shm-size={cfg.docker_shm_size_mb}m",
         ]
@@ -312,9 +334,7 @@ class SshRemoteSandbox:
 
         return " ".join(parts)
 
-    def _ssh_run(
-        self, command: str, *, timeout_sec: int | None = None
-    ) -> _SshResult:
+    def _ssh_run(self, command: str, *, timeout_sec: int | None = None) -> _SshResult:
         """Execute a command on the remote host via ssh."""
         if timeout_sec is None:
             timeout_sec = self.config.timeout_sec
@@ -360,7 +380,7 @@ class SshRemoteSandbox:
         target = f"{_ssh_target(cfg)}:{remote_dir}/"
 
         # P1 FIX: Use configurable host key checking
-        host_key_checking = getattr(cfg, 'strict_host_key_checking', 'accept-new')
+        host_key_checking = getattr(cfg, "strict_host_key_checking", "accept-new")
         cmd = ["scp", "-r", "-o", f"StrictHostKeyChecking={host_key_checking}"]
         if cfg.port != 22:
             cmd.extend(["-P", str(cfg.port)])
@@ -376,8 +396,13 @@ class SshRemoteSandbox:
 
         try:
             cp = subprocess.run(
-                cmd, capture_output=True, text=True, encoding="utf-8",
-                errors="replace", timeout=cfg.scp_timeout_sec, check=False,
+                cmd,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=cfg.scp_timeout_sec,
+                check=False,
             )
             if cp.returncode != 0:
                 logger.error("scp upload failed: %s", cp.stderr.strip())
@@ -390,6 +415,7 @@ class SshRemoteSandbox:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 class _SshResult:
     __slots__ = ("returncode", "stdout", "stderr", "timed_out")
@@ -422,15 +448,17 @@ def _build_ssh_base(
 
     *extra_opts* are inserted **before** the hostname so that SSH
     interprets them as SSH options, not as part of the remote command.
-    
+
     P1 FIX: Uses configurable strict_host_key_checking (default: accept-new).
     """
     # P1 FIX: Use configurable host key checking (default: accept-new)
-    host_key_checking = getattr(cfg, 'strict_host_key_checking', 'accept-new')
+    host_key_checking = getattr(cfg, "strict_host_key_checking", "accept-new")
     cmd = [
         "ssh",
-        "-o", f"StrictHostKeyChecking={host_key_checking}",
-        "-o", "BatchMode=yes",
+        "-o",
+        f"StrictHostKeyChecking={host_key_checking}",
+        "-o",
+        "BatchMode=yes",
     ]
     if cfg.port != 22:
         cmd.extend(["-p", str(cfg.port)])

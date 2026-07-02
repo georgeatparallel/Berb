@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime
+from datetime import date
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -19,9 +19,7 @@ class FeedManager:
         sources: tuple[str, ...] = ("arxiv", "semantic_scholar"),
         s2_api_key: str = "",
     ):
-        self.sources = tuple(
-            s for s in sources if s in self.SUPPORTED_SOURCES
-        )
+        self.sources = tuple(s for s in sources if s in self.SUPPORTED_SOURCES)
         self.s2_api_key = s2_api_key
 
     def fetch_recent_papers(
@@ -119,9 +117,7 @@ class FeedManager:
             return [
                 {
                     "title": r.get("title", ""),
-                    "authors": [
-                        a.get("name", "") for a in r.get("authors", [])
-                    ],
+                    "authors": [a.get("name", "") for a in r.get("authors", [])],
                     "abstract": r.get("abstract", ""),
                     "url": r.get("url", ""),
                     "source": "semantic_scholar",

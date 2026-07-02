@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import shutil
 from dataclasses import dataclass, field
 from typing import Any
@@ -40,19 +39,20 @@ class EnvironmentReport:
 
 def detect_environment() -> EnvironmentReport:
     """Detect local environment and generate recommendations."""
-    import sys
     import subprocess
+    import sys
 
     report = EnvironmentReport()
-    report.python_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+    report.python_version = (
+        f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+    )
 
     # Docker
     if shutil.which("docker"):
         report.has_docker = True
         try:
             result = subprocess.run(
-                ["docker", "--version"],
-                capture_output=True, text=True, encoding="utf-8", timeout=5
+                ["docker", "--version"], capture_output=True, text=True, encoding="utf-8", timeout=5
             )
             report.docker_version = result.stdout.strip()
         except Exception:
@@ -61,6 +61,7 @@ def detect_environment() -> EnvironmentReport:
     # GPU
     try:
         import torch
+
         if torch.cuda.is_available():
             report.has_gpu = True
             report.gpu_name = torch.cuda.get_device_name(0)
@@ -74,27 +75,20 @@ def detect_environment() -> EnvironmentReport:
     # Memory
     try:
         import psutil
+
         report.available_memory_gb = psutil.virtual_memory().available / (1024**3)
     except ImportError:
         pass
 
     # Recommendations
     if not report.has_docker:
-        report.recommendations.append(
-            "Install Docker for experiment isolation (recommended)"
-        )
+        report.recommendations.append("Install Docker for experiment isolation (recommended)")
     if not report.has_gpu:
-        report.recommendations.append(
-            "No GPU detected — use 'simulated' mode or remote GPU server"
-        )
+        report.recommendations.append("No GPU detected — use 'simulated' mode or remote GPU server")
     if not report.has_latex:
-        report.recommendations.append(
-            "Install LaTeX (texlive) for PDF paper export"
-        )
+        report.recommendations.append("Install LaTeX (texlive) for PDF paper export")
 
     if report.has_gpu and report.has_docker:
-        report.recommendations.append(
-            "Environment ready for full Docker GPU experiments"
-        )
+        report.recommendations.append("Environment ready for full Docker GPU experiments")
 
     return report

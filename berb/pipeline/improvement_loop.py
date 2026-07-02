@@ -15,12 +15,9 @@ Features:
 
 from __future__ import annotations
 
-import json
 import logging
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from enum import Enum
-from pathlib import Path
+from datetime import UTC, datetime
+from enum import StrEnum
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
@@ -30,13 +27,12 @@ from berb.review.cross_model_reviewer import (
     ReviewResult,
     Weakness,
     WeaknessSeverity,
-    ImprovementDelta,
 )
 
 logger = logging.getLogger(__name__)
 
 
-class FixType(str, Enum):
+class FixType(StrEnum):
     """Type of fix for a weakness.
 
     Attributes:
@@ -56,7 +52,7 @@ class FixType(str, Enum):
     REMOVE = "remove"
 
 
-class ClaimVerdict(str, Enum):
+class ClaimVerdict(StrEnum):
     """Verdict for claim verification.
 
     Attributes:
@@ -269,11 +265,13 @@ class ClaimTracker:
 
         claim = self.claims[claim_id]
         claim.status = "challenged"
-        claim.challenge_history.append({
-            "round": round_num,
-            "reason": reason,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-        })
+        claim.challenge_history.append(
+            {
+                "round": round_num,
+                "reason": reason,
+                "timestamp": datetime.now(UTC).isoformat(),
+            }
+        )
 
         logger.info(f"Challenged claim {claim_id}: {reason}")
 
@@ -457,7 +455,7 @@ class AutonomousImprovementLoop:
                 score_progression=ScoreProgression(),
             )
 
-        start_time = datetime.now(timezone.utc)
+        start_time = datetime.now(UTC)
         score_progression = ScoreProgression()
         all_fixes = []
         claims_killed = []
@@ -482,14 +480,18 @@ class AutonomousImprovementLoop:
         for round_num in range(1, self.config.max_rounds + 1):
             # Check stopping conditions
             if prior_review.overall_score >= self.config.score_threshold:
-                logger.info(f"Score threshold met ({prior_review.overall_score:.1f} >= {self.config.score_threshold})")
+                logger.info(
+                    f"Score threshold met ({prior_review.overall_score:.1f} >= {self.config.score_threshold})"
+                )
                 score_progression.stopped_early = True  # type: ignore
                 score_progression.stop_reason = "score_threshold_met"  # type: ignore
                 break
 
             # Check budget
             if total_cost >= self.config.max_loop_budget_usd:
-                logger.info(f"Budget exhausted (${total_cost:.2f} >= ${self.config.max_loop_budget_usd:.2f})")
+                logger.info(
+                    f"Budget exhausted (${total_cost:.2f} >= ${self.config.max_loop_budget_usd:.2f})"
+                )
                 score_progression.stopped_early = True  # type: ignore
                 score_progression.stop_reason = "budget_exhausted"  # type: ignore
                 break
@@ -514,7 +516,9 @@ class AutonomousImprovementLoop:
                 )
                 if total_cost + fix_cost["cost"] > self.config.max_loop_budget_usd:
                     if self.config.skip_expensive_fixes:
-                        logger.info(f"Skipping fix (too expensive): {weakness_class.weakness.category}")
+                        logger.info(
+                            f"Skipping fix (too expensive): {weakness_class.weakness.category}"
+                        )
                         continue
 
                 # Apply fix
@@ -547,7 +551,9 @@ class AutonomousImprovementLoop:
             total_cost += round_cost
 
             # Re-review
-            logger.info(f"Round {round_num} complete - {len(fixes_applied)} fixes applied, re-reviewing...")
+            logger.info(
+                f"Round {round_num} complete - {len(fixes_applied)} fixes applied, re-reviewing..."
+            )
             new_review = await reviewer.review(
                 current_paper,
                 prior_review=prior_review,
@@ -576,7 +582,7 @@ class AutonomousImprovementLoop:
             prior_review = new_review
 
         # Calculate final metrics
-        end_time = datetime.now(timezone.utc)
+        end_time = datetime.now(UTC)
         total_time = (end_time - start_time).total_seconds() / 60
 
         score_progression.final_score = prior_review.overall_score  # type: ignore
@@ -868,11 +874,17 @@ class ComputeGuard:
 
         # Check budget
         if api_cost > self.budget_remaining * 0.5:
-            return False, f"Cost ${api_cost:.2f} exceeds 50% of remaining budget ${self.budget_remaining:.2f}"
+            return (
+                False,
+                f"Cost ${api_cost:.2f} exceeds 50% of remaining budget ${self.budget_remaining:.2f}",
+            )
 
         # Check time
         if wall_clock > self.time_remaining_minutes:
-            return False, f"Time {wall_clock:.0f}min exceeds remaining time {self.time_remaining_minutes:.0f}min"
+            return (
+                False,
+                f"Time {wall_clock:.0f}min exceeds remaining time {self.time_remaining_minutes:.0f}min",
+            )
 
         # Check GPU hours (4hr limit)
         if gpu_hours > 4:

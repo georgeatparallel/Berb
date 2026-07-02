@@ -55,13 +55,13 @@ logger = logging.getLogger(__name__)
 @dataclass
 class Hypothesis:
     """A hypothesis with prior and posterior probabilities."""
-    
+
     name: str
     prior: float  # P(H) - prior probability (0-1)
     posterior: float = 0.0  # P(H|E) - posterior probability
     likelihood: float = 1.0  # P(E|H) - likelihood
     description: str = ""
-    
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
@@ -76,22 +76,22 @@ class Hypothesis:
 @dataclass
 class Evidence:
     """Evidence item with likelihood assessments."""
-    
+
     name: str
     description: str = ""
     likelihood_given_h: dict[str, float] = field(default_factory=dict)  # P(E|H) for each hypothesis
     likelihood_given_not_h: dict[str, float] = field(default_factory=dict)  # P(E|¬H)
-    
+
     def likelihood_ratio(self, hypothesis_name: str) -> float:
         """Calculate likelihood ratio for a hypothesis."""
         p_e_given_h = self.likelihood_given_h.get(hypothesis_name, 0.5)
         p_e_given_not_h = self.likelihood_given_not_h.get(hypothesis_name, 0.5)
-        
+
         if p_e_given_not_h == 0:
-            return float('inf') if p_e_given_h > 0 else 1.0
-        
+            return float("inf") if p_e_given_h > 0 else 1.0
+
         return p_e_given_h / p_e_given_not_h
-    
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
@@ -105,13 +105,13 @@ class Evidence:
 @dataclass
 class BayesianResult:
     """Result of Bayesian reasoning."""
-    
+
     hypotheses: list[Hypothesis]
     evidence: list[Evidence]
     posteriors: dict[str, float]  # Final posterior probabilities
     sensitivity: dict[str, Any]  # Sensitivity analysis results
     recommendation: str = ""
-    
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
@@ -125,24 +125,25 @@ class BayesianResult:
 
 class BayesianMethod(ReasoningMethod):
     """Bayesian reasoning method.
-    
+
     Implements Bayesian belief updates:
     P(H|E) = P(E|H) × P(H) / P(E)
-    
+
     Where:
     - P(H) = Prior probability of hypothesis
     - P(E|H) = Likelihood of evidence given hypothesis
     - P(H|E) = Posterior probability after seeing evidence
-    
+
     Attributes:
         router: LLM model router
     """
-    
+
     method_type = MethodType.BAYESIAN
-    
+
     def __init__(
         self,
         router: Any | None = None,
+        llm_client: Any | None = None,
         name: str | None = None,
         description: str | None = None,
     ):
@@ -157,65 +158,64 @@ class BayesianMethod(ReasoningMethod):
         """
         super().__init__(
             name=name or "Bayesian Reasoning",
-            description=description or (
-                "Evidence-grounded belief updates using Bayes' rule"
-            ),
+            description=description or ("Evidence-grounded belief updates using Bayes' rule"),
         )
         self.router = router
         self.llm_client = llm_client
-    
+
     async def execute(self, context: ReasoningContext) -> ReasoningResult:
         """
         Execute Bayesian reasoning.
-        
+
         Args:
             context: Reasoning context with hypotheses and evidence
-        
+
         Returns:
             ReasoningResult with posteriors and sensitivity analysis
         """
         import time
+
         t0 = time.monotonic()
-        
+
         # Validate context
         if not self.validate_context(context):
             return ReasoningResult.error_result(
                 self.method_type,
                 "Invalid context: missing stage_id or input_data",
             )
-        
+
         # Extract required data from context
         hypotheses_data = context.get("hypotheses", [])
         evidence_data = context.get("evidence", [])
-        
+
         if not hypotheses_data:
             return ReasoningResult.error_result(
                 self.method_type,
                 "Context missing hypotheses",
             )
-        
+
         try:
             # Phase 1: Elicit priors (if not provided)
             hypotheses = await self._elicit_priors(hypotheses_data, context)
-            
+
             # Phase 2: Assess likelihoods (if evidence provided)
             evidence = await self._assess_likelihoods(evidence_data, hypotheses, context)
-            
+
             # Phase 3: Update posteriors using Bayes' rule
             posteriors = self._update_posteriors(hypotheses, evidence)
-            
+
             # Phase 4: Sensitivity analysis
             sensitivity = await self._analyze_sensitivity(hypotheses, evidence, context)
-            
+
             # Phase 5: Generate recommendation
             recommendation = self._generate_recommendation(posteriors, sensitivity)
-            
+
             # Update hypotheses with posteriors
             for h in hypotheses:
                 h.posterior = posteriors.get(h.name, h.prior)
-            
+
             elapsed = time.monotonic() - t0
-            
+
             return ReasoningResult.success_result(
                 method_type=self.method_type,
                 output={
@@ -232,14 +232,14 @@ class BayesianMethod(ReasoningMethod):
                     "duration_sec": elapsed,
                 },
             )
-            
+
         except Exception as e:
             self._logger.error("Bayesian reasoning failed: %s", e)
             return ReasoningResult.error_result(
                 self.method_type,
                 str(e),
             )
-    
+
     async def _elicit_priors(
         self,
         hypotheses_data: list[dict[str, Any]],
@@ -247,16 +247,16 @@ class BayesianMethod(ReasoningMethod):
     ) -> list[Hypothesis]:
         """
         Elicit prior probabilities for hypotheses.
-        
+
         Args:
             hypotheses_data: List of hypothesis data
             context: Reasoning context
-        
+
         Returns:
             List of Hypothesis objects with priors
         """
         hypotheses = []
-        
+
         # If priors already provided, use them
         for h_data in hypotheses_data:
             if isinstance(h_data, Hypothesis):
@@ -275,27 +275,27 @@ class BayesianMethod(ReasoningMethod):
                     prior=0.5,
                 )
                 hypotheses.append(hypothesis)
-        
+
         # If no priors provided, use LLM to elicit
         if all(h.prior == 0.5 for h in hypotheses) and self.router:
             provider = self.router.get_provider_for_role("scoring")
-            
+
             prompt = self._build_prior_elicitation_prompt(hypotheses, context)
             response = await provider.complete(prompt)
-            
+
             # Parse priors from response
             priors = self._parse_priors(response.content, hypotheses)
-            for h, prior in zip(hypotheses, priors):
+            for h, prior in zip(hypotheses, priors, strict=False):
                 h.prior = prior
-        
+
         # Normalize priors to sum to 1
         total = sum(h.prior for h in hypotheses)
         if total > 0:
             for h in hypotheses:
                 h.prior /= total
-        
+
         return hypotheses
-    
+
     async def _assess_likelihoods(
         self,
         evidence_data: list[dict[str, Any]],
@@ -304,17 +304,17 @@ class BayesianMethod(ReasoningMethod):
     ) -> list[Evidence]:
         """
         Assess likelihood of evidence given hypotheses.
-        
+
         Args:
             evidence_data: List of evidence data
             hypotheses: List of hypotheses
             context: Reasoning context
-        
+
         Returns:
             List of Evidence objects
         """
         evidence = []
-        
+
         for e_data in evidence_data:
             if isinstance(e_data, Evidence):
                 evidence.append(e_data)
@@ -323,25 +323,25 @@ class BayesianMethod(ReasoningMethod):
                     name=e_data.get("name", "Unknown"),
                     description=e_data.get("description", ""),
                 )
-                
+
                 # Extract likelihoods if provided
                 ev.likelihood_given_h = e_data.get("likelihood_given_h", {})
                 ev.likelihood_given_not_h = e_data.get("likelihood_given_not_h", {})
-                
+
                 evidence.append(ev)
-        
+
         # If likelihoods not provided, use LLM to assess
         if evidence and self.router:
             provider = self.router.get_provider_for_role("scoring")
-            
+
             prompt = self._build_likelihood_assessment_prompt(evidence, hypotheses, context)
             response = await provider.complete(prompt)
-            
+
             # Parse likelihoods from response
             evidence = self._parse_likelihoods(response.content, evidence, hypotheses)
-        
+
         return evidence
-    
+
     def _update_posteriors(
         self,
         hypotheses: list[Hypothesis],
@@ -349,42 +349,41 @@ class BayesianMethod(ReasoningMethod):
     ) -> dict[str, float]:
         """
         Update posterior probabilities using Bayes' rule.
-        
+
         P(H|E) = P(E|H) × P(H) / P(E)
-        
+
         Args:
             hypotheses: List of hypotheses with priors
             evidence: List of evidence with likelihoods
-        
+
         Returns:
             Dictionary of posterior probabilities
         """
         posteriors = {h.name: h.prior for h in hypotheses}
-        
+
         # Apply each piece of evidence
         for ev in evidence:
             # Calculate marginal likelihood P(E)
             p_e = sum(
-                ev.likelihood_given_h.get(h.name, 0.5) * posteriors[h.name]
-                for h in hypotheses
+                ev.likelihood_given_h.get(h.name, 0.5) * posteriors[h.name] for h in hypotheses
             )
-            
+
             # Update each hypothesis
             for h in hypotheses:
                 p_e_given_h = ev.likelihood_given_h.get(h.name, 0.5)
-                
+
                 if p_e > 0:
                     # Bayes' rule
                     posteriors[h.name] = (p_e_given_h * posteriors[h.name]) / p_e
-        
+
         # Normalize posteriors
         total = sum(posteriors.values())
         if total > 0:
             for name in posteriors:
                 posteriors[name] /= total
-        
+
         return posteriors
-    
+
     async def _analyze_sensitivity(
         self,
         hypotheses: list[Hypothesis],
@@ -393,67 +392,68 @@ class BayesianMethod(ReasoningMethod):
     ) -> dict[str, Any]:
         """
         Analyze sensitivity to prior assumptions.
-        
+
         Args:
             hypotheses: List of hypotheses
             evidence: List of evidence
             context: Reasoning context
-        
+
         Returns:
             Sensitivity analysis results
         """
         # Base posteriors
         base_posteriors = self._update_posteriors(hypotheses, evidence)
-        
+
         # Perturb each prior and see how posteriors change
         sensitivity = {
             "base_posteriors": base_posteriors,
             "prior_perturbations": [],
         }
-        
+
         for h in hypotheses:
             # Perturb prior by ±10%
             for delta in [-0.1, 0.1]:
                 perturbed_prior = max(0.01, min(0.99, h.prior + delta))
-                
+
                 # Create perturbed hypothesis
                 perturbed_h = Hypothesis(
                     name=h.name,
                     prior=perturbed_prior,
                 )
                 perturbed_hypotheses = [
-                    perturbed_h if h2.name == h.name else h2
-                    for h2 in hypotheses
+                    perturbed_h if h2.name == h.name else h2 for h2 in hypotheses
                 ]
-                
+
                 # Recalculate posteriors
                 perturbed_posteriors = self._update_posteriors(
                     perturbed_hypotheses,
                     evidence,
                 )
-                
+
                 # Calculate sensitivity
                 sensitivity_score = sum(
                     abs(perturbed_posteriors.get(name, 0) - base_posteriors.get(name, 0))
                     for name in base_posteriors
                 )
-                
-                sensitivity["prior_perturbations"].append({
-                    "hypothesis": h.name,
-                    "delta": delta,
-                    "sensitivity_score": sensitivity_score,
-                    "perturbed_posteriors": perturbed_posteriors,
-                })
-        
+
+                sensitivity["prior_perturbations"].append(
+                    {
+                        "hypothesis": h.name,
+                        "delta": delta,
+                        "sensitivity_score": sensitivity_score,
+                        "perturbed_posteriors": perturbed_posteriors,
+                    }
+                )
+
         # Identify most sensitive priors
         sensitivity["most_sensitive"] = max(
             sensitivity["prior_perturbations"],
             key=lambda x: x["sensitivity_score"],
             default=None,
         )
-        
+
         return sensitivity
-    
+
     def _generate_recommendation(
         self,
         posteriors: dict[str, float],
@@ -461,21 +461,21 @@ class BayesianMethod(ReasoningMethod):
     ) -> str:
         """
         Generate recommendation based on posteriors.
-        
+
         Args:
             posteriors: Posterior probabilities
             sensitivity: Sensitivity analysis results
-        
+
         Returns:
             Recommendation string
         """
         if not posteriors:
             return "Insufficient data for recommendation"
-        
+
         # Find best hypothesis
         best = max(posteriors.items(), key=lambda x: x[1])
         best_name, best_prob = best
-        
+
         # Check confidence
         if best_prob > 0.8:
             confidence = "HIGH"
@@ -483,19 +483,21 @@ class BayesianMethod(ReasoningMethod):
             confidence = "MEDIUM"
         else:
             confidence = "LOW"
-        
+
         # Check sensitivity
         most_sensitive = sensitivity.get("most_sensitive")
         if most_sensitive and most_sensitive["sensitivity_score"] > 0.2:
-            sensitivity_warning = f"Note: Results sensitive to prior for {most_sensitive['hypothesis']}"
+            sensitivity_warning = (
+                f"Note: Results sensitive to prior for {most_sensitive['hypothesis']}"
+            )
         else:
             sensitivity_warning = "Results robust to prior perturbations"
-        
+
         return (
             f"Recommendation: {best_name} (P={best_prob:.2f}, {confidence} confidence)\n"
             f"{sensitivity_warning}"
         )
-    
+
     def _build_prior_elicitation_prompt(
         self,
         hypotheses: list[Hypothesis],
@@ -503,7 +505,7 @@ class BayesianMethod(ReasoningMethod):
     ) -> str:
         """Build prompt for prior elicitation."""
         h_list = "\n".join(f"- {h.name}: {h.description}" for h in hypotheses)
-        
+
         return f"""You are an expert at eliciting prior probabilities.
 
 Given these hypotheses:
@@ -522,7 +524,7 @@ Output format (JSON):
     }},
     "rationale": "..."
 }}"""
-    
+
     def _build_likelihood_assessment_prompt(
         self,
         evidence: list[Evidence],
@@ -532,10 +534,10 @@ Output format (JSON):
         """Build prompt for likelihood assessment."""
         h_names = [h.name for h in hypotheses]
         e_list = "\n".join(f"- {e.name}: {e.description}" for e in evidence)
-        
+
         return f"""You are an expert at assessing evidence likelihoods.
 
-Hypotheses: {', '.join(h_names)}
+Hypotheses: {", ".join(h_names)}
 
 Evidence:
 {e_list}
@@ -555,7 +557,7 @@ Output format (JSON):
         }}
     }}
 }}"""
-    
+
     def _parse_priors(
         self,
         response: str,
@@ -564,24 +566,24 @@ Output format (JSON):
         """Parse priors from LLM response."""
         import json
         import re
-        
-        json_match = re.search(r'\{.*\}', response, re.DOTALL)
+
+        json_match = re.search(r"\{.*\}", response, re.DOTALL)
         if json_match:
             try:
                 data = json.loads(json_match.group())
                 priors_dict = data.get("priors", {})
-                
+
                 priors = []
                 for h in hypotheses:
                     priors.append(priors_dict.get(h.name, 0.5))
-                
+
                 return priors
             except (json.JSONDecodeError, ValueError):
                 pass
-        
+
         # Fallback: equal priors
         return [1.0 / len(hypotheses)] * len(hypotheses)
-    
+
     def _parse_likelihoods(
         self,
         response: str,
@@ -591,13 +593,13 @@ Output format (JSON):
         """Parse likelihoods from LLM response."""
         import json
         import re
-        
-        json_match = re.search(r'\{.*\}', response, re.DOTALL)
+
+        json_match = re.search(r"\{.*\}", response, re.DOTALL)
         if json_match:
             try:
                 data = json.loads(json_match.group())
                 likelihoods_dict = data.get("likelihoods", {})
-                
+
                 for ev in evidence:
                     if ev.name in likelihoods_dict:
                         ev_data = likelihoods_dict[ev.name]
@@ -605,7 +607,9 @@ Output format (JSON):
                             if h.name in ev_data:
                                 h_data = ev_data[h.name]
                                 ev.likelihood_given_h[h.name] = h_data.get("p_e_given_h", 0.5)
-                                ev.likelihood_given_not_h[h.name] = h_data.get("p_e_given_not_h", 0.5)
+                                ev.likelihood_given_not_h[h.name] = h_data.get(
+                                    "p_e_given_not_h", 0.5
+                                )
 
                 return evidence
             except (json.JSONDecodeError, ValueError):

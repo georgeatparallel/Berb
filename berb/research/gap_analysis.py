@@ -12,25 +12,24 @@ Uses Multi-Perspective reasoning for parallel gap identification.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
+from berb.llm.client import LLMProvider
+from berb.reasoning.base import ReasoningContext
 from berb.reasoning.multi_perspective import (
     MultiPerspectiveMethod,
-    PerspectiveType,
     PerspectiveResult,
+    PerspectiveType,
 )
-from berb.reasoning.base import ReasoningContext, ReasoningResult
-from berb.llm.client import LLMProvider
 
 logger = logging.getLogger(__name__)
 
 
-class GapType(str, Enum):
+class GapType(StrEnum):
     """Type of research gap.
 
     Attributes:
@@ -91,9 +90,7 @@ class ResearchGap(BaseModel):
         Returns:
             Priority score (0-1000)
         """
-        self.priority_score = (
-            self.novelty_score * self.feasibility_score * self.impact_score
-        )
+        self.priority_score = self.novelty_score * self.feasibility_score * self.impact_score
         return self.priority_score
 
 
@@ -135,9 +132,7 @@ class GapAnalysisResult(BaseModel):
 
     def _compute_top_gaps(self) -> None:
         """Get top 5 gaps by priority."""
-        sorted_gaps = sorted(
-            self.gaps, key=lambda g: g.priority_score, reverse=True
-        )
+        sorted_gaps = sorted(self.gaps, key=lambda g: g.priority_score, reverse=True)
         self.top_gaps = sorted_gaps[:5]
 
 
@@ -255,9 +250,7 @@ class ResearchGapAnalyzer:
         logger.info(f"Starting gap analysis for topic: {topic}")
 
         # Build analysis context
-        context = self._build_analysis_context(
-            topic, synthesis, literature_review, domain
-        )
+        context = self._build_analysis_context(topic, synthesis, literature_review, domain)
 
         # Identify gaps using multi-perspective reasoning
         if self.multi_perspective_method:
@@ -267,15 +260,12 @@ class ResearchGapAnalyzer:
             gaps = await self._heuristic_analysis(context)
 
         # Filter by novelty threshold
-        filtered_gaps = [
-            g for g in gaps
-            if g.novelty_score >= self.config.min_novelty_score
-        ]
+        filtered_gaps = [g for g in gaps if g.novelty_score >= self.config.min_novelty_score]
 
         # Sort by priority and limit
-        sorted_gaps = sorted(
-            filtered_gaps, key=lambda g: g.priority_score, reverse=True
-        )[: self.config.max_gaps]
+        sorted_gaps = sorted(filtered_gaps, key=lambda g: g.priority_score, reverse=True)[
+            : self.config.max_gaps
+        ]
 
         # Build result
         result = GapAnalysisResult(
@@ -341,7 +331,7 @@ class ResearchGapAnalyzer:
 
         # Extract key information
         years = [p.get("year", 0) for p in papers if p.get("year")]
-        venues = [p.get("venue", "") for p in papers if p.get("venue")]
+        [p.get("venue", "") for p in papers if p.get("venue")]
         citations = [p.get("citations", 0) for p in papers]
 
         summary_parts = [
@@ -349,14 +339,10 @@ class ResearchGapAnalyzer:
         ]
 
         if years:
-            summary_parts.append(
-                f"published between {min(years)}-{max(years)}"
-            )
+            summary_parts.append(f"published between {min(years)}-{max(years)}")
 
         if citations:
-            summary_parts.append(
-                f"with average {sum(citations)/len(citations):.0f} citations"
-            )
+            summary_parts.append(f"with average {sum(citations) / len(citations):.0f} citations")
 
         return ". ".join(summary_parts) + "."
 
@@ -445,15 +431,11 @@ class ResearchGapAnalyzer:
             )
 
             # Build perspective-specific problem
-            problem = self._build_perspective_problem(
-                context, perspective_def
-            )
+            problem = self._build_perspective_problem(context, perspective_def)
 
             # Execute perspective analysis
             try:
-                perspective_result = await self._run_perspective(
-                    problem, perspective_name
-                )
+                perspective_result = await self._run_perspective(problem, perspective_name)
 
                 # Extract gaps from result
                 gaps = self._extract_gaps_from_perspective(
@@ -466,9 +448,7 @@ class ResearchGapAnalyzer:
                 all_gaps.extend(gaps)
 
             except Exception as e:
-                logger.warning(
-                    f"Perspective {perspective_name} failed: {e}"
-                )
+                logger.warning(f"Perspective {perspective_name} failed: {e}")
 
         # Deduplicate gaps
         unique_gaps = self._deduplicate_gaps(all_gaps)
@@ -489,19 +469,19 @@ class ResearchGapAnalyzer:
         Returns:
             Problem statement
         """
-        problem = f"""Research Topic: {context['topic']}
-Domain: {context['domain']}
+        problem = f"""Research Topic: {context["topic"]}
+Domain: {context["domain"]}
 
-Literature Summary: {context.get('literature_summary', 'Not provided')}
+Literature Summary: {context.get("literature_summary", "Not provided")}
 
-Key Themes: {', '.join(context.get('key_themes', [])[:5])}
+Key Themes: {", ".join(context.get("key_themes", [])[:5])}
 
-Known Limitations: {', '.join(context.get('limitations', [])[:5])}
+Known Limitations: {", ".join(context.get("limitations", [])[:5])}
 
 ---
 
-Role: {perspective_def['role']}
-Your Task: {perspective_def['question']}
+Role: {perspective_def["role"]}
+Your Task: {perspective_def["question"]}
 
 Identify specific research gaps from your perspective. For each gap:
 1. Describe what's missing
@@ -535,7 +515,9 @@ Identify specific research gaps from your perspective. For each gap:
         # Convert to PerspectiveResult
         return PerspectiveResult(
             perspective_type=PerspectiveType.CONSTRUCTIVE,
-            content=result.output.get("content", "") if isinstance(result.output, dict) else str(result.output),
+            content=result.output.get("content", "")
+            if isinstance(result.output, dict)
+            else str(result.output),
             reasoning=result.output.get("reasoning", "") if isinstance(result.output, dict) else "",
             confidence=0.7,
         )
@@ -614,8 +596,15 @@ Identify specific research gaps from your perspective. For each gap:
         """
         # Keywords indicating high novelty
         novelty_keywords = [
-            "first", "novel", "unexplored", "never", "new",
-            "未曾", "新しい", "neu", "premier",
+            "first",
+            "novel",
+            "unexplored",
+            "never",
+            "new",
+            "未曾",
+            "新しい",
+            "neu",
+            "premier",
         ]
 
         score = 5.0  # Base score
@@ -638,14 +627,20 @@ Identify specific research gaps from your perspective. For each gap:
         """
         # Keywords indicating low feasibility
         difficulty_keywords = [
-            "impossible", "infeasible", "extremely difficult",
-            "prohibitive", "requires breakthrough",
+            "impossible",
+            "infeasible",
+            "extremely difficult",
+            "prohibitive",
+            "requires breakthrough",
         ]
 
         # Keywords indicating high feasibility
         easy_keywords = [
-            "straightforward", "simple", "feasible",
-            "can be done", "with existing",
+            "straightforward",
+            "simple",
+            "feasible",
+            "can be done",
+            "with existing",
         ]
 
         score = 6.0  # Base score (slightly optimistic)
@@ -673,9 +668,17 @@ Identify specific research gaps from your perspective. For each gap:
         """
         # Keywords indicating high impact
         impact_keywords = [
-            "significant", "important", "critical", "essential",
-            "broad", "wide", "many", "fundamental",
-            "practical", "real-world", "application",
+            "significant",
+            "important",
+            "critical",
+            "essential",
+            "broad",
+            "wide",
+            "many",
+            "fundamental",
+            "practical",
+            "real-world",
+            "application",
         ]
 
         score = 5.0  # Base score
@@ -790,9 +793,7 @@ class GapToHypothesisConverter:
         hypotheses = []
 
         # Top gaps become hypotheses
-        sorted_gaps = sorted(
-            gaps, key=lambda g: g.priority_score, reverse=True
-        )[:max_hypotheses]
+        sorted_gaps = sorted(gaps, key=lambda g: g.priority_score, reverse=True)[:max_hypotheses]
 
         for gap in sorted_gaps:
             hypothesis = {

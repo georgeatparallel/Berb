@@ -134,28 +134,33 @@
         // UI served on 8080, API on 8082
         const API_BASE = 'http://localhost:8082';
         let currentJobId = null;
-        
+
         async function createNewJob() {
-            const topic = prompt('Enter your research topic:', "Augustine's Theory of Time and Eternity");
+            const topic = prompt('Enter your research topic:', "Lyapunov exponents in standard map");
             if (!topic) return;
-            
+
             try {
                 const response = await fetch(`${API_BASE}/api/v1/research`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         topic: topic,
-                        preset: 'humanities',
-                        mode: 'collaborative'
+                        preset: 'physics',
+                        mode: 'autonomous'
                     })
                 });
-                
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`);
+                }
+
                 const data = await response.json();
                 currentJobId = data.id;
                 document.getElementById('jobIdInput').value = data.id;
-                alert(`Job created: ${data.id}\n\nWait ~15 seconds for topic expansion, then click "Check Status"`);
+                alert(`Job created: ${data.id}\n\nStatus: ${data.status}\n\nThe pipeline is starting...`);
             } catch (e) {
-                alert('Error: ' + e.message);
+                alert('Error creating job: ' + e.message);
             }
         }
         
@@ -165,50 +170,63 @@
                 alert('Please enter a job ID');
                 return;
             }
-            
+
             currentJobId = jobId;
-            
+
             try {
                 const response = await fetch(`${API_BASE}/api/v1/research/${jobId}`);
-                const job = await response.json();
                 
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`);
+                }
+                
+                const job = await response.json();
+
                 // Show logs
                 document.getElementById('logsCard').classList.remove('hidden');
                 document.getElementById('logs').innerHTML = job.logs?.map(l => `<div>• ${l}</div>`).join('') || 'No logs yet';
-                
+
                 if (job.status === 'pending_approval' && job.topic_expanded) {
                     // Show approval card
                     document.getElementById('approvalCard').classList.remove('hidden');
                     document.getElementById('originalTopic').textContent = job.topic;
                     document.getElementById('expandedTopic').textContent = job.topic_expanded;
                 } else if (job.status === 'starting' || job.status === 'running') {
-                    alert(`Pipeline is ${job.status} - Progress: ${job.progress}%`);
+                    alert(`Pipeline is ${job.status} - Progress: ${job.progress || 0}%\nStages completed: ${job.stages?.length || 0}`);
                 } else if (job.status === 'completed') {
-                    alert(`Research completed! Check artifacts folder.`);
+                    alert(`Research completed! Check artifacts folder.\nTotal cost: $${job.cost?.toFixed(2) || '0.00'}`);
+                } else if (job.status === 'failed') {
+                    alert(`Research FAILED:\n${job.error || 'Unknown error'}`);
                 } else {
                     alert(`Status: ${job.status}`);
                 }
             } catch (e) {
-                alert('Error: ' + e.message);
+                alert('Error checking status: ' + e.message);
             }
         }
         
         async function approveTopic(approve) {
             if (!currentJobId) return;
-            
+
             try {
                 const response = await fetch(`${API_BASE}/api/v1/research/${currentJobId}/topic-approve?approve=${approve}`, {
                     method: 'POST'
                 });
                 
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`);
+                }
+
                 const data = await response.json();
-                alert(data.status === 'approved' 
+                alert(data.status === 'approved'
                     ? `✓ Topic approved! Pipeline starting...\n\nTopic: ${data.topic}`
                     : `✗ Using original topic\n\nTopic: ${data.topic}`);
-                
+
                 document.getElementById('approvalCard').classList.add('hidden');
             } catch (e) {
-                alert('Error: ' + e.message);
+                alert('Error approving topic: ' + e.message);
             }
         }
         

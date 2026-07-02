@@ -37,9 +37,7 @@ class IdeaPool:
     def _save(self) -> None:
         self.pool_path.parent.mkdir(parents=True, exist_ok=True)
         data = {"ideas": [idea.to_dict() for idea in self.ideas.values()]}
-        self.pool_path.write_text(
-            json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8"
-        )
+        self.pool_path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
 
     # ── CRUD ──────────────────────────────────────────────────────
 

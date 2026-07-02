@@ -11,7 +11,7 @@ Available Presets:
 
 Usage:
     from berb.llm.presets import get_preset
-    
+
     config = get_preset("berb-research")
     # config contains base_url, api_key_env, models, fallback_models
 
@@ -53,109 +53,105 @@ class PresetConfig:
 
 
 # Model definitions
+# Note: All model IDs use OpenRouter canonical provider prefixes.
+# Provider prefixes: deepseek/, qwen/, z-ai/, anthropic/, google/,
+# perplexity/, mistralai/, minimax/ — see berb/llm/openrouter_adapter.py
 MODELS = {
     # DeepSeek models
     "deepseek-v3.2": ModelConfig(
-        model_id="deepseek/deepseek-chat-v3-0324:free",
+        model_id="deepseek/deepseek-v3.2",
         provider="deepseek",
-        price_input=0.27,
-        price_output=0.27,
-        context_window=64000,
+        price_input=0.23,
+        price_output=0.34,
+        context_window=131072,
         stages=["8", "9", "13", "15"],
         capabilities=["reasoning", "coding", "math"],
     ),
     "deepseek-r1": ModelConfig(
-        model_id="deepseek/deepseek-r1:free",
+        model_id="deepseek/deepseek-r1",
         provider="deepseek",
-        price_input=0.50,
-        price_output=0.50,
-        context_window=64000,
+        price_input=0.70,
+        price_output=2.50,
+        context_window=163840,
         stages=["2", "8", "15"],
         capabilities=["reasoning", "chain-of-thought"],
     ),
-    
     # Alibaba Qwen models
     "qwen3-max": ModelConfig(
-        model_id="alibaba/qwen-max-2025-01-25",
-        provider="alibaba",
-        price_input=0.40,
-        price_output=0.40,
-        context_window=256000,
+        model_id="qwen/qwen3-max",
+        provider="qwen",
+        price_input=0.78,
+        price_output=3.90,
+        context_window=262144,
         stages=["5", "18"],
         capabilities=["long-context", "analysis"],
     ),
     "qwen3-turbo": ModelConfig(
-        model_id="alibaba/qwen-turbo",
-        provider="alibaba",
-        price_input=0.03,
-        price_output=0.03,
-        context_window=32000,
+        model_id="qwen/qwen3.5-flash-02-23",
+        provider="qwen",
+        price_input=0.065,
+        price_output=0.26,
+        context_window=1000000,
         stages=["1", "11"],
         capabilities=["fast", "cheap"],
     ),
-    
-    # ZhipuAI GLM models
+    # ZhipuAI GLM models (OpenRouter prefix is "z-ai", not "zhipuai")
     "glm-4.5": ModelConfig(
-        model_id="zhipuai/glm-4-0520",
-        provider="zhipuai",
-        price_input=0.30,
-        price_output=0.30,
-        context_window=128000,
+        model_id="z-ai/glm-4.5",
+        provider="z-ai",
+        price_input=0.60,
+        price_output=2.20,
+        context_window=131072,
         stages=["7", "20"],
         capabilities=["analysis", "synthesis"],
     ),
-    
     # Anthropic Claude models
     "claude-sonnet-4.6": ModelConfig(
-        model_id="anthropic/claude-sonnet-4-20250514",
+        model_id="anthropic/claude-sonnet-4.6",
         provider="anthropic",
         price_input=3.00,
-        price_output=3.00,
-        context_window=200000,
+        price_output=15.00,
+        context_window=1000000,
         stages=["14", "18"],
         capabilities=["writing", "analysis", "long-context"],
     ),
-    
     # Google Gemini models
     "gemini-2.5-flash": ModelConfig(
-        model_id="google/gemini-2.5-flash-001",
+        model_id="google/gemini-2.5-flash",
         provider="google",
         price_input=0.30,
-        price_output=0.30,
-        context_window=1000000,  # 1M context!
+        price_output=2.50,
+        context_window=1048576,  # 1M context!
         stages=["4"],
         capabilities=["massive-context", "multimodal"],
     ),
-    
     # Perplexity Sonar models
     "sonar-pro": ModelConfig(
         model_id="perplexity/sonar-pro",
         provider="perplexity",
-        price_input=5.00,
-        price_output=5.00,
+        price_input=3.00,
+        price_output=15.00,
         context_window=200000,
         stages=["5", "23"],
         capabilities=["search-grounded", "factual"],
     ),
-    
     # Mistral models (EU sovereign)
     "mistral-large-3": ModelConfig(
-        model_id="mistralai/mistral-large-2407",
-        provider="mistral",
-        price_input=4.00,
-        price_output=4.00,
+        model_id="mistralai/mistral-large",
+        provider="mistralai",
+        price_input=2.00,
+        price_output=6.00,
         context_window=128000,
         stages=["7", "18"],
         capabilities=["eu-sovereign", "gdpr"],
     ),
-    
     # MiniMax models
     "minimax-m2.5": ModelConfig(
-        model_id="minimax/minimax-01",
+        model_id="minimax/minimax-m2.5",
         provider="minimax",
-        price_input=0.40,
-        price_output=0.40,
-        context_window=256000,
+        price_input=0.15,
+        price_output=0.90,
+        context_window=204800,
         stages=["8", "15"],
         capabilities=["diversity", "long-context"],
     ),
@@ -169,11 +165,11 @@ PRESETS = {
         description="Best models regardless of cost - maximum research quality",
         base_url="https://openrouter.ai/api/v1",
         api_key_env="OPENROUTER_API_KEY",
-        primary_model="anthropic/claude-sonnet-4-20250514",
+        primary_model="anthropic/claude-sonnet-4.6",
         fallback_models=[
-            "google/gemini-2.5-flash-001",
+            "google/gemini-2.5-flash",
             "perplexity/sonar-pro",
-            "alibaba/qwen-max-2025-01-25",
+            "qwen/qwen3-max",
         ],
         cost_per_paper_estimate=(0.50, 0.80),
         models=[
@@ -191,16 +187,15 @@ PRESETS = {
             "Multi-model ensemble",
         ],
     ),
-    
     "berb-budget": PresetConfig(
         name="berb-budget",
         description="Cheapest viable models - maximum cost efficiency",
         base_url="https://openrouter.ai/api/v1",
         api_key_env="OPENROUTER_API_KEY",
-        primary_model="alibaba/qwen-turbo",
+        primary_model="qwen/qwen3.5-flash-02-23",
         fallback_models=[
-            "deepseek/deepseek-chat-v3-0324:free",
-            "zhipuai/glm-4-0520",
+            "deepseek/deepseek-v3.2",
+            "z-ai/glm-4.5",
         ],
         cost_per_paper_estimate=(0.15, 0.25),
         models=[
@@ -216,7 +211,6 @@ PRESETS = {
             "High-volume research optimized",
         ],
     ),
-    
     "berb-research": PresetConfig(
         name="berb-research",
         description="Search-grounded models - best for literature review",
@@ -224,9 +218,9 @@ PRESETS = {
         api_key_env="OPENROUTER_API_KEY",
         primary_model="perplexity/sonar-pro",
         fallback_models=[
-            "google/gemini-2.5-flash-001",
-            "anthropic/claude-sonnet-4-20250514",
-            "deepseek/deepseek-r1:free",
+            "google/gemini-2.5-flash",
+            "anthropic/claude-sonnet-4.6",
+            "deepseek/deepseek-r1",
         ],
         cost_per_paper_estimate=(2.00, 3.00),
         models=[
@@ -243,16 +237,15 @@ PRESETS = {
             "Citation verification support",
         ],
     ),
-    
     "berb-eu-sovereign": PresetConfig(
         name="berb-eu-sovereign",
         description="GDPR-compliant models - EU data sovereignty",
         base_url="https://openrouter.ai/api/v1",
         api_key_env="OPENROUTER_API_KEY",
-        primary_model="mistralai/mistral-large-2407",
+        primary_model="mistralai/mistral-large",
         fallback_models=[
-            "alibaba/qwen-max-2025-01-25",
-            "zhipuai/glm-4-0520",
+            "qwen/qwen3-max",
+            "z-ai/glm-4.5",
         ],
         cost_per_paper_estimate=(0.80, 1.20),
         models=[
@@ -273,21 +266,19 @@ PRESETS = {
 
 def get_preset(name: str) -> PresetConfig:
     """Get a preset configuration by name.
-    
+
     Args:
         name: Preset name (e.g., "berb-research")
-    
+
     Returns:
         PresetConfig with full configuration
-    
+
     Raises:
         ValueError: If preset name not found
     """
     if name not in PRESETS:
         available = ", ".join(PRESETS.keys())
-        raise ValueError(
-            f"Preset '{name}' not found. Available: {available}"
-        )
+        raise ValueError(f"Preset '{name}' not found. Available: {available}")
     return PRESETS[name]
 
 
@@ -298,21 +289,19 @@ def list_presets() -> list[str]:
 
 def get_model(model_id: str) -> ModelConfig:
     """Get a model configuration by ID.
-    
+
     Args:
         model_id: Model ID (e.g., "deepseek-v3.2")
-    
+
     Returns:
         ModelConfig with full configuration
-    
+
     Raises:
         ValueError: If model ID not found
     """
     if model_id not in MODELS:
         available = ", ".join(MODELS.keys())
-        raise ValueError(
-            f"Model '{model_id}' not found. Available: {available}"
-        )
+        raise ValueError(f"Model '{model_id}' not found. Available: {available}")
     return MODELS[model_id]
 
 
@@ -323,25 +312,22 @@ def list_models() -> list[str]:
 
 def get_models_for_stage(stage_id: str) -> list[ModelConfig]:
     """Get all models suitable for a specific pipeline stage.
-    
+
     Args:
         stage_id: Pipeline stage ID (e.g., "8" for HYPOTHESIS_GEN)
-    
+
     Returns:
         List of ModelConfig suitable for the stage
     """
-    return [
-        model for model in MODELS.values()
-        if stage_id in model.stages
-    ]
+    return [model for model in MODELS.values() if stage_id in model.stages]
 
 
 def to_llm_config(preset: PresetConfig) -> dict[str, Any]:
     """Convert preset to LLM client configuration dict.
-    
+
     Args:
         preset: PresetConfig to convert
-    
+
     Returns:
         Dictionary suitable for LLMConfig
     """
@@ -357,22 +343,24 @@ def to_llm_config(preset: PresetConfig) -> dict[str, Any]:
 # Convenience function for CLI
 def print_preset_info(name: str | None = None) -> None:
     """Print preset information to stdout.
-    
+
     Args:
         name: Specific preset name, or None for all
     """
     if name:
         preset = get_preset(name)
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"Preset: {preset.name}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         print(f"Description: {preset.description}")
         print(f"Base URL: {preset.base_url}")
         print(f"API Key Env: {preset.api_key_env}")
         print(f"Primary Model: {preset.primary_model}")
         print(f"Fallback Models: {', '.join(preset.fallback_models)}")
-        print(f"Estimated Cost: ${preset.cost_per_paper_estimate[0]:.2f}-${preset.cost_per_paper_estimate[1]:.2f}/paper")
-        print(f"\nFeatures:")
+        print(
+            f"Estimated Cost: ${preset.cost_per_paper_estimate[0]:.2f}-${preset.cost_per_paper_estimate[1]:.2f}/paper"
+        )
+        print("\nFeatures:")
         for feature in preset.features:
             print(f"  ✓ {feature}")
         print(f"\nModels ({len(preset.models)}):")
@@ -385,18 +373,21 @@ def print_preset_info(name: str | None = None) -> None:
             print(f"    Capabilities: {', '.join(model.capabilities)}")
     else:
         print("\nAvailable Presets:")
-        print("="*60)
+        print("=" * 60)
         for preset_name in PRESETS:
             preset = PRESETS[preset_name]
             print(f"\n{preset.name}")
             print(f"  {preset.description}")
-            print(f"  Cost: ${preset.cost_per_paper_estimate[0]:.2f}-${preset.cost_per_paper_estimate[1]:.2f}/paper")
+            print(
+                f"  Cost: ${preset.cost_per_paper_estimate[0]:.2f}-${preset.cost_per_paper_estimate[1]:.2f}/paper"
+            )
             print(f"  Primary: {preset.primary_model}")
-        print(f"\nUse 'berb presets <name>' for detailed info")
+        print("\nUse 'berb presets <name>' for detailed info")
 
 
 if __name__ == "__main__":
     import sys
+
     if len(sys.argv) > 1:
         print_preset_info(sys.argv[1])
     else:

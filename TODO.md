@@ -840,3 +840,1125 @@ berb/
 ---
 
 **Berb — Research, Refined.** 🧪✨
+
+
+---
+
+## 🚨 CRITICAL BUG FIXES (2026-04-06)
+
+**Status:** P0 - Blocking pipeline execution  
+**Discovered:** Production run `rc-20260406-124632-0e0fa8`
+
+### **Bug 1: Stage 10 (CODE_GENERATION) - OpenCode Model Resolution Failure**
+
+**Severity:** Critical (Pipeline cannot complete)  
+**Root Cause:** OpenCode CLI v1.3.3 doesn't recognize `deepseek/deepseek-v3.2`  
+
+| Aspect | Details |
+|--------|---------|
+| Error | `ProviderModelNotFoundError: Model not found: deepseek/deepseek-v3.2` |
+| Location | `berb/pipeline/opencode_bridge.py:441-456` |
+| Trigger | `_resolve_opencode_model()` returns invalid model identifier |
+| Impact | Beast mode fails, falls back to CodeAgent, which also fails with `IncompleteRead` |
+
+**Fix Required:**
+```python
+# berb/pipeline/opencode_bridge.py
+# Add OpenCode-compatible model mapping
+
+OPENCODE_MODEL_MAP = {
+    # OpenRouter models → OpenCode-compatible models
+    "deepseek/deepseek-v3.2": "anthropic/claude-sonnet-4-6",
+    "deepseek/deepseek-chat": "anthropic/claude-sonnet-4-6",
+    "meta-llama/llama-3.3-70b-instruct:free": "anthropic/claude-sonnet-4-6",
+    "google/gemma-3-4b-it:free": "anthropic/claude-sonnet-4-6",
+    # Add more mappings as needed
+}
+
+def _resolve_opencode_model(self) -> str:
+    """Resolve model for OpenCode CLI compatibility."""
+    if not self._model:
+        return "anthropic/claude-sonnet-4-6"
+    
+    # Map unsupported models to OpenCode-compatible alternatives
+    if self._model in OPENCODE_MODEL_MAP:
+        return OPENCODE_MODEL_MAP[self._model]
+    
+    if "/" in self._model:
+        return self._model
+    return f"openai/{self._model}"
+```
+
+**Testing:**
+- [ ] Test with `deepseek/deepseek-v3.2` → should map to Claude Sonnet 4.6
+- [ ] Test with `anthropic/claude-sonnet-4-6` → should pass through
+- [ ] Verify OpenCode CLI accepts resolved model
+
+---
+
+### **Bug 2: Stage 6 (KNOWLEDGE_EXTRACT) - LLMConfig Parameter Error**
+
+**Severity:** High (Performance degradation)  
+**Root Cause:** Wrong parameter name `provider` instead of `provider_name`  
+
+| Aspect | Details |
+|--------|---------|
+| Error | `LLMConfig.__init__() got an unexpected keyword argument 'provider'` |
+| Location | `berb/pipeline/stage_impls/_literature.py:775` |
+| Impact | Fast model switch fails, falls back to default (slower, more expensive) |
+
+**Fix Required:**
+```python
+# berb/pipeline/stage_impls/_literature.py:775-781
+# BEFORE (broken):
+fast_config = LLMConfig(
+    provider="openrouter",  # ❌ Wrong parameter name
+    base_url=llm.config.base_url,
+    api_key=llm.config.api_key,
+    primary_model=FAST_MODEL,
+    fallback_models=llm.config.fallback_models,  # ❌ Wrong parameter name
+)
+
+# AFTER (fixed):
+fast_config = LLMConfig(
+    provider_name="openrouter",  # ✅ Correct parameter name
+    base_url=llm.config.base_url,
+    api_key=llm.config.api_key,
+    primary_model=FAST_MODEL,
+    fallback_providers=llm.config.fallback_providers or [],  # ✅ Correct parameter name
+)
+```
+
+**Testing:**
+- [ ] Stage 6 completes with fast model (`qwen/qwen3.5-flash`)
+- [ ] Verify 5x speed improvement
+- [ ] Verify cost reduction ($0.065/M vs $0.26/M)
+
+---
+
+### **Bug 3: Stage 10 - IncompleteRead Error from DeepSeek**
+
+**Severity:** High (Stage instability)  
+**Root Cause:** Streaming response truncation from DeepSeek V3.2  
+
+| Aspect | Details |
+|--------|---------|
+| Error | `IncompleteRead(5577 bytes read)` / `IncompleteRead(3949 bytes read)` |
+| Location | LLM streaming response handling |
+| Impact | Model calls fail unpredictably |
+
+**Fix Required:**
+```python
+# berb/llm/client.py or relevant location
+# Add retry logic for IncompleteRead errors
+
+import http.client
+from typing import TypeVar, Callable
+
+T = TypeVar('T')
+
+def with_incomplete_read_retry(
+    func: Callable[..., T],
+    max_retries: int = 3
+) -> Callable[..., T]:
+    """Decorator to retry on IncompleteRead errors."""
+    def wrapper(*args, **kwargs):
+        for attempt in range(max_retries):
+            try:
+                return func(*args, **kwargs)
+            except http.client.IncompleteRead as e:
+                if attempt == max_retries - 1:
+                    raise
+                logger.warning(f"IncompleteRead, retrying ({attempt + 1}/{max_retries}): {e}")
+                time.sleep(2 ** attempt)  # Exponential backoff
+    return wrapper
+
+# Apply to LLM call methods
+@with_incomplete_read_retry
+def _call_llm_streaming(...):
+    ...
+```
+
+**Alternative Fix:** Disable streaming for problematic models
+```python
+# In model config
+MODEL_STREAMING_CONFIG = {
+    "deepseek/deepseek-v3.2": {"streaming": False},  # Use non-streaming
+    "anthropic/claude-sonnet-4-6": {"streaming": True},
+}
+```
+
+---
+
+### **Bug 4: Model Fallback Chain - HTTP 400 Errors**
+
+**Severity:** Medium (Reliability issue)  
+**Root Cause:** Free models reject prompts/format  
+
+| Aspect | Details |
+|--------|---------|
+| Error | `HTTP Error 400: Bad Request` for all fallback models |
+| Affected | `meta-llama/llama-3.3-70b-instruct:free`, `google/gemma-3-4b-it:free` |
+| Impact | No working fallback when primary fails |
+
+**Investigation Required:**
+1. Check if prompt format is compatible with free models
+2. Verify if free models have different API requirements
+3. Consider adding paid fallback models
+
+**Proposed Fix:**
+```yaml
+# config.yaml - Update fallback models to reliable paid options
+llm:
+  fallback_models:
+    - "qwen/qwen3.5-flash"           # $0.065/M, reliable
+    - "google/gemini-2.5-flash-lite"  # $0.10/M, 1M context
+    - "alibaba/qwen-turbo"           # $0.03/M, ultra-cheap
+```
+
+---
+
+### **Bug 5: Dependency Warnings**
+
+**Severity:** Low (Warning noise)  
+**Root Cause:** urllib3/chardet version mismatch  
+
+| Aspect | Details |
+|--------|---------|
+| Warning | `RequestsDependencyWarning: urllib3 (2.6.3) or chardet (6.0.0.post1) doesn't match` |
+| Impact | Console clutter, potential compatibility issues |
+
+**Fix Required:**
+```bash
+pip install --upgrade requests urllib3 chardet
+```
+
+Update `pyproject.toml`:
+```toml
+[project.dependencies]
+requests = ">=2.32.0"
+urllib3 = ">=2.2.0"
+charset-normalizer = ">=3.3.0"
+```
+
+---
+
+### **Implementation Checklist**
+
+| # | Fix | Priority | File(s) | Status |
+|---|-----|----------|---------|--------|
+| 1 | OpenCode model mapping | P0 | `opencode_bridge.py` | ⏳ Pending |
+| 2 | LLMConfig parameter fix | P0 | `_literature.py` | ⏳ Pending |
+| 3 | IncompleteRead retry | P1 | `client.py` | ⏳ Pending |
+| 4 | Fallback model update | P1 | `config.yaml` | ⏳ Pending |
+| 5 | Dependency upgrade | P2 | `pyproject.toml` | ⏳ Pending |
+
+---
+
+## 🚀 DEEPSCIENTIST-INSPIRED ENHANCEMENTS
+
+**Analysis Date:** 2026-04-06  
+**Source:** `DeepScientist-main/` - Local-first AI research studio  
+**Key Insight:** DeepScientist uses Git-native research state vs Berb's pipeline approach
+
+### **Enhancement 1: Git-Native Research Branching**
+
+**Concept:** Replace linear stage progression with Git-based research branches  
+**Inspired by:** DeepScientist's `idea/`, `run/`, `paper/` branch conventions  
+
+**Current (Berb):**
+```
+Stage 1 → Stage 2 → ... → Stage 23 (linear, database state)
+```
+
+**Proposed:**
+```
+main (topic definition)
+├── idea/exploration-1 (Stage 1-6: Lit review branches)
+├── idea/exploration-2 (alternative approach)
+│   └── run/experiment-a (Stage 9-13: Experiment worktrees)
+│       └── analysis/results-1 (Stage 14-15: Analysis branches)
+└── paper/draft-v1 (Stage 16-23: Paper branches)
+```
+
+**Implementation:**
+```python
+# berb/git_research/branch_manager.py
+class ResearchBranchManager:
+    """Git-native research state management."""
+    
+    BRANCH_PREFIXES = {
+        "idea": "exploration and literature",
+        "run": "experiment execution",
+        "analysis": "result analysis",
+        "paper": "paper writing",
+    }
+    
+    def create_idea_branch(self, idea_name: str) -> str:
+        """Create branch for exploring a research idea."""
+        branch = f"idea/{self.sanitize_name(idea_name)}"
+        # Creates branch from main with quest structure
+        ...
+    
+    def create_run_worktree(self, experiment_id: str) -> Path:
+        """Create worktree for isolated experiment execution."""
+        # Lighter than Docker, naturally versioned
+        ...
+```
+
+**Benefits:**
+- Failed experiments preserved as branches (not deleted)
+- Parallel exploration of multiple ideas
+- Natural research lineage tracking
+- Human can inspect/checkout any research state
+
+**Effort:** ~600 lines  
+**Priority:** P2 (Architecture evolution)
+
+---
+
+### **Enhancement 2: Markdown-First Memory Cards**
+
+**Concept:** Human-readable memory with YAML frontmatter  
+**Inspired by:** DeepScientist's `memory/service.py` with Markdown cards  
+
+**Current (Berb):**
+- Binary/JSON memory storage
+- Machine-optimized, not human-readable
+
+**Proposed:**
+```markdown
+---
+id: idea-abc123
+type: knowledge_card
+title: "Prefix Sensitivity in LLM Reasoning"
+tags: [llm, reasoning, prefix, trajectory]
+source_stage: 6
+source_paper: wang2024survey
+created: 2026-04-06T12:00:00Z
+relevance_score: 0.92
+---
+
+# Key Insight
+
+LLM reasoning trajectories can be controlled by manipulating prefix tokens...
+
+## Method
+- Step-wise verification at each reasoning step
+- Prefix sensitivity analysis
+
+## Findings
+- 23% improvement in reasoning accuracy
+- Applicable to chain-of-thought prompting
+
+## Citation
+Wang et al. (2024). A survey on large language model based autonomous agents.
+```
+
+**Implementation:**
+```python
+# berb/memory/markdown_cards.py
+from dataclasses import dataclass
+from pathlib import Path
+import frontmatter  # python-frontmatter
+
+@dataclass
+class MemoryCard:
+    id: str
+    type: str  # idea, knowledge, decision, episode
+    content: str
+    metadata: dict
+    
+    @classmethod
+    def from_file(cls, path: Path) -> "MemoryCard":
+        post = frontmatter.load(path)
+        return cls(
+            id=post.metadata["id"],
+            type=post.metadata["type"],
+            content=post.content,
+            metadata=post.metadata,
+        )
+    
+    def to_file(self, path: Path):
+        post = frontmatter.Post(self.content, **self.metadata)
+        frontmatter.dump(post, path)
+```
+
+**Benefits:**
+- Human can read/edit memory directly
+- Git-diffable memory changes
+- Compatible with Obsidian/Notion import
+- Transparent AI reasoning
+
+**Effort:** ~400 lines  
+**Priority:** P1 (Knowledge enhancement)
+
+---
+
+### **Enhancement 3: Multi-Channel Bidirectional Integration**
+
+**Concept:** Research management via messaging platforms  
+**Inspired by:** DeepScientist's 7+ channel connectors (Telegram, Discord, Slack, etc.)  
+
+**Supported Platforms:**
+- Telegram (polling)
+- Discord (gateway)
+- Slack (socket mode)
+- Microsoft Teams
+
+**Commands:**
+```
+/research status           # Get current stage
+/research approve          # Approve gate stage
+/research pause            # Pause execution
+/research resume           # Resume execution
+/research export pdf       # Get paper PDF
+/research notify on        # Enable notifications
+```
+
+**Implementation:**
+```python
+# berb/channels/telegram_bot.py
+from telegram.ext import Application, CommandHandler
+
+class BerbTelegramBot:
+    """Telegram interface for Berb pipeline."""
+    
+    async def status_command(self, update, context):
+        """Show current research status."""
+        run_id = self.get_active_run(context.chat_id)
+        checkpoint = self.load_checkpoint(run_id)
+        
+        await update.message.reply_text(
+            f"📊 Research: {checkpoint['topic'][:50]}...\n"
+            f"Stage: {checkpoint['stage']}/23\n"
+            f"Status: {checkpoint['status']}"
+        )
+    
+    async def approve_command(self, update, context):
+        """Approve gate stage."""
+        # Trigger pipeline resume with HITL approval
+        ...
+```
+
+**Benefits:**
+- Research status on mobile
+- Quick approvals without opening dashboard
+- Notifications for long-running stages
+- Collaborative research discussions
+
+**Effort:** ~800 lines (base + 3 platforms)  
+**Priority:** P2 (UX enhancement)
+
+---
+
+### **Enhancement 4: Artifact Projection Caching**
+
+**Concept:** Fast artifact queries without filesystem scanning  
+**Inspired by:** DeepScientist's `refresh_artifact_projection()`  
+
+**Problem:** Stage 6 scans all cards, Stage 10 checks all experiments — O(n) filesystem ops  
+
+**Solution:**
+```python
+# berb/artifact/projection.py
+class ArtifactProjection:
+    """Cached view of all artifacts."""
+    
+    def __init__(self, run_dir: Path):
+        self.run_dir = run_dir
+        self._cache: dict = {}
+        self._mtime = 0
+    
+    def refresh(self):
+        """Rebuild projection if artifacts changed."""
+        current_mtime = self._get_max_mtime()
+        if current_mtime > self._mtime:
+            self._cache = self._build_projection()
+            self._mtime = current_mtime
+    
+    def _build_projection(self) -> dict:
+        """Build artifact index."""
+        return {
+            "cards": list((self.run_dir / "stage-06/cards").glob("*.md")),
+            "experiments": list((self.run_dir / "stage-10").glob("*/")),
+            "metrics": self._extract_all_metrics(),
+        }
+    
+    def get_cards_by_tag(self, tag: str) -> list[Path]:
+        """O(1) tag lookup via cache."""
+        return [c for c in self._cache["cards"] if tag in c.metadata.get("tags", [])]
+```
+
+**Benefits:**
+- 10-100x faster artifact queries
+- Enables real-time dashboard updates
+- Reduces filesystem I/O
+
+**Effort:** ~300 lines  
+**Priority:** P1 (Performance)
+
+---
+
+### **Enhancement 5: Metric Contracts**
+
+**Concept:** Explicit metric definitions for automatic evaluation  
+**Inspired by:** DeepScientist's artifact metric contracts  
+
+**Definition:**
+```yaml
+# artifacts/metric_contracts.yaml
+baseline_contract:
+  contract_id: "baseline-reasoning-control"
+  primary_metric: "reasoning_accuracy"
+  metrics:
+    - metric_id: "reasoning_accuracy"
+      direction: "higher_is_better"
+      unit: "%"
+      decimals: 2
+      threshold: 75.0  # Minimum acceptable
+    
+    - metric_id: "trajectory_divergence"
+      direction: "lower_is_better"
+      unit: "score"
+      decimals: 4
+      threshold: 0.5
+  
+  evaluation_protocol:
+    comparison: "against_baseline"
+    significance_test: "paired_t_test"
+    min_samples: 100
+```
+
+**Automatic Evaluation:**
+```python
+# berb/experiment/metric_contracts.py
+class MetricContractEvaluator:
+    """Automatic experiment evaluation against contracts."""
+    
+    def evaluate(self, run_metrics: dict, contract: MetricContract) -> EvaluationResult:
+        results = {}
+        for metric in contract.metrics:
+            value = run_metrics.get(metric.metric_id)
+            passed = self._check_threshold(value, metric)
+            results[metric.metric_id] = {
+                "value": value,
+                "threshold": metric.threshold,
+                "passed": passed,
+            }
+        
+        return EvaluationResult(
+            overall_pass=all(r["passed"] for r in results.values()),
+            metrics=results,
+        )
+```
+
+**Benefits:**
+- Automatic pass/fail determination
+- Consistent evaluation criteria
+- A/B comparison between experiments
+- Prevents "moving goalposts"
+
+**Effort:** ~400 lines  
+**Priority:** P1 (Quality)
+
+---
+
+### **Enhancement 6: Worktree-Based Experiment Isolation**
+
+**Concept:** Git worktrees as lightweight alternative to Docker  
+**Inspired by:** DeepScientist's `gitops/service.py` worktree functions  
+
+**Current (Berb):**
+- Docker: Heavy, slow startup, requires daemon
+- Sandbox: Limited isolation
+
+**Proposed:**
+```python
+# berb/experiment/worktree_isolation.py
+class WorktreeExperimentSandbox:
+    """Git worktree-based experiment isolation."""
+    
+    def create_experiment_worktree(
+        self,
+        experiment_id: str,
+        base_branch: str = "main"
+    ) -> Path:
+        """Create isolated worktree for experiment.
+        
+        Faster than Docker, naturally versioned, human-inspectable.
+        """
+        worktree_path = self.experiments_dir / experiment_id
+        
+        # Create worktree from base branch
+        subprocess.run([
+            "git", "worktree", "add",
+            "-b", f"exp/{experiment_id}",
+            str(worktree_path),
+            base_branch
+        ], check=True)
+        
+        # Install dependencies in worktree
+        self._setup_venv(worktree_path)
+        
+        return worktree_path
+    
+    def archive_worktree(self, experiment_id: str, result: str):
+        """Archive experiment worktree with results."""
+        # Commit final state
+        # Remove worktree (keep branch)
+        # Tag: experiments/{experiment_id}/{result}
+```
+
+**Usage:**
+```bash
+# Experiments are real Git branches
+$ git branch | grep exp/
+  exp/reasoning-v1
+  exp/reasoning-v2-ablation
+  exp/control-v1-failed
+```
+
+**Benefits:**
+- 10x faster than Docker startup
+- Every experiment is a commit
+- Easy comparison: `git diff exp/v1 exp/v2`
+- No Docker daemon required
+- Human can checkout and inspect
+
+**Effort:** ~500 lines  
+**Priority:** P2 (Experiment optimization)
+
+---
+
+### **Implementation Roadmap**
+
+| Enhancement | Effort | Priority | Timeline | Impact |
+|-------------|--------|----------|----------|--------|
+| 1. Git-Native Branching | 600L | P2 | Month 2 | +40% exploration flexibility |
+| 2. Markdown Memory Cards | 400L | P1 | Week 2 | +100% transparency |
+| 3. Multi-Channel Integration | 800L | P2 | Month 1 | +30% accessibility |
+| 4. Artifact Projection | 300L | P1 | Week 1 | 10x faster queries |
+| 5. Metric Contracts | 400L | P1 | Week 3 | +25% evaluation consistency |
+| 6. Worktree Isolation | 500L | P2 | Month 1 | 10x faster experiments |
+
+**Total:** ~3,000 lines, 2-3 months  
+**Combined Impact:** Transform Berb from pipeline to organic research workspace
+
+---
+
+**Last Updated:** 2026-04-06  
+**Status:** Critical bugs identified, DeepScientist analysis complete
+
+
+---
+
+## 🔬 FEYNMAN-INSPIRED ENHANCEMENTS
+
+**Analysis Date:** 2026-04-06  
+**Source:** `feynman-main/` - Pi-based research CLI agent  
+**Key Insight:** Feynman uses Pi multi-agent framework with dedicated verifier/reviewer subagents
+
+### **Architecture Comparison: Feynman vs Berb**
+
+| Aspect | Feynman | Berb |
+|--------|---------|------|
+| **Framework** | Pi multi-agent runtime | Custom 23-stage pipeline |
+| **Agents** | Markdown-defined (researcher, writer, verifier, reviewer) | Python classes |
+| **Workflows** | Prompt templates with YAML frontmatter | Stage implementations |
+| **Verification** | Separate `verifier` subagent | Integrated into stages |
+| **State** | File-based (plan artifacts) | Pipeline state + memory vault |
+| **Naming** | Topic slugs (`quantum-error-correction`) | IDs (`rc-20260406-124632`) |
+| **Output** | Provenance sidecars (`.provenance.md`) | Audit trail JSON |
+
+---
+
+### **Enhancement 1: Dedicated Verification Subagent (⭐⭐⭐ Priority)**
+
+**Concept:** Separate synthesis from citation verification  
+**Inspired by:** Feynman's `verifier` subagent  
+
+**Current (Berb Stage 17-18):**
+- Paper drafting and peer review in pipeline stages
+- Citation verification integrated into writing
+- Limited adversarial checking
+
+**Proposed:**
+```python
+# berb/agents/verifier_agent.py
+class VerifierAgent:
+    """Post-process drafts to verify citations and sources.
+    
+    Inspired by Feynman's verifier subagent.
+    """
+    
+    async def verify(self, draft: PaperDraft, research_context: ResearchContext) -> VerifiedPaper:
+        """Verification pipeline:
+        1. Anchor every factual claim to a source
+        2. Verify every source URL (live/dead/redirect)
+        3. Build unified Sources section
+        4. Remove unsourced claims
+        5. Deduplicate sources
+        """
+        
+        # Add inline citations [1], [2], etc.
+        cited_draft = await self._add_inline_citations(draft, research_context)
+        
+        # Verify all URLs are live
+        url_status = await self._verify_urls(cited_draft.sources)
+        
+        # Remove claims that depend on dead sources
+        cleaned_draft = await self._remove_dead_source_claims(cited_draft, url_status)
+        
+        # Generate provenance sidecar
+        provenance = ProvenanceReport(
+            sources_consulted=len(research_context.sources),
+            sources_accepted=len(cleaned_draft.sources),
+            sources_rejected=[s for s, status in url_status.items() if status == "dead"],
+            verification_status="PASS" if all(status == "live" for status in url_status.values()) else "PASS_WITH_NOTES"
+        )
+        
+        return VerifiedPaper(draft=cleaned_draft, provenance=provenance)
+    
+    async def _verify_urls(self, sources: list[Source]) -> dict[str, str]:
+        """Check if URLs resolve."""
+        results = {}
+        for source in sources:
+            try:
+                response = await self.http.head(source.url, timeout=10)
+                if response.status_code == 200:
+                    results[source.id] = "live"
+                elif response.status_code in (301, 302, 307, 308):
+                    results[source.id] = "redirect"
+                else:
+                    results[source.id] = "dead"
+            except Exception:
+                results[source.id] = "dead"
+        return results
+```
+
+**Integration with Pipeline:**
+```python
+# New Stage 17b: CITATION_VERIFICATION (between PAPER_DRAFT and PEER_REVIEW)
+async def _execute_citation_verify(...) -> StageResult:
+    verifier = VerifierAgent(llm)
+    verified = await verifier.verify(draft, research_context)
+    
+    # Save provenance sidecar
+    (stage_dir / f"{slug}.provenance.md").write_text(
+        verified.provenance.to_markdown()
+    )
+    
+    return StageResult(...)
+```
+
+**Provenance Sidecar Format:**
+```markdown
+# Provenance Report
+
+## Source Accounting
+- Sources consulted: 47
+- Sources accepted: 42
+- Sources rejected: 5
+
+## Verification Status: PASS WITH NOTES
+
+## Rejected Sources
+| ID | URL | Reason |
+|----|-----|--------|
+| [12] | https://example.com/paper | 404 Not Found |
+| [23] | https://old-paper.org/x | Redirects to unrelated content |
+
+## Claims Modified
+- Removed claim about "97% accuracy" (depended solely on dead source [12])
+- Weakened claim from "proven" to "suggested by" (source [15] inconclusive)
+
+## Verification Timestamp
+2026-04-06T14:30:00Z
+```
+
+**Benefits:**
+- Catches fabricated citations before peer review
+- Active dead link detection
+- Transparent source accounting
+- Human-readable audit trail
+
+**Effort:** ~600 lines  
+**Priority:** P1 (Quality improvement)
+
+---
+
+### **Enhancement 2: Markdown-First Agent Definitions (⭐⭐⭐ Priority)**
+
+**Concept:** Define agents in Markdown with YAML frontmatter  
+**Inspired by:** Feynman's `.feynman/agents/*.md`  
+
+**Current (Berb):**
+```python
+# berb/agents/research_agent.py (complex Python class)
+class LiteratureResearchAgent:
+    def __init__(self, llm_client, config):
+        ...
+```
+
+**Proposed:**
+```markdown
+# berb/agents/researcher.md
+---
+name: researcher
+description: Gather primary evidence across papers, web sources, and local artifacts
+thinking: high
+tools: search_papers, web_search, read_file, grep, find
+temperature: 0.3
+max_tokens: 8000
+---
+
+## Integrity Commandments
+1. **Never fabricate a source.** Every citation must have a verifiable URL.
+2. **Never claim a project exists without checking.** Search first, cite second.
+3. **URL or it didn't happen.** No URL = not included.
+4. **Read before you summarize.** Do not infer from titles alone.
+
+## Search Strategy
+1. Start wide with 2-4 varied-angle queries
+2. Evaluate source quality
+3. Progressively narrow using discovered terminology
+4. Cross-source: use both academic and web sources
+
+## Output Format
+### Evidence Table
+| # | Source | URL | Key Claim | Type | Confidence |
+
+### Findings
+Use inline source references: `[1]`, `[2]`, etc.
+```
+
+**Agent Loader:**
+```python
+# berb/agents/loader.py
+from dataclasses import dataclass
+import frontmatter
+
+@dataclass
+class AgentSpec:
+    name: str
+    description: str
+    thinking: str
+    tools: list[str]
+    temperature: float
+    system_prompt: str
+
+def load_agent_from_markdown(path: Path) -> AgentSpec:
+    post = frontmatter.load(path)
+    return AgentSpec(
+        name=post.metadata["name"],
+        description=post.metadata["description"],
+        thinking=post.metadata.get("thinking", "medium"),
+        tools=post.metadata.get("tools", []),
+        temperature=post.metadata.get("temperature", 0.3),
+        system_prompt=post.content,
+    )
+```
+
+**Benefits:**
+- Easier agent authoring (Markdown vs Python)
+- Self-documenting agent capabilities
+- Version control friendly
+- Non-programmers can modify prompts
+
+**Effort:** ~400 lines  
+**Priority:** P2 (Developer experience)
+
+---
+
+### **Enhancement 3: Slug-Based File Organization (⭐⭐ Priority)**
+
+**Concept:** Human-friendly topic-based filenames  
+**Inspired by:** Feynman's `cloud-sandbox-pricing` slug convention  
+
+**Current (Berb):**
+```
+artifacts/rc-20260406-124632-0e0fa8/
+├── stage-06/
+│   └── cards/card-001.md
+├── stage-17/
+│   └── paper_draft.md
+└── checkpoint.json
+```
+
+**Proposed:**
+```
+artifacts/
+├── rc-20260406-124632-0e0fa8/  # Original ID for tracking
+│   └── ...
+└── reasoning-trajectory-control/  # Slug for human access
+    ├── lit-review/
+    │   ├── web-sources.md
+    │   └── paper-sources.md
+    ├── cards/
+    │   ├── prefix-sensitivity.md
+    │   └── step-verification.md
+    ├── experiments/
+    │   ├── baseline/
+    │   └── ablation-attention/
+    ├── drafts/
+    │   ├── draft-v1.md
+    │   └── draft-v2.md
+    ├── paper.md  # Final output
+    └── paper.provenance.md  # Verification audit
+```
+
+**Slug Generator:**
+```python
+# berb/utils/slugs.py
+import re
+
+def generate_slug(topic: str, max_words: int = 5) -> str:
+    """Generate human-friendly slug from topic.
+    
+    Example:
+        "Controlling Reasoning Trajectories in Large Language Models"
+        → "reasoning-trajectory-control"
+    """
+    # Remove filler words
+    filler = {"the", "a", "an", "in", "on", "at", "to", "for", "of", "and", "or"}
+    words = topic.lower().split()
+    content_words = [w for w in words if w not in filler]
+    
+    # Take first N content words
+    selected = content_words[:max_words]
+    
+    # Join with hyphens, remove non-alphanumeric
+    slug = "-".join(selected)
+    slug = re.sub(r'[^a-z0-9-]', '', slug)
+    slug = re.sub(r'-+', '-', slug)  # Collapse multiple hyphens
+    
+    return slug
+```
+
+**Benefits:**
+- Human can find files without knowing IDs
+- Concurrent work on related topics
+- Natural directory structure
+- Git-friendly organization
+
+**Effort:** ~300 lines  
+**Priority:** P2 (Usability)
+
+---
+
+### **Enhancement 4: Plan Artifacts as Externalized Working Memory (⭐⭐ Priority)**
+
+**Concept:** Keep research plan as editable Markdown file  
+**Inspired by:** Feynman's `outputs/.plans/<slug>.md`  
+
+**Plan Format:**
+```markdown
+# Research Plan: reasoning-trajectory-control
+
+## Objective
+Control LLM reasoning trajectories via prefix sensitivity and step-wise verification.
+
+## Tasks
+- [x] 1. Literature search on prefix sensitivity
+- [x] 2. Literature search on step-wise verification
+- [ ] 3. Identify baseline methods
+- [ ] 4. Design experiments
+- [ ] 5. Implement control mechanism
+
+## Decisions Log
+| Date | Decision | Rationale |
+|------|----------|-----------|
+| 2026-04-06 | Focus on Chain-of-Thought | Most relevant to reasoning trajectories |
+| 2026-04-06 | Exclude tool-use papers | Out of scope for this iteration |
+
+## Verification Log
+| Claim | Source | Status |
+|-------|--------|--------|
+| Prefix tokens affect reasoning | Wang et al. 2024 | verified |
+| 23% improvement possible | Smith et al. 2023 | unverified (need to check) |
+
+## Blockers
+- [ ] Need access to GPT-4 API for baseline comparison
+
+## Next Steps
+1. Verify Smith et al. 2023 results
+2. Design prefix manipulation experiments
+```
+
+**Benefits:**
+- Resumable long-running workflows
+- Human can edit plan mid-research
+- Transparent decision history
+- Better than hidden database state
+
+**Effort:** ~400 lines  
+**Priority:** P1 (Workflow robustness)
+
+---
+
+### **Enhancement 5: Source Integrity Commandments (⭐⭐ Priority)**
+
+**Concept:** Explicit rules for source handling  
+**Inspired by:** Feynman's researcher's "Integrity Commandments"  
+
+**Implementation:**
+```python
+# berb/literature/source_integrity.py
+from enum import Enum
+
+class SourceStatus(Enum):
+    VERIFIED = "verified"      # Actually checked with evidence
+    UNVERIFIED = "unverified"  # Not yet checked
+    INFERRED = "inferred"      # Synthesis from multiple sources
+    BLOCKED = "blocked"        # Cannot proceed
+
+@dataclass
+class IntegrityReport:
+    """Tracks source integrity throughout research."""
+    
+    commandments_checked: dict[str, bool]
+    source_status: dict[str, SourceStatus]
+    violations: list[str]
+    
+    COMMANDMENTS = [
+        "never_fabricate_source",
+        "never_claim_without_checking",
+        "never_extrapolate_unread",
+        "url_or_it_didnt_happen",
+        "read_before_summarize",
+        "mark_status_honestly",
+    ]
+    
+    def check_commandment(self, name: str, passed: bool, details: str = ""):
+        self.commandments_checked[name] = passed
+        if not passed:
+            self.violations.append(f"{name}: {details}")
+```
+
+**Integration:**
+```python
+# In Stage 6 (KNOWLEDGE_EXTRACT)
+for paper in papers:
+    integrity = IntegrityReport()
+    
+    # Check commandment: URL or it didn't happen
+    if not paper.url:
+        integrity.check_commandment(
+            "url_or_it_didnt_happen",
+            passed=False,
+            details=f"Paper '{paper.title}' has no URL"
+        )
+    
+    # Check commandment: Read before summarize
+    if not paper.full_text_accessed:
+        integrity.check_commandment(
+            "read_before_summarize",
+            passed=False,
+            details=f"Summarizing '{paper.title}' from abstract only"
+        )
+    
+    card.metadata["integrity"] = integrity.to_dict()
+```
+
+**Benefits:**
+- Prevents hallucinated citations
+- Transparent source quality
+- Enforces research rigor
+- Audit trail for verification
+
+**Effort:** ~300 lines  
+**Priority:** P1 (Research quality)
+
+---
+
+### **Enhancement 6: Lab Notebook Pattern (CHANGELOG.md) (⭐ Priority)**
+
+**Concept:** Chronological research log  
+**Inspired by:** Feynman's use of `CHANGELOG.md` as lab notebook  
+
+**Format:**
+```markdown
+# Research Log: reasoning-trajectory-control
+
+## 2026-04-06 14:30 - Stage 6 Complete
+**Status:** Literature collection finished  
+**Sources:** 47 papers, 12 web sources  
+**Key Finding:** Prefix sensitivity well-established in CoT literature  
+**Next:** Move to hypothesis generation
+
+## 2026-04-06 12:15 - Blocker Resolved
+**Issue:** Semantic Scholar rate limiting  
+**Resolution:** Switched to arXiv primary, S2 fallback  
+**Impact:** +20min delay
+
+## 2026-04-06 10:00 - Research Started
+**Topic:** Controlling Reasoning Trajectories in LLMs  
+**Approach:** Focus on prefix manipulation and step-wise verification  
+**Initial Hypothesis:** Prefix tokens can steer reasoning direction
+```
+
+**Benefits:**
+- Human-readable progress tracking
+- Blocker documentation
+- Decision rationale preserved
+- Resume context after interruptions
+
+**Effort:** ~200 lines  
+**Priority:** P2 (Transparency)
+
+---
+
+### **Implementation Roadmap**
+
+| Enhancement | Effort | Priority | Timeline | Impact |
+|-------------|--------|----------|----------|--------|
+| 1. Verification Subagent | 600L | P1 | Week 1-2 | +40% citation accuracy |
+| 2. Markdown Agent Definitions | 400L | P2 | Month 1 | +50% agent authoring ease |
+| 3. Slug-Based Organization | 300L | P2 | Week 2 | +30% usability |
+| 4. Plan Artifacts | 400L | P1 | Week 1 | Resumable workflows |
+| 5. Source Integrity | 300L | P1 | Week 2 | +35% research rigor |
+| 6. Lab Notebook | 200L | P2 | Week 3 | Transparency |
+
+**Total:** ~2,200 lines, 1-2 months  
+**Combined Impact:** Research rigor + transparency + usability
+
+---
+
+## 🎯 SUMMARY: Cross-Project Insights
+
+### **From DeepScientist:**
+- Git-native research branching (failed paths preserved)
+- Worktree-based experiment isolation (faster than Docker)
+- Markdown memory cards (human-readable)
+- Multi-channel integration (Telegram/Discord/Slack)
+- Artifact projection caching (10x faster queries)
+
+### **From Feynman:**
+- Dedicated verification subagent (source integrity)
+- Markdown agent definitions (declarative)
+- Slug-based file organization (human-friendly)
+- Plan artifacts as working memory (resumable)
+- Source integrity commandments (rigor)
+- Lab notebook pattern (transparency)
+
+### **Comparative Strengths:**
+
+| Project | Best For | Key Innovation |
+|---------|----------|----------------|
+| **Berb** | End-to-end paper generation | 23-stage pipeline with experiment execution |
+| **DeepScientist** | Exploratory research with human collaboration | Git-native branching, organic evolution |
+| **Feynman** | Source-heavy research with verification | Pi multi-agent, integrity commandments |
+
+### **Recommended Adaptations for Berb (Priority Order):**
+
+1. **P0 (Critical):** Fix current bugs (OpenCode, LLMConfig, IncompleteRead)
+2. **P1 (High):** Verification subagent, source integrity, plan artifacts
+3. **P2 (Medium):** Slug-based organization, markdown agents, lab notebook
+4. **P3 (Future):** Git branching, multi-channel, worktree isolation
+
+---
+
+**Last Updated:** 2026-04-06  
+**Status:** DeepScientist + Feynman analysis complete
+**Next:** Implement critical bug fixes

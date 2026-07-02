@@ -12,7 +12,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from berb.agents.base import BaseAgent, AgentStepResult
+from berb.agents.base import AgentStepResult, BaseAgent
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +55,7 @@ class IntegratorAgent(BaseAgent):
         """
         try:
             rendered = context.get("rendered", [])
-            topic = context.get("topic", "")
+            topic = context.get("topic", "")  # noqa: F841
             output_dir = Path(context.get("output_dir", "charts"))
 
             # Filter to successfully rendered figures only
@@ -82,9 +82,7 @@ class IntegratorAgent(BaseAgent):
                 json.dumps(manifest, indent=2, ensure_ascii=False),
                 encoding="utf-8",
             )
-            self.logger.info(
-                "Generated figure manifest: %d figures", len(manifest)
-            )
+            self.logger.info("Generated figure manifest: %d figures", len(manifest))
 
             return self._make_result(
                 True,
@@ -171,9 +169,7 @@ class IntegratorAgent(BaseAgent):
     # Markdown reference generation
     # ------------------------------------------------------------------
 
-    def _generate_markdown_refs(
-        self, manifest: list[dict[str, Any]]
-    ) -> str:
+    def _generate_markdown_refs(self, manifest: list[dict[str, Any]]) -> str:
         """Generate markdown image references for paper embedding."""
         refs: list[str] = []
 
@@ -181,9 +177,7 @@ class IntegratorAgent(BaseAgent):
             fig_num = entry["figure_number"]
             file_path = entry["file_path"]
             caption = entry.get("caption") or entry.get("title", f"Figure {fig_num}")
-            refs.append(
-                f"![Figure {fig_num}: {caption}]({file_path})"
-            )
+            refs.append(f"![Figure {fig_num}: {caption}]({file_path})")
 
         return "\n\n".join(refs)
 
@@ -191,9 +185,7 @@ class IntegratorAgent(BaseAgent):
     # Description generation for paper writing prompt
     # ------------------------------------------------------------------
 
-    def _generate_descriptions(
-        self, manifest: list[dict[str, Any]]
-    ) -> str:
+    def _generate_descriptions(self, manifest: list[dict[str, Any]]) -> str:
         """Generate figure descriptions for injection into paper writing prompt."""
         parts: list[str] = []
         parts.append("## AVAILABLE FIGURES (embed in the paper)")

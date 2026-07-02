@@ -51,9 +51,7 @@ class PresetRegistry:
             logger.warning(f"Preset catalog not found at {self.catalog_path}")
             return
 
-        yaml_files = list(self.catalog_path.glob("*.yaml")) + list(
-            self.catalog_path.glob("*.yml")
-        )
+        yaml_files = list(self.catalog_path.glob("*.yaml")) + list(self.catalog_path.glob("*.yml"))
 
         for yaml_file in yaml_files:
             try:
@@ -76,7 +74,7 @@ class PresetRegistry:
             Loaded PipelinePreset or None
         """
         try:
-            with open(yaml_file, "r", encoding="utf-8") as f:
+            with open(yaml_file, encoding="utf-8") as f:
                 data = yaml.safe_load(f)
 
             if not data:
@@ -165,11 +163,7 @@ class PresetRegistry:
         Returns:
             List of matching preset names
         """
-        return [
-            name
-            for name, preset in self.presets.items()
-            if tag in preset.tags
-        ]
+        return [name for name, preset in self.presets.items() if tag in preset.tags]
 
     def validate_preset(self, name: str) -> tuple[bool, list[str]]:
         """Validate a preset configuration.
@@ -231,8 +225,12 @@ class PresetRegistry:
         Returns:
             Merged configuration dictionary
         """
-        # Convert preset to dict
-        preset_dict = preset.model_dump(mode="json", exclude_none=True)
+        # Convert preset to dict. mode="python" (not "json") is required here:
+        # JSON mode stringifies dict keys, so stage_overrides' int stage-number
+        # keys (e.g. 8, 9) become "8", "9" — any int-keyed override merged in
+        # below would then create a duplicate int-keyed entry instead of
+        # overriding the existing string-keyed one.
+        preset_dict = preset.model_dump(mode="python", exclude_none=True)
 
         # Deep merge
         merged = self._deep_merge(preset_dict, user_config)
@@ -257,11 +255,7 @@ class PresetRegistry:
         result = base.copy()
 
         for key, value in override.items():
-            if (
-                key in result
-                and isinstance(result[key], dict)
-                and isinstance(value, dict)
-            ):
+            if key in result and isinstance(result[key], dict) and isinstance(value, dict):
                 result[key] = self._deep_merge(result[key], value)
             else:
                 result[key] = value

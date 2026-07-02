@@ -128,10 +128,21 @@ class TestGoogleScholarClient:
         assert len(results) == 1
         assert results[0].title == "Test Paper"
 
+    @patch("berb.web.scholar.time.sleep", return_value=None)
     @patch("berb.web.scholar.HAS_SCHOLARLY", True)
     @patch("berb.web.scholar.scholarly")
-    def test_search_error_graceful(self, mock_scholarly):
-        """Search should return empty list on error, not raise."""
+    def test_search_error_graceful(self, mock_scholarly, _mock_sleep):
+        """Search should return empty list on error, not raise.
+
+        The injected error message ("Rate limited") is classified by
+        GoogleScholarClient._with_retry as a block-type failure (matches the
+        "rate limit" keyword), which quadruples the exponential backoff base
+        (up to a 64s cap) across 3 retries — several real seconds of
+        time.sleep() per run. That's genuine retry/backoff logic being
+        exercised correctly, not a bug, so we mock time.sleep itself to keep
+        this test fast and deterministic rather than weakening the retry
+        classification or reducing max_retries.
+        """
         mock_scholarly.search_pubs.side_effect = Exception("Rate limited")
 
         client = GoogleScholarClient(inter_request_delay=0.0)

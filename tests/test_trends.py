@@ -31,21 +31,25 @@ def _make_papers(n: int = 10) -> list[dict[str, Any]]:
     """Generate synthetic papers for testing."""
     papers = []
     for i in range(n):
-        papers.append({
-            "title": f"Transformer attention mechanism for graph neural networks part {i}",
-            "authors": [
-                {"name": "Alice Smith"},
-                {"name": "Bob Jones"},
-            ] if i % 2 == 0 else ["Alice Smith", "Charlie Brown"],
-            "abstract": (
-                "We propose a transformer-based attention approach for "
-                "graph neural networks using contrastive learning on ImageNet "
-                "and CIFAR datasets. Our diffusion model achieves SOTA results."
-            ),
-            "url": f"https://arxiv.org/abs/2026.{i:05d}",
-            "source": "arxiv" if i % 2 == 0 else "semantic_scholar",
-            "published_date": "2026-03-01",
-        })
+        papers.append(
+            {
+                "title": f"Transformer attention mechanism for graph neural networks part {i}",
+                "authors": [
+                    {"name": "Alice Smith"},
+                    {"name": "Bob Jones"},
+                ]
+                if i % 2 == 0
+                else ["Alice Smith", "Charlie Brown"],
+                "abstract": (
+                    "We propose a transformer-based attention approach for "
+                    "graph neural networks using contrastive learning on ImageNet "
+                    "and CIFAR datasets. Our diffusion model achieves SOTA results."
+                ),
+                "url": f"https://arxiv.org/abs/2026.{i:05d}",
+                "source": "arxiv" if i % 2 == 0 else "semantic_scholar",
+                "published_date": "2026-03-01",
+            }
+        )
     return papers
 
 
@@ -145,9 +149,7 @@ class TestTrendAnalyzer:
 
     def test_extract_authors_dict_format(self):
         analyzer = TrendAnalyzer()
-        papers = [
-            {"authors": [{"name": "Alice"}, {"name": "Bob"}]} for _ in range(5)
-        ]
+        papers = [{"authors": [{"name": "Alice"}, {"name": "Bob"}]} for _ in range(5)]
         authors = analyzer._extract_authors(papers)
         assert any(a["author"] == "Alice" for a in authors)
 
@@ -239,9 +241,9 @@ class TestOpportunityFinder:
 
     def test_heuristic_empty_trends(self):
         finder = OpportunityFinder()
-        result = asyncio.run(finder.find_opportunities(
-            {"rising_keywords": [], "method_trends": []}, ["ml"]
-        ))
+        result = asyncio.run(
+            finder.find_opportunities({"rising_keywords": [], "method_trends": []}, ["ml"])
+        )
         assert result == []
 
     def test_llm_path(self):
@@ -277,12 +279,8 @@ class TestOpportunityFinder:
     def test_heuristic_max_five(self):
         finder = OpportunityFinder()
         trend_analysis = {
-            "rising_keywords": [
-                {"keyword": f"kw{i}", "count": 10} for i in range(10)
-            ],
-            "method_trends": [
-                {"method": f"method{i}", "mention_count": 5} for i in range(10)
-            ],
+            "rising_keywords": [{"keyword": f"kw{i}", "count": 10} for i in range(10)],
+            "method_trends": [{"method": f"method{i}", "mention_count": 5} for i in range(10)],
         }
         result = asyncio.run(finder.find_opportunities(trend_analysis, ["ml"]))
         assert len(result) <= 5
@@ -345,12 +343,14 @@ class TestDailyDigest:
 
     def test_author_formatting_dict(self):
         fm = FeedManager(sources=("arxiv",))
-        papers = [{
-            "title": "T",
-            "abstract": "",
-            "url": "",
-            "authors": [{"name": "A"}, {"name": "B"}, {"name": "C"}, {"name": "D"}],
-        }]
+        papers = [
+            {
+                "title": "T",
+                "abstract": "",
+                "url": "",
+                "authors": [{"name": "A"}, {"name": "B"}, {"name": "C"}, {"name": "D"}],
+            }
+        ]
         with patch.object(fm, "fetch_recent_papers", return_value=papers):
             digest = DailyDigest(fm)
             result = asyncio.run(digest.generate(["ml"]))
@@ -417,7 +417,9 @@ class TestAutoTopicGenerator:
         opp = {"topic": "totally unique xyz", "feasibility": "high"}
         trend = {"rising_keywords": [], "paper_count": 50}
         score = AutoTopicGenerator._score_candidate(opp, trend)
-        expected = round(0.4 * score["novelty"] + 0.3 * score["feasibility"] + 0.3 * score["impact"], 3)
+        expected = round(
+            0.4 * score["novelty"] + 0.3 * score["feasibility"] + 0.3 * score["impact"], 3
+        )
         assert score["overall"] == expected
 
     def test_format_candidates_empty(self):

@@ -29,6 +29,7 @@ from berb.skills.registry import (
 
 # ============== Agent Tests ==============
 
+
 class TestAgentConfig:
     """Test AgentConfig."""
 
@@ -101,7 +102,7 @@ class TestLiteratureReviewerAgent:
         agent = LiteratureReviewerAgent()
         papers = [{"title": "Test Paper"}]
         result = await agent.review("Test Topic", papers)
-        
+
         assert isinstance(result, LiteratureReviewResult)
         assert result.success is True
         assert len(result.key_findings) > 0
@@ -110,14 +111,16 @@ class TestLiteratureReviewerAgent:
     async def test_review_with_mock_llm(self):
         """Test review with mock LLM."""
         mock_llm = Mock()
-        mock_llm.chat = Mock(return_value=Mock(
-            content='{"summary": "Test", "key_findings": ["Finding 1"], "gaps": ["Gap 1"], "trends": ["Trend 1"], "relevant_papers": []}'
-        ))
-        
+        mock_llm.chat = Mock(
+            return_value=Mock(
+                content='{"summary": "Test", "key_findings": ["Finding 1"], "gaps": ["Gap 1"], "trends": ["Trend 1"], "relevant_papers": []}'
+            )
+        )
+
         agent = LiteratureReviewerAgent(AgentConfig(llm_client=mock_llm))
         papers = [{"title": "Test Paper"}]
         result = await agent.review("Test Topic", papers)
-        
+
         assert isinstance(result, LiteratureReviewResult)
         assert result.success is True
 
@@ -131,7 +134,7 @@ class TestExperimentAnalystAgent:
         results = {"accuracy": [0.95, 0.93]}
         metrics = {"accuracy": 0.95, "f1": 0.93}
         formatted = agent._format_results(results, metrics, None)
-        
+
         assert "## Metrics" in formatted
         assert "accuracy: 0.9500" in formatted
 
@@ -142,7 +145,7 @@ class TestExperimentAnalystAgent:
         results = {}
         metrics = {"accuracy": 0.95, "f1": 0.93}
         result = await agent.analyze(results, metrics)
-        
+
         assert isinstance(result, ExperimentAnalysisResult)
         assert result.success is True
         assert len(result.key_results) > 0
@@ -159,7 +162,7 @@ class TestPaperWritingAgent:
             "Method": "Technical description",
         }
         formatted = agent._format_outline(outline)
-        
+
         assert "## Introduction" in formatted
         assert "Problem statement" in formatted
 
@@ -171,7 +174,7 @@ class TestPaperWritingAgent:
             {"title": "Paper 2", "authors": ["Author B"], "year": 2021},
         ]
         formatted = agent._format_citations(citations)
-        
+
         assert "Paper 1" in formatted
         assert "Author A" in formatted
 
@@ -181,7 +184,7 @@ class TestPaperWritingAgent:
         agent = PaperWritingAgent()
         outline = {"Introduction": "Test"}
         result = await agent.write(outline, [])
-        
+
         assert isinstance(result, PaperWritingResult)
         assert result.success is True
         assert "abstract" in result.sections
@@ -201,7 +204,7 @@ class TestRebuttalWriterAgent:
             }
         ]
         formatted = agent._format_reviews(reviews)
-        
+
         assert "Reviewer R1" in formatted
         assert "Rating: 7" in formatted
         assert "Good paper" in formatted
@@ -212,7 +215,7 @@ class TestRebuttalWriterAgent:
         agent = RebuttalWriterAgent()
         reviews = [{"reviewer": "R1", "comments": ["Comment 1"]}]
         result = await agent.respond(reviews, "Paper text")
-        
+
         assert isinstance(result, RebuttalResult)
         assert result.success is True
         assert len(result.point_by_point) > 0
@@ -249,6 +252,7 @@ class TestCreateAgent:
 
 # ============== Skill Tests ==============
 
+
 class TestSkill:
     """Test Skill dataclass."""
 
@@ -276,7 +280,7 @@ class TestSkill:
         skill = Skill(id="test-skill", name="Test")
         context = {"key": "value"}
         result = skill.apply(context)
-        
+
         assert "applied_skills" in result
         assert "test-skill" in result["applied_skills"]
 
@@ -293,7 +297,7 @@ class TestSkillRegistry:
         """Test getting skill by ID."""
         registry = SkillRegistry()
         skill = registry.get("literature-review")
-        
+
         assert skill is not None
         assert skill.name == "Literature Review"
 
@@ -301,14 +305,14 @@ class TestSkillRegistry:
         """Test getting nonexistent skill."""
         registry = SkillRegistry()
         skill = registry.get("nonexistent")
-        
+
         assert skill is None
 
     def test_get_by_category(self):
         """Test getting skills by category."""
         registry = SkillRegistry()
         skills = registry.get_by_category("research")
-        
+
         assert len(skills) >= 1
         assert all(s.category == "research" for s in skills)
 
@@ -316,7 +320,7 @@ class TestSkillRegistry:
         """Test getting applicable skills for stage."""
         registry = SkillRegistry()
         skills = registry.get_applicable("LITERATURE_SCREEN")
-        
+
         assert len(skills) >= 1
         assert "LITERATURE_SCREEN" in skills[0].triggers
 
@@ -324,7 +328,7 @@ class TestSkillRegistry:
         """Test listing all skills."""
         registry = SkillRegistry()
         skill_ids = registry.list_skills()
-        
+
         assert len(skill_ids) == 4
         assert "literature-review" in skill_ids
         assert "experiment-analysis" in skill_ids
@@ -333,7 +337,7 @@ class TestSkillRegistry:
         """Test listing all categories."""
         registry = SkillRegistry()
         categories = registry.list_categories()
-        
+
         assert len(categories) == 4  # research, analysis, writing, verification
         assert "research" in categories
         assert "writing" in categories
@@ -347,7 +351,7 @@ class TestSkillRegistry:
             category="custom",
         )
         registry.register(new_skill)
-        
+
         assert registry.get("custom-skill") is not None
         assert len(registry.list_skills()) == 5
 
@@ -355,7 +359,7 @@ class TestSkillRegistry:
         """Test registry to_dict method."""
         registry = SkillRegistry()
         d = registry.to_dict()
-        
+
         assert len(d) == 4
         assert "literature-review" in d
         assert d["literature-review"]["name"] == "Literature Review"
@@ -368,12 +372,13 @@ class TestApplySkills:
         """Test applying skills to context."""
         context = {"stage": "test"}
         result = apply_skills(context, "LITERATURE_SCREEN")
-        
+
         assert "applied_skills" in result
         assert len(result["applied_skills"]) >= 1
 
 
 # ============== Integration Tests ==============
+
 
 class TestAgentsIntegration:
     """Test agent integration."""
@@ -386,6 +391,7 @@ class TestAgentsIntegration:
             PaperWritingAgent,
             RebuttalWriterAgent,
         )
+
         assert LiteratureReviewerAgent is not None
 
     def test_create_all_agents(self):
@@ -401,13 +407,14 @@ class TestSkillsIntegration:
     def test_import_skills(self):
         """Test skills can be imported."""
         from berb.skills import SkillRegistry, Skill
+
         assert SkillRegistry is not None
         assert Skill is not None
 
     def test_builtin_skills_complete(self):
         """Test built-in skills have all required fields."""
         registry = SkillRegistry()
-        
+
         for skill in registry._skills.values():
             assert skill.id
             assert skill.name

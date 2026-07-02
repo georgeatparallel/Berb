@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import sys
 from typing import Any
 
 from berb.wizard.templates import TEMPLATES
@@ -36,9 +35,7 @@ class QuickStartWizard:
             "Research domains (comma-separated: cv, nlp, rl, ml, ai4science)",
             default="ml",
         )
-        config["research"]["domains"] = [
-            d.strip() for d in domains_str.split(",") if d.strip()
-        ]
+        config["research"]["domains"] = [d.strip() for d in domains_str.split(",") if d.strip()]
 
         # 4. Experiment mode
         mode = self._choose(
@@ -70,11 +67,13 @@ class QuickStartWizard:
             base_url = self._ask("API base URL", default="https://api.openai.com/v1")
             api_key_env = self._ask("API key env var", default="OPENAI_API_KEY")
             model = self._ask("Model name", default="gpt-4o")
-            config["llm"].update({
-                "base_url": base_url,
-                "api_key_env": api_key_env,
-                "primary_model": model,
-            })
+            config["llm"].update(
+                {
+                    "base_url": base_url,
+                    "api_key_env": api_key_env,
+                    "primary_model": model,
+                }
+            )
 
         # 6. Output format
         conference = self._choose(

@@ -13,8 +13,8 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from enum import Enum
+from datetime import UTC, datetime
+from enum import StrEnum
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
@@ -22,7 +22,7 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger(__name__)
 
 
-class ClaimVerdict(str, Enum):
+class ClaimVerdict(StrEnum):
     """Verdict for claim verification.
 
     Attributes:
@@ -51,7 +51,7 @@ class ChallengeEvent(BaseModel):
     round: int
     reason: str
     challenger: str = "reviewer"
-    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    timestamp: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())
 
 
 class ClaimRecord(BaseModel):
@@ -79,7 +79,7 @@ class ClaimRecord(BaseModel):
     challenge_history: list[ChallengeEvent] = Field(default_factory=list)
     kill_reason: str | None = None
     verification_round: int | None = None
-    last_updated: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    last_updated: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
@@ -109,7 +109,7 @@ class ClaimIntegrityReport(BaseModel):
     challenged: int = 0
     verification_rate: float = 0.0
     claims: list[dict[str, Any]] = Field(default_factory=list)
-    generated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    generated_at: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())
 
     def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
@@ -221,7 +221,7 @@ class ClaimTracker:
                 challenger=challenger,
             )
         )
-        claim.last_updated = datetime.now(timezone.utc).isoformat()
+        claim.last_updated = datetime.now(UTC).isoformat()
 
         logger.info(f"Challenged claim {claim_id}: {reason}")
         return True
@@ -254,9 +254,7 @@ class ClaimTracker:
 
         # Use Bayesian verification if enabled
         if use_bayesian:
-            verdict = await self._bayesian_verify_claim(
-                claim, experiment_results, prior_belief
-            )
+            verdict = await self._bayesian_verify_claim(claim, experiment_results, prior_belief)
         else:
             # Fallback to rule-based verification
             verdict = self._rule_based_verify_claim(claim, experiment_results)
@@ -270,7 +268,7 @@ class ClaimTracker:
         else:
             claim.status = "weakened"
 
-        claim.last_updated = datetime.now(timezone.utc).isoformat()
+        claim.last_updated = datetime.now(UTC).isoformat()
 
         logger.info(f"Verified claim {claim_id}: {verdict.value}")
         return verdict
@@ -326,10 +324,7 @@ class ClaimTracker:
         prior_false = 1 - prior_belief
 
         # P(evidence) = P(evidence | true) × P(true) + P(evidence | false) × P(false)
-        evidence_prob = (
-            likelihood_given_true * prior_true +
-            likelihood_given_false * prior_false
-        )
+        evidence_prob = likelihood_given_true * prior_true + likelihood_given_false * prior_false
 
         # Posterior belief
         if evidence_prob > 0:
@@ -406,7 +401,7 @@ class ClaimTracker:
         claim = self.claims[claim_id]
         claim.status = "killed"
         claim.kill_reason = reason
-        claim.last_updated = datetime.now(timezone.utc).isoformat()
+        claim.last_updated = datetime.now(UTC).isoformat()
 
         logger.info(f"Killed claim {claim_id}: {reason}")
         return True
@@ -430,7 +425,7 @@ class ClaimTracker:
 
         claim = self.claims[claim_id]
         claim.evidence.extend(evidence)
-        claim.last_updated = datetime.now(timezone.utc).isoformat()
+        claim.last_updated = datetime.now(UTC).isoformat()
         return True
 
     def get_claim(self, claim_id: str) -> ClaimRecord | None:
@@ -578,9 +573,16 @@ class ClaimIntegrityChecker:
 
         # Look for claim indicators
         indicators = [
-            "we found", "we show", "we demonstrate", "our results",
-            "this paper", "our approach", "experiments show",
-            "significantly", "substantially", "improves by",
+            "we found",
+            "we show",
+            "we demonstrate",
+            "our results",
+            "this paper",
+            "our approach",
+            "experiments show",
+            "significantly",
+            "substantially",
+            "improves by",
         ]
 
         sentences = text.split(".")

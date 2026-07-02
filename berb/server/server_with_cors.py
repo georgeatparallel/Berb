@@ -1,8 +1,8 @@
 """Berb API Server with CORS support."""
 
-from fastapi import FastAPI, Request, Response
-from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 # Create app FIRST before any routes
 app = FastAPI(title="Berb Research API")
@@ -17,17 +17,7 @@ app.add_middleware(
 )
 
 # NOW import routes (they will be registered after CORS)
-from berb.server.api import (
-    app as api_app,
-    create_research_job,
-    get_research_job,
-    stream_research_progress,
-    run_research_pipeline,
-    websocket_endpoint,
-    list_presets,
-    healthz,
-    readyz,
-)
+from berb.server.api import app as api_app  # noqa: E402
 
 # Copy routes from imported app
 app.router.routes = api_app.router.routes

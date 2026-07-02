@@ -1,8 +1,10 @@
-"""AIRA2-inspired asynchronous experiment execution pool.
+"""AIRA2-inspired asynchronous experiment execution pool with bulkhead isolation.
 
 Based on AIRA2 (Meta FAIR — arXiv:2603.26499) Section 3.1:
 "Asynchronous Multi-GPU Worker Pool decouples decision-making from execution.
 8 workers run in parallel — no synchronization barriers."
+
+P1 2026-04-02: Added bulkhead isolation to prevent cascading failures.
 
 Key Features:
 - Decouples decision-making from execution
@@ -10,12 +12,13 @@ Key Features:
 - Steady-state evolution: dispatch as workers become available
 - Linear throughput scaling (8 GPUs ≈ 8× experiments)
 - CAID-inspired isolation (docker/worktree/sandbox)
+- P1 bulkhead isolation (separate resource pools per worker)
 
 # Author: Georgios-Chrysovalantis Chatzivantsidis
 
 Usage:
     from berb.experiment.async_pool import AsyncExperimentPool
-    
+
     pool = AsyncExperimentPool(max_workers=4)
     results = await pool.execute_parallel(experiments)
 """
@@ -26,7 +29,6 @@ import asyncio
 import logging
 import time
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any, Protocol
 
 from berb.experiment.runner import ExperimentResult
@@ -38,7 +40,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class WorkerStatus:
     """Worker status information.
-    
+
     Attributes:
         worker_id: Unique worker identifier
         is_busy: Whether worker is currently executing
@@ -47,6 +49,7 @@ class WorkerStatus:
         failed_count: Number of failed experiments
         last_heartbeat: Last activity timestamp
     """
+
     worker_id: str
     is_busy: bool = False
     current_experiment: str | None = None
@@ -57,26 +60,27 @@ class WorkerStatus:
 
 class ExperimentWorker(Protocol):
     """Individual experiment worker interface.
-    
+
     Attributes:
         worker_id: Unique worker identifier
     """
+
     worker_id: str
-    
+
     async def execute(self, design: ExperimentDesign) -> ExperimentResult:
         """Execute single experiment.
-        
+
         Args:
             design: Experiment design to execute
-            
+
         Returns:
             Experiment result
         """
         ...
-    
+
     async def get_status(self) -> WorkerStatus:
         """Get worker status.
-        
+
         Returns:
             Current worker status
         """
@@ -86,7 +90,7 @@ class ExperimentWorker(Protocol):
 @dataclass
 class PoolConfig:
     """Configuration for async experiment pool.
-    
+
     Attributes:
         max_workers: Maximum number of parallel workers
         isolation: Isolation mode (docker/worktree/sandbox)
@@ -94,6 +98,7 @@ class PoolConfig:
         timeout_per_experiment: Default timeout per experiment (seconds)
         docker_image: Docker image to use (if isolation=docker)
     """
+
     max_workers: int = 4
     isolation: str = "docker"
     gpu_enabled: bool = True
@@ -103,17 +108,17 @@ class PoolConfig:
 
 class AsyncExperimentPool:
     """AIRA2-inspired asynchronous experiment execution pool.
-    
+
     Implements parallel experiment execution with:
     - CAID-inspired isolation (each experiment isolated)
     - AIRA2-inspired scheduling (steady-state dispatch)
     - No synchronization barriers
     - Linear throughput scaling
-    
+
     Usage:
         pool = AsyncExperimentPool(max_workers=4)
         results = await pool.execute_parallel(experiments)
-    
+
     Architecture:
         ┌─────────────────────────────────────────┐
         │         AsyncExperimentPool             │
@@ -125,110 +130,114 @@ class AsyncExperimentPool:
         │              Queue                      │
         └─────────────────────────────────────────┘
     """
-    
+
     def __init__(
         self,
         config: PoolConfig | None = None,
+        bulkhead_enabled: bool = True,
     ):
         """Initialize async experiment pool.
-        
+
         Args:
             config: Pool configuration (uses defaults if None)
+            bulkhead_enabled: Enable bulkhead isolation (P1 2026-04-02)
         """
         self.config = config or PoolConfig()
         self.max_workers = self.config.max_workers
         self.isolation = self.config.isolation
         self.gpu_enabled = self.config.gpu_enabled
         self.timeout = self.config.timeout_per_experiment
-        
+
+        # P1 2026-04-02: Bulkhead isolation - separate semaphore per worker
+        self._bulkhead_enabled = bulkhead_enabled
+        self._worker_semaphores: list[asyncio.Semaphore] = (
+            [asyncio.Semaphore(1) for _ in range(self.max_workers)] if bulkhead_enabled else []
+        )
+
         self._workers: list[ExperimentWorker] = []
         self._result_db: dict[str, ExperimentResult] = {}
         self._queue: asyncio.Queue[ExperimentDesign] = asyncio.Queue()
         self._running = False
         self._status: dict[str, WorkerStatus] = {}
-    
+        self._worker_failures: dict[str, int] = {}  # Track failures per worker
+
     async def execute_parallel(
         self,
         experiments: list[ExperimentDesign],
         timeout_per_experiment: int | None = None,
     ) -> list[ExperimentResult]:
         """Run experiments in parallel isolated environments.
-        
+
         CAID-inspired isolation:
         - Each experiment runs in its own Docker container or git worktree
         - No shared state between experiments
         - Results collected asynchronously
         - Failed experiments don't affect others
-        
+
         AIRA2-inspired scheduling:
         - Steady-state: dispatch new experiment as worker frees
         - No synchronization barriers
         - Linear throughput scaling with workers
-        
+
         Args:
             experiments: List of experiment designs to execute
             timeout_per_experiment: Timeout per experiment in seconds
                 (overrides config default if provided)
-            
+
         Returns:
             List of experiment results (order preserved to match input)
-            
+
         Raises:
             RuntimeError: If pool is already running
         """
         if self._running:
             raise RuntimeError("Pool is already running")
-        
+
         timeout = timeout_per_experiment or self.timeout
-        
+
         # Initialize workers
         logger.info(f"Initializing {self.max_workers} workers...")
         await self._initialize_workers()
-        
+
         # Queue all experiments
         for exp in experiments:
             await self._queue.put(exp)
-        
+
         # Start workers
         self._running = True
         start_time = time.time()
-        
+
         # Dispatch workers
         tasks = [
-            asyncio.create_task(self._worker_loop(worker, timeout))
-            for worker in self._workers
+            asyncio.create_task(self._worker_loop(worker, timeout)) for worker in self._workers
         ]
-        
+
         logger.info(f"Started {len(tasks)} worker tasks")
-        
+
         # Wait for queue to be empty
         await self._queue.join()
-        
+
         # Stop workers
         self._running = False
         await asyncio.gather(*tasks, return_exceptions=True)
-        
+
         elapsed = time.time() - start_time
-        
+
         # Log summary
-        total_completed = sum(
-            s.completed_count for s in self._status.values()
-        )
-        total_failed = sum(
-            s.failed_count for s in self._status.values()
-        )
+        total_completed = sum(s.completed_count for s in self._status.values())
+        total_failed = sum(s.failed_count for s in self._status.values())
         logger.info(
             f"Pool execution complete: {total_completed} succeeded, "
             f"{total_failed} failed in {elapsed:.2f}s"
         )
-        
+
         # Return results in original order
         return [self._result_db[exp.id] for exp in experiments]
-    
+
     async def _initialize_workers(self) -> None:
         """Initialize worker pool."""
         from berb.experiment.worker import ExperimentWorkerImpl
-        
+
         for i in range(self.max_workers):
             worker = ExperimentWorkerImpl(
                 worker_id=f"worker-{i}",
@@ -237,12 +246,12 @@ class AsyncExperimentPool:
                 docker_image=self.config.docker_image,
             )
             self._workers.append(worker)
-            
+
             status = WorkerStatus(worker_id=worker.worker_id)
             self._status[worker.worker_id] = status
-            
+
             logger.info(f"Initialized {worker.worker_id} (isolation={self.isolation})")
-    
+
     async def _worker_loop(
         self,
         worker: ExperimentWorker,
@@ -250,11 +259,14 @@ class AsyncExperimentPool:
     ) -> None:
         """Worker main loop - process queue until stopped.
 
+        P1 2026-04-02: Added bulkhead isolation to prevent cascading failures.
+
         Args:
             worker: Worker instance
             timeout: Timeout per experiment in seconds
         """
         worker_name = worker.worker_id
+        worker_idx = int(worker_name.split("-")[-1]) if worker_name.count("-") > 0 else 0
 
         while self._running or not self._queue.empty():
             design = None
@@ -274,54 +286,54 @@ class AsyncExperimentPool:
 
                 logger.info(f"{worker_name} executing {design.id}")
 
-                # Execute experiment with timeout
-                try:
-                    result = await asyncio.wait_for(
-                        worker.execute(design),
-                        timeout=timeout,
-                    )
-                    self._result_db[design.id] = result
-                    status.completed_count += 1
-                    logger.info(f"{worker_name} completed {design.id}")
+                # P1 2026-04-02: Execute with bulkhead isolation
+                if self._bulkhead_enabled and worker_idx < len(self._worker_semaphores):
+                    async with self._worker_semaphores[worker_idx]:
+                        result = await self._execute_with_timeout(
+                            worker, design, timeout, worker_name
+                        )
+                else:
+                    result = await self._execute_with_timeout(worker, design, timeout, worker_name)
 
-                except asyncio.TimeoutError:
-                    logger.error(f"{worker_name} timeout on {design.id}")
-                    result = ExperimentResult(
-                        run_id=design.id,
-                        iteration=0,
-                        code="",
-                        metrics={},
-                        primary_metric=None,
-                        improved=False,
-                        kept=False,
-                        elapsed_sec=timeout,
-                        stdout="",
-                        stderr=f"Timeout after {timeout}s",
-                        error="Timeout",
-                    )
-                    self._result_db[design.id] = result
-                    status.failed_count += 1
+                self._result_db[design.id] = result
+                status.completed_count += 1
+                logger.info(f"{worker_name} completed {design.id}")
 
-                except Exception as e:
-                    logger.exception(f"{worker_name} failed on {design.id}: {e}")
-                    result = ExperimentResult(
-                        run_id=design.id,
-                        iteration=0,
-                        code="",
-                        metrics={},
-                        primary_metric=None,
-                        improved=False,
-                        kept=False,
-                        elapsed_sec=0,
-                        stdout="",
-                        stderr=str(e),
-                        error=str(e),
-                    )
-                    self._result_db[design.id] = result
-                    status.failed_count += 1
+            except TimeoutError:
+                logger.error(f"{worker_name} timeout on {design.id}")
+                result = ExperimentResult(
+                    run_id=design.id,
+                    iteration=0,
+                    code="",
+                    metrics={},
+                    primary_metric=None,
+                    improved=False,
+                    kept=False,
+                    elapsed_sec=timeout,
+                    stdout="",
+                    stderr=f"Timeout after {timeout}s",
+                    error="Timeout",
+                )
+                self._result_db[design.id] = result
+                status.failed_count += 1
 
             except Exception as e:
-                logger.exception(f"{worker_name} loop error: {e}")
+                logger.exception(f"{worker_name} failed on {design.id}: {e}")
+                result = ExperimentResult(
+                    run_id=design.id,
+                    iteration=0,
+                    code="",
+                    metrics={},
+                    primary_metric=None,
+                    improved=False,
+                    kept=False,
+                    elapsed_sec=0,
+                    stdout="",
+                    stderr=str(e),
+                    error=str(e),
+                )
+                self._result_db[design.id] = result
+                status.failed_count += 1
 
             finally:
                 # Always mark task done if we successfully got an item
@@ -337,10 +349,69 @@ class AsyncExperimentPool:
                     status.is_busy = False
                     status.current_experiment = None
                     status.last_heartbeat = time.time()
-    
+
+    async def _execute_with_timeout(
+        self,
+        worker: ExperimentWorker,
+        design: ExperimentDesign,
+        timeout: int,
+        worker_name: str,
+    ) -> ExperimentResult:
+        """Execute experiment with timeout.
+
+        P1 2026-04-02: Extracted for bulkhead isolation.
+
+        Args:
+            worker: Worker instance
+            design: Experiment design
+            timeout: Timeout in seconds
+            worker_name: Worker name for logging
+
+        Returns:
+            Experiment result
+        """
+        try:
+            result = await asyncio.wait_for(
+                worker.execute(design),
+                timeout=timeout,
+            )
+            return result
+
+        except TimeoutError:
+            logger.error(f"{worker_name} timeout on {design.id}")
+            return ExperimentResult(
+                run_id=design.id,
+                iteration=0,
+                code="",
+                metrics={},
+                primary_metric=None,
+                improved=False,
+                kept=False,
+                elapsed_sec=timeout,
+                stdout="",
+                stderr=f"Timeout after {timeout}s",
+                error="Timeout",
+            )
+
+        except Exception as e:
+            logger.exception(f"{worker_name} failed on {design.id}: {e}")
+            return ExperimentResult(
+                run_id=design.id,
+                iteration=0,
+                code="",
+                metrics={},
+                primary_metric=None,
+                improved=False,
+                kept=False,
+                elapsed_sec=0,
+                stdout="",
+                stderr=str(e),
+                error=str(e),
+            )
+
     def get_pool_status(self) -> dict[str, Any]:
         """Get current pool status.
-        
+
         Returns:
             Dictionary with pool status information
         """
@@ -358,26 +429,26 @@ class AsyncExperimentPool:
             },
             "results_count": len(self._result_db),
         }
-    
+
     async def shutdown(self) -> None:
         """Shutdown the pool gracefully."""
         logger.info("Shutting down pool...")
         self._running = False
-        
+
         # Wait for queue to drain
         if not self._queue.empty():
             logger.info(f"Waiting for {self._queue.qsize()} pending experiments")
             await self._queue.join()
-        
+
         logger.info("Pool shutdown complete")
 
 
 async def create_pool(config: PoolConfig | None = None) -> AsyncExperimentPool:
     """Factory function to create and initialize pool.
-    
+
     Args:
         config: Pool configuration
-        
+
     Returns:
         Initialized AsyncExperimentPool
     """

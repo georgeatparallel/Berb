@@ -67,7 +67,6 @@ enabled_stages:
   - 21
   - 22
   - 23
-
 stage_overrides:
   3:  # Literature — food innovation databases
     extra_sources: ["mintel_gnpd_open", "fao_food_data", "eu_cordis_projects"]

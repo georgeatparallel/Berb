@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import shutil
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -49,12 +49,10 @@ class BranchManager:
         meta = {
             "name": name,
             "from_stage": from_stage,
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
             "status": "active",
         }
-        (branch_dir / "branch_meta.json").write_text(
-            json.dumps(meta, indent=2), encoding="utf-8"
-        )
+        (branch_dir / "branch_meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
 
         logger.info("Created branch '%s' from stage %d", name, from_stage)
         return str(branch_dir)
@@ -75,17 +73,21 @@ class BranchManager:
                     meta["path"] = str(branch_dir)
                     branches.append(meta)
                 except (json.JSONDecodeError, OSError):
-                    branches.append({
+                    branches.append(
+                        {
+                            "name": branch_dir.name,
+                            "path": str(branch_dir),
+                            "status": "unknown",
+                        }
+                    )
+            else:
+                branches.append(
+                    {
                         "name": branch_dir.name,
                         "path": str(branch_dir),
                         "status": "unknown",
-                    })
-            else:
-                branches.append({
-                    "name": branch_dir.name,
-                    "path": str(branch_dir),
-                    "status": "unknown",
-                })
+                    }
+                )
         return branches
 
     def switch_branch(self, name: str) -> Path:

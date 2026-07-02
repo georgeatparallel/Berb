@@ -16,16 +16,16 @@ Author: Georgios-Chrysovalantis Chatzivantsidis
 """
 
 from berb.commands.claude_scholar import (
-    cmd_research_init,
-    cmd_zotero_review,
-    cmd_zotero_notes,
-    cmd_obsidian_ingest,
     cmd_analyze_results,
-    cmd_rebuttal_enhanced,
-    cmd_mine_writing_patterns,
-    cmd_verify_citations,
     cmd_anti_ai_editing,
+    cmd_mine_writing_patterns,
+    cmd_obsidian_ingest,
     cmd_obsidian_init,
+    cmd_rebuttal_enhanced,
+    cmd_research_init,
+    cmd_verify_citations,
+    cmd_zotero_notes,
+    cmd_zotero_review,
     setup_claude_scholar_commands,
 )
 

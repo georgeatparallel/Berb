@@ -8,6 +8,7 @@ including feedback collection, audit trail, and mode management.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import pytest
 from datetime import datetime, timezone
@@ -186,17 +187,17 @@ class TestAuditTrail:
         """Test recording feedback."""
         filepath = tmp_path / "audit_trail.json"
         trail = AuditTrail(filepath)
-        
+
         feedback = HumanFeedback(
             stage_number=8,
             action=FeedbackAction.APPROVE,
         )
         trail.record_feedback(feedback)
-        
+
         assert len(trail.entries) == 1
         assert trail.entries[0]["type"] == "human_feedback"
         assert trail.entries[0]["stage_number"] == 8
-        
+
         # Verify file was written
         assert filepath.exists()
 
@@ -204,13 +205,13 @@ class TestAuditTrail:
         """Test recording stage completion."""
         filepath = tmp_path / "audit_trail.json"
         trail = AuditTrail(filepath)
-        
+
         trail.record_stage_completion(
             stage_number=5,
             stage_name="LITERATURE_SCREEN",
             output_path="output/stage_5.json",
         )
-        
+
         assert len(trail.entries) == 1
         assert trail.entries[0]["type"] == "stage_completion"
         assert trail.entries[0]["stage_number"] == 5
@@ -219,9 +220,9 @@ class TestAuditTrail:
         """Test recording approval."""
         filepath = tmp_path / "audit_trail.json"
         trail = AuditTrail(filepath)
-        
+
         trail.record_approval(stage_number=8, approved_by="human")
-        
+
         assert len(trail.entries) == 1
         assert trail.entries[0]["type"] == "stage_approval"
 
@@ -229,13 +230,13 @@ class TestAuditTrail:
         """Test recording rejection."""
         filepath = tmp_path / "audit_trail.json"
         trail = AuditTrail(filepath)
-        
+
         trail.record_rejection(
             stage_number=9,
             reason="Experiment design flawed",
             requested_action="regenerate",
         )
-        
+
         assert len(trail.entries) == 1
         assert trail.entries[0]["type"] == "stage_rejection"
         assert "flawed" in trail.entries[0]["reason"]
@@ -244,11 +245,11 @@ class TestAuditTrail:
         """Test getting stage history."""
         filepath = tmp_path / "audit_trail.json"
         trail = AuditTrail(filepath)
-        
+
         trail.record_approval(stage_number=5)
         trail.record_approval(stage_number=8)
         trail.record_rejection(stage_number=5, reason="test", requested_action="fix")
-        
+
         history = trail.get_stage_history(5)
         assert len(history) == 2
 
@@ -256,10 +257,10 @@ class TestAuditTrail:
         """Test getting full report."""
         filepath = tmp_path / "audit_trail.json"
         trail = AuditTrail(filepath)
-        
+
         trail.record_approval(stage_number=5)
         trail.record_rejection(stage_number=8, reason="test", requested_action="fix")
-        
+
         report = trail.get_full_report()
         assert "total_entries" in report
         assert report["total_entries"] == 2
@@ -270,11 +271,11 @@ class TestAuditTrail:
     def test_load_existing_trail(self, tmp_path):
         """Test loading existing audit trail."""
         filepath = tmp_path / "audit_trail.json"
-        
+
         # Create initial trail
         trail1 = AuditTrail(filepath)
         trail1.record_approval(stage_number=1)
-        
+
         # Load again
         trail2 = AuditTrail(filepath)
         assert len(trail2.entries) == 1
@@ -305,16 +306,16 @@ class TestOperationModeManager:
     def test_inject_feedback_hypothesis(self):
         """Test injecting hypothesis feedback."""
         manager = OperationModeManager(mode=OperationMode.COLLABORATIVE)
-        
+
         feedback = HumanFeedback(
             stage_number=8,
             action=FeedbackAction.ADD_HYPOTHESIS,
             feedback_text="Additional hypothesis here",
         )
         context = {"hypotheses": ["Original hypothesis"]}
-        
+
         updated = manager.inject_feedback_into_context(feedback, context)
-        
+
         assert "human_feedback" in updated
         assert len(updated["hypotheses"]) == 2
         assert "Additional hypothesis here" in updated["hypotheses"]
@@ -322,28 +323,26 @@ class TestOperationModeManager:
     def test_inject_feedback_override(self):
         """Test injecting experiment override feedback."""
         manager = OperationModeManager(mode=OperationMode.COLLABORATIVE)
-        
+
         feedback = HumanFeedback(
             stage_number=9,
             action=FeedbackAction.OVERRIDE,
             metadata={"overrides": {"max_iterations": 20}},
         )
         context = {}
-        
+
         updated = manager.inject_feedback_into_context(feedback, context)
-        
+
         assert "experiment_overrides" in updated
         assert updated["experiment_overrides"]["max_iterations"] == 20
 
     def test_get_audit_report(self):
         """Test getting audit report."""
         manager = OperationModeManager(mode=OperationMode.COLLABORATIVE)
-        
+
         manager.audit_trail.record_approval(stage_number=5)
-        manager.audit_trail.record_rejection(
-            stage_number=8, reason="test", requested_action="fix"
-        )
-        
+        manager.audit_trail.record_rejection(stage_number=8, reason="test", requested_action="fix")
+
         report = manager.get_audit_report()
         assert report["total_entries"] == 2
         assert report["summary"]["approvals"] == 1
@@ -384,14 +383,14 @@ class TestAsyncApproval:
             mode=OperationMode.COLLABORATIVE,
             collaborative_config=config,
         )
-        
+
         summary = StageSummary(
             stage_number=8,
             stage_name="HYPOTHESIS_GEN",
             status="completed",
             output_summary="Test",
         )
-        
+
         with patch("asyncio.wait_for", side_effect=asyncio.TimeoutError()):
             with pytest.raises(TimeoutError):
                 await manager.present_for_approval(summary)
@@ -403,17 +402,17 @@ class TestAsyncApproval:
             mode=OperationMode.COLLABORATIVE,
             collaborative_config=config,
         )
-        
+
         summary = StageSummary(
             stage_number=5,
             stage_name="LITERATURE_SCREEN",
             status="completed",
             output_summary="Test",
         )
-        
+
         # Mock JSON input
         json_feedback = '{"action": "approve", "feedback_text": "Good work"}'
-        
+
         with patch("asyncio.wait_for", return_value=json_feedback):
             with patch("builtins.input", return_value=json_feedback):
                 feedback = await manager._collect_json_feedback(summary)

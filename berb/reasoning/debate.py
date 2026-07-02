@@ -31,16 +31,15 @@ Usage:
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from dataclasses import dataclass, field
 from typing import Any
 
 from .base import (
-    ReasoningMethod,
-    ReasoningContext,
-    ReasoningResult,
     MethodType,
+    ReasoningContext,
+    ReasoningMethod,
+    ReasoningResult,
 )
 from .registry import ReasonerRegistry
 
@@ -93,7 +92,7 @@ class DebateMethod(ReasoningMethod):
 
     def __init__(
         self,
-        router: Any = None,      # NEW: Primary (ExtendedNadirClawRouter)
+        router: Any = None,  # NEW: Primary (ExtendedNadirClawRouter)
         llm_client: Any = None,  # DEPRECATED: Fallback only
         num_arguments: int = 3,
         **kwargs: Any,
@@ -198,10 +197,10 @@ class DebateMethod(ReasoningMethod):
                 duration_sec=duration,
                 model_used=context.metadata.get("model", "unknown"),
             )
-            
+
             # Track cost if router supports it
             self._track_cost(duration)
-            
+
             return result
 
         except Exception as e:
@@ -219,23 +218,24 @@ class DebateMethod(ReasoningMethod):
         context: ReasoningContext,
     ) -> list[Argument]:
         """Generate arguments for one side of the debate.
-        
+
         Uses router if available (recommended for cost optimization),
         otherwise falls back to llm_client.
         """
         arguments = []
-        
+
         # Determine role name for router
         role = f"debate_{side}"  # "debate_pro" or "debate_con"
 
-        if self.router and hasattr(self.router, 'get_provider_for_role'):
+        if self.router and hasattr(self.router, "get_provider_for_role"):
             # Use router for cost-optimized model selection
             try:
                 provider = self.router.get_provider_for_role(role)
                 prompt = self._build_argument_prompt(position, side)
                 response = await provider.chat([{"role": "user", "content": prompt}])
-                
+
                 import json
+
                 data = json.loads(response.content)
                 for arg_data in data.get("arguments", []):
                     arguments.append(
@@ -277,7 +277,7 @@ class DebateMethod(ReasoningMethod):
             arguments = self._generate_fallback_arguments(side, position)
 
         return arguments
-    
+
     def _build_argument_prompt(self, position: str, side: str) -> str:
         """Build prompt for argument generation."""
         return f"""Consider the following position:
@@ -340,12 +340,8 @@ Respond in JSON format:
         """Judge evaluates the debate and declares a winner."""
         if self.llm_client:
             # Format arguments for judge
-            pro_text = "\n".join(
-                f"- {a.claim} (Evidence: {a.evidence})" for a in pro_args
-            )
-            con_text = "\n".join(
-                f"- {a.claim} (Evidence: {a.evidence})" for a in con_args
-            )
+            pro_text = "\n".join(f"- {a.claim} (Evidence: {a.evidence})" for a in pro_args)
+            con_text = "\n".join(f"- {a.claim} (Evidence: {a.evidence})" for a in con_args)
 
             prompt = f"""As an impartial judge, evaluate this debate:
 
@@ -393,20 +389,22 @@ Respond in JSON format:
         return {
             "winner": winner,
             "reasoning": f"Pro average strength: {pro_strength:.2f}, Con average strength: {con_strength:.2f}",
-            "conclusion": f"The debate favors the {winner} side based on argument strength." if winner != "undecided" else "The debate is too close to call.",
+            "conclusion": f"The debate favors the {winner} side based on argument strength."
+            if winner != "undecided"
+            else "The debate is too close to call.",
             "confidence": abs(pro_strength - con_strength),
         }
-    
+
     def _track_cost(self, duration_sec: float) -> None:
         """Track cost for debate execution."""
         if self.router is None or self._run_id is None:
             return
-        
-        if hasattr(self.router, 'track_cost'):
+
+        if hasattr(self.router, "track_cost"):
             # Estimate tokens for debate (pro + con + judge)
             estimated_input = 600 * self.num_arguments * 2 + 800  # pro + con + judge
             estimated_output = 400 * self.num_arguments * 2 + 500
-            
+
             self.router.track_cost(
                 method="debate",
                 phase="all",

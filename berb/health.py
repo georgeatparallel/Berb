@@ -12,9 +12,9 @@ import urllib.request
 from collections.abc import Callable as AbcCallable
 from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import ContextManager, cast
+from typing import Any, cast
 
 import yaml
 
@@ -69,8 +69,7 @@ def check_python_version() -> CheckResult:
             name="python_version",
             status="pass",
             detail=(
-                f"Python {sys.version_info.major}.{sys.version_info.minor}."
-                f"{sys.version_info.micro}"
+                f"Python {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
             ),
         )
     return CheckResult(
@@ -137,9 +136,7 @@ def check_config_valid(config_path: str | Path) -> CheckResult:
     typed_data = {str(key): value for key, value in data_map.items()}
     result = validate_config(typed_data)
     if result.ok:
-        return CheckResult(
-            name="config_valid", status="pass", detail="Config validation ok"
-        )
+        return CheckResult(name="config_valid", status="pass", detail="Config validation ok")
     return CheckResult(
         name="config_valid",
         status="fail",
@@ -255,9 +252,7 @@ def _fetch_models(base_url: str, api_key: str = "") -> tuple[int, dict[str, obje
     with _urlopen(request, timeout=5) as response:
         raw_bytes = _read_response_bytes(response)
         payload_map = _load_json_mapping(raw_bytes.decode("utf-8") or "{}")
-        payload: dict[str, object] = {
-            str(key): value for key, value in payload_map.items()
-        }
+        payload: dict[str, object] = {str(key): value for key, value in payload_map.items()}
         return 200, payload
 
 
@@ -274,8 +269,8 @@ def _read_response_bytes(response: object) -> bytes:
     return bytes(raw)
 
 
-def _urlopen(req: str | urllib.request.Request, timeout: int) -> ContextManager[object]:
-    return cast(ContextManager[object], urllib.request.urlopen(req, timeout=timeout))
+def _urlopen(req: str | urllib.request.Request, timeout: int) -> Any:
+    return cast(Any, urllib.request.urlopen(req, timeout=timeout))
 
 
 def _load_yaml_object(content: str) -> object:
@@ -707,7 +702,7 @@ def run_doctor(config_path: str | Path) -> DoctorReport:
 
     overall = "fail" if any(c.status == "fail" for c in checks) else "pass"
     return DoctorReport(
-        timestamp=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        timestamp=datetime.now(UTC).isoformat(timespec="seconds"),
         checks=checks,
         overall=overall,
     )

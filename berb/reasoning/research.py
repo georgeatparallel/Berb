@@ -37,10 +37,10 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from .base import (
-    ReasoningMethod,
-    ReasoningContext,
-    ReasoningResult,
     MethodType,
+    ReasoningContext,
+    ReasoningMethod,
+    ReasoningResult,
 )
 from .registry import ReasonerRegistry
 
@@ -93,7 +93,7 @@ class ResearchMethod(ReasoningMethod):
 
     def __init__(
         self,
-        router: Any = None,      # NEW: Primary (ExtendedNadirClawRouter)
+        router: Any = None,  # NEW: Primary (ExtendedNadirClawRouter)
         llm_client: Any = None,  # DEPRECATED: Fallback only
         search_client: Any = None,
         max_iterations: int = 3,
@@ -134,7 +134,7 @@ class ResearchMethod(ReasoningMethod):
             Exception: If research fails
         """
         import uuid
-        
+
         start_time = time.time()
         self._run_id = f"research-{uuid.uuid4().hex[:8]}"
 
@@ -158,9 +158,7 @@ class ResearchMethod(ReasoningMethod):
 
             # Iterative research loop
             for i in range(self.max_iterations):
-                iteration = await self._research_iteration(
-                    topic, i, remaining_gaps, context
-                )
+                iteration = await self._research_iteration(topic, i, remaining_gaps, context)
                 iterations.append(iteration)
                 all_findings.extend(iteration.findings)
                 remaining_gaps = iteration.gaps
@@ -200,10 +198,10 @@ class ResearchMethod(ReasoningMethod):
                 duration_sec=duration,
                 model_used=context.metadata.get("model", "unknown"),
             )
-            
+
             # Track cost if router supports it
             self._track_cost(duration)
-            
+
             return research_result
 
         except Exception as e:
@@ -249,7 +247,7 @@ class ResearchMethod(ReasoningMethod):
         if self.llm_client and gaps:
             prompt = f"""Topic: {topic}
 
-Current knowledge gaps: {', '.join(gaps)}
+Current knowledge gaps: {", ".join(gaps)}
 
 Generate a focused search query to address these gaps.
 
@@ -362,7 +360,7 @@ Respond in JSON format:
 Key findings:
 {chr(10).join(findings)}
 
-Remaining gaps: {', '.join(gaps) if gaps else 'None identified'}
+Remaining gaps: {", ".join(gaps) if gaps else "None identified"}
 
 Write a comprehensive synthesis summarizing the research findings.
 
@@ -379,17 +377,17 @@ Respond with the synthesis text only.
 
         # Fallback
         return f"Research synthesis for {topic}: {len(findings)} findings collected. {'Remaining gaps: ' + ', '.join(gaps) if gaps else 'No significant gaps identified.'}"
-    
+
     def _track_cost(self, duration_sec: float) -> None:
         """Track cost for research execution."""
         if self.router is None or self._run_id is None:
             return
-        
-        if hasattr(self.router, 'track_cost'):
+
+        if hasattr(self.router, "track_cost"):
             # Estimate tokens for research (multiple iterations)
             estimated_input = 1000 * self.max_iterations + 1500  # queries + synthesis
             estimated_output = 800 * self.max_iterations + 2000
-            
+
             self.router.track_cost(
                 method="research",
                 phase="all",

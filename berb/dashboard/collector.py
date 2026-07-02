@@ -111,8 +111,7 @@ class DashboardCollector:
 
         # --- stage directories ---
         snap.stages_completed = sorted(
-            [d.name for d in run_dir.iterdir()
-             if d.is_dir() and d.name.startswith("stage-")]
+            [d.name for d in run_dir.iterdir() if d.is_dir() and d.name.startswith("stage-")]
         )
 
         # --- experiment metrics (results.json) ---
@@ -129,7 +128,7 @@ class DashboardCollector:
         if log_path.exists():
             try:
                 lines = log_path.read_text(errors="replace").splitlines()
-                snap.last_log_lines = lines[-self._max_log_lines:]
+                snap.last_log_lines = lines[-self._max_log_lines :]
             except Exception:
                 pass
 

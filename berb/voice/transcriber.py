@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -26,11 +27,10 @@ class VoiceTranscriber:
         """
         try:
             import httpx
-        except ImportError:
+        except ImportError as e:
             raise RuntimeError(
-                "httpx is required for voice transcription. "
-                "Install with: pip install httpx"
-            )
+                "httpx is required for voice transcription. Install with: pip install httpx"
+            ) from e
 
         url = self._api_url or "https://api.openai.com/v1/audio/transcriptions"
 

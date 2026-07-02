@@ -31,7 +31,7 @@ from berb.experiment.sandbox import SandboxResult, parse_metrics
 logger = logging.getLogger(__name__)
 
 # Template for the Colab worker notebook
-COLAB_WORKER_TEMPLATE = '''\
+COLAB_WORKER_TEMPLATE = """\
 # === Berb Colab Worker ===
 # Run this cell in Google Colab with GPU enabled.
 # It polls Google Drive for experiment tasks and executes them.
@@ -114,7 +114,7 @@ while True:
         print(f"[{task_id}] Done (exit {result['returncode']})")
 
     time.sleep(10)
-'''
+"""
 
 
 class ColabDriveSandbox:
@@ -161,11 +161,15 @@ class ColabDriveSandbox:
     ) -> SandboxResult:
         # BUG-DA8-07: Validate entry_point (path traversal, etc.) like other backends
         from berb.experiment.sandbox import validate_entry_point
+
         err = validate_entry_point(entry_point)
         if err:
             return SandboxResult(
-                returncode=-1, stdout="", stderr=err,
-                elapsed_sec=0.0, metrics={},
+                returncode=-1,
+                stdout="",
+                stderr=err,
+                elapsed_sec=0.0,
+                metrics={},
             )
 
         self._run_counter += 1
@@ -189,17 +193,23 @@ class ColabDriveSandbox:
 
         if not (staging / entry_point).exists():
             return SandboxResult(
-                returncode=-1, stdout="",
+                returncode=-1,
+                stdout="",
                 stderr=f"Entry point {entry_point} not found",
-                elapsed_sec=0.0, metrics={},
+                elapsed_sec=0.0,
+                metrics={},
             )
         # BUG-DA8-07: Check resolved path doesn't escape staging dir
         from berb.experiment.sandbox import validate_entry_point_resolved
+
         err2 = validate_entry_point_resolved(staging, entry_point)
         if err2:
             return SandboxResult(
-                returncode=-1, stdout="", stderr=err2,
-                elapsed_sec=0.0, metrics={},
+                returncode=-1,
+                stdout="",
+                stderr=err2,
+                elapsed_sec=0.0,
+                metrics={},
             )
 
         self._write_setup_script(staging)
@@ -221,8 +231,7 @@ class ColabDriveSandbox:
             exists = False
         if not exists:
             return False, (
-                f"Drive root not found: {root}. "
-                f"Is Google Drive for Desktop running and syncing?"
+                f"Drive root not found: {root}. Is Google Drive for Desktop running and syncing?"
             )
         return True, f"Google Drive accessible at {root}"
 
@@ -237,9 +246,7 @@ class ColabDriveSandbox:
         harness_src = Path(__file__).parent / "harness_template.py"
         if harness_src.exists():
             dest = target_dir / "experiment_harness.py"
-            dest.write_text(
-                harness_src.read_text(encoding="utf-8"), encoding="utf-8"
-            )
+            dest.write_text(harness_src.read_text(encoding="utf-8"), encoding="utf-8")
 
     def _write_setup_script(self, staging: Path) -> None:
         """Write setup.sh if setup_script is configured."""
@@ -255,7 +262,10 @@ class ColabDriveSandbox:
     # ------------------------------------------------------------------
 
     def _submit_and_wait(
-        self, staging: Path, task_id: str, timeout_sec: int,
+        self,
+        staging: Path,
+        task_id: str,
+        timeout_sec: int,
     ) -> SandboxResult:
         """Submit an experiment task and wait for the Colab worker to complete it.
 
@@ -309,7 +319,9 @@ class ColabDriveSandbox:
         )
 
     def _collect_result(
-        self, task_done: Path, elapsed: float,
+        self,
+        task_done: Path,
+        elapsed: float,
     ) -> SandboxResult:
         """Read result.json from the done task directory and clean up.
 
@@ -322,18 +334,22 @@ class ColabDriveSandbox:
         result_file = task_done / "result.json"
         if not result_file.exists():
             return SandboxResult(
-                returncode=-1, stdout="",
+                returncode=-1,
+                stdout="",
                 stderr="Colab worker did not write result.json",
-                elapsed_sec=elapsed, metrics={},
+                elapsed_sec=elapsed,
+                metrics={},
             )
 
         try:
             data = json.loads(result_file.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError) as exc:
             return SandboxResult(
-                returncode=-1, stdout="",
+                returncode=-1,
+                stdout="",
                 stderr=f"Failed to read result.json: {exc}",
-                elapsed_sec=elapsed, metrics={},
+                elapsed_sec=elapsed,
+                metrics={},
             )
 
         stdout = data.get("stdout", "")

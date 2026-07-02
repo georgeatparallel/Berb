@@ -24,7 +24,7 @@ _TTL_SEC = 86400 * 7  # 7 days (default for S2, OpenAlex)
 # Per-source TTLs: arXiv updates daily at midnight, so 24h cache is optimal.
 # Citation verification results are permanent (verified papers don't change).
 _SOURCE_TTL: dict[str, float] = {
-    "arxiv": 86400,         # 24 hours — arXiv metadata updates once/day
+    "arxiv": 86400,  # 24 hours — arXiv metadata updates once/day
     "semantic_scholar": 86400 * 3,  # 3 days
     "openalex": 86400 * 3,  # 3 days
     "citation_verify": 86400 * 365,  # ~permanent
@@ -70,8 +70,9 @@ def get_cached(
         ts = data.get("timestamp", 0)
         age_sec = time.time() - ts
         if age_sec > effective_ttl:
-            logger.debug("Cache expired for key %s (age=%.0fs > ttl=%.0fs)",
-                         key, age_sec, effective_ttl)
+            logger.debug(
+                "Cache expired for key %s (age=%.0fs > ttl=%.0fs)", key, age_sec, effective_ttl
+            )
             return None
         papers = data.get("papers", [])
         if not isinstance(papers, list):
@@ -79,7 +80,10 @@ def get_cached(
         age_str = _format_age(age_sec)
         logger.info(
             "[cache] HIT query=%r source=%s age=%s (%d papers)",
-            query[:50], source, age_str, len(papers),
+            query[:50],
+            source,
+            age_str,
+            len(papers),
         )
         return papers
     except (json.JSONDecodeError, TypeError, ValueError):

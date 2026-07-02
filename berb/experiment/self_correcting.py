@@ -18,7 +18,7 @@ Features:
 
 Usage:
     from berb.experiment.self_correcting import SelfCorrectingExecutor
-    
+
     executor = SelfCorrectingExecutor()
     result = await executor.run_simulation(
         prompt="Simulate heat conduction in a metal rod",
@@ -29,9 +29,10 @@ Usage:
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from enum import Enum
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from enum import StrEnum
+from pathlib import Path
 from typing import Any
 
 from berb.memory.shared_memory import SharedResearchMemory, get_shared_memory
@@ -40,8 +41,9 @@ from berb.utils.time import utc_timestamp
 logger = logging.getLogger(__name__)
 
 
-class SimulationStatus(str, Enum):
+class SimulationStatus(StrEnum):
     """Status of simulation execution."""
+
     PENDING = "pending"
     CLARIFYING = "clarifying"
     CODING = "coding"
@@ -55,7 +57,7 @@ class SimulationStatus(str, Enum):
 @dataclass
 class SimulationResult:
     """Result of self-correcting simulation."""
-    
+
     success: bool
     status: SimulationStatus
     iterations: int
@@ -70,13 +72,13 @@ class SimulationResult:
 
 class InputClarifierAgent:
     """Agent 1: Clarifies underspecified prompts."""
-    
+
     def __init__(self, memory: SharedResearchMemory) -> None:
         self._memory = memory
-    
+
     async def clarify(self, prompt: str, domain: str) -> dict[str, Any]:
         """Clarify input prompt into canonical specification.
-        
+
         Returns dict with:
         - geometry: str
         - governing_equations: list[str]
@@ -90,7 +92,7 @@ class InputClarifierAgent:
         if existing:
             logger.info("Using cached clarification")
             return existing
-        
+
         # In production, call LLM to extract specification
         # For now, create structured spec from prompt
         specification = {
@@ -105,16 +107,16 @@ class InputClarifierAgent:
             "assumptions": [],
             "clarification_confidence": 0.7,
         }
-        
+
         # Store in memory
         self._memory.store_clarification(prompt, specification, "clarifier_agent")
-        
+
         return specification
-    
+
     def _infer_geometry(self, prompt: str, domain: str) -> str:
         """Infer geometry from prompt."""
         prompt_lower = prompt.lower()
-        
+
         if "rod" in prompt_lower or "beam" in prompt_lower:
             return "1d_line"
         elif "plate" in prompt_lower or "sheet" in prompt_lower:
@@ -125,13 +127,13 @@ class InputClarifierAgent:
             return "3d_cylinder"
         else:
             return "2d_rectangle"  # Default
-    
+
     def _infer_equations(self, prompt: str, domain: str) -> list[str]:
         """Infer governing equations from prompt."""
         prompt_lower = prompt.lower()
-        
+
         equations = []
-        
+
         if domain == "physics":
             if "heat" in prompt_lower or "thermal" in prompt_lower:
                 equations.append("heat_equation")
@@ -141,12 +143,12 @@ class InputClarifierAgent:
                 equations.append("linear_elasticity")
             if "wave" in prompt_lower:
                 equations.append("wave_equation")
-        
+
         if not equations:
             equations.append("generic_pde")
-        
+
         return equations
-    
+
     def _infer_parameters(self, prompt: str, domain: str) -> dict[str, float]:
         """Infer parameters from prompt."""
         # Default parameters based on domain
@@ -161,17 +163,17 @@ class InputClarifierAgent:
                 "poissons_ratio": 0.3,
             },
         }
-        
+
         return defaults.get(domain, {"default_param": 1.0})
 
 
 class CodeBuilderAgent:
     """Agent 2: Generates solver-ready code."""
-    
+
     def __init__(self, memory: SharedResearchMemory) -> None:
         self._memory = memory
         self._code_templates = self._load_templates()
-    
+
     def _load_templates(self) -> dict[str, str]:
         """Load code templates for different equation types."""
         return {
@@ -180,7 +182,7 @@ class CodeBuilderAgent:
             "linear_elasticity": self._elasticity_template(),
             "generic_pde": self._generic_pde_template(),
         }
-    
+
     async def generate_code(
         self,
         specification: dict[str, Any],
@@ -196,15 +198,17 @@ class CodeBuilderAgent:
                 # Store snapshot (use UTC timestamp for uniqueness)
                 version = f"v{utc_timestamp()}"
                 self._memory.store_code_snapshot(
-                    version, code, "code_builder_agent",
+                    version,
+                    code,
+                    "code_builder_agent",
                     metadata={"specification": specification},
                 )
-                
+
                 return code
-        
+
         # Fallback to generic template
         return self._generic_pde_template()
-    
+
     def _customize_template(
         self,
         template: str,
@@ -212,19 +216,17 @@ class CodeBuilderAgent:
     ) -> str:
         """Customize template with specification."""
         code = template
-        
+
         # Replace placeholders
         code = code.replace("{geometry}", spec.get("geometry", "default"))
         code = code.replace("{domain}", spec.get("domain", "physics"))
-        
+
         # Add parameters
-        params_str = "\n".join(
-            f"{k} = {v}" for k, v in spec.get("parameters", {}).items()
-        )
+        params_str = "\n".join(f"{k} = {v}" for k, v in spec.get("parameters", {}).items())
         code = code.replace("{parameters}", params_str)
-        
+
         return code
-    
+
     def _heat_equation_template(self) -> str:
         """Heat equation template."""
         return '''"""Heat conduction simulation - Auto-generated by Berb"""
@@ -256,21 +258,21 @@ for step in range(n_steps):
     # Build Laplacian matrix
     data = np.ones(nx)
     A = sparse.diags([data, -2*data, data], [-1, 0, 1], shape=(nx, nx)) / dx**2
-    
+
     # Apply boundary conditions (Dirichlet)
     A = A.toarray()
     A[0, :] = 0
     A[0, 0] = 1
     A[-1, :] = 0
     A[-1, -1] = 1
-    
+
     # Time step
     T_new = T + alpha * dt * A @ T
-    
+
     # Apply BCs
     T_new[0] = 400  # Left boundary
     T_new[-1] = 300  # Right boundary
-    
+
     T = T_new
 
 # Output
@@ -282,7 +284,7 @@ np.save("grid.npy", x)
 
 print("Simulation completed successfully")
 '''
-    
+
     def _navier_stokes_template(self) -> str:
         """Navier-Stokes template (placeholder)."""
         return '''"""Fluid flow simulation - Auto-generated by Berb"""
@@ -290,14 +292,14 @@ print("Simulation completed successfully")
 # To be implemented with FEniCS or similar
 print("Navier-Stokes simulation placeholder")
 '''
-    
+
     def _elasticity_template(self) -> str:
         """Linear elasticity template (placeholder)."""
         return '''"""Linear elasticity simulation - Auto-generated by Berb"""
 # Placeholder for elasticity solver
 print("Linear elasticity simulation placeholder")
 '''
-    
+
     def _generic_pde_template(self) -> str:
         """Generic PDE template."""
         return '''"""Generic PDE solver - Auto-generated by Berb"""
@@ -319,17 +321,17 @@ print(f"Solution computed: {result.min():.3f} to {result.max():.3f}")
 
 class SimulationExecutorAgent:
     """Agent 3: Executes simulation code."""
-    
+
     def __init__(self, memory: SharedResearchMemory) -> None:
         self._memory = memory
-    
+
     async def execute(
         self,
         code: str,
         timeout_sec: int = 60,
     ) -> dict[str, Any]:
         """Execute simulation code in sandbox.
-        
+
         Returns:
         - success: bool
         - output: str
@@ -339,20 +341,18 @@ class SimulationExecutorAgent:
         import subprocess
         import tempfile
         import time
-        
+
         start_time = time.time()
-        
+
         # Write code to temp file
-        with tempfile.NamedTemporaryFile(
-            mode='w', suffix='.py', delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
             f.write(code)
             temp_path = f.name
-        
+
         try:
             # Execute in sandbox
             result = subprocess.run(
-                ['python', temp_path],
+                ["python", temp_path],
                 capture_output=True,
                 text=True,
                 encoding="utf-8",
@@ -360,9 +360,9 @@ class SimulationExecutorAgent:
                 timeout=timeout_sec,
                 cwd=tempfile.gettempdir(),
             )
-            
+
             execution_time = time.time() - start_time
-            
+
             # Store execution trace
             self._memory.store_execution_trace(
                 stage="simulation",
@@ -374,14 +374,14 @@ class SimulationExecutorAgent:
                 agent_id="executor_agent",
                 metadata={"execution_time": execution_time},
             )
-            
+
             return {
                 "success": result.returncode == 0,
                 "output": result.stdout,
                 "error": result.stderr if result.returncode != 0 else None,
                 "execution_time": execution_time,
             }
-            
+
         except subprocess.TimeoutExpired:
             return {
                 "success": False,
@@ -396,15 +396,20 @@ class SimulationExecutorAgent:
                 "error": str(e),
                 "execution_time": time.time() - start_time,
             }
+        finally:
+            try:
+                Path(temp_path).unlink(missing_ok=True)
+            except OSError:
+                pass
 
 
 class ErrorDiagnosisAgent:
     """Agent 4: Diagnoses errors in physical terms."""
-    
+
     def __init__(self, memory: SharedResearchMemory) -> None:
         self._memory = memory
         self._error_patterns = self._load_error_patterns()
-    
+
     def _load_error_patterns(self) -> dict[str, dict[str, Any]]:
         """Load physics-aware error patterns."""
         return {
@@ -476,7 +481,7 @@ class ErrorDiagnosisAgent:
                 ],
             },
         }
-    
+
     async def diagnose(
         self,
         error_message: str,
@@ -484,7 +489,7 @@ class ErrorDiagnosisAgent:
         specification: dict[str, Any],
     ) -> dict[str, Any]:
         """Diagnose error in physical terms.
-        
+
         Returns:
         - category: str
         - physical_meaning: str
@@ -503,10 +508,10 @@ class ErrorDiagnosisAgent:
                 "recommended_fixes": [cached_fix],
                 "confidence": 0.9,
             }
-        
+
         # Pattern match error
         diagnosis = self._match_error_pattern(error_message)
-        
+
         # Store in memory
         if diagnosis["recommended_fixes"]:
             self._memory.store_error_fix(
@@ -515,16 +520,16 @@ class ErrorDiagnosisAgent:
                 "diagnosis_agent",
                 success=True,
             )
-        
+
         return diagnosis
-    
+
     def _match_error_pattern(
         self,
         error_message: str,
     ) -> dict[str, Any]:
         """Match error to known patterns."""
         error_lower = error_message.lower()
-        
+
         for pattern, info in self._error_patterns.items():
             if pattern in error_lower:
                 return {
@@ -534,7 +539,7 @@ class ErrorDiagnosisAgent:
                     "recommended_fixes": info["fixes"],
                     "confidence": 0.8,
                 }
-        
+
         # Unknown error
         return {
             "category": "unknown",
@@ -547,10 +552,10 @@ class ErrorDiagnosisAgent:
 
 class InputRewriterAgent:
     """Agent 5: Revises prompts if high-level ambiguities persist."""
-    
+
     def __init__(self, memory: SharedResearchMemory) -> None:
         self._memory = memory
-    
+
     async def revise(
         self,
         original_prompt: str,
@@ -563,10 +568,10 @@ class InputRewriterAgent:
         existing = self._memory.get_clarification(f"revision:{key}")
         if existing:
             return existing
-        
+
         # Generate revised prompt
         revised = original_prompt
-        
+
         # Add clarifications based on diagnosis
         if diagnosis.get("category") == "numerical":
             revised += ". Use stable numerical schemes with appropriate time steps."
@@ -574,19 +579,19 @@ class InputRewriterAgent:
             revised += ". Ensure physical constraints are satisfied."
         elif diagnosis.get("category") == "convergence":
             revised += ". Use robust solvers with good initial guesses."
-        
+
         # Store revision
         self._memory.store_clarification(f"revision:{key}", revised, "rewriter_agent")
-        
+
         return revised
 
 
 class MechanicalInsightAgent:
     """Agent 6: Generates explanatory reports."""
-    
+
     def __init__(self, memory: SharedResearchMemory) -> None:
         self._memory = memory
-    
+
     async def generate_report(
         self,
         specification: dict[str, Any],
@@ -610,41 +615,47 @@ class MechanicalInsightAgent:
             f"**Success:** {'Yes' if result.success else 'No'}",
             "",
         ]
-        
+
         if result.errors_encountered:
-            report_lines.extend([
-                "## Errors Encountered",
-                "",
-            ])
+            report_lines.extend(
+                [
+                    "## Errors Encountered",
+                    "",
+                ]
+            )
             for i, error in enumerate(result.errors_encountered, 1):
                 report_lines.append(f"{i}. {error}")
             report_lines.append("")
-        
+
         if result.fixes_applied:
-            report_lines.extend([
-                "## Fixes Applied",
-                "",
-            ])
+            report_lines.extend(
+                [
+                    "## Fixes Applied",
+                    "",
+                ]
+            )
             for i, fix in enumerate(result.fixes_applied, 1):
                 report_lines.append(f"{i}. {fix}")
             report_lines.append("")
-        
-        report_lines.extend([
-            "## Physical Interpretation",
-            "",
-            "The simulation was executed using physics-aware numerical methods.",
-            "Results should be validated against analytical solutions or experimental data.",
-            "",
-            "---",
-            "*Report generated by Berb Self-Correcting Simulation Framework*",
-        ])
-        
+
+        report_lines.extend(
+            [
+                "## Physical Interpretation",
+                "",
+                "The simulation was executed using physics-aware numerical methods.",
+                "Results should be validated against analytical solutions or experimental data.",
+                "",
+                "---",
+                "*Report generated by Berb Self-Correcting Simulation Framework*",
+            ]
+        )
+
         return "\n".join(report_lines)
 
 
 class SelfCorrectingExecutor:
     """Main orchestrator for self-correcting simulation."""
-    
+
     def __init__(
         self,
         project_id: str | None = None,
@@ -659,7 +670,7 @@ class SelfCorrectingExecutor:
         self._project_id = project_id or f"sim_{utc_timestamp()}"
         self._memory = get_shared_memory(self._project_id)
         self._max_iterations = max_iterations
-        
+
         # Initialize agents
         self._clarifier = InputClarifierAgent(self._memory)
         self._code_builder = CodeBuilderAgent(self._memory)
@@ -667,9 +678,9 @@ class SelfCorrectingExecutor:
         self._diagnoser = ErrorDiagnosisAgent(self._memory)
         self._rewriter = InputRewriterAgent(self._memory)
         self._reporter = MechanicalInsightAgent(self._memory)
-        
+
         # Register agents in memory
-        for agent_name, agent in [
+        for agent_name, _agent in [
             ("clarifier", self._clarifier),
             ("code_builder", self._code_builder),
             ("executor", self._executor),
@@ -678,16 +689,16 @@ class SelfCorrectingExecutor:
             ("reporter", self._reporter),
         ]:
             self._memory.register_agent(f"{agent_name}_agent")
-        
+
         logger.info(f"Initialized SelfCorrectingExecutor (project: {self._project_id})")
-    
+
     async def run_simulation(
         self,
         prompt: str,
         domain: str = "physics",
     ) -> SimulationResult:
         """Run self-correcting simulation.
-        
+
         Args:
             prompt: Natural language description
             domain: Domain (physics, mechanics, etc.)
@@ -695,7 +706,7 @@ class SelfCorrectingExecutor:
         Returns:
             SimulationResult
         """
-        start_time = datetime.now(timezone.utc)
+        start_time = datetime.now(UTC)
 
         logger.info(f"Starting self-correcting simulation: {prompt[:50]}...")
 
@@ -738,35 +749,35 @@ class SelfCorrectingExecutor:
                     execution_output=execution_output,
                     errors_encountered=errors_encountered,
                     fixes_applied=fixes_applied,
-                    total_time_sec=(datetime.now(timezone.utc) - start_time).total_seconds(),
+                    total_time_sec=(datetime.now(UTC) - start_time).total_seconds(),
                     memory_used=True,
                 )
-                
+
                 # Generate report
                 self._memory.update_agent_status("reporter_agent", "working", "generate_report")
                 result.report = await self._reporter.generate_report(specification, result)
                 self._memory.update_agent_status("reporter_agent", "idle")
-                
+
                 return result
-            
+
             # Reflect phase: Diagnose error
             error_message = exec_result.get("error", "Unknown error")
             errors_encountered.append(error_message)
-            
+
             self._memory.update_agent_status("diagnoser_agent", "working", "diagnose_error")
             diagnosis = await self._diagnoser.diagnose(error_message, current_code, specification)
             self._memory.update_agent_status("diagnoser_agent", "idle")
-            
+
             logger.info(f"Diagnosis: {diagnosis['physical_meaning']}")
-            
+
             # Revise phase: Apply fix or revise prompt
             if diagnosis["recommended_fixes"]:
                 fix = diagnosis["recommended_fixes"][0]
                 fixes_applied.append(fix)
-                
+
                 # Apply fix to code (placeholder - would use LLM in production)
                 current_code = self._apply_fix(current_code, fix)
-                
+
                 logger.info(f"Applied fix: {fix}")
             else:
                 # Revise specification
@@ -774,7 +785,7 @@ class SelfCorrectingExecutor:
                 revised_prompt = await self._rewriter.revise(prompt, diagnosis, iteration)
                 specification = await self._clarifier.clarify(revised_prompt, domain)
                 self._memory.update_agent_status("rewriter_agent", "idle")
-        
+
         # Max iterations reached without success
         logger.warning(f"Simulation failed after {self._max_iterations} iterations")
 
@@ -786,19 +797,19 @@ class SelfCorrectingExecutor:
             execution_output=execution_output,
             errors_encountered=errors_encountered,
             fixes_applied=fixes_applied,
-            total_time_sec=(datetime.now(timezone.utc) - start_time).total_seconds(),
+            total_time_sec=(datetime.now(UTC) - start_time).total_seconds(),
             memory_used=True,
         )
-    
+
     def _apply_fix(self, code: str | None, fix: str) -> str:
         """Apply fix to code (placeholder)."""
         if not code:
             return ""
-        
+
         # In production, use LLM to apply fix
         # For now, return code with fix comment
         return f"{code}\n# Applied fix: {fix}"
-    
+
     def get_statistics(self) -> dict[str, Any]:
         """Get execution statistics."""
         return self._memory.get_statistics()
@@ -811,12 +822,12 @@ async def run_self_correcting_simulation(
     max_iterations: int = 5,
 ) -> SimulationResult:
     """Quick function to run self-correcting simulation.
-    
+
     Args:
         prompt: Natural language description
         domain: Domain
         max_iterations: Maximum iterations
-        
+
     Returns:
         SimulationResult
     """

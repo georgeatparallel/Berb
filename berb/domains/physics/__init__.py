@@ -23,18 +23,18 @@ Usage:
 """
 
 from berb.domains.physics.hamiltonian import (
+    DoublePendulum,
+    HamiltonianSystem,
+    HarmonicOscillator,
+    HenonHeiles,
+    IntegrationResult,
+    Pendulum,
+    PhaseSpaceAnalyzer,
+    SymplecticIntegrator,
     VerletIntegrator,
     YoshidaIntegrator,
-    HarmonicOscillator,
-    Pendulum,
-    HenonHeiles,
-    DoublePendulum,
-    PhaseSpaceAnalyzer,
     create_integrator,
     create_system,
-    IntegrationResult,
-    HamiltonianSystem,
-    SymplecticIntegrator,
 )
 from berb.domains.physics.integrators import (
     AdaptiveVerletIntegrator,
@@ -42,13 +42,13 @@ from berb.domains.physics.integrators import (
     IntegrationStats,
 )
 from berb.domains.physics.templates import (
-    SimplePendulum,
+    TEMPLATES,
     CoupledOscillators,
     DuffingOscillator,
     KeplerProblem,
+    SimplePendulum,
     StandardMap,
     get_template,
-    TEMPLATES,
 )
 
 __all__ = [
@@ -59,31 +59,25 @@ __all__ = [
     "SymplecticIntegrator",
     "IntegrationState",
     "IntegrationStats",
-
     # Systems (from hamiltonian.py)
     "HarmonicOscillator",
     "Pendulum",
     "HenonHeiles",
     "DoublePendulum",
     "HamiltonianSystem",
-
     # Systems (from templates.py)
     "SimplePendulum",
     "CoupledOscillators",
     "DuffingOscillator",
     "KeplerProblem",
     "StandardMap",
-
     # Template registry
     "get_template",
     "TEMPLATES",
-
     # Analysis
     "PhaseSpaceAnalyzer",
-
     # Results
     "IntegrationResult",
-
     # Factory
     "create_integrator",
     "create_system",

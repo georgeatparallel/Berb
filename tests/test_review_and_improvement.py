@@ -208,10 +208,10 @@ class TestCrossModelReviewer:
             generation_provider="anthropic",
             review_provider="openai",
         )
-        
+
         # Mock LLM response
         mock_response = MagicMock()
-        mock_response.content = '''
+        mock_response.content = """
         {
             "overall_score": 7.5,
             "verdict": "weak_accept",
@@ -232,18 +232,18 @@ class TestCrossModelReviewer:
             "confidence": 0.8,
             "review_text": "Good paper overall"
         }
-        '''
-        
+        """
+
         mock_provider = AsyncMock()
         mock_provider.complete = AsyncMock(return_value=mock_response)
-        
+
         reviewer = CrossModelReviewer(mock_provider, config)
-        
+
         review = await reviewer.review(
             paper_text="Test paper content" * 100,
             venue="neurips",
         )
-        
+
         assert review.overall_score == 7.5
         assert review.verdict == ReviewVerdict.WEAK_ACCEPT
         assert len(review.weaknesses) == 1
@@ -256,7 +256,7 @@ class TestCrossModelReviewer:
         )
         mock_provider = MagicMock()
         reviewer = CrossModelReviewer(mock_provider, config)
-        
+
         prior = ReviewResult(
             overall_score=6.0,
             verdict=ReviewVerdict.BORDERLINE,
@@ -268,7 +268,7 @@ class TestCrossModelReviewer:
                 )
             ],
         )
-        
+
         current = ReviewResult(
             overall_score=7.5,
             verdict=ReviewVerdict.WEAK_ACCEPT,
@@ -280,9 +280,9 @@ class TestCrossModelReviewer:
                 )
             ],
         )
-        
+
         delta = reviewer.compare_with_prior(current, prior)
-        
+
         assert delta.score_change == 1.5
         assert len(delta.improvements_made) == 1
         assert "Unclear methods" in delta.improvements_made[0]
@@ -295,14 +295,14 @@ class TestClaimTracker:
     async def test_register_claim(self):
         """Test claim registration."""
         tracker = ClaimTracker()
-        
+
         claim_id = await tracker.register_claim(
             claim="Method X improves accuracy by 15%",
             source_stage=8,
             evidence=["experiment_1_results"],
             round_num=1,
         )
-        
+
         assert claim_id == "claim_1"
         assert claim_id in tracker.claims
         assert tracker.claims[claim_id].status == "active"
@@ -311,19 +311,19 @@ class TestClaimTracker:
     async def test_challenge_claim(self):
         """Test claim challenging."""
         tracker = ClaimTracker()
-        
+
         claim_id = await tracker.register_claim(
             claim="Test claim",
             source_stage=8,
             evidence=[],
         )
-        
+
         await tracker.challenge_claim(
             claim_id=claim_id,
             round_num=2,
             reason="Unsupported by evidence",
         )
-        
+
         assert tracker.claims[claim_id].status == "challenged"
         assert len(tracker.claims[claim_id].challenge_history) == 1
 
@@ -331,13 +331,13 @@ class TestClaimTracker:
     async def test_verify_claim_supported(self):
         """Test claim verification - supported."""
         tracker = ClaimTracker()
-        
+
         claim_id = await tracker.register_claim(
             claim="Test claim",
             source_stage=8,
             evidence=[],
         )
-        
+
         verdict = await tracker.verify_claim(
             claim_id=claim_id,
             experiment_results={
@@ -346,7 +346,7 @@ class TestClaimTracker:
                 "p_value": 0.01,
             },
         )
-        
+
         assert verdict == ClaimVerdict.SUPPORTED
         assert tracker.claims[claim_id].status == "verified"
 
@@ -354,13 +354,13 @@ class TestClaimTracker:
     async def test_verify_claim_refuted(self):
         """Test claim verification - refuted."""
         tracker = ClaimTracker()
-        
+
         claim_id = await tracker.register_claim(
             claim="Test claim",
             source_stage=8,
             evidence=[],
         )
-        
+
         verdict = await tracker.verify_claim(
             claim_id=claim_id,
             experiment_results={
@@ -369,25 +369,25 @@ class TestClaimTracker:
                 "p_value": 0.5,
             },
         )
-        
+
         assert verdict == ClaimVerdict.REFUTED
 
     @pytest.mark.asyncio
     async def test_kill_claim(self):
         """Test claim killing."""
         tracker = ClaimTracker()
-        
+
         claim_id = await tracker.register_claim(
             claim="Test claim",
             source_stage=8,
             evidence=[],
         )
-        
+
         await tracker.kill_claim(
             claim_id=claim_id,
             reason="Evidence does not support claim",
         )
-        
+
         assert tracker.claims[claim_id].status == "killed"
         assert tracker.claims[claim_id].kill_reason == "Evidence does not support claim"
 
@@ -395,12 +395,12 @@ class TestClaimTracker:
     async def test_generate_report(self):
         """Test claim report generation."""
         tracker = ClaimTracker()
-        
+
         await tracker.register_claim("Claim 1", source_stage=8, evidence=[])
         await tracker.register_claim("Claim 2", source_stage=8, evidence=[])
-        
+
         report = tracker.generate_claim_report()
-        
+
         assert report["total_claims"] == 2
         assert report["verification_rate"] == 0.0
 
@@ -415,13 +415,13 @@ class TestClassifiedWeakness:
             description="Needs more baselines",
             severity=WeaknessSeverity.MINOR,
         )
-        
+
         classified = ClassifiedWeakness(
             weakness=weakness,
             fix_type=FixType.NEW_EXPERIMENT,
             priority=5.0,
         )
-        
+
         assert classified.fix_type == FixType.NEW_EXPERIMENT
         assert classified.priority == 5.0
 
@@ -451,12 +451,12 @@ class TestAutonomousImprovementLoop:
         """Test loop with disabled config."""
         config = ImprovementLoopConfig(enabled=False)
         loop = AutonomousImprovementLoop(config=config)
-        
+
         result = await loop.run(
             paper="Test paper",
             reviewer=MagicMock(),
         )
-        
+
         assert result.final_paper == "Test paper"
         assert len(result.score_progression.rounds) == 0
 
@@ -464,7 +464,7 @@ class TestAutonomousImprovementLoop:
     async def test_classify_weaknesses(self):
         """Test weakness classification."""
         loop = AutonomousImprovementLoop()
-        
+
         weaknesses = [
             Weakness(
                 category="experiments",
@@ -477,16 +477,16 @@ class TestAutonomousImprovementLoop:
                 severity=WeaknessSeverity.MINOR,
             ),
         ]
-        
+
         classified = await loop._classify_weaknesses(weaknesses)
-        
+
         assert len(classified) == 2
         assert all(c.priority > 0 for c in classified)
 
     def test_prioritize_fixes(self):
         """Test fix prioritization."""
         loop = AutonomousImprovementLoop()
-        
+
         classified = [
             ClassifiedWeakness(
                 weakness=Weakness(
@@ -507,9 +507,9 @@ class TestAutonomousImprovementLoop:
                 priority=10.0,
             ),
         ]
-        
+
         prioritized = loop._prioritize_fixes(classified)
-        
+
         # Higher priority first
         assert prioritized[0].priority == 10.0
         assert prioritized[1].priority == 1.0
@@ -525,14 +525,16 @@ class TestComputeGuard:
             budget_remaining=10.0,
             time_remaining_minutes=120,
         )
-        
-        estimate = await guard.estimate_experiment_cost({
-            "dataset_size": 10000,
-            "num_configurations": 5,
-            "epochs": 20,
-            "gpu_required": True,
-        })
-        
+
+        estimate = await guard.estimate_experiment_cost(
+            {
+                "dataset_size": 10000,
+                "num_configurations": 5,
+                "epochs": 20,
+                "gpu_required": True,
+            }
+        )
+
         assert "gpu_hours" in estimate
         assert "api_cost" in estimate
         assert "wall_clock_minutes" in estimate
@@ -544,13 +546,15 @@ class TestComputeGuard:
             budget_remaining=10.0,
             time_remaining_minutes=120,
         )
-        
-        should_run, reason = await guard.should_run({
-            "gpu_hours": 2.0,
-            "api_cost": 0.25,
-            "wall_clock_minutes": 60,
-        })
-        
+
+        should_run, reason = await guard.should_run(
+            {
+                "gpu_hours": 2.0,
+                "api_cost": 0.25,
+                "wall_clock_minutes": 60,
+            }
+        )
+
         assert should_run is True
 
     @pytest.mark.asyncio
@@ -560,13 +564,15 @@ class TestComputeGuard:
             budget_remaining=1.0,
             time_remaining_minutes=120,
         )
-        
-        should_run, reason = await guard.should_run({
-            "gpu_hours": 2.0,
-            "api_cost": 1.0,
-            "wall_clock_minutes": 60,
-        })
-        
+
+        should_run, reason = await guard.should_run(
+            {
+                "gpu_hours": 2.0,
+                "api_cost": 1.0,
+                "wall_clock_minutes": 60,
+            }
+        )
+
         assert should_run is False
         assert "budget" in reason.lower()
 
@@ -577,13 +583,15 @@ class TestComputeGuard:
             budget_remaining=10.0,
             time_remaining_minutes=30,
         )
-        
-        should_run, reason = await guard.should_run({
-            "gpu_hours": 2.0,
-            "api_cost": 0.25,
-            "wall_clock_minutes": 120,
-        })
-        
+
+        should_run, reason = await guard.should_run(
+            {
+                "gpu_hours": 2.0,
+                "api_cost": 0.25,
+                "wall_clock_minutes": 120,
+            }
+        )
+
         assert should_run is False
         assert "time" in reason.lower()
 
@@ -594,13 +602,15 @@ class TestComputeGuard:
             budget_remaining=10.0,
             time_remaining_minutes=300,
         )
-        
-        should_run, reason = await guard.should_run({
-            "gpu_hours": 5.0,  # > 4hr limit
-            "api_cost": 0.25,
-            "wall_clock_minutes": 60,
-        })
-        
+
+        should_run, reason = await guard.should_run(
+            {
+                "gpu_hours": 5.0,  # > 4hr limit
+                "api_cost": 0.25,
+                "wall_clock_minutes": 60,
+            }
+        )
+
         assert should_run is False
         assert "GPU hours" in reason
         assert "4hr limit" in reason

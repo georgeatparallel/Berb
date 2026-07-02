@@ -28,9 +28,15 @@ def _read_prior_artifact(run_dir: Path, filename: str) -> str | None:
     """Read the contents of a prior stage artifact from any stage directory.
 
     Searches all ``stage-*/`` directories in reverse order (most recent first)
-    for the given filename.
+    for the given filename.  Directory matches (e.g. ``"experiment/"``) are
+    returned as a path string rather than read as text.
     """
-    return _find_prior_file(run_dir, filename)
+    found = _find_prior_file(run_dir, filename)
+    if found is None:
+        return None
+    if found.is_dir():
+        return str(found)
+    return found.read_text(encoding="utf-8")
 
 
 def _find_prior_file(run_dir: Path, filename: str) -> Path | None:
@@ -111,7 +117,7 @@ def _extract_yaml_block(text: str) -> str:
     """Extract YAML content from a ```yaml ... ``` block, or return the whole text."""
     import re as _re
 
-    match = _re.search(r"```ya?ml\s*\n(.*?)\n```", text, _re.DOTALL)
+    match = _re.search(r"```(?:ya?ml)?\s*\n(.*?)\n```", text, _re.DOTALL)
     if match:
         return match.group(1).strip()
     # If no block found, assume entire text is YAML

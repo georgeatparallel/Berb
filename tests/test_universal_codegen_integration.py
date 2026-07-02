@@ -123,13 +123,16 @@ class TestExperimentSchemaIntegration:
             domain_id="physics_pde",
             problem_description="Solve Poisson equation with FEM and FDM",
             conditions=[
-                Condition(name="FDM_2nd", role="reference",
-                          description="2nd order finite difference"),
-                Condition(name="FEM_P1", role="proposed",
-                          description="P1 finite element method"),
-                Condition(name="FEM_P2", role="variant",
-                          varies_from="FEM_P1",
-                          description="P2 finite element method"),
+                Condition(
+                    name="FDM_2nd", role="reference", description="2nd order finite difference"
+                ),
+                Condition(name="FEM_P1", role="proposed", description="P1 finite element method"),
+                Condition(
+                    name="FEM_P2",
+                    role="variant",
+                    varies_from="FEM_P1",
+                    description="P2 finite element method",
+                ),
             ],
             evaluation=EvaluationSpec(
                 primary_metric=MetricSpec(
@@ -165,16 +168,22 @@ class TestExperimentSchemaIntegration:
             experiment_type="progressive_spec",
             domain_id="economics_empirical",
             conditions=[
-                Condition(name="OLS", role="reference",
-                          description="Simple OLS"),
-                Condition(name="OLS_controls", role="proposed",
-                          description="OLS with control variables"),
-                Condition(name="FE", role="variant",
-                          varies_from="OLS_controls",
-                          description="Fixed effects"),
-                Condition(name="IV_2SLS", role="variant",
-                          varies_from="OLS_controls",
-                          description="Instrumental variables"),
+                Condition(name="OLS", role="reference", description="Simple OLS"),
+                Condition(
+                    name="OLS_controls", role="proposed", description="OLS with control variables"
+                ),
+                Condition(
+                    name="FE",
+                    role="variant",
+                    varies_from="OLS_controls",
+                    description="Fixed effects",
+                ),
+                Condition(
+                    name="IV_2SLS",
+                    role="variant",
+                    varies_from="OLS_controls",
+                    description="Instrumental variables",
+                ),
             ],
             evaluation=EvaluationSpec(
                 primary_metric=MetricSpec(name="coefficient", direction="maximize"),
@@ -398,8 +407,13 @@ class TestDockerProfileMapping:
         # Allow some unmapped (new domains without docker images yet)
         # but the core ones should be mapped
         core_domains = [
-            "ml_vision", "ml_nlp", "ml_rl", "physics_simulation",
-            "physics_pde", "chemistry_qm", "economics_empirical",
+            "ml_vision",
+            "ml_nlp",
+            "ml_rl",
+            "physics_simulation",
+            "physics_pde",
+            "chemistry_qm",
+            "economics_empirical",
             "mathematics_numerical",
         ]
         for d in core_domains:

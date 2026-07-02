@@ -151,7 +151,7 @@ class ConfigWizard:
             ("openrouter", "OpenRouter (Multiple providers)"),
         ]
 
-        for i, (provider_id, provider_name) in enumerate(provider_options, 1):
+        for i, (_provider_id, provider_name) in enumerate(provider_options, 1):
             print(f"   [{i}] {provider_name}")
 
         print("\n   Enter numbers separated by commas (e.g., 1,2,3)\n")
@@ -213,7 +213,7 @@ class ConfigWizard:
 
         model_mapping = {
             "openai": {"primary": "gpt-4o", "fallback": "gpt-4o-mini"},
-            "anthropic": {"primary": "claude-sonnet-4-6", "fallback": "claude-haiku-4-5"},
+            "anthropic": {"primary": "claude-sonnet-4-6", "fallback": "claude-haiku-4-5-20251001"},
             "google": {"primary": "gemini-2.5-pro", "fallback": "gemini-2.5-flash"},
             "deepseek": {"primary": "deepseek-v3.2", "fallback": "deepseek-r1"},
         }
@@ -224,7 +224,9 @@ class ConfigWizard:
         config = {
             "project": {
                 "name": "my-research",
-                "mode": "collaborative" if self.responses.get("collaborative_mode") else "full-auto",
+                "mode": "collaborative"
+                if self.responses.get("collaborative_mode")
+                else "full-auto",
             },
             "research": {
                 "topic": "Your research topic here",

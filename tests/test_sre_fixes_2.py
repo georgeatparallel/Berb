@@ -21,6 +21,7 @@ import pytest
 # BUG-A — RateLimiter.wait_sync() race on _last_call
 # ---------------------------------------------------------------------------
 
+
 class TestRateLimiterWaitSyncThreadSafety:
     """BUG-A: concurrent wait_sync() callers must each honour min_interval_sec."""
 
@@ -50,7 +51,7 @@ class TestRateLimiterWaitSyncThreadSafety:
         # A race (all reads before any write) would produce a spread close to 0.
         total_span = call_times[-1] - call_times[0]
         assert total_span >= (N - 1) * interval * 0.8, (
-            f"BUG-A regression: spread={total_span:.3f}s, expected ≥ {(N-1)*interval:.3f}s — "
+            f"BUG-A regression: spread={total_span:.3f}s, expected ≥ {(N - 1) * interval:.3f}s — "
             "concurrent callers are under-sleeping"
         )
 
@@ -83,6 +84,7 @@ class TestRateLimiterWaitSyncThreadSafety:
 # ---------------------------------------------------------------------------
 # BUG-B — put_cache() non-atomic write
 # ---------------------------------------------------------------------------
+
 
 class TestPutCacheAtomicWrite:
     """BUG-B: concurrent put_cache() writes must not corrupt the JSON file."""
@@ -154,6 +156,7 @@ class TestPutCacheAtomicWrite:
 # BUG-C — CascadingLLMClient.get_stats() dict iteration race
 # ---------------------------------------------------------------------------
 
+
 class TestGetStatsThreadSafety:
     """BUG-C: get_stats() must not raise RuntimeError when dict is concurrently modified."""
 
@@ -199,10 +202,9 @@ class TestGetStatsThreadSafety:
                 except RuntimeError as exc:
                     errors.append(exc)
 
-        threads = (
-            [threading.Thread(target=_mutate) for _ in range(10)]
-            + [threading.Thread(target=_reader) for _ in range(10)]
-        )
+        threads = [threading.Thread(target=_mutate) for _ in range(10)] + [
+            threading.Thread(target=_reader) for _ in range(10)
+        ]
         for t in threads:
             t.start()
         for t in threads:

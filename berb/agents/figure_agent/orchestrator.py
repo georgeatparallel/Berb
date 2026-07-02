@@ -44,7 +44,7 @@ class FigureAgentConfig:
     min_figures: int = 3
     max_figures: int = 8
     # Orchestrator
-    max_iterations: int = 3   # max CodeGen→Renderer→Critic retry loops
+    max_iterations: int = 3  # max CodeGen→Renderer→Critic retry loops
     # Renderer security
     render_timeout_sec: int = 30
     use_docker: bool | None = None  # None = auto-detect
@@ -111,11 +111,7 @@ class FigurePlan:
 
     def get_chart_files(self) -> list[str]:
         """Return list of chart filenames from manifest."""
-        return [
-            Path(entry["file_path"]).name
-            for entry in self.manifest
-            if entry.get("file_path")
-        ]
+        return [Path(entry["file_path"]).name for entry in self.manifest if entry.get("file_path")]
 
 
 # ---------------------------------------------------------------------------
@@ -154,7 +150,8 @@ class FigureOrchestrator(AgentOrchestrator):
         )
         # BUG-60: Pass use_docker so CodeGen generates container-aware paths
         self._codegen = CodeGenAgent(
-            llm, output_format=cfg.output_format,
+            llm,
+            output_format=cfg.output_format,
             use_docker=bool(cfg.use_docker) if cfg.use_docker is not None else False,
         )
         self._renderer = RendererAgent(
@@ -217,14 +214,16 @@ class FigureOrchestrator(AgentOrchestrator):
 
         # ── Phase 0: Decision — what figures are needed? ──────────────
         self.logger.info("Phase 0: Deciding what figures are needed")
-        decision_result = self._decision.execute({
-            "topic": topic,
-            "hypothesis": context.get("hypothesis", ""),
-            "paper_draft": context.get("paper_draft", ""),
-            "has_experiments": bool(context.get("experiment_results")),
-            "experiment_results": context.get("experiment_results", {}),
-            "condition_summaries": context.get("condition_summaries", {}),
-        })
+        decision_result = self._decision.execute(
+            {
+                "topic": topic,
+                "hypothesis": context.get("hypothesis", ""),
+                "paper_draft": context.get("paper_draft", ""),
+                "has_experiments": bool(context.get("experiment_results")),
+                "experiment_results": context.get("experiment_results", {}),
+                "condition_summaries": context.get("condition_summaries", {}),
+            }
+        )
         self._accumulate(decision_result)
         self._save_artifact("figure_decisions.json", decision_result.data)
 
@@ -233,7 +232,8 @@ class FigureOrchestrator(AgentOrchestrator):
 
         self.logger.info(
             "Decision: %d code figures, %d image figures",
-            len(code_figures), len(image_figures),
+            len(code_figures),
+            len(image_figures),
         )
 
         # Track all rendered figures (from both backends)
@@ -263,14 +263,14 @@ class FigureOrchestrator(AgentOrchestrator):
             )
 
         # ── Phase C: Integrate all figures ────────────────────────────
-        self.logger.info(
-            "Phase C: Integrating %d figures into paper", len(all_rendered)
+        self.logger.info("Phase C: Integrating %d figures into paper", len(all_rendered))
+        integrate_result = self._integrator.execute(
+            {
+                "rendered": all_rendered,
+                "topic": topic,
+                "output_dir": str(output_dir),
+            }
         )
-        integrate_result = self._integrator.execute({
-            "rendered": all_rendered,
-            "topic": topic,
-            "output_dir": str(output_dir),
-        })
         self._accumulate(integrate_result)
 
         # ── Finalize ─────────────────────────────────────────────────
@@ -279,9 +279,7 @@ class FigureOrchestrator(AgentOrchestrator):
         plan.figure_descriptions = integrate_result.data.get("figure_descriptions", "")
         plan.manifest_path = integrate_result.data.get("manifest_path", "")
         plan.figure_count = integrate_result.data.get("figure_count", 0)
-        plan.passed_count = sum(
-            1 for r in all_rendered if r.get("success")
-        )
+        plan.passed_count = sum(1 for r in all_rendered if r.get("success"))
         plan.total_llm_calls = self.total_llm_calls
         plan.total_tokens = self.total_tokens
         plan.elapsed_sec = time.monotonic() - t0
@@ -290,8 +288,7 @@ class FigureOrchestrator(AgentOrchestrator):
         self._save_artifact("figure_plan_final.json", plan.to_dict())
 
         self.logger.info(
-            "FigureAgent complete: %d figures (%d code + %d image), "
-            "%d passed, %d LLM calls, %.1fs",
+            "FigureAgent complete: %d figures (%d code + %d image), %d passed, %d LLM calls, %.1fs",
             plan.figure_count,
             len(code_figures),
             len(image_figures),
@@ -316,15 +313,17 @@ class FigureOrchestrator(AgentOrchestrator):
 
         # Phase 1: Plan (uses experiment data)
         self.logger.info("Phase A1: Planning data figures")
-        plan_result = self._planner.execute({
-            "experiment_results": context.get("experiment_results", {}),
-            "topic": context.get("topic", ""),
-            "hypothesis": context.get("hypothesis", ""),
-            "conditions": context.get("conditions", []),
-            "metric_key": context.get("metric_key", "primary_metric"),
-            "metrics_summary": context.get("metrics_summary", {}),
-            "condition_summaries": context.get("condition_summaries", {}),
-        })
+        plan_result = self._planner.execute(
+            {
+                "experiment_results": context.get("experiment_results", {}),
+                "topic": context.get("topic", ""),
+                "hypothesis": context.get("hypothesis", ""),
+                "conditions": context.get("conditions", []),
+                "metric_key": context.get("metric_key", "primary_metric"),
+                "metrics_summary": context.get("metrics_summary", {}),
+                "condition_summaries": context.get("condition_summaries", {}),
+            }
+        )
         self._accumulate(plan_result)
 
         if not plan_result.success:
@@ -342,19 +341,22 @@ class FigureOrchestrator(AgentOrchestrator):
         for iteration in range(self.max_iterations):
             self.logger.info(
                 "Phase A2: CodeGen (iteration %d/%d)",
-                iteration + 1, self.max_iterations,
+                iteration + 1,
+                self.max_iterations,
             )
 
             # CodeGen
-            codegen_result = self._codegen.execute({
-                "figures": figures,
-                "experiment_results": context.get("experiment_results", {}),
-                "condition_summaries": context.get("condition_summaries", {}),
-                "metrics_summary": context.get("metrics_summary", {}),
-                "metric_key": context.get("metric_key", "primary_metric"),
-                "output_dir": str(output_dir),
-                "critic_feedback": critic_feedback,
-            })
+            codegen_result = self._codegen.execute(
+                {
+                    "figures": figures,
+                    "experiment_results": context.get("experiment_results", {}),
+                    "condition_summaries": context.get("condition_summaries", {}),
+                    "metrics_summary": context.get("metrics_summary", {}),
+                    "metric_key": context.get("metric_key", "primary_metric"),
+                    "output_dir": str(output_dir),
+                    "critic_feedback": critic_feedback,
+                }
+            )
             self._accumulate(codegen_result)
 
             if not codegen_result.success:
@@ -362,20 +364,23 @@ class FigureOrchestrator(AgentOrchestrator):
                 continue
 
             scripts = codegen_result.data.get("scripts", [])
-            self._save_artifact(f"scripts_{iteration}.json", [
-                {k: v for k, v in s.items() if k != "script"}
-                for s in scripts
-            ])
+            self._save_artifact(
+                f"scripts_{iteration}.json",
+                [{k: v for k, v in s.items() if k != "script"} for s in scripts],
+            )
 
             # Render
             self.logger.info(
                 "Phase A3: Rendering (iteration %d/%d)",
-                iteration + 1, self.max_iterations,
+                iteration + 1,
+                self.max_iterations,
             )
-            render_result = self._renderer.execute({
-                "scripts": scripts,
-                "output_dir": str(output_dir),
-            })
+            render_result = self._renderer.execute(
+                {
+                    "scripts": scripts,
+                    "output_dir": str(output_dir),
+                }
+            )
             self._accumulate(render_result)
 
             if not render_result.success:
@@ -397,15 +402,18 @@ class FigureOrchestrator(AgentOrchestrator):
             # Critic
             self.logger.info(
                 "Phase A4: Critic review (iteration %d/%d)",
-                iteration + 1, self.max_iterations,
+                iteration + 1,
+                self.max_iterations,
             )
-            critic_result = self._critic.execute({
-                "rendered": rendered,
-                "scripts": scripts,
-                "condition_summaries": context.get("condition_summaries", {}),
-                "metrics_summary": context.get("metrics_summary", {}),
-                "metric_key": context.get("metric_key", "primary_metric"),
-            })
+            critic_result = self._critic.execute(
+                {
+                    "rendered": rendered,
+                    "scripts": scripts,
+                    "condition_summaries": context.get("condition_summaries", {}),
+                    "metrics_summary": context.get("metrics_summary", {}),
+                    "metric_key": context.get("metric_key", "primary_metric"),
+                }
+            )
             self._accumulate(critic_result)
 
             reviews = critic_result.data.get("reviews", [])
@@ -420,9 +428,7 @@ class FigureOrchestrator(AgentOrchestrator):
                 break
 
             # Collect feedback for failed figures
-            critic_feedback = [
-                r for r in reviews if not r.get("passed")
-            ]
+            critic_feedback = [r for r in reviews if not r.get("passed")]
 
             # Only retry figures that failed
             # BUG-37: figure_id may be non-hashable (list) — force str
@@ -437,7 +443,8 @@ class FigureOrchestrator(AgentOrchestrator):
 
             self.logger.warning(
                 "Critic: %d/%d figures need revision",
-                len(failed_ids), len(rendered),
+                len(failed_ids),
+                len(rendered),
             )
 
         return final_rendered
@@ -464,15 +471,15 @@ class FigureOrchestrator(AgentOrchestrator):
         # Assign figure IDs
         for i, fig in enumerate(image_figures):
             if "figure_id" not in fig:
-                fig["figure_id"] = (
-                    f"{fig.get('figure_type', 'conceptual')}_{i + 1}"
-                )
+                fig["figure_id"] = f"{fig.get('figure_type', 'conceptual')}_{i + 1}"
 
-        nb_result = self._nano_banana.execute({
-            "image_figures": image_figures,
-            "topic": context.get("topic", ""),
-            "output_dir": str(output_dir),
-        })
+        nb_result = self._nano_banana.execute(
+            {
+                "image_figures": image_figures,
+                "topic": context.get("topic", ""),
+                "output_dir": str(output_dir),
+            }
+        )
         self._accumulate(nb_result)
         self._save_artifact("nano_banana_results.json", nb_result.data)
 
@@ -481,7 +488,8 @@ class FigureOrchestrator(AgentOrchestrator):
 
         self.logger.info(
             "Nano Banana: %d/%d images generated successfully",
-            success_count, len(image_figures),
+            success_count,
+            len(image_figures),
         )
 
         return generated

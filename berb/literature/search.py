@@ -15,13 +15,13 @@ Public API
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
-from dataclasses import asdict
 import importlib
 import logging
 import re
 import time
 import urllib.error
+from collections.abc import Callable, Sequence
+from dataclasses import asdict
 from typing import cast
 
 from berb.literature.arxiv_client import search_arxiv
@@ -109,6 +109,7 @@ def search_papers(
     year_min: int = 0,
     deduplicate: bool = True,
     s2_api_key: str = "",
+    failure_counter: dict[str, int] | None = None,
 ) -> list[Paper]:
     """Search multiple academic sources and return deduplicated results.
 
@@ -126,6 +127,11 @@ def search_papers(
         Whether to remove duplicates across sources.
     s2_api_key:
         Optional Semantic Scholar API key.
+    failure_counter:
+        Optional dict to accumulate per-source failure counts into
+        (e.g. ``{"openalex": 2}``). Used by ``search_papers_multi_query``
+        to decide whether to trigger a Perplexity top-up. Callers that
+        don't pass this get identical behavior to before.
 
     Returns
     -------
@@ -142,9 +148,7 @@ def search_papers(
 
     for src in sources:
         src_lower = src.lower().replace("-", "_").replace(" ", "_")
-        cache_source = (
-            "semantic_scholar" if src_lower in ("semantic_scholar", "s2") else src_lower
-        )
+        cache_source = "semantic_scholar" if src_lower in ("semantic_scholar", "s2") else src_lower
         try:
             if src_lower == "openalex":
                 papers = search_openalex(
@@ -155,9 +159,7 @@ def search_papers(
                 all_papers.extend(papers)
                 cache_put(query, "openalex", limit, _papers_to_dicts(papers))
                 source_stats["openalex"] = len(papers)
-                logger.info(
-                    "OpenAlex returned %d papers for %r", len(papers), query
-                )
+                logger.info("OpenAlex returned %d papers for %r", len(papers), query)
                 time.sleep(0.5)
 
             elif src_lower in ("semantic_scholar", "s2"):
@@ -170,9 +172,7 @@ def search_papers(
                 all_papers.extend(papers)
                 cache_put(query, "semantic_scholar", limit, _papers_to_dicts(papers))
                 source_stats["semantic_scholar"] = len(papers)
-                logger.info(
-                    "Semantic Scholar returned %d papers for %r", len(papers), query
-                )
+                logger.info("Semantic Scholar returned %d papers for %r", len(papers), query)
                 # Rate-limit gap before next source
                 time.sleep(1.0)
 
@@ -193,21 +193,17 @@ def search_papers(
             urllib.error.HTTPError,
             urllib.error.URLError,
         ):
-            logger.warning(
-                "[rate-limit] Source %s failed for %r — trying cache", src, query
-            )
+            logger.warning("[rate-limit] Source %s failed for %r — trying cache", src, query)
+            if failure_counter is not None:
+                failure_counter[cache_source] = failure_counter.get(cache_source, 0) + 1
             cached = cache_get(query, cache_source, limit)
             if cached:
                 papers = _dicts_to_papers(cached)
                 all_papers.extend(papers)
                 cache_hits += len(papers)
-                logger.info(
-                    "[cache] HIT: %d papers for %s/%r", len(papers), src, query
-                )
+                logger.info("[cache] HIT: %d papers for %s/%r", len(papers), src, query)
             else:
-                logger.warning(
-                    "No cache available for %s/%r — skipping", src, query
-                )
+                logger.warning("No cache available for %s/%r — skipping", src, query)
 
     # Summary log
     total = len(all_papers)
@@ -238,12 +234,27 @@ def search_papers_multi_query(
     year_min: int = 0,
     s2_api_key: str = "",
     inter_query_delay: float = 1.5,
+    perplexity_top_up: bool = True,
+    perplexity_min_candidates: int = 10,
+    perplexity_min_failed_sources: int = 2,
+    perplexity_domain_filter: list[str] | None = None,
+    perplexity_recency_filter: str | None = None,
 ) -> list[Paper]:
     """Run multiple queries and return deduplicated union.
 
     Adds a delay between queries to respect rate limits.
+
+    If the free academic cascade (OpenAlex → Semantic Scholar → arXiv)
+    under-delivers — either too few total candidates, or at least
+    ``perplexity_min_failed_sources`` of the 3 sources failed outright at
+    any point across the run — and ``perplexity_top_up`` is enabled and a
+    ``PERPLEXITY_API_KEY`` is configured, one additional paid Perplexity
+    search tops up the result set. This is intentionally NOT a 4th source
+    in the per-query loop above: the academic APIs are free, Perplexity
+    isn't, so it only fires when needed.
     """
     all_papers: list[Paper] = []
+    failure_counter: dict[str, int] = {}
 
     for i, q in enumerate(queries):
         if i > 0:
@@ -255,13 +266,65 @@ def search_papers_multi_query(
             year_min=year_min,
             s2_api_key=s2_api_key,
             deduplicate=False,  # we dedup globally below
+            failure_counter=failure_counter,
         )
         all_papers.extend(results)
         logger.info("Query %d/%d %r → %d papers", i + 1, len(queries), q, len(results))
 
     deduped = _deduplicate(all_papers)
+
+    if perplexity_top_up:
+        failed_sources = {src for src, count in failure_counter.items() if count > 0}
+        under_delivered = len(deduped) < perplexity_min_candidates
+        sources_down = len(failed_sources) >= perplexity_min_failed_sources
+        if under_delivered or sources_down:
+            logger.info(
+                "[literature] Cascade under-delivered (%d candidates, failed sources: %s) "
+                "— trying Perplexity top-up",
+                len(deduped),
+                sorted(failed_sources) or "none",
+            )
+            top_up = _perplexity_top_up(
+                queries,
+                limit=limit_per_query,
+                year_min=year_min,
+                domain_filter=perplexity_domain_filter,
+                recency_filter=perplexity_recency_filter,
+            )
+            if top_up:
+                deduped = _deduplicate(deduped + top_up)
+
     deduped.sort(key=lambda p: (p.citation_count, p.year), reverse=True)
     return deduped
+
+
+def _perplexity_top_up(
+    queries: list[str],
+    *,
+    limit: int,
+    year_min: int,
+    domain_filter: list[str] | None,
+    recency_filter: str | None,
+) -> list[Paper]:
+    """Run a single Perplexity search using the primary query as a top-up.
+
+    Only the first query is used (not every expanded variant) to keep the
+    paid call count bounded — this is a backstop, not a parallel source.
+    """
+    if not queries:
+        return []
+    try:
+        from berb.literature.perplexity_search import search_perplexity
+    except ImportError:
+        return []
+
+    return search_perplexity(
+        queries[0],
+        limit=limit,
+        year_min=year_min,
+        domain_filter=domain_filter,
+        recency_filter=recency_filter,
+    )
 
 
 # ------------------------------------------------------------------

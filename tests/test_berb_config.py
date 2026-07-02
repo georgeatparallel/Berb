@@ -103,9 +103,7 @@ def test_valid_config_data_helper_returns_expected_baseline_shape():
 
 
 def test_validate_config_with_valid_data_returns_ok_true(tmp_path: Path):
-    result = validate_config(
-        _valid_config_data(), project_root=tmp_path, check_paths=False
-    )
+    result = validate_config(_valid_config_data(), project_root=tmp_path, check_paths=False)
 
     assert isinstance(result, ValidationResult)
     assert result.ok is True
@@ -316,9 +314,7 @@ def test_check_paths_false_skips_missing_kb_root_validation(tmp_path: Path):
 
 
 def test_path_validation_missing_kb_root_is_error(tmp_path: Path):
-    result = validate_config(
-        _valid_config_data(), project_root=tmp_path, check_paths=True
-    )
+    result = validate_config(_valid_config_data(), project_root=tmp_path, check_paths=True)
 
     assert result.ok is False
     assert any(error.startswith("Missing path:") for error in result.errors)
@@ -332,10 +328,7 @@ def test_validate_config_missing_kb_subdirs_emits_warnings(tmp_path: Path):
 
     assert result.ok is True
     assert len(result.warnings) == 6
-    assert all(
-        warning.startswith("Missing recommended kb subdir:")
-        for warning in result.warnings
-    )
+    assert all(warning.startswith("Missing recommended kb subdir:") for warning in result.warnings)
 
 
 def test_rcconfig_from_dict_uses_default_security_when_missing(tmp_path: Path):

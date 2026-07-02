@@ -481,16 +481,19 @@ class TestSecurityFixesIntegration:
         """Verify all security fixes are present in codebase."""
         # Fix #1: Docker sandbox
         from berb.hyperagent.task_agent import TaskAgentConfig
+
         config = TaskAgentConfig()
         assert hasattr(config, "docker_image")
 
         # Fix #2: API key env var enforcement
         from berb.config import LlmConfig
+
         llm_config = LlmConfig(provider="openai", api_key_env="TEST")
         assert hasattr(llm_config, "get_api_key")
 
         # Fix #6: Rate limiting
         from berb.llm.client import TokenBucketRateLimiter
+
         limiter = TokenBucketRateLimiter()
         assert hasattr(limiter, "acquire")
 

@@ -12,7 +12,6 @@ from __future__ import annotations
 import logging
 import math
 from dataclasses import dataclass, field
-from typing import Any
 
 from berb.pipeline.verified_registry import ConditionResult, VerifiedRegistry
 
@@ -139,9 +138,7 @@ def _build_main_table(
     body = "\n".join(rows)
     note_lines = []
     if any(c.n_seeds == 1 for c in conditions):
-        note_lines.append(
-            "$^{\\ddagger}$Single seed; no standard deviation available."
-        )
+        note_lines.append("$^{\\ddagger}$Single seed; no standard deviation available.")
 
     notes = "\n".join(note_lines)
     if notes:
@@ -291,6 +288,7 @@ def _fmt(value: float | None) -> str:
     elif av > 0:
         # Very small values: use 2 significant figures
         import decimal
+
         d = decimal.Decimal(str(value)).normalize()
         # Count leading zeros after decimal point
         exp = d.adjusted()

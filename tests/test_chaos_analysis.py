@@ -42,6 +42,7 @@ from berb.domains.chaos.test_01 import (
 # Entropy Tests
 # =============================================================================
 
+
 class TestKolmogorovSinaiEntropy:
     """Test KS entropy computation."""
 
@@ -128,8 +129,15 @@ class TestApproximateEntropy:
 class TestSampleEntropy:
     """Test sample entropy."""
 
+    @pytest.mark.slow
     def test_regular_signal(self):
-        """Test SampEn for regular signal."""
+        """Test SampEn for regular signal.
+
+        sample_entropy()'s count_matches_nodiag is O(n^2) with a Python-level
+        inner loop; n=1000 here takes well over pytest's 15s timeout budget
+        for the unit sweep, same as its test_random_signal sibling below.
+        Marked slow to match.
+        """
         t = np.linspace(0, 10 * np.pi, 1000)
         signal = np.sin(t)
 
@@ -138,6 +146,7 @@ class TestSampleEntropy:
         # Regular signal should have low SampEn
         assert result.value < 0.5
 
+    @pytest.mark.slow
     def test_random_signal(self):
         """Test SampEn for random signal."""
         np.random.seed(42)
@@ -198,6 +207,7 @@ class TestPermutationEntropy:
 # =============================================================================
 # Recurrence Analysis Tests
 # =============================================================================
+
 
 class TestRecurrencePlot:
     """Test recurrence plot generation."""
@@ -348,6 +358,7 @@ class TestJointRecurrence:
 # =============================================================================
 # 0-1 Test for Chaos Tests
 # =============================================================================
+
 
 class Test01ChaosFunction:
     """Test 0-1 test for chaos function."""

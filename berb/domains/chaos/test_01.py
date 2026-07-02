@@ -32,7 +32,6 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Optional
 
 import numpy as np
 
@@ -282,8 +281,8 @@ def compute_modified_msd(
             if end <= start:
                 continue
 
-            dp = p[start:end] - p[start - lag:end - lag] if start >= lag else p[start:end]
-            dq = q[start:end] - q[start - lag:end - lag] if start >= lag else q[start:end]
+            dp = p[start:end] - p[start - lag : end - lag] if start >= lag else p[start:end]
+            dq = q[start:end] - q[start - lag : end - lag] if start >= lag else q[start:end]
 
             displacements.append(np.mean(dp**2 + dq**2))
 

@@ -12,19 +12,18 @@ from __future__ import annotations
 
 import logging
 import re
-from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from berb.reasoning.research import ResearchMethod
 from berb.llm.client import LLMProvider
+from berb.reasoning.research import ResearchMethod
 
 logger = logging.getLogger(__name__)
 
 
-class PaperSection(str, Enum):
+class PaperSection(StrEnum):
     """Standard paper sections.
 
     Attributes:
@@ -48,7 +47,7 @@ class PaperSection(str, Enum):
     APPENDIX = "appendix"
 
 
-class CitationPurpose(str, Enum):
+class CitationPurpose(StrEnum):
     """Purpose of a citation in context.
 
     Attributes:
@@ -118,9 +117,7 @@ class PaperCitationProfile(BaseModel):
         if not self.section_distribution:
             return None
 
-        return PaperSection(
-            max(self.section_distribution, key=self.section_distribution.get)
-        )
+        return PaperSection(max(self.section_distribution, key=self.section_distribution.get))
 
 
 class CitationRecommendation(BaseModel):
@@ -205,24 +202,39 @@ class SectionCitationAnalyzer:
         PaperSection.ABSTRACT: ["abstract", "summary"],
         PaperSection.INTRODUCTION: ["introduction", "intro", "background"],
         PaperSection.RELATED_WORK: [
-            "related work", "related works", "literature review",
-            "prior work", "previous work", "background"
+            "related work",
+            "related works",
+            "literature review",
+            "prior work",
+            "previous work",
+            "background",
         ],
         PaperSection.METHODS: [
-            "methods", "methodology", "approach", "technique",
-            "model", "architecture", "algorithm", "implementation"
+            "methods",
+            "methodology",
+            "approach",
+            "technique",
+            "model",
+            "architecture",
+            "algorithm",
+            "implementation",
         ],
         PaperSection.RESULTS: [
-            "results", "experiments", "evaluation", "findings",
-            "outcomes", "performance"
+            "results",
+            "experiments",
+            "evaluation",
+            "findings",
+            "outcomes",
+            "performance",
         ],
         PaperSection.DISCUSSION: [
-            "discussion", "analysis", "interpretation",
-            "implications", "limitations"
+            "discussion",
+            "analysis",
+            "interpretation",
+            "implications",
+            "limitations",
         ],
-        PaperSection.CONCLUSION: [
-            "conclusion", "concluding", "summary", "future work"
-        ],
+        PaperSection.CONCLUSION: ["conclusion", "concluding", "summary", "future work"],
         PaperSection.APPENDIX: ["appendix", "supplementary", "appendix"],
     }
 
@@ -279,9 +291,7 @@ class SectionCitationAnalyzer:
         section_summary = self._generate_section_summary(citations)
 
         # Generate recommendations
-        recommendations = await self._generate_recommendations(
-            citations, profiles, paper_text
-        )
+        recommendations = await self._generate_recommendations(citations, profiles, paper_text)
 
         analysis = SectionCitationAnalysis(
             paper_text=paper_text,
@@ -291,10 +301,7 @@ class SectionCitationAnalyzer:
             recommendations=recommendations,
         )
 
-        logger.info(
-            f"Analysis complete: {len(citations)} citations, "
-            f"{len(profiles)} unique papers"
-        )
+        logger.info(f"Analysis complete: {len(citations)} citations, {len(profiles)} unique papers")
 
         return analysis
 
@@ -345,9 +352,7 @@ class SectionCitationAnalyzer:
             if section_positions:
                 for i, (section, start_pos) in enumerate(section_positions):
                     end_pos = (
-                        section_positions[i + 1][1]
-                        if i + 1 < len(section_positions)
-                        else len(text)
+                        section_positions[i + 1][1] if i + 1 < len(section_positions) else len(text)
                     )
                     section_text = text[start_pos:end_pos]
                     sections.append((section, section_text, start_pos))
@@ -464,7 +469,9 @@ class SectionCitationAnalyzer:
 
             citation = SectionCitation(
                 paper_id=paper_id,
-                section=PaperSection(section_name) if section_name in [s.value for s in PaperSection] else PaperSection.INTRODUCTION,
+                section=PaperSection(section_name)
+                if section_name in [s.value for s in PaperSection]
+                else PaperSection.INTRODUCTION,
                 purpose=purpose,
                 context=context,
                 position=pos_label,
@@ -607,7 +614,7 @@ class SectionCitationAnalyzer:
                     "total_citations": len(section_citations),
                     "by_purpose": purpose_counts,
                     "by_position": position_counts,
-                    "unique_papers": len(set(c.paper_id for c in section_citations)),
+                    "unique_papers": len({c.paper_id for c in section_citations}),
                 }
 
         return summary
@@ -654,9 +661,7 @@ class SectionCitationAnalyzer:
                     recommended_purpose=primary_purpose,
                     confidence=confidence,
                     reasoning=self._generate_reasoning(profile),
-                    alternative_sections=[
-                        PaperSection(s) for s in alternatives
-                    ],
+                    alternative_sections=[PaperSection(s) for s in alternatives],
                 )
                 recommendations.append(recommendation)
 
@@ -682,13 +687,9 @@ class SectionCitationAnalyzer:
         ]
 
         if primary_purpose != CitationPurpose.BACKGROUND:
-            reasoning_parts.append(
-                f"typically for {primary_purpose.value.replace('_', ' ')}"
-            )
+            reasoning_parts.append(f"typically for {primary_purpose.value.replace('_', ' ')}")
 
-        reasoning_parts.append(
-            f"({profile.total_citations} total citations)"
-        )
+        reasoning_parts.append(f"({profile.total_citations} total citations)")
 
         return " ".join(reasoning_parts)
 
@@ -780,26 +781,30 @@ class CitationPlacementOptimizer:
         # Find sections with low citation density
         for section, summary in analysis.section_summary.items():
             if summary["total_citations"] < 3:
-                suggestions.append({
-                    "section": section,
-                    "issue": "low_citation_density",
-                    "recommendation": f"Add more citations to {section} section",
-                    "priority": "medium",
-                })
+                suggestions.append(
+                    {
+                        "section": section,
+                        "issue": "low_citation_density",
+                        "recommendation": f"Add more citations to {section} section",
+                        "priority": "medium",
+                    }
+                )
 
         # Find papers that should be cited but aren't
-        cited_ids = set(c.paper_id for c in analysis.citations)
+        cited_ids = {c.paper_id for c in analysis.citations}
         for ref in references:
             ref_id = ref.get("id", ref.get("doi", ""))
             if ref_id and ref_id not in cited_ids:
                 # Recommend where to cite
                 primary_section = self._infer_section_for_reference(ref)
-                suggestions.append({
-                    "paper_id": ref_id,
-                    "issue": "missing_citation",
-                    "recommendation": f"Cite in {primary_section} section",
-                    "priority": "high",
-                })
+                suggestions.append(
+                    {
+                        "paper_id": ref_id,
+                        "issue": "missing_citation",
+                        "recommendation": f"Cite in {primary_section} section",
+                        "priority": "high",
+                    }
+                )
 
         return suggestions
 

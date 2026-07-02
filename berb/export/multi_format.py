@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import json
 import logging
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -26,7 +26,7 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger(__name__)
 
 
-class ExportFormat(str, Enum):
+class ExportFormat(StrEnum):
     """Supported export formats.
 
     Attributes:
@@ -159,9 +159,7 @@ class MultiFormatExporter:
         for fmt in self.config.formats:
             try:
                 if fmt == ExportFormat.LATEX:
-                    path = await self._export_latex(
-                        paper, references, figures, output_dir
-                    )
+                    path = await self._export_latex(paper, references, figures, output_dir)
                     result.exported_formats.append("latex")
                     result.output_paths["latex"] = str(path)
 
@@ -171,16 +169,12 @@ class MultiFormatExporter:
                     result.output_paths["markdown"] = str(path)
 
                 elif fmt == ExportFormat.HTML:
-                    path = await self._export_html(
-                        paper, references, figures, output_dir
-                    )
+                    path = await self._export_html(paper, references, figures, output_dir)
                     result.exported_formats.append("html")
                     result.output_paths["html"] = str(path)
 
                 elif fmt == ExportFormat.WORD:
-                    path = await self._export_word(
-                        paper, references, figures, output_dir
-                    )
+                    path = await self._export_word(paper, references, figures, output_dir)
                     result.exported_formats.append("word")
                     result.output_paths["word"] = str(path)
 
@@ -195,17 +189,13 @@ class MultiFormatExporter:
                     result.output_paths["csl-json"] = str(path)
 
                 elif fmt == ExportFormat.OVERLEAF_ZIP:
-                    path = await self._export_overleaf(
-                        paper, references, figures, output_dir
-                    )
+                    path = await self._export_overleaf(paper, references, figures, output_dir)
                     result.exported_formats.append("overleaf-zip")
                     result.output_paths["overleaf-zip"] = str(path)
 
                 elif fmt == ExportFormat.PDF:
                     # PDF requires LaTeX compilation
-                    path = await self._export_pdf(
-                        paper, references, figures, output_dir
-                    )
+                    path = await self._export_pdf(paper, references, figures, output_dir)
                     result.exported_formats.append("pdf")
                     result.output_paths["pdf"] = str(path)
 
@@ -248,7 +238,7 @@ class MultiFormatExporter:
         )
 
         latex_dir = output_dir / "latex"
-        project = await exporter.export_latex_project(
+        await exporter.export_latex_project(
             paper=paper,
             references=references,
             output_dir=latex_dir,
@@ -381,11 +371,11 @@ class MultiFormatExporter:
 </head>
 <body>
     <h1>{title}</h1>
-    <p class="authors">{', '.join(authors)}</p>
-    
+    <p class="authors">{", ".join(authors)}</p>
+
     <div class="abstract">
         <h2>Abstract</h2>
-        <p>{paper.get('abstract', '')}</p>
+        <p>{paper.get("abstract", "")}</p>
     </div>
 """
 
@@ -447,7 +437,7 @@ class MultiFormatExporter:
         """
         try:
             from docx import Document
-            from docx.shared import Pt, Inches
+            from docx.shared import Inches, Pt  # noqa: F401 - Pt for future use
         except ImportError:
             # python-docx not installed - fall back to Markdown
             logger.warning("python-docx not installed, exporting as Markdown instead")
@@ -647,6 +637,7 @@ class MultiFormatExporter:
 
         # Clean up temp directory
         import shutil
+
         shutil.rmtree(latex_dir, ignore_errors=True)
 
         return zip_path
@@ -672,9 +663,7 @@ class MultiFormatExporter:
         import subprocess
 
         # First export LaTeX
-        latex_path = await self._export_latex(
-            paper, references, figures, output_dir
-        )
+        latex_path = await self._export_latex(paper, references, figures, output_dir)
 
         latex_dir = latex_path.parent
 

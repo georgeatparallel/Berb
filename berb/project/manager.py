@@ -121,10 +121,7 @@ class ProjectManager:
             "total": len(projects),
             "active": self._active,
             "by_status": _count_by(projects, "status"),
-            "projects": [
-                {"name": p.name, "status": p.status, "topic": p.topic}
-                for p in projects
-            ],
+            "projects": [{"name": p.name, "status": p.status, "topic": p.topic} for p in projects],
         }
 
     # ── project switching ─────────────────────────────────────────
@@ -151,8 +148,18 @@ class ProjectManager:
         a = self.get(name_a)
         b = self.get(name_b)
         return {
-            "project_a": {"name": a.name, "status": a.status, "topic": a.topic, "metrics": a.metrics},
-            "project_b": {"name": b.name, "status": b.status, "topic": b.topic, "metrics": b.metrics},
+            "project_a": {
+                "name": a.name,
+                "status": a.status,
+                "topic": a.topic,
+                "metrics": a.metrics,
+            },
+            "project_b": {
+                "name": b.name,
+                "status": b.status,
+                "topic": b.topic,
+                "metrics": b.metrics,
+            },
             "metric_diff": _metric_diff(a.metrics, b.metrics),
         }
 

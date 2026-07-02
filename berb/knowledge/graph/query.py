@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from collections import Counter, defaultdict
 from typing import Any
 
 from berb.knowledge.graph.builder import KnowledgeGraphBuilder
@@ -37,7 +36,8 @@ class KnowledgeGraphQuery:
 
         if domain:
             datasets = [
-                d for d in datasets
+                d
+                for d in datasets
                 if domain.lower() in d.attributes.get("domain", "").lower()
                 or domain.lower() in d.name.lower()
             ]
@@ -46,9 +46,7 @@ class KnowledgeGraphQuery:
         for dataset in datasets:
             # Count methods applied to this dataset
             rels = self._graph.get_relations_for(dataset.id, direction="incoming")
-            method_rels = [
-                r for r in rels if r.relation_type == RelationType.USES_DATASET
-            ]
+            method_rels = [r for r in rels if r.relation_type == RelationType.USES_DATASET]
             if len(method_rels) < 2 and methods:
                 gaps.append(
                     f"Dataset '{dataset.name}' has only {len(method_rels)} "
@@ -71,22 +69,23 @@ class KnowledgeGraphQuery:
 
         for method in methods:
             rels = self._graph.get_relations_for(method.id, direction="incoming")
-            citation_count = len([
-                r for r in rels
-                if r.relation_type in (
-                    RelationType.EXTENDS,
-                    RelationType.APPLIES_METHOD,
-                    RelationType.CITES,
-                )
-            ])
+            citation_count = len(
+                [
+                    r
+                    for r in rels
+                    if r.relation_type
+                    in (
+                        RelationType.EXTENDS,
+                        RelationType.APPLIES_METHOD,
+                        RelationType.CITES,
+                    )
+                ]
+            )
             if citation_count >= min_citations:
                 trending.append((citation_count, method.name))
 
         trending.sort(reverse=True)
-        return [
-            f"'{name}' — referenced {count} time(s)"
-            for count, name in trending
-        ]
+        return [f"'{name}' — referenced {count} time(s)" for count, name in trending]
 
     def get_method_comparison(
         self,

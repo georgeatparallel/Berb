@@ -7,20 +7,20 @@ enabling human-in-the-loop research at configurable decision points.
 """
 
 from berb.modes.operation_mode import (
+    AuditTrail,
     CollaborativeConfig,
     FeedbackAction,
     HumanFeedback,
     OperationMode,
     OperationModeManager,
     StageSummary,
-    AuditTrail,
     create_mode_manager,
 )
 from berb.modes.workflow import (
+    WORKFLOW_STAGES,
     WorkflowConfig,
     WorkflowManager,
     WorkflowType,
-    WORKFLOW_STAGES,
     create_workflow_manager,
     get_workflow_stages,
 )

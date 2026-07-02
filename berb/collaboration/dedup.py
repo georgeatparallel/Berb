@@ -20,6 +20,7 @@ def content_hash(content: Any) -> str:
     """
     if isinstance(content, (dict, list)):
         import json
+
         text = json.dumps(content, sort_keys=True, default=str)
     else:
         text = str(content)

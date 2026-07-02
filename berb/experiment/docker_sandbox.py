@@ -47,27 +47,84 @@ def _next_container_name() -> str:
 # Packages already in the Docker image — skip during auto-detect.
 _BUILTIN_PACKAGES = {
     # PyTorch ecosystem
-    "torch", "torchvision", "torchaudio", "torchdiffeq",
+    "torch",
+    "torchvision",
+    "torchaudio",
+    "torchdiffeq",
     # Scientific / ML
-    "numpy", "scipy", "sklearn", "pandas", "matplotlib", "seaborn",
-    "tqdm", "gymnasium", "networkx",
+    "numpy",
+    "scipy",
+    "sklearn",
+    "pandas",
+    "matplotlib",
+    "seaborn",
+    "tqdm",
+    "gymnasium",
+    "networkx",
     # Extended ML ecosystem
-    "timm", "einops", "torchmetrics", "albumentations", "kornia",
-    "h5py", "tensorboard",
+    "timm",
+    "einops",
+    "torchmetrics",
+    "albumentations",
+    "kornia",
+    "h5py",
+    "tensorboard",
     # HuggingFace / LLM stack
-    "transformers", "datasets", "accelerate", "peft", "trl",
-    "bitsandbytes", "sentencepiece", "protobuf", "tokenizers",
-    "safetensors", "evaluate",
+    "transformers",
+    "datasets",
+    "accelerate",
+    "peft",
+    "trl",
+    "bitsandbytes",
+    "sentencepiece",
+    "protobuf",
+    "tokenizers",
+    "safetensors",
+    "evaluate",
     # Other pre-installed
-    "yaml", "PIL", "mujoco",
+    "yaml",
+    "PIL",
+    "mujoco",
     # Python stdlib
-    "os", "sys", "math", "random", "json", "csv", "re", "time",
-    "collections", "itertools", "functools", "pathlib", "typing",
-    "dataclasses", "abc", "copy", "io", "logging", "argparse",
-    "datetime", "hashlib", "pickle", "subprocess", "shutil",
-    "tempfile", "warnings", "unittest", "contextlib", "operator",
-    "string", "textwrap", "struct", "statistics", "glob",
-    "urllib", "http", "email", "html", "xml",
+    "os",
+    "sys",
+    "math",
+    "random",
+    "json",
+    "csv",
+    "re",
+    "time",
+    "collections",
+    "itertools",
+    "functools",
+    "pathlib",
+    "typing",
+    "dataclasses",
+    "abc",
+    "copy",
+    "io",
+    "logging",
+    "argparse",
+    "datetime",
+    "hashlib",
+    "pickle",
+    "subprocess",
+    "shutil",
+    "tempfile",
+    "warnings",
+    "unittest",
+    "contextlib",
+    "operator",
+    "string",
+    "textwrap",
+    "struct",
+    "statistics",
+    "glob",
+    "urllib",
+    "http",
+    "email",
+    "html",
+    "xml",
 }
 
 # Map import names to pip package names.
@@ -174,8 +231,11 @@ class DockerSandbox:
         err = validate_entry_point(entry_point)
         if err:
             return SandboxResult(
-                returncode=-1, stdout="", stderr=err,
-                elapsed_sec=0.0, metrics={},
+                returncode=-1,
+                stdout="",
+                stderr=err,
+                elapsed_sec=0.0,
+                metrics={},
             )
 
         # Inject harness first (immutable)
@@ -183,12 +243,11 @@ class DockerSandbox:
 
         # Copy project files and subdirectories (skip harness overwrite)
         import shutil as _shutil
+
         for src_item in project_dir.iterdir():
             dest = staging / src_item.name
             if src_item.name == "experiment_harness.py":
-                logger.warning(
-                    "Project contains experiment_harness.py — skipping (immutable)"
-                )
+                logger.warning("Project contains experiment_harness.py — skipping (immutable)")
                 continue
             if src_item.is_file():
                 dest.write_bytes(src_item.read_bytes())
@@ -199,8 +258,11 @@ class DockerSandbox:
         err = validate_entry_point_resolved(staging, entry_point)
         if err:
             return SandboxResult(
-                returncode=-1, stdout="", stderr=err,
-                elapsed_sec=0.0, metrics={},
+                returncode=-1,
+                stdout="",
+                stderr=err,
+                elapsed_sec=0.0,
+                metrics={},
             )
 
         entry = staging / entry_point
@@ -238,9 +300,15 @@ class DockerSandbox:
         """Return True if the NVIDIA Container Toolkit is available."""
         try:
             cp = subprocess.run(
-                ["docker", "run", "--rm", "--gpus", "all",
-                 "nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04",
-                 "nvidia-smi"],
+                [
+                    "docker",
+                    "run",
+                    "--rm",
+                    "--gpus",
+                    "all",
+                    "nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04",
+                    "nvidia-smi",
+                ],
                 capture_output=True,
                 timeout=30,
                 check=False,
@@ -277,9 +345,7 @@ class DockerSandbox:
     # Internals
     # ------------------------------------------------------------------
 
-    def _execute(
-        self, staging_dir: Path, *, entry_point: str, timeout_sec: int
-    ) -> SandboxResult:
+    def _execute(self, staging_dir: Path, *, entry_point: str, timeout_sec: int) -> SandboxResult:
         """Core execution: single container, three-phase via entrypoint.sh."""
         cfg = self.config
         container_name = _next_container_name()
@@ -347,9 +413,7 @@ class DockerSandbox:
         results_json_path = staging_dir / "results.json"
         if results_json_path.exists():
             try:
-                structured = json.loads(
-                    results_json_path.read_text(encoding="utf-8")
-                )
+                structured = json.loads(results_json_path.read_text(encoding="utf-8"))
                 if isinstance(structured, dict):
                     for k, v in structured.items():
                         if k not in metrics:
@@ -387,11 +451,15 @@ class DockerSandbox:
         """
         cfg = self.config
         cmd = [
-            "docker", "run",
-            "--name", container_name,
+            "docker",
+            "run",
+            "--name",
+            container_name,
             "--rm",
-            "-v", f"{_to_docker_path(staging_dir)}:/workspace",
-            "-w", "/workspace",
+            "-v",
+            f"{_to_docker_path(staging_dir)}:/workspace",
+            "-w",
+            "/workspace",
             f"--memory={cfg.memory_limit_mb}m",
             f"--shm-size={cfg.shm_size_mb}m",
         ]
@@ -533,14 +601,10 @@ class DockerSandbox:
     @staticmethod
     def _detect_pip_packages(staging_dir: Path) -> list[str]:
         """Scan Python files for import statements and return pip package names."""
-        import_re = re.compile(
-            r"^\s*(?:import|from)\s+([\w.]+)", re.MULTILINE
-        )
+        import_re = re.compile(r"^\s*(?:import|from)\s+([\w.]+)", re.MULTILINE)
         # Exclude local project modules (any .py file in staging_dir, recursive)
         # BUG-DA8-13: Use rglob to also scan subdirectories
-        local_modules = {
-            pyf.stem for pyf in staging_dir.rglob("*.py")
-        }
+        local_modules = {pyf.stem for pyf in staging_dir.rglob("*.py")}
         detected: list[str] = []
         for pyf in staging_dir.rglob("*.py"):
             if pyf.name == "setup.py":

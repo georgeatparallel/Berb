@@ -34,6 +34,14 @@ from berb.config import (
 )
 from berb.health import print_doctor_report, run_doctor, write_doctor_report
 
+try:
+    from dotenv import load_dotenv
+
+    # override=True: .env is authoritative over stale shell/OS env vars
+    load_dotenv(override=True)
+except ImportError:
+    pass
+
 # ---------------------------------------------------------------------------
 # OpenCode installation helpers
 # ---------------------------------------------------------------------------
@@ -629,21 +637,24 @@ def cmd_init(args: argparse.Namespace) -> int:
 
     content = example.read_text(encoding="utf-8")
 
-    # String-based replacement to preserve YAML comments
-    content = content.replace('provider: "openai-compatible"', f'provider: "{provider}"')
+    # String-based replacement to preserve YAML comments.
+    # NOTE: these placeholders must match configs/config.arc.example.yaml's
+    # actual defaults (provider: "openrouter", not "openai-compatible") —
+    # a prior mismatch here silently no-op'd the entire customization step.
+    content = content.replace('provider: "openrouter"', f'provider: "{provider}"')
 
     if provider == "acp":
         # ACP doesn't need base_url or api_key
-        content = content.replace('base_url: "https://api.openai.com/v1"', 'base_url: ""')
-        content = content.replace('api_key_env: "OPENAI_API_KEY"', 'api_key_env: ""')
+        content = content.replace('base_url: "https://openrouter.ai/api/v1"', 'base_url: ""')
+        content = content.replace('api_key_env: "OPENROUTER_API_KEY"', 'api_key_env: ""')
     else:
         base_url = _PROVIDER_URLS.get(provider, "https://api.openai.com/v1")
         content = content.replace(
-            'base_url: "https://api.openai.com/v1"', f'base_url: "{base_url}"'
+            'base_url: "https://openrouter.ai/api/v1"', f'base_url: "{base_url}"'
         )
         if api_key_env:
             content = content.replace(
-                'api_key_env: "OPENAI_API_KEY"', f'api_key_env: "{api_key_env}"'
+                'api_key_env: "OPENROUTER_API_KEY"', f'api_key_env: "{api_key_env}"'
             )
 
     if provider in _PROVIDER_MODELS:
@@ -862,16 +873,20 @@ def cmd_literature(args: argparse.Namespace) -> int:
     print()
 
     # Execute pipeline
-    results = execute_pipeline(
-        run_dir=run_dir,
-        run_id=run_id,
-        config=config,
-        adapters=adapters,
-        from_stage=from_stage,
-        auto_approve_gates=True,
-        stop_on_gate=False,
-        skip_noncritical=True,
-        kb_root_path=None,
+    import asyncio as _asyncio
+
+    results = _asyncio.run(
+        execute_pipeline(
+            run_dir=run_dir,
+            run_id=run_id,
+            config=config,
+            adapters=adapters,
+            from_stage=from_stage,
+            auto_approve_gates=True,
+            stop_on_gate=False,
+            skip_noncritical=True,
+            kb_root=None,
+        )
     )
 
     done = sum(1 for r in results if r.status.value == "done")
@@ -1005,27 +1020,80 @@ def cmd_rebuttal(args: argparse.Namespace) -> int:
 
 
 def cmd_survey(args: argparse.Namespace) -> int:
-    """Write literature review paper."""
-    from berb.modes.workflow import create_workflow_manager
+    """Write a comprehensive literature review via Perplexity sonar-deep-research.
 
-    config_path = Path(cast(str, args.config)) if args.config else None
-    if config_path and not config_path.exists():
-        print(f"Error: config file not found: {config_path}", file=sys.stderr)
+    This is deliberately a single API call, not a run through the 23-stage
+    pipeline — sonar-deep-research already does autonomous multi-step
+    search and produces a cited report directly.
+    """
+    import os
+
+    from berb.config import load_config
+
+    config_path = _resolve_config_or_exit(args)
+    if config_path is None:
+        return 1
+    try:
+        config = load_config(str(config_path))
+    except Exception as e:
+        print(f"Error loading config: {e}", file=sys.stderr)
         return 1
 
-    # Create workflow manager for literature-review
-    workflow_manager = create_workflow_manager(
-        workflow="literature-review",
-        stages=[1, 2, 3, 4, 5, 6, 7, 8, 16, 17, 18, 19, 20, 21, 22, 23],
-        operation_mode="autonomous",
+    if not config.perplexity.enabled:
+        print(
+            "Error: perplexity.enabled is false in config — 'berb survey' "
+            "requires it (sonar-deep-research powers the review).",
+            file=sys.stderr,
+        )
+        return 1
+
+    api_key = os.environ.get(config.perplexity.api_key_env, "")
+    if not api_key:
+        print(
+            f"Error: {config.perplexity.api_key_env} is not set. "
+            "'berb survey' requires a Perplexity API key.",
+            file=sys.stderr,
+        )
+        return 1
+
+    print(f"Literature review: {args.topic}")
+    print(
+        "Note: sonar-deep-research is the most expensive Sonar tier "
+        "(autonomous multi-step search + long-form report)."
+    )
+    if not args.yes:
+        confirm = input("Continue? [y/N] ").strip().lower()
+        if confirm not in ("y", "yes"):
+            print("Aborted.")
+            return 1
+
+    from berb.llm.deep_query_client import DeepQueryClient
+
+    client = DeepQueryClient(api_key=api_key)
+    try:
+        result = client.literature_review(topic=args.topic)
+    except RuntimeError as e:
+        print(f"Error: literature review failed: {e}", file=sys.stderr)
+        return 1
+
+    run_id = _generate_run_id(args.topic)
+    output_path = Path(args.output) if args.output else Path(f"artifacts/survey-{run_id}.md")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    citations_md = ""
+    if result.citations:
+        citations_md = "\n\n## Sources\n\n" + "\n".join(
+            f"- [{c.get('title') or c.get('url', '')}]({c.get('url', '')})"
+            for c in result.citations
+        )
+
+    output_path.write_text(
+        f"# Literature Review: {args.topic}\n\n{result.content}{citations_md}\n",
+        encoding="utf-8",
     )
 
-    print(f"Starting literature review workflow for: {args.topic}")
-    print(f"Workflow: {workflow_manager.current_workflow.value}")
-    print(f"Stages: {workflow_manager.get_enabled_stages()}")
-
-    # TODO: Integrate with actual pipeline execution
-    print("\nNote: Literature review workflow is ready for integration.")
+    print(f"\nDone — {len(result.citations)} sources cited.")
+    print(f"Saved to: {output_path}")
     return 0
 
 
@@ -1175,6 +1243,10 @@ def main(argv: list[str] | None = None) -> int:
     _ = survey_p.add_argument("--topic", "-t", required=True, help="Review topic")
     _ = survey_p.add_argument("--preset", default="ml-conference", help="Preset to use")
     _ = survey_p.add_argument("--config", "-c", default=None, help="Config file path")
+    _ = survey_p.add_argument("--output", "-o", default=None, help="Output file path")
+    _ = survey_p.add_argument(
+        "--yes", "-y", action="store_true", help="Skip cost confirmation prompt"
+    )
 
     # D4: Conference deadline calendar
     cal_p = sub.add_parser("calendar", help="Conference deadline calendar")

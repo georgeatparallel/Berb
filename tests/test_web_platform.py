@@ -47,12 +47,14 @@ class TestServerConfig:
     def test_parse_server_config(self) -> None:
         from berb.config import _parse_server_config
 
-        cfg = _parse_server_config({
-            "enabled": True,
-            "host": "127.0.0.1",
-            "port": 9090,
-            "auth_token": "secret123",
-        })
+        cfg = _parse_server_config(
+            {
+                "enabled": True,
+                "host": "127.0.0.1",
+                "port": 9090,
+                "auth_token": "secret123",
+            }
+        )
         assert cfg.enabled is True
         assert cfg.host == "127.0.0.1"
         assert cfg.port == 9090
@@ -68,10 +70,12 @@ class TestServerConfig:
     def test_parse_dashboard_config(self) -> None:
         from berb.config import _parse_dashboard_config
 
-        cfg = _parse_dashboard_config({
-            "refresh_interval_sec": 10,
-            "max_log_lines": 500,
-        })
+        cfg = _parse_dashboard_config(
+            {
+                "refresh_interval_sec": 10,
+                "max_log_lines": 500,
+            }
+        )
         assert cfg.refresh_interval_sec == 10
         assert cfg.max_log_lines == 500
 
@@ -482,11 +486,13 @@ class TestWizard:
         from berb.wizard.quickstart import QuickStartWizard
 
         wizard = QuickStartWizard()
-        config = wizard.run_web([
-            {"key": "project_name", "value": "test-proj"},
-            {"key": "topic", "value": "neural scaling laws"},
-            {"key": "mode", "value": "docker"},
-        ])
+        config = wizard.run_web(
+            [
+                {"key": "project_name", "value": "test-proj"},
+                {"key": "topic", "value": "neural scaling laws"},
+                {"key": "mode", "value": "docker"},
+            ]
+        )
         assert config.get("project", {}).get("name") == "test-proj"
         assert config.get("research", {}).get("topic") == "neural scaling laws"
 
@@ -521,11 +527,13 @@ class TestEvents:
     def test_event_deserialization(self) -> None:
         from berb.server.websocket.events import Event, EventType
 
-        raw = json.dumps({
-            "type": "heartbeat",
-            "data": {"active_clients": 3},
-            "timestamp": 1234567890.0,
-        })
+        raw = json.dumps(
+            {
+                "type": "heartbeat",
+                "data": {"active_clients": 3},
+                "timestamp": 1234567890.0,
+            }
+        )
         evt = Event.from_json(raw)
         assert evt.type == EventType.HEARTBEAT
         assert evt.data["active_clients"] == 3
@@ -604,6 +612,7 @@ class TestFastAPIApp:
         }
         config = RCConfig.from_dict(data, check_paths=False)
         from berb.server.app import create_app
+
         return create_app(config)
 
     @pytest.mark.asyncio

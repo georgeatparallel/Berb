@@ -20,6 +20,7 @@ from berb.hooks import (
 
 # ============== Hook Result Tests ==============
 
+
 class TestHookResult:
     """Test HookResult dataclass."""
 
@@ -50,6 +51,7 @@ class TestHookResult:
 
 
 # ============== Session Start Hook Tests ==============
+
 
 class TestSessionStartHook:
     """Test SessionStartHook."""
@@ -103,6 +105,7 @@ class TestSessionStartHook:
 
 
 # ============== Skill Evaluation Hook Tests ==============
+
 
 class TestSkillEvaluationHook:
     """Test SkillEvaluationHook."""
@@ -169,6 +172,7 @@ class TestSkillEvaluationHook:
 
 # ============== Session End Hook Tests ==============
 
+
 class TestSessionEndHook:
     """Test SessionEndHook."""
 
@@ -232,6 +236,7 @@ class TestSessionEndHook:
 
 
 # ============== Security Guard Hook Tests ==============
+
 
 class TestSecurityGuardHook:
     """Test SecurityGuardHook."""
@@ -320,6 +325,7 @@ os.system("ls")
 
 # ============== Hook Manager Tests ==============
 
+
 class TestHookManager:
     """Test HookManager."""
 
@@ -383,6 +389,7 @@ class TestHookManager:
 
 # ============== Factory Function Tests ==============
 
+
 class TestCreateDefaultHookManager:
     """Test create_default_hook_manager."""
 
@@ -418,6 +425,7 @@ class TestCreateDefaultHookManager:
 
 # ============== Integration Tests ==============
 
+
 class TestHooksIntegration:
     """Test hooks integration."""
 
@@ -429,6 +437,7 @@ class TestHooksIntegration:
             SessionEndHook,
             SecurityGuardHook,
         )
+
         assert SessionStartHook is not None
         assert SkillEvaluationHook is not None
         assert SessionEndHook is not None

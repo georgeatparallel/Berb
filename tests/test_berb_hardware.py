@@ -21,11 +21,16 @@ from berb.hardware import (
 # HardwareProfile
 # ---------------------------------------------------------------------------
 
+
 class TestHardwareProfile:
     def test_to_dict(self):
         hp = HardwareProfile(
-            has_gpu=True, gpu_type="cuda", gpu_name="RTX 4090",
-            vram_mb=24564, tier="high", warning="",
+            has_gpu=True,
+            gpu_type="cuda",
+            gpu_name="RTX 4090",
+            vram_mb=24564,
+            tier="high",
+            warning="",
         )
         d = hp.to_dict()
         assert d["has_gpu"] is True
@@ -34,8 +39,12 @@ class TestHardwareProfile:
 
     def test_cpu_only_profile(self):
         hp = HardwareProfile(
-            has_gpu=False, gpu_type="cpu", gpu_name="CPU only",
-            vram_mb=None, tier="cpu_only", warning="No GPU",
+            has_gpu=False,
+            gpu_type="cpu",
+            gpu_name="CPU only",
+            vram_mb=None,
+            tier="cpu_only",
+            warning="No GPU",
         )
         assert hp.tier == "cpu_only"
         assert hp.warning == "No GPU"
@@ -44,6 +53,7 @@ class TestHardwareProfile:
 # ---------------------------------------------------------------------------
 # NVIDIA detection
 # ---------------------------------------------------------------------------
+
 
 class TestDetectNvidia:
     def test_high_vram_nvidia(self):
@@ -100,6 +110,7 @@ class TestDetectNvidia:
 # MPS detection
 # ---------------------------------------------------------------------------
 
+
 class TestDetectMPS:
     def test_apple_silicon(self):
         mock_result = MagicMock()
@@ -136,6 +147,7 @@ class TestDetectMPS:
 # detect_hardware (integration)
 # ---------------------------------------------------------------------------
 
+
 class TestDetectHardware:
     def test_falls_back_to_cpu(self):
         with (
@@ -151,12 +163,20 @@ class TestDetectHardware:
 
     def test_nvidia_takes_priority(self):
         nvidia_profile = HardwareProfile(
-            has_gpu=True, gpu_type="cuda", gpu_name="RTX 4090",
-            vram_mb=24564, tier="high", warning="",
+            has_gpu=True,
+            gpu_type="cuda",
+            gpu_name="RTX 4090",
+            vram_mb=24564,
+            tier="high",
+            warning="",
         )
         mps_profile = HardwareProfile(
-            has_gpu=True, gpu_type="mps", gpu_name="M3",
-            vram_mb=None, tier="limited", warning="MPS",
+            has_gpu=True,
+            gpu_type="mps",
+            gpu_name="M3",
+            vram_mb=None,
+            tier="limited",
+            warning="MPS",
         )
         with (
             patch("berb.hardware._detect_nvidia", return_value=nvidia_profile),
@@ -170,6 +190,7 @@ class TestDetectHardware:
 # ---------------------------------------------------------------------------
 # ensure_torch_available
 # ---------------------------------------------------------------------------
+
 
 class TestEnsureTorchAvailable:
     def test_already_installed(self):
@@ -225,6 +246,7 @@ class TestEnsureTorchAvailable:
 # ---------------------------------------------------------------------------
 # is_metric_name
 # ---------------------------------------------------------------------------
+
 
 class TestIsMetricName:
     def test_valid_metrics(self):

@@ -22,15 +22,15 @@ Usage:
 
     # Option 2: Registry singleton (recommended for reuse)
     from berb.reasoning.registry import get_reasoner, create_reasoner, list_reasoners
-    
+
     # Get singleton instance (same instance returned on subsequent calls)
     method = get_reasoner("multi_perspective", router)
     result = await method.execute(context)
-    
+
     # Create new instance (always fresh)
     method = create_reasoner("debate", llm_client, num_arguments=5)
     result = await method.execute(context)
-    
+
     # List available methods
     print(list_reasoners())  # ['multi_perspective', 'pre_mortem', ...]
 
@@ -38,33 +38,21 @@ Usage:
 """
 
 from berb.reasoning.base import (
+    MethodType,
+    ReasoningContext,
     ReasoningMethod,
     ReasoningResult,
-    ReasoningContext,
-    MethodType,
     create_context,
-)
-from berb.reasoning.multi_perspective import (
-    MultiPerspectiveMethod,
-    PerspectiveType,
-    PerspectiveCandidate,
-    PerspectiveScore,
-)
-from berb.reasoning.pre_mortem import (
-    PreMortemMethod,
-    FailureNarrative,
-    RootCause,
-    EarlySignal,
 )
 from berb.reasoning.bayesian import (
     BayesianMethod,
-    Hypothesis,
-    Evidence,
     BayesianResult,
+    Evidence,
+    Hypothesis,
 )
 from berb.reasoning.debate import (
-    DebateMethod,
     Argument,
+    DebateMethod,
     DebateResult,
 )
 from berb.reasoning.dialectical import (
@@ -72,33 +60,47 @@ from berb.reasoning.dialectical import (
     DialecticalPosition,
     DialecticalResult,
 )
+from berb.reasoning.jury import (
+    Juror,
+    JurorRole,
+    JuryMethod,
+    JuryResult,
+)
+from berb.reasoning.multi_perspective import (
+    MultiPerspectiveMethod,
+    PerspectiveCandidate,
+    PerspectiveScore,
+    PerspectiveType,
+)
+from berb.reasoning.pre_mortem import (
+    EarlySignal,
+    FailureNarrative,
+    PreMortemMethod,
+    RootCause,
+)
+from berb.reasoning.registry import (
+    ReasonerRegistry,
+    create_reasoner,
+    get_reasoner,
+    list_reasoners,
+)
 from berb.reasoning.research import (
-    ResearchMethod,
     ResearchIteration,
+    ResearchMethod,
     ResearchResult,
+)
+from berb.reasoning.scientific import (
+    ExperimentDesign,
+    ScientificMethod,
+    ScientificResult,
+)
+from berb.reasoning.scientific import (
+    Hypothesis as ScientificHypothesis,
 )
 from berb.reasoning.socratic import (
     SocraticMethod,
     SocraticQuestion,
     SocraticResult,
-)
-from berb.reasoning.scientific import (
-    ScientificMethod,
-    Hypothesis as ScientificHypothesis,
-    ExperimentDesign,
-    ScientificResult,
-)
-from berb.reasoning.jury import (
-    JuryMethod,
-    Juror,
-    JurorRole,
-    JuryResult,
-)
-from berb.reasoning.registry import (
-    ReasonerRegistry,
-    get_reasoner,
-    create_reasoner,
-    list_reasoners,
 )
 
 __all__ = [
@@ -108,57 +110,47 @@ __all__ = [
     "ReasoningContext",
     "MethodType",
     "create_context",
-
     # Registry (recommended usage)
     "ReasonerRegistry",
     "get_reasoner",
     "create_reasoner",
     "list_reasoners",
-
     # Multi-Perspective
     "MultiPerspectiveMethod",
     "PerspectiveType",
     "PerspectiveCandidate",
     "PerspectiveScore",
-
     # Pre-Mortem
     "PreMortemMethod",
     "FailureNarrative",
     "RootCause",
     "EarlySignal",
-
     # Bayesian
     "BayesianMethod",
     "Hypothesis",
     "Evidence",
     "BayesianResult",
-
     # Debate
     "DebateMethod",
     "Argument",
     "DebateResult",
-
     # Dialectical
     "DialecticalMethod",
     "DialecticalPosition",
     "DialecticalResult",
-
     # Research
     "ResearchMethod",
     "ResearchIteration",
     "ResearchResult",
-
     # Socratic
     "SocraticMethod",
     "SocraticQuestion",
     "SocraticResult",
-
     # Scientific
     "ScientificMethod",
     "ScientificHypothesis",
     "ExperimentDesign",
     "ScientificResult",
-
     # Jury
     "JuryMethod",
     "Juror",

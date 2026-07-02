@@ -16,21 +16,17 @@ class RoboticsPromptAdapter(PromptAdapter):
 
     def get_code_generation_blocks(self, context: dict[str, Any]) -> PromptBlocks:
         domain = self.domain
-        libs = (
+        (
             ", ".join(domain.core_libraries)
             if domain.core_libraries
             else "gymnasium, stable-baselines3, torch"
         )
 
         return PromptBlocks(
-            compute_budget=domain.compute_budget_guidance
-            or self._default_compute_budget(),
-            dataset_guidance=domain.dataset_guidance
-            or self._default_dataset_guidance(),
-            hp_reporting=domain.hp_reporting_guidance
-            or self._default_hp_reporting(),
-            code_generation_hints=domain.code_generation_hints
-            or self._default_code_hints(),
+            compute_budget=domain.compute_budget_guidance or self._default_compute_budget(),
+            dataset_guidance=domain.dataset_guidance or self._default_dataset_guidance(),
+            hp_reporting=domain.hp_reporting_guidance or self._default_hp_reporting(),
+            code_generation_hints=domain.code_generation_hints or self._default_code_hints(),
             output_format_guidance=self._output_format(),
         )
 
@@ -50,16 +46,9 @@ class RoboticsPromptAdapter(PromptAdapter):
         )
 
         if domain.standard_baselines:
-            design_context += (
-                f"\nStandard baselines: "
-                f"{', '.join(domain.standard_baselines)}\n"
-            )
+            design_context += f"\nStandard baselines: {', '.join(domain.standard_baselines)}\n"
 
-        stats = (
-            ", ".join(domain.statistical_tests)
-            if domain.statistical_tests
-            else "paired t-test"
-        )
+        stats = ", ".join(domain.statistical_tests) if domain.statistical_tests else "paired t-test"
 
         return PromptBlocks(
             experiment_design_context=design_context,

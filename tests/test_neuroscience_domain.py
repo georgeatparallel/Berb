@@ -51,8 +51,7 @@ class TestNeuroscienceProfiles:
         profile = get_profile("neuroscience_computational")
         assert profile is not None
         assert len(profile.standard_baselines) >= 2
-        assert any("LIF" in b or "Integrate-and-Fire" in b
-                    for b in profile.standard_baselines)
+        assert any("LIF" in b or "Integrate-and-Fire" in b for b in profile.standard_baselines)
 
     def test_imaging_profile_exists(self):
         profile = get_profile("neuroscience_imaging")
@@ -75,10 +74,15 @@ class TestNeuroscienceProfiles:
 
 class TestNeuroscienceKeywordDetection:
     def test_spiking_network(self):
-        assert _keyword_detect("spiking neural model of cortical columns") == "neuroscience_computational"
+        assert (
+            _keyword_detect("spiking neural model of cortical columns")
+            == "neuroscience_computational"
+        )
 
     def test_brian2(self):
-        assert _keyword_detect("network model implemented in brian2") == "neuroscience_computational"
+        assert (
+            _keyword_detect("network model implemented in brian2") == "neuroscience_computational"
+        )
 
     def test_hodgkin_huxley(self):
         assert _keyword_detect("Hodgkin-Huxley neuron model") == "neuroscience_computational"
@@ -90,10 +94,16 @@ class TestNeuroscienceKeywordDetection:
         assert _keyword_detect("Izhikevich neuron dynamics") == "neuroscience_computational"
 
     def test_neural_decoding(self):
-        assert _keyword_detect("neural decoding of population coding in cortex") == "neuroscience_computational"
+        assert (
+            _keyword_detect("neural decoding of population coding in cortex")
+            == "neuroscience_computational"
+        )
 
     def test_firing_rate(self):
-        assert _keyword_detect("firing rate analysis of cortical neurons") == "neuroscience_computational"
+        assert (
+            _keyword_detect("firing rate analysis of cortical neurons")
+            == "neuroscience_computational"
+        )
 
     def test_fmri(self):
         assert _keyword_detect("fmri resting state analysis") == "neuroscience_imaging"
@@ -135,6 +145,7 @@ class TestNeuroscienceAdapter:
         from berb.domains.adapters.neuroscience import (
             NeurosciencePromptAdapter,
         )
+
         assert isinstance(adapter, NeurosciencePromptAdapter)
 
     def test_imaging_gets_neuroscience_adapter(self):
@@ -160,8 +171,10 @@ class TestNeuroscienceAdapter:
             pytest.skip("neuroscience_computational profile not found")
         adapter = get_adapter(profile)
         blocks = adapter.get_experiment_design_blocks({})
-        assert "neuroscience" in blocks.experiment_design_context.lower() or \
-               "Computational Neuroscience" in blocks.experiment_design_context
+        assert (
+            "neuroscience" in blocks.experiment_design_context.lower()
+            or "Computational Neuroscience" in blocks.experiment_design_context
+        )
         assert blocks.statistical_test_guidance
 
     def test_result_analysis_blocks(self):

@@ -3,7 +3,10 @@ import re
 import pytest
 
 from berb.pipeline.contracts import CONTRACTS, StageContract
-from berb.pipeline.stages import GATE_STAGES, STAGE_SEQUENCE, Stage
+from berb.pipeline.resolution import resolve_stage_order
+from berb.pipeline.stages import GATE_STAGES, Stage
+
+STAGE_SEQUENCE = resolve_stage_order()
 
 
 def test_contracts_dict_has_exactly_23_entries():
@@ -30,9 +33,7 @@ def test_output_files_is_non_empty_for_all_contracts(contract: StageContract):
 
 
 @pytest.mark.parametrize("stage,contract", tuple(CONTRACTS.items()))
-def test_error_code_starts_with_e_and_contains_stage_number(
-    stage: Stage, contract: StageContract
-):
+def test_error_code_starts_with_e_and_contains_stage_number(stage: Stage, contract: StageContract):
     assert contract.error_code.startswith("E")
     assert f"{int(stage):02d}" in contract.error_code
     assert re.match(r"^E\d{2}_[A-Z0-9_]+$", contract.error_code)

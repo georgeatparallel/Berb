@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Callable, Awaitable
+from collections.abc import Awaitable, Callable
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -44,8 +44,6 @@ class TokenAuthMiddleware(BaseHTTPMiddleware):
             token = auth_header.removeprefix("Bearer ").strip()
 
         if token != self._token:
-            return JSONResponse(
-                {"detail": "Unauthorized"}, status_code=401
-            )
+            return JSONResponse({"detail": "Unauthorized"}, status_code=401)
 
         return await call_next(request)

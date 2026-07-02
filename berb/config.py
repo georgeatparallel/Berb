@@ -203,6 +203,10 @@ class LlmConfig:
     fallback_models: tuple[str, ...] = ()
     # P1 FIX: Multi-provider failover configuration
     fallback_providers: tuple[str, ...] = ()  # e.g., ("deepseek", "anthropic")
+    # Per-provider model override for fallback providers, since model IDs
+    # are not portable across providers (e.g. "deepseek-chat" vs
+    # "deepseek/deepseek-v3.2" OpenRouter-style IDs).
+    fallback_provider_models: tuple[tuple[str, str], ...] = ()
     s2_api_key: str = ""
     notes: str = ""
     acp: AcpConfig = field(default_factory=AcpConfig)
@@ -553,6 +557,25 @@ class WebSearchConfig:
 
 
 @dataclass(frozen=True)
+class PerplexityConfig:
+    """Configuration for Perplexity Sonar integration.
+
+    Shared by the literature-search top-up (Stage 4), citation
+    web-grounding (CitationVerifier), novelty check (Stage 8 prep), and
+    the ``berb survey`` command — one config surface for all Sonar use.
+    """
+
+    enabled: bool = True
+    api_key_env: str = "PERPLEXITY_API_KEY"
+    # Domains to restrict literature-search top-up to. Empty tuple = use
+    # search_perplexity.DEFAULT_DOMAIN_FILTER.
+    domain_filter: tuple[str, ...] = ()
+    recency_filter: str = ""  # "", "day", "week", "month", "year"
+    literature_min_candidates: int = 10
+    literature_min_failed_sources: int = 2
+
+
+@dataclass(frozen=True)
 class ExportConfig:
     """Configuration for paper export and LaTeX generation."""
 
@@ -769,6 +792,7 @@ class RCConfig:
     export: ExportConfig = field(default_factory=ExportConfig)
     prompts: PromptsConfig = field(default_factory=PromptsConfig)
     web_search: WebSearchConfig = field(default_factory=WebSearchConfig)
+    perplexity: PerplexityConfig = field(default_factory=PerplexityConfig)
     metaclaw_bridge: MetaClawBridgeConfig = field(default_factory=MetaClawBridgeConfig)
     # Agent B: Intelligence & Memory
     memory: MemoryConfig = field(default_factory=MemoryConfig)
@@ -815,6 +839,7 @@ class RCConfig:
         export = data.get("export") or {}
         prompts = data.get("prompts") or {}
         web_search = data.get("web_search") or {}
+        perplexity = data.get("perplexity") or {}
         metaclaw = data.get("metaclaw_bridge") or {}
         memory_data = data.get("memory") or {}
         skills_data = data.get("skills") or {}
@@ -897,6 +922,16 @@ class RCConfig:
                 max_web_results=int(web_search.get("max_web_results", 10)),
                 max_scholar_results=int(web_search.get("max_scholar_results", 10)),
                 max_crawl_urls=int(web_search.get("max_crawl_urls", 5)),
+            ),
+            perplexity=PerplexityConfig(
+                enabled=bool(perplexity.get("enabled", True)),
+                api_key_env=str(perplexity.get("api_key_env", "PERPLEXITY_API_KEY")),
+                domain_filter=tuple(perplexity.get("domain_filter") or ()),
+                recency_filter=str(perplexity.get("recency_filter", "")),
+                literature_min_candidates=int(perplexity.get("literature_min_candidates", 10)),
+                literature_min_failed_sources=int(
+                    perplexity.get("literature_min_failed_sources", 2)
+                ),
             ),
             metaclaw_bridge=_parse_metaclaw_bridge_config(metaclaw),
             memory=_parse_memory_config(memory_data),
@@ -1062,6 +1097,9 @@ def _parse_llm_config(data: dict[str, Any]) -> LlmConfig:
         fallback_models=tuple(data.get("fallback_models") or ()),
         # P1 FIX: Multi-provider failover
         fallback_providers=tuple(data.get("fallback_providers") or ()),
+        fallback_provider_models=tuple(
+            (str(k), str(v)) for k, v in (data.get("fallback_provider_models") or {}).items()
+        ),
         s2_api_key=data.get("s2_api_key", ""),
         notes=data.get("notes", ""),
         acp=AcpConfig(

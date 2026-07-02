@@ -416,9 +416,7 @@ def format_issues_for_llm(validation: CodeValidation) -> str:
     lines: list[str] = []
     for issue in validation.issues:
         loc = f"line {issue.line}" if issue.line else "unknown location"
-        lines.append(
-            f"- [{issue.severity.upper()}] ({issue.category}) {issue.message} @ {loc}"
-        )
+        lines.append(f"- [{issue.severity.upper()}] ({issue.category}) {issue.message} @ {loc}")
     return "\n".join(lines)
 
 
@@ -436,11 +434,11 @@ def check_code_complexity(code: str) -> list[str]:
 
     # Count non-blank, non-comment, non-import lines
     effective_lines = [
-        l
-        for l in code.splitlines()
-        if l.strip()
-        and not l.strip().startswith("#")
-        and not l.strip().startswith(("import ", "from "))
+        line
+        for line in code.splitlines()
+        if line.strip()
+        and not line.strip().startswith("#")
+        and not line.strip().startswith(("import ", "from "))
     ]
 
     if len(effective_lines) < 10:
@@ -531,7 +529,7 @@ def check_class_quality(all_files: dict[str, str]) -> list[str]:
                     # Approximate method body size
                     m_start = item.lineno
                     m_end = item.end_lineno or item.lineno
-                    body_len = m_end - m_start
+                    m_end - m_start
                     method_sources[item.name] = f"{fname}:{m_start}-{m_end}"
 
                     # Check for nn.Module creation inside forward()
@@ -547,9 +545,11 @@ def check_class_quality(all_files: dict[str, str]) -> list[str]:
             if node.end_lineno and node.lineno:
                 cls_body = code_lines[node.lineno - 1 : node.end_lineno]
                 body_lines = sum(
-                    1 for l in cls_body
-                    if l.strip() and not l.strip().startswith("#")
-                    and not l.strip().startswith(("import ", "from "))
+                    1
+                    for line in cls_body
+                    if line.strip()
+                    and not line.strip().startswith("#")
+                    and not line.strip().startswith(("import ", "from "))
                 )
 
             non_dunder = [m for m in methods if not m.startswith("__")]
@@ -590,7 +590,7 @@ def check_class_quality(all_files: dict[str, str]) -> list[str]:
     class_names = list(class_info.keys())
     for i, name_a in enumerate(class_names):
         info_a = class_info[name_a]
-        for name_b in class_names[i + 1:]:
+        for name_b in class_names[i + 1 :]:
             info_b = class_info[name_b]
             if (
                 info_a["body_lines"] > 5
@@ -675,7 +675,7 @@ def check_class_quality(all_files: dict[str, str]) -> list[str]:
 
                 # --- Check 6: Ablation subclass must override >=1 parent method ---
                 _lname = cls_name.lower()
-                if ("ablation" in _lname or "no_" in _lname or "without" in _lname):
+                if "ablation" in _lname or "no_" in _lname or "without" in _lname:
                     parent_non_dunder = {
                         m.name
                         for m in parent_node.body
@@ -745,9 +745,7 @@ def check_variable_scoping(code: str, fname: str = "main.py") -> list[str]:
     return warnings
 
 
-def _collect_if_only_assignments(
-    if_node: ast.If, result: dict[str, int]
-) -> None:
+def _collect_if_only_assignments(if_node: ast.If, result: dict[str, int]) -> None:
     """Collect variables assigned only inside if/elif branches."""
     for child in ast.iter_child_nodes(if_node):
         if isinstance(child, (ast.Assign, ast.AugAssign, ast.AnnAssign)):
@@ -866,7 +864,7 @@ def check_api_correctness(code: str, fname: str = "main.py") -> list[str]:
     warnings: list[str] = []
 
     lines = code.splitlines()
-    for i, line in enumerate(lines, 1):
+    for _i, line in enumerate(lines, 1):
         stripped = line.strip()
         if stripped.startswith("#"):
             continue
@@ -874,31 +872,30 @@ def check_api_correctness(code: str, fname: str = "main.py") -> list[str]:
         # np.erf doesn't exist
         if _re.search(r"\bnp\.erf\b", stripped):
             warnings.append(
-                f"[{fname}:{i}] np.erf() does not exist — use "
+                f"[{fname}:{_i}] np.erf() does not exist — use "
                 f"scipy.special.erf() or math.erf() instead"
             )
 
         # NumPy 2.0 removed ndarray methods
         if _re.search(r"\.ptp\s*\(", stripped):
             warnings.append(
-                f"[{fname}:{i}] ndarray.ptp() was removed in NumPy 2.0 — "
+                f"[{fname}:{_i}] ndarray.ptp() was removed in NumPy 2.0 — "
                 f"use np.ptp(arr) or arr.max() - arr.min() instead"
             )
 
         # NumPy 2.0 removed type aliases
-        for old_alias in ("np.bool", "np.int", "np.float", "np.complex",
-                          "np.object", "np.str"):
+        for old_alias in ("np.bool", "np.int", "np.float", "np.complex", "np.object", "np.str"):
             pattern = _re.escape(old_alias) + r"(?![_\w\d])"
             if _re.search(pattern, stripped):
                 warnings.append(
-                    f"[{fname}:{i}] {old_alias} was removed in NumPy 2.0 — "
+                    f"[{fname}:{_i}] {old_alias} was removed in NumPy 2.0 — "
                     f"use {old_alias}_ or Python builtin instead"
                 )
 
         # np.random.RandomState with hardcoded seed in a function called multiple times
         if _re.search(r"RandomState\(\s*\d+\s*\)", stripped) and "def " not in stripped:
             warnings.append(
-                f"[{fname}:{i}] Hardcoded RandomState seed inside a loop/function "
+                f"[{fname}:{_i}] Hardcoded RandomState seed inside a loop/function "
                 f"may produce identical results across calls — pass seed as parameter"
             )
 
@@ -906,13 +903,12 @@ def check_api_correctness(code: str, fname: str = "main.py") -> list[str]:
     # Detect `from X import Y` followed by `X.Y(...)` — guaranteed NameError
     import_from_map: dict[str, set[str]] = {}  # module -> {names}
     import_module_set: set[str] = set()  # modules imported with `import X`
-    for i, line in enumerate(lines, 1):
+    for _i, line in enumerate(lines, 1):
         stripped = line.strip()
         m = _re.match(r"from\s+([\w.]+)\s+import\s+(.+)", stripped)
         if m:
             mod = m.group(1)
-            names = {n.strip().split(" as ")[-1].strip()
-                     for n in m.group(2).split(",")}
+            names = {n.strip().split(" as ")[-1].strip() for n in m.group(2).split(",")}
             import_from_map.setdefault(mod, set()).update(names)
         elif _re.match(r"import\s+([\w.]+)", stripped) and "from" not in stripped:
             m2 = _re.match(r"import\s+([\w.]+)", stripped)
@@ -920,7 +916,7 @@ def check_api_correctness(code: str, fname: str = "main.py") -> list[str]:
                 import_module_set.add(m2.group(1).split(".")[0])
 
     # Now scan for qualified calls to modules that were only from-imported
-    for i, line in enumerate(lines, 1):
+    for _i, line in enumerate(lines, 1):
         stripped = line.strip()
         if stripped.startswith("#"):
             continue
@@ -934,7 +930,7 @@ def check_api_correctness(code: str, fname: str = "main.py") -> list[str]:
                 pattern = _re.escape(f"{mod}.{name}") + r"\s*\("
                 if _re.search(pattern, stripped):
                     warnings.append(
-                        f"[{fname}:{i}] Import-usage mismatch: '{name}' was imported "
+                        f"[{fname}:{_i}] Import-usage mismatch: '{name}' was imported "
                         f"via `from {mod} import {name}` but called as `{mod}.{name}()` "
                         f"— this will raise NameError. Use `{name}()` directly."
                     )
@@ -957,23 +953,109 @@ def check_undefined_calls(code: str, fname: str = "main.py") -> list[str]:
 
     # Common builtins that are always available
     builtins = {
-        "print", "len", "range", "enumerate", "zip", "map", "filter", "sorted",
-        "list", "dict", "set", "tuple", "str", "int", "float", "bool", "bytes",
-        "type", "isinstance", "issubclass", "hasattr", "getattr", "setattr",
-        "delattr", "callable", "iter", "next", "reversed", "slice", "super",
-        "property", "staticmethod", "classmethod", "abs", "all", "any", "bin",
-        "chr", "ord", "hex", "oct", "pow", "round", "sum", "min", "max", "open",
-        "input", "repr", "hash", "id", "dir", "vars", "globals", "locals",
-        "format", "ascii", "object", "Exception", "ValueError", "TypeError",
-        "KeyError", "IndexError", "AttributeError", "RuntimeError", "StopIteration",
-        "NotImplementedError", "AssertionError", "ImportError", "FileNotFoundError",
-        "OSError", "IOError", "ZeroDivisionError", "OverflowError", "MemoryError",
-        "RecursionError", "SystemExit", "KeyboardInterrupt", "GeneratorExit",
-        "BaseException", "Warning", "DeprecationWarning", "UserWarning",
-        "FutureWarning", "PendingDeprecationWarning", "SyntaxWarning",
-        "RuntimeWarning", "ResourceWarning", "BytesWarning", "UnicodeWarning",
-        "breakpoint", "memoryview", "bytearray", "frozenset", "complex",
-        "divmod", "eval", "exec", "compile", "__import__", "help", "exit", "quit",
+        "print",
+        "len",
+        "range",
+        "enumerate",
+        "zip",
+        "map",
+        "filter",
+        "sorted",
+        "list",
+        "dict",
+        "set",
+        "tuple",
+        "str",
+        "int",
+        "float",
+        "bool",
+        "bytes",
+        "type",
+        "isinstance",
+        "issubclass",
+        "hasattr",
+        "getattr",
+        "setattr",
+        "delattr",
+        "callable",
+        "iter",
+        "next",
+        "reversed",
+        "slice",
+        "super",
+        "property",
+        "staticmethod",
+        "classmethod",
+        "abs",
+        "all",
+        "any",
+        "bin",
+        "chr",
+        "ord",
+        "hex",
+        "oct",
+        "pow",
+        "round",
+        "sum",
+        "min",
+        "max",
+        "open",
+        "input",
+        "repr",
+        "hash",
+        "id",
+        "dir",
+        "vars",
+        "globals",
+        "locals",
+        "format",
+        "ascii",
+        "object",
+        "Exception",
+        "ValueError",
+        "TypeError",
+        "KeyError",
+        "IndexError",
+        "AttributeError",
+        "RuntimeError",
+        "StopIteration",
+        "NotImplementedError",
+        "AssertionError",
+        "ImportError",
+        "FileNotFoundError",
+        "OSError",
+        "IOError",
+        "ZeroDivisionError",
+        "OverflowError",
+        "MemoryError",
+        "RecursionError",
+        "SystemExit",
+        "KeyboardInterrupt",
+        "GeneratorExit",
+        "BaseException",
+        "Warning",
+        "DeprecationWarning",
+        "UserWarning",
+        "FutureWarning",
+        "PendingDeprecationWarning",
+        "SyntaxWarning",
+        "RuntimeWarning",
+        "ResourceWarning",
+        "BytesWarning",
+        "UnicodeWarning",
+        "breakpoint",
+        "memoryview",
+        "bytearray",
+        "frozenset",
+        "complex",
+        "divmod",
+        "eval",
+        "exec",
+        "compile",
+        "__import__",
+        "help",
+        "exit",
+        "quit",
     }
 
     # Collect all defined names in the module
@@ -1053,10 +1135,7 @@ def check_undefined_calls(code: str, fname: str = "main.py") -> list[str]:
             # Only check bare name calls, not attribute calls (obj.method())
             if isinstance(node.func, ast.Name):
                 call_name = node.func.id
-                if (
-                    call_name not in defined_names
-                    and call_name not in builtins
-                ):
+                if call_name not in defined_names and call_name not in builtins:
                     warnings.append(
                         f"[{fname}:{node.lineno}] Call to undefined function "
                         f"'{call_name}()' — this will raise NameError at runtime. "
@@ -1076,13 +1155,39 @@ def check_filename_collisions(files: dict[str, str]) -> list[str]:
     # Filenames (without .py) that are known to collide with pip/stdlib packages.
     _SHADOW_RISK: set[str] = {
         # pip packages frequently installed as transitive deps
-        "config", "test", "tests", "types", "typing_extensions",
+        "config",
+        "test",
+        "tests",
+        "types",
+        "typing_extensions",
         # stdlib modules the LLM might accidentally shadow
-        "io", "logging", "json", "time", "random", "copy", "math",
-        "os", "sys", "collections", "functools", "abc", "re",
-        "statistics", "signal", "pickle", "itertools",
-        "string", "tokenize", "token", "email", "calendar",
-        "numbers", "operator", "queue", "code", "profile",
+        "io",
+        "logging",
+        "json",
+        "time",
+        "random",
+        "copy",
+        "math",
+        "os",
+        "sys",
+        "collections",
+        "functools",
+        "abc",
+        "re",
+        "statistics",
+        "signal",
+        "pickle",
+        "itertools",
+        "string",
+        "tokenize",
+        "token",
+        "email",
+        "calendar",
+        "numbers",
+        "operator",
+        "queue",
+        "code",
+        "profile",
     }
     warnings: list[str] = []
     for fname in files:

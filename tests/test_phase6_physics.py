@@ -21,6 +21,7 @@ from berb.domains.physics.hamiltonian import (
 
 # ============== Integrator Tests ==============
 
+
 class TestVerletIntegrator:
     """Test VerletIntegrator."""
 
@@ -89,6 +90,7 @@ class TestYoshidaIntegrator:
 
 
 # ============== Hamiltonian System Tests ==============
+
 
 class TestHarmonicOscillator:
     """Test HarmonicOscillator."""
@@ -182,6 +184,7 @@ class TestHenonHeiles:
 
 # ============== Phase Space Analysis Tests ==============
 
+
 class TestPhaseSpaceAnalyzer:
     """Test PhaseSpaceAnalyzer."""
 
@@ -208,18 +211,22 @@ class TestPhaseSpaceAnalyzer:
         analyzer = PhaseSpaceAnalyzer()
 
         # Create trajectory that crosses q1=0
-        q = np.array([
-            [-0.1, 0.5],
-            [0.0, 0.6],
-            [0.1, 0.7],
-            [0.2, 0.8],
-        ])
-        p = np.array([
-            [0.1, 0.1],
-            [0.2, 0.2],
-            [0.3, 0.3],
-            [0.4, 0.4],
-        ])
+        q = np.array(
+            [
+                [-0.1, 0.5],
+                [0.0, 0.6],
+                [0.1, 0.7],
+                [0.2, 0.8],
+            ]
+        )
+        p = np.array(
+            [
+                [0.1, 0.1],
+                [0.2, 0.2],
+                [0.3, 0.3],
+                [0.4, 0.4],
+            ]
+        )
 
         section = analyzer.poincare_section(q, p, surface="q1=0")
 
@@ -246,8 +253,9 @@ class TestPhaseSpaceAnalyzer:
         # Two trajectories that diverge
         t = np.linspace(0, 10, 100)
         traj1 = np.column_stack([np.sin(t), np.cos(t)])
-        traj2 = np.column_stack([np.sin(t) + 0.01 * np.exp(0.1 * t),
-                                  np.cos(t) + 0.01 * np.exp(0.1 * t)])
+        traj2 = np.column_stack(
+            [np.sin(t) + 0.01 * np.exp(0.1 * t), np.cos(t) + 0.01 * np.exp(0.1 * t)]
+        )
 
         lyap = analyzer.lyapunov_exponent(traj1, traj2, dt=0.1)
 
@@ -256,6 +264,7 @@ class TestPhaseSpaceAnalyzer:
 
 
 # ============== Factory Function Tests ==============
+
 
 class TestCreateIntegrator:
     """Test create_integrator factory."""
@@ -302,6 +311,7 @@ class TestCreateSystem:
 
 # ============== IntegrationResult Tests ==============
 
+
 class TestIntegrationResult:
     """Test IntegrationResult dataclass."""
 
@@ -338,6 +348,7 @@ class TestIntegrationResult:
 
 # ============== Integration Tests ==============
 
+
 class TestPhysicsIntegration:
     """Test physics module integration."""
 
@@ -348,6 +359,7 @@ class TestPhysicsIntegration:
             HarmonicOscillator,
             PhaseSpaceAnalyzer,
         )
+
         assert VerletIntegrator is not None
         assert HarmonicOscillator is not None
         assert PhaseSpaceAnalyzer is not None

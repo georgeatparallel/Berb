@@ -23,6 +23,7 @@ from berb.literature.full_text import (
 
 # ============== Firecrawl Client Tests ==============
 
+
 class TestFirecrawlConfig:
     """Test Firecrawl configuration."""
 
@@ -148,8 +149,8 @@ class TestFirecrawlClient:
         # Mock the HTTP client
         mock_response = Mock()
         mock_response.status_code = 200
-        
-        with patch.object(client, '_client') as mock_client:
+
+        with patch.object(client, "_client") as mock_client:
             mock_client.get = AsyncMock(return_value=mock_response)
             result = await client.health_check()
             assert result is True
@@ -158,14 +159,15 @@ class TestFirecrawlClient:
     async def test_health_check_failure(self):
         """Test health check failure (mocked)."""
         client = FirecrawlClient()
-        
-        with patch.object(client, '_client') as mock_client:
+
+        with patch.object(client, "_client") as mock_client:
             mock_client.get = AsyncMock(side_effect=Exception("Connection failed"))
             result = await client.health_check()
             assert result is False
 
 
 # ============== Full-Text Extractor Tests ==============
+
 
 class TestExtractorConfig:
     """Test FullTextExtractor configuration."""
@@ -313,28 +315,33 @@ class TestFullTextExtractorBatch:
 
 # ============== Integration Tests ==============
 
+
 class TestWebIntegration:
     """Test web module integration."""
 
     def test_import_firecrawl_client(self):
         """Test Firecrawl client can be imported."""
         from berb.web import FirecrawlClient, FirecrawlConfig
+
         assert FirecrawlClient is not None
         assert FirecrawlConfig is not None
 
     def test_import_searxng_client(self):
         """Test SearXNG client can be imported."""
         from berb.web import SearXNGClient, SearXNGConfig
+
         assert SearXNGClient is not None
         assert SearXNGConfig is not None
 
     def test_import_full_text_extractor(self):
         """Test FullTextExtractor can be imported."""
         from berb.literature.full_text import FullTextExtractor
+
         assert FullTextExtractor is not None
 
 
 # ============== Configuration Tests ==============
+
 
 class TestEnvironmentConfig:
     """Test environment-based configuration."""
@@ -342,22 +349,30 @@ class TestEnvironmentConfig:
     def test_create_firecrawl_client_from_env(self):
         """Test creating Firecrawl client from environment."""
         from berb.web.firecrawl_client import create_firecrawl_client_from_env
-        
-        with patch.dict('os.environ', {
-            'FIRECRAWL_BASE_URL': 'http://test:3000',
-            'FIRECRAWL_API_KEY': 'test-key',
-        }, clear=False):
+
+        with patch.dict(
+            "os.environ",
+            {
+                "FIRECRAWL_BASE_URL": "http://test:3000",
+                "FIRECRAWL_API_KEY": "test-key",
+            },
+            clear=False,
+        ):
             client = create_firecrawl_client_from_env()
             assert client.config.base_url == "http://test:3000"
 
     def test_create_extractor_from_env(self):
         """Test creating FullTextExtractor from environment."""
         from berb.literature.full_text import create_extractor_from_env
-        
-        with patch.dict('os.environ', {
-            'FIRECRAWL_BASE_URL': 'http://test:3000',
-            'EXTRACTOR_MAX_CHARS': '25000',
-        }, clear=False):
+
+        with patch.dict(
+            "os.environ",
+            {
+                "FIRECRAWL_BASE_URL": "http://test:3000",
+                "EXTRACTOR_MAX_CHARS": "25000",
+            },
+            clear=False,
+        ):
             extractor = create_extractor_from_env()
             assert extractor.config.firecrawl_url == "http://test:3000"
             assert extractor.config.max_chars == 25000

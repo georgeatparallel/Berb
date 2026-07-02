@@ -1,4 +1,5 @@
 """Tests for berb/hyperagent/ — base, memory, task_agent, meta_agent."""
+
 from __future__ import annotations
 
 import asyncio
@@ -24,6 +25,7 @@ from berb.hyperagent.meta_agent import MetaAgent, MetaAgentState, ModificationRe
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _tmp_path() -> Path:
     td = tempfile.mkdtemp()
@@ -106,7 +108,10 @@ class TestHyperagentState:
     def test_record_improvement_updates_counters(self):
         state = HyperagentState()
         imp = Improvement(
-            improvement_id="i1", description="d", code_diff="", affected_component="ta",
+            improvement_id="i1",
+            description="d",
+            code_diff="",
+            affected_component="ta",
             expected_benefit="e",
         )
         result = ImprovementResult(iteration=1, improvements_made=[imp], performance_delta=0.1)
@@ -210,8 +215,12 @@ class TestPersistentMemory:
     async def test_store_improvement(self, tmp_path):
         mem = PersistentMemory(tmp_path / "mem")
         imp = Improvement(
-            improvement_id="i1", description="desc", code_diff="",
-            affected_component="task_agent", expected_benefit="better", confidence=0.7,
+            improvement_id="i1",
+            description="desc",
+            code_diff="",
+            affected_component="task_agent",
+            expected_benefit="better",
+            confidence=0.7,
         )
         await mem.store_improvement(imp)
         history = mem.get_all_improvements()
@@ -234,8 +243,11 @@ class TestPersistentMemory:
         storage = tmp_path / "mem"
         mem1 = PersistentMemory(storage)
         imp = Improvement(
-            improvement_id="persist-1", description="test", code_diff="diff",
-            affected_component="meta_agent", expected_benefit="better",
+            improvement_id="persist-1",
+            description="test",
+            code_diff="diff",
+            affected_component="meta_agent",
+            expected_benefit="better",
         )
         await mem1.store_improvement(imp)
 
@@ -246,12 +258,22 @@ class TestPersistentMemory:
     def test_transfer_improvements_filters_by_transferable_flag(self, tmp_path):
         mem = PersistentMemory(tmp_path / "mem")
         imp_transferable = Improvement(
-            improvement_id="t1", description="d", code_diff="", affected_component="ta",
-            expected_benefit="e", transferable=True, source_domain="ml",
+            improvement_id="t1",
+            description="d",
+            code_diff="",
+            affected_component="ta",
+            expected_benefit="e",
+            transferable=True,
+            source_domain="ml",
         )
         imp_non_transferable = Improvement(
-            improvement_id="t2", description="d", code_diff="", affected_component="ta",
-            expected_benefit="e", transferable=False, source_domain="ml",
+            improvement_id="t2",
+            description="d",
+            code_diff="",
+            affected_component="ta",
+            expected_benefit="e",
+            transferable=False,
+            source_domain="ml",
         )
         mem.improvements = [imp_transferable, imp_non_transferable]
         transferred = mem.transfer_improvements(source_domain="ml", target_domain="biology")
@@ -379,12 +401,14 @@ class TestMetaAgent:
 
 def test_tracing_new_trace_returns_id():
     from berb.pipeline import tracing
+
     trace_id = tracing.new_trace("run-123")
     assert trace_id == "run-123"
 
 
 def test_tracing_span_records_duration(tmp_path):
     from berb.pipeline import tracing
+
     tracing.configure(tmp_path)
     trace_id = tracing.new_trace()
     with tracing.span(trace_id, "test.op", component="test") as s:
@@ -401,6 +425,7 @@ def test_tracing_span_records_duration(tmp_path):
 
 def test_tracing_span_captures_error(tmp_path):
     from berb.pipeline import tracing
+
     tracing.configure(tmp_path)
     trace_id = tracing.new_trace()
     try:
@@ -416,6 +441,7 @@ def test_tracing_span_captures_error(tmp_path):
 def test_tracing_writes_jsonl(tmp_path):
     import json
     from berb.pipeline import tracing
+
     tracing.configure(tmp_path)
     trace_id = tracing.new_trace("file-test")
     with tracing.span(trace_id, "write.op"):
@@ -430,5 +456,6 @@ def test_tracing_writes_jsonl(tmp_path):
 
 def test_tracing_get_trace_empty():
     from berb.pipeline import tracing
+
     records = tracing.get_trace("nonexistent-trace-xyz")
     assert records == []

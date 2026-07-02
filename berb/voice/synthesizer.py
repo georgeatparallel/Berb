@@ -23,8 +23,8 @@ class VoiceSynthesizer:
         """Synthesize text to audio bytes using OpenAI TTS API."""
         try:
             import httpx
-        except ImportError:
-            raise RuntimeError("httpx required for TTS")
+        except ImportError as e:
+            raise RuntimeError("httpx required for TTS") from e
 
         import os
 

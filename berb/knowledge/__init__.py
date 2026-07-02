@@ -1,9 +1,9 @@
 """Knowledge management — base, adapters, Obsidian export."""
 
 from berb.knowledge.obsidian_export import (
-    ObsidianExporter,
-    ObsidianConfig,
     ExportResult,
+    ObsidianConfig,
+    ObsidianExporter,
     create_exporter_from_env,
 )
 

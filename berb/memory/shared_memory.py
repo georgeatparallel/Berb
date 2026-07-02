@@ -8,12 +8,13 @@ Features:
 - Prevent redundant computations
 - Enable long-horizon coherence
 - Agent communication bus
+- P0 2026-04-02: Fixed thread safety with separate sync/async locks
 
 # Author: Georgios-Chrysovalantis Chatzivantsidis
 
 Usage:
     from berb.memory.shared_memory import SharedResearchMemory
-    
+
     memory = SharedResearchMemory(project_id="proj_123")
     memory.store("hypothesis", {"text": "...", "score": 8.5})
     trajectory = memory.get_trajectory()
@@ -21,14 +22,15 @@ Usage:
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import threading
+from collections import deque
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-from collections import deque
 
 logger = logging.getLogger(__name__)
 
@@ -36,14 +38,14 @@ logger = logging.getLogger(__name__)
 @dataclass
 class MemoryEntry:
     """Single entry in shared memory."""
-    
+
     key: str
     value: Any
     agent_id: str
     timestamp: datetime
     entry_type: str  # clarification, code, execution, error_fix, decision, result
     metadata: dict[str, Any] = field(default_factory=dict)
-    
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
@@ -59,7 +61,7 @@ class MemoryEntry:
 @dataclass
 class AgentState:
     """State of a single agent."""
-    
+
     agent_id: str
     status: str  # idle, working, waiting, error
     current_task: str | None
@@ -70,7 +72,7 @@ class AgentState:
 
 class SharedResearchMemory:
     """Memory-centric coordination for multi-agent research."""
-    
+
     def __init__(
         self,
         project_id: str,
@@ -78,7 +80,7 @@ class SharedResearchMemory:
         max_trajectory_length: int = 1000,
     ) -> None:
         """Initialize shared memory.
-        
+
         Args:
             project_id: Unique project identifier
             storage_path: Path for persistent storage (optional)
@@ -87,13 +89,12 @@ class SharedResearchMemory:
         self._project_id = project_id
         self._storage_path = Path(storage_path) if storage_path else None
         self._max_trajectory = max_trajectory_length
-        
-        # Lock protecting all mutable state.  All write paths (store, send_message,
-        # record_code_snapshot, record_error_fix, record_clarification,
-        # record_execution_trace, _update_agent_activity) acquire this lock so
-        # that concurrent callers from multiple threads or async tasks running on
-        # a thread-pool executor cannot corrupt the data structures.
-        self._lock = threading.RLock()
+
+        # P0 2026-04-02 FIX: Separate locks for sync and async operations
+        # threading.RLock for synchronous methods called from threads
+        self._sync_lock = threading.RLock()
+        # asyncio.Lock for async methods (created lazily to avoid event loop issues)
+        self._async_lock: asyncio.Lock | None = None
 
         # Core memory structures
         self._entries: list[MemoryEntry] = []
@@ -106,15 +107,24 @@ class SharedResearchMemory:
         self._error_fix_mappings: dict[str, str] = {}  # error_pattern → fix
         self._clarifications: dict[str, Any] = {}  # question → answer
         self._execution_traces: list[dict] = []
-        
+
         # Load from persistent storage if available
         if self._storage_path and self._storage_path.exists():
             self._load_from_disk()
-        
+
         logger.info(f"Initialized shared memory for project {project_id}")
-    
+
+    def _get_async_lock(self) -> asyncio.Lock:
+        """Get or create async lock lazily.
+
+        P0 2026-04-02 FIX: Creates lock in current event loop context.
+        """
+        if self._async_lock is None:
+            self._async_lock = asyncio.Lock()
+        return self._async_lock
+
     # ========== Core Storage Methods ==========
-    
+
     def store(
         self,
         key: str,
@@ -124,7 +134,7 @@ class SharedResearchMemory:
         metadata: dict[str, Any] | None = None,
     ) -> None:
         """Store value in shared memory.
-        
+
         Args:
             key: Storage key
             value: Value to store
@@ -136,20 +146,16 @@ class SharedResearchMemory:
             key=key,
             value=value,
             agent_id=agent_id,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             entry_type=entry_type,
             metadata=metadata or {},
         )
-        # Acquire the RLock for the full compound mutation so that concurrent
-        # callers (e.g. multiple async tasks running on a thread-pool executor)
-        # cannot interleave the append, trajectory-prune, kv-update, and disk
-        # persist steps.  RLock allows the same thread to re-enter (e.g. when
-        # store_execution_trace() holds the lock and then calls store()).
-        with self._lock:
+        # P0 2026-04-02 FIX: Use _sync_lock for synchronous methods
+        with self._sync_lock:
             # Add to entries list (trajectory)
             self._entries.append(entry)
             if len(self._entries) > self._max_trajectory:
-                self._entries = self._entries[-self._max_trajectory:]
+                self._entries = self._entries[-self._max_trajectory :]
 
             # Update key-value store
             self._key_value_store[key] = value
@@ -162,10 +168,10 @@ class SharedResearchMemory:
                 self._save_to_disk()
 
         logger.debug(f"Stored {key} ({entry_type}) from agent {agent_id}")
-    
+
     def get(self, key: str, default: Any = None) -> Any:
         """Get value from shared memory."""
-        with self._lock:
+        with self._sync_lock:
             value = self._key_value_store.get(key, default)
         if value is not None:
             logger.debug(f"Retrieved {key}")
@@ -184,9 +190,9 @@ class SharedResearchMemory:
         """Check if key exists in memory."""
         with self._lock:
             return key in self._key_value_store
-    
+
     # ========== Specialized Stores ==========
-    
+
     def store_code_snapshot(
         self,
         version: str,
@@ -195,7 +201,7 @@ class SharedResearchMemory:
         metadata: dict[str, Any] | None = None,
     ) -> None:
         """Store code snapshot.
-        
+
         Args:
             version: Version identifier
             code: Code content
@@ -211,12 +217,12 @@ class SharedResearchMemory:
             metadata=metadata,
         )
         logger.info(f"Stored code snapshot {version}")
-    
+
     def get_code_snapshot(self, version: str) -> str | None:
         """Get code snapshot by version."""
         with self._lock:
             return self._code_snapshots.get(version)
-    
+
     def store_error_fix(
         self,
         error_pattern: str,
@@ -225,7 +231,7 @@ class SharedResearchMemory:
         success: bool,
     ) -> None:
         """Store error→fix mapping.
-        
+
         Args:
             error_pattern: Error pattern or message
             fix: Fix description or code
@@ -234,7 +240,7 @@ class SharedResearchMemory:
         """
         key = f"error_fix:{error_pattern}"
         self._error_fix_mappings[error_pattern] = fix
-        
+
         self.store(
             key,
             {"error": error_pattern, "fix": fix, "success": success},
@@ -242,7 +248,7 @@ class SharedResearchMemory:
             entry_type="error_fix",
         )
         logger.info(f"Stored error→fix mapping: {error_pattern[:50]}...")
-    
+
     def get_error_fix(self, error_message: str) -> str | None:
         """Get fix for error (pattern matching)."""
         with self._lock:
@@ -252,7 +258,7 @@ class SharedResearchMemory:
                 if pattern in error_message or error_message in pattern:
                     return fix
         return None
-    
+
     def store_clarification(
         self,
         question: str,
@@ -267,12 +273,12 @@ class SharedResearchMemory:
             agent_id,
             entry_type="clarification",
         )
-    
+
     def get_clarification(self, question: str) -> Any:
         """Get stored clarification."""
         with self._lock:
             return self._clarifications.get(question)
-    
+
     def store_execution_trace(
         self,
         stage: str,
@@ -286,12 +292,12 @@ class SharedResearchMemory:
             "stage": stage,
             "action": action,
             "result": result,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "agent_id": agent_id,
         }
         if metadata:
             trace.update(metadata)
-        
+
         # Protect the compound append+prune with the same RLock used in store().
         # This prevents a concurrent store_execution_trace() from interleaving its
         # append with the length-check and list-rebind, which would corrupt the
@@ -299,7 +305,7 @@ class SharedResearchMemory:
         with self._lock:
             self._execution_traces.append(trace)
             if len(self._execution_traces) > self._max_trajectory:
-                self._execution_traces = self._execution_traces[-self._max_trajectory:]
+                self._execution_traces = self._execution_traces[-self._max_trajectory :]
             trace_index = len(self._execution_traces)
 
         self.store(
@@ -309,9 +315,9 @@ class SharedResearchMemory:
             entry_type="execution",
             metadata=metadata,
         )
-    
+
     # ========== Agent Coordination ==========
-    
+
     def register_agent(
         self,
         agent_id: str,
@@ -322,10 +328,10 @@ class SharedResearchMemory:
             agent_id=agent_id,
             status=initial_status,
             current_task=None,
-            last_update=datetime.now(timezone.utc),
+            last_update=datetime.now(UTC),
         )
         logger.info(f"Registered agent: {agent_id}")
-    
+
     def update_agent_status(
         self,
         agent_id: str,
@@ -336,17 +342,17 @@ class SharedResearchMemory:
         if agent_id not in self._agent_states:
             self.register_agent(agent_id, status)
             return
-        
+
         state = self._agent_states[agent_id]
         state.status = status
         state.current_task = task
-        state.last_update = datetime.now(timezone.utc)
-    
+        state.last_update = datetime.now(UTC)
+
     def _update_agent_activity(self, agent_id: str) -> None:
         """Update agent activity timestamp."""
         if agent_id in self._agent_states:
-            self._agent_states[agent_id].last_update = datetime.now(timezone.utc)
-    
+            self._agent_states[agent_id].last_update = datetime.now(UTC)
+
     def get_agent_state(self, agent_id: str) -> AgentState | None:
         """Get agent state."""
         with self._lock:
@@ -356,9 +362,9 @@ class SharedResearchMemory:
         """Get all agent states."""
         with self._lock:
             return list(self._agent_states.values())
-    
+
     # ========== Message Bus ==========
-    
+
     def send_message(
         self,
         from_agent: str,
@@ -367,7 +373,7 @@ class SharedResearchMemory:
         content: Any,
     ) -> None:
         """Send message via message bus.
-        
+
         Args:
             from_agent: Sender agent ID
             to_agent: Recipient agent ID (None = broadcast)
@@ -379,9 +385,9 @@ class SharedResearchMemory:
             "to": to_agent,
             "type": message_type,
             "content": content,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         }
-        
+
         # Protect the deque append and the agent-state counter update under the
         # same lock so that concurrent send_message() calls cannot interleave
         # the compound read-modify-write on messages_sent (BUG-002).
@@ -393,7 +399,7 @@ class SharedResearchMemory:
                 self._agent_states[from_agent].messages_sent += 1
 
         logger.debug(f"Message {message_type} from {from_agent} to {to_agent or 'all'}")
-    
+
     def get_messages(
         self,
         agent_id: str,
@@ -414,9 +420,9 @@ class SharedResearchMemory:
                 self._agent_states[agent_id].messages_received += len(messages)
 
         return messages
-    
+
     # ========== Trajectory & Analytics ==========
-    
+
     def get_trajectory(
         self,
         entry_type: str | None = None,
@@ -424,12 +430,12 @@ class SharedResearchMemory:
         limit: int | None = None,
     ) -> list[MemoryEntry]:
         """Get trajectory of memory entries.
-        
+
         Args:
             entry_type: Filter by entry type
             agent_id: Filter by agent
             limit: Max entries to return
-            
+
         Returns:
             List of memory entries
         """
@@ -443,7 +449,7 @@ class SharedResearchMemory:
         if limit:
             entries = entries[-limit:]
         return entries
-    
+
     def get_statistics(self) -> dict[str, Any]:
         """Get memory statistics."""
         with self._lock:
@@ -462,7 +468,7 @@ class SharedResearchMemory:
                 "messages_in_queue": len(self._message_queue),
                 "entry_type_distribution": entry_types,
             }
-    
+
     def find_redundant_computations(self) -> list[dict[str, Any]]:
         """Find potentially redundant computations."""
         redundant = []
@@ -476,38 +482,40 @@ class SharedResearchMemory:
             if key not in trace_groups:
                 trace_groups[key] = []
             trace_groups[key].append(trace)
-        
+
         # Find groups with multiple similar executions
         for key, traces in trace_groups.items():
             if len(traces) > 2:  # More than 2 similar executions
-                redundant.append({
-                    "pattern": key,
-                    "count": len(traces),
-                    "traces": traces,
-                    "recommendation": f"Consider caching results for {key}",
-                })
-        
+                redundant.append(
+                    {
+                        "pattern": key,
+                        "count": len(traces),
+                        "traces": traces,
+                        "recommendation": f"Consider caching results for {key}",
+                    }
+                )
+
         return redundant
-    
+
     # ========== Persistence ==========
-    
+
     def _save_to_disk(self) -> None:
         """Save memory to disk."""
         if not self._storage_path:
             return
-        
+
         self._storage_path.mkdir(parents=True, exist_ok=True)
-        
+
         # Save entries
         entries_file = self._storage_path / "entries.json"
         with open(entries_file, "w", encoding="utf-8") as f:
             json.dump([e.to_dict() for e in self._entries], f, indent=2)
-        
+
         # Save key-value store
         kv_file = self._storage_path / "kv_store.json"
         with open(kv_file, "w", encoding="utf-8") as f:
             json.dump(self._key_value_store, f, indent=2)
-        
+
         # Save specialized stores
         for store_name, store_data in [
             ("code_snapshots", self._code_snapshots),
@@ -518,19 +526,19 @@ class SharedResearchMemory:
             store_file = self._storage_path / f"{store_name}.json"
             with open(store_file, "w", encoding="utf-8") as f:
                 json.dump(store_data, f, indent=2)
-        
+
         logger.debug(f"Saved memory to {self._storage_path}")
-    
+
     def _load_from_disk(self) -> None:
         """Load memory from disk."""
         if not self._storage_path or not self._storage_path.exists():
             return
-        
+
         try:
             # Load entries
             entries_file = self._storage_path / "entries.json"
             if entries_file.exists():
-                with open(entries_file, "r", encoding="utf-8") as f:
+                with open(entries_file, encoding="utf-8") as f:
                     entries_data = json.load(f)
                     self._entries = [
                         MemoryEntry(
@@ -543,13 +551,13 @@ class SharedResearchMemory:
                         )
                         for e in entries_data
                     ]
-            
+
             # Load key-value store
             kv_file = self._storage_path / "kv_store.json"
             if kv_file.exists():
-                with open(kv_file, "r", encoding="utf-8") as f:
+                with open(kv_file, encoding="utf-8") as f:
                     self._key_value_store = json.load(f)
-            
+
             # Load specialized stores
             for store_name, store_attr in [
                 ("code_snapshots", "_code_snapshots"),
@@ -559,14 +567,14 @@ class SharedResearchMemory:
             ]:
                 store_file = self._storage_path / f"{store_name}.json"
                 if store_file.exists():
-                    with open(store_file, "r", encoding="utf-8") as f:
+                    with open(store_file, encoding="utf-8") as f:
                         setattr(self, store_attr, json.load(f))
-            
+
             logger.info(f"Loaded memory from {self._storage_path}")
-            
+
         except Exception as e:
             logger.error(f"Failed to load memory: {e}")
-    
+
     def clear(self) -> None:
         """Clear all memory."""
         self._entries.clear()
@@ -576,7 +584,7 @@ class SharedResearchMemory:
         self._clarifications.clear()
         self._execution_traces.clear()
         self._message_queue.clear()
-        
+
         logger.info("Cleared all memory")
 
 

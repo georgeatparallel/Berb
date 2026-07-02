@@ -59,19 +59,19 @@ class RateLimiter:
 
     async def _get_async_lock(self) -> asyncio.Lock:
         """Get or create the async lock with proper synchronization.
-        
+
         BUG-002 FIX: Uses double-checked locking with a dedicated init lock
         to prevent the race condition where multiple tasks create separate locks.
         """
         # Fast path: lock already created
         if self._async_lock is not None:
             return self._async_lock
-        
+
         # Create init lock lazily (safe because asyncio.Lock() just allocates,
         # doesn't interact with event loop until first use)
         if self._init_lock is None:
             self._init_lock = asyncio.Lock()
-        
+
         # Slow path: acquire init lock and create async lock
         async with self._init_lock:
             # Double-check after acquiring lock
@@ -81,7 +81,7 @@ class RateLimiter:
 
     async def wait(self) -> None:
         """Async-safe wait — yields control to the event loop during sleep.
-        
+
         BUG-002 FIX: Uses _get_async_lock() to prevent race condition.
         """
         lock = await self._get_async_lock()
@@ -118,5 +118,5 @@ class RateLimiter:
     @staticmethod
     def backoff_delay(attempt: int, base: float = 2.0, max_delay: float = 60.0) -> float:
         """Return exponential backoff delay with ±20 % jitter."""
-        delay = min(base ** attempt, max_delay)
+        delay = min(base**attempt, max_delay)
         return delay + random.uniform(0.0, delay * 0.2)

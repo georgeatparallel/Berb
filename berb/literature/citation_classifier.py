@@ -17,8 +17,7 @@ Features:
 from __future__ import annotations
 
 import logging
-from enum import Enum
-from typing import Any
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
@@ -27,7 +26,7 @@ from berb.llm.client import LLMProvider, LLMResponse
 logger = logging.getLogger(__name__)
 
 
-class CitationIntent(str, Enum):
+class CitationIntent(StrEnum):
     """Citation intent classification.
 
     Attributes:
@@ -251,9 +250,7 @@ Be conservative with confidence scores. Only assign high confidence (>0.8) when 
                 reasoning=f"Classification failed: {e}",
             )
 
-    def _parse_response(
-        self, response: LLMResponse, context: str
-    ) -> CitationClassification:
+    def _parse_response(self, response: LLMResponse, context: str) -> CitationClassification:
         """Parse LLM response into CitationClassification.
 
         Args:
@@ -300,15 +297,28 @@ Be conservative with confidence scores. Only assign high confidence (>0.8) when 
 
         # Supporting keywords
         supporting_keywords = [
-            "consistent with", "confirms", "demonstrates", "supports",
-            "validates", "corroborates", "in agreement with", "replicates",
+            "consistent with",
+            "confirms",
+            "demonstrates",
+            "supports",
+            "validates",
+            "corroborates",
+            "in agreement with",
+            "replicates",
         ]
 
         # Contrasting keywords
         contrasting_keywords = [
-            "however", "in contrast", "contradicts", "challenges",
-            "disagrees with", "unlike", "differs from", "questions",
-            "casts doubt on", "refutes",
+            "however",
+            "in contrast",
+            "contradicts",
+            "challenges",
+            "disagrees with",
+            "unlike",
+            "differs from",
+            "questions",
+            "casts doubt on",
+            "refutes",
         ]
 
         support_count = sum(1 for kw in supporting_keywords if kw in context_lower)
@@ -362,6 +372,7 @@ Be conservative with confidence scores. Only assign high confidence (>0.8) when 
         ]
 
         import asyncio
+
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         # Handle exceptions
@@ -398,10 +409,9 @@ Be conservative with confidence scores. Only assign high confidence (>0.8) when 
         Returns:
             PaperCitationProfile with aggregate statistics
         """
-        classifications = await self.classify_batch([
-            (context, claim, paper_id, cited_id)
-            for context, claim, cited_id in citations
-        ])
+        classifications = await self.classify_batch(
+            [(context, claim, paper_id, cited_id) for context, claim, cited_id in citations]
+        )
 
         # Count by intent
         supporting = sum(1 for c in classifications if c.intent == CitationIntent.SUPPORTING)
@@ -427,9 +437,7 @@ Be conservative with confidence scores. Only assign high confidence (>0.8) when 
             berb_confidence_score=berb_confidence,
         )
 
-    def compute_berb_confidence_score(
-        self, profile: PaperCitationProfile
-    ) -> float:
+    def compute_berb_confidence_score(self, profile: PaperCitationProfile) -> float:
         """Compute Berb confidence score from citation profile.
 
         The Berb confidence score represents the net support for a paper's

@@ -48,11 +48,7 @@ class WritingMemory:
         Returns:
             The generated memory entry ID.
         """
-        content = (
-            f"Feedback type: {feedback_type}\n"
-            f"Issue: {feedback}\n"
-            f"Resolution: {resolution}"
-        )
+        content = f"Feedback type: {feedback_type}\nIssue: {feedback}\nResolution: {resolution}"
         metadata = {
             "type": "review_feedback",
             "feedback_type": feedback_type,
@@ -61,9 +57,7 @@ class WritingMemory:
 
         confidence = 0.7  # review feedback is usually reliable
         embedding = self._embed_fn(content) if self._embed_fn else []
-        return self._store.add(
-            CATEGORY, content, metadata, embedding, confidence
-        )
+        return self._store.add(CATEGORY, content, metadata, embedding, confidence)
 
     def record_successful_structure(
         self,
@@ -83,11 +77,7 @@ class WritingMemory:
         Returns:
             The generated memory entry ID.
         """
-        content = (
-            f"Section: {section}\n"
-            f"Structure: {structure}\n"
-            f"Quality score: {score:.1f}/10"
-        )
+        content = f"Section: {section}\nStructure: {structure}\nQuality score: {score:.1f}/10"
         metadata = {
             "type": "structure_pattern",
             "section": section,
@@ -97,9 +87,7 @@ class WritingMemory:
 
         confidence = min(1.0, 0.3 + score / 15.0)
         embedding = self._embed_fn(content) if self._embed_fn else []
-        return self._store.add(
-            CATEGORY, content, metadata, embedding, confidence
-        )
+        return self._store.add(CATEGORY, content, metadata, embedding, confidence)
 
     def recall_writing_tips(
         self,
@@ -128,8 +116,7 @@ class WritingMemory:
         for i, (entry, score) in enumerate(results, 1):
             entry_type = entry.metadata.get("type", "tip")
             parts.append(
-                f"{i}. [{entry_type}] {entry.content.splitlines()[0]} "
-                f"(relevance: {score:.2f})"
+                f"{i}. [{entry_type}] {entry.content.splitlines()[0]} (relevance: {score:.2f})"
             )
             # Show resolution for review feedback
             if entry_type == "review_feedback":

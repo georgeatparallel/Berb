@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Protocol
 
 from pydantic import BaseModel, Field
@@ -23,7 +23,7 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger(__name__)
 
 
-class AlignmentResult(str, Enum):
+class AlignmentResult(StrEnum):
     """Source-claim alignment result.
 
     Attributes:
@@ -96,9 +96,7 @@ class AlignmentReport(BaseModel):
         self.partially_aligned = sum(
             1 for c in self.checks if c.alignment == AlignmentResult.PARTIALLY_ALIGNED
         )
-        self.misaligned = sum(
-            1 for c in self.checks if c.alignment == AlignmentResult.MISALIGNED
-        )
+        self.misaligned = sum(1 for c in self.checks if c.alignment == AlignmentResult.MISALIGNED)
         self.cannot_determine = sum(
             1 for c in self.checks if c.alignment == AlignmentResult.CANNOT_DETERMINE
         )
@@ -145,15 +143,29 @@ class SourceClaimAligner:
 
     # Alignment keywords
     SUPPORT_KEYWORDS = [
-        "consistent with", "confirms", "supports", "validates",
-        "demonstrates", "shows", "indicates", "suggests",
-        "in agreement with", "corroborates",
+        "consistent with",
+        "confirms",
+        "supports",
+        "validates",
+        "demonstrates",
+        "shows",
+        "indicates",
+        "suggests",
+        "in agreement with",
+        "corroborates",
     ]
 
     CONTRAST_KEYWORDS = [
-        "however", "in contrast", "contradicts", "challenges",
-        "disagrees with", "unlike", "differs from", "questions",
-        "casts doubt on", "refutes",
+        "however",
+        "in contrast",
+        "contradicts",
+        "challenges",
+        "disagrees with",
+        "unlike",
+        "differs from",
+        "questions",
+        "casts doubt on",
+        "refutes",
     ]
 
     def __init__(self, source_client: SourceClient | None = None):
@@ -184,9 +196,7 @@ class SourceClaimAligner:
         relevant_section = self._find_relevant_section(claim, source_text)
 
         # Check alignment
-        alignment, confidence, reasoning = self._analyze_alignment(
-            claim, relevant_section
-        )
+        alignment, confidence, reasoning = self._analyze_alignment(claim, relevant_section)
 
         return AlignmentCheck(
             claim=claim,
@@ -218,7 +228,8 @@ class SourceClaimAligner:
 
         # Extract key terms from claim
         claim_terms = [
-            word for word in claim_lower.split()
+            word
+            for word in claim_lower.split()
             if len(word) > 4 and word not in {"that", "this", "which", "there", "their"}
         ]
 
@@ -227,7 +238,7 @@ class SourceClaimAligner:
         best_overlap = 0
 
         for i in range(0, len(source_lower) - 100, 100):
-            section = source_lower[i:i + context_size]
+            section = source_lower[i : i + context_size]
             overlap = sum(1 for term in claim_terms if term in section)
 
             if overlap > best_overlap:
@@ -235,7 +246,7 @@ class SourceClaimAligner:
                 best_start = i
 
         if best_overlap > 0:
-            return source_text[best_start:best_start + context_size]
+            return source_text[best_start : best_start + context_size]
 
         # Return first section if no match
         return source_text[:context_size]
@@ -258,14 +269,10 @@ class SourceClaimAligner:
         source_lower = source_section.lower()
 
         # Check for support keywords
-        support_count = sum(
-            1 for kw in self.SUPPORT_KEYWORDS if kw in source_lower
-        )
+        support_count = sum(1 for kw in self.SUPPORT_KEYWORDS if kw in source_lower)
 
         # Check for contrast keywords
-        contrast_count = sum(
-            1 for kw in self.CONTRAST_KEYWORDS if kw in source_lower
-        )
+        contrast_count = sum(1 for kw in self.CONTRAST_KEYWORDS if kw in source_lower)
 
         # Check for keyword overlap
         claim_words = set(claim_lower.split())
@@ -336,9 +343,7 @@ class SourceClaimAligner:
                     continue
 
                 # Check alignment
-                check = await self.check_alignment(
-                    claim_text, source_text, citation_id
-                )
+                check = await self.check_alignment(claim_text, source_text, citation_id)
                 checks.append(check)
 
         return AlignmentReport(checks=checks)
@@ -369,8 +374,13 @@ class SourceClaimAligner:
 
             # Check for claim indicators
             indicators = [
-                "we found", "we show", "we demonstrate", "our results",
-                "this paper", "our approach", "experiments show",
+                "we found",
+                "we show",
+                "we demonstrate",
+                "our results",
+                "this paper",
+                "our approach",
+                "experiments show",
             ]
 
             if any(ind in sentence.lower() for ind in indicators):
@@ -463,10 +473,6 @@ class AlignmentConfig:
     min_confidence: float = 0.5
     flag_misaligned: bool = True
     auto_fix: bool = False
-
-
-# Import dataclass
-from dataclasses import dataclass
 
 
 # Convenience functions

@@ -15,7 +15,6 @@ import logging
 import re
 import shutil
 import subprocess
-import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -24,18 +23,72 @@ logger = logging.getLogger(__name__)
 # BUG-201: Cyrillic → Latin transliteration for author names from Semantic Scholar.
 # pdflatex without T2A font encoding chokes on Cyrillic (e.g. "А. И. Колесников").
 _CYRILLIC_TO_LATIN_MAP: dict[str, str] = {
-    "А": "A", "Б": "B", "В": "V", "Г": "G", "Д": "D", "Е": "E",
-    "Ё": "E", "Ж": "Zh", "З": "Z", "И": "I", "Й": "Y", "К": "K",
-    "Л": "L", "М": "M", "Н": "N", "О": "O", "П": "P", "Р": "R",
-    "С": "S", "Т": "T", "У": "U", "Ф": "F", "Х": "Kh", "Ц": "Ts",
-    "Ч": "Ch", "Ш": "Sh", "Щ": "Shch", "Ъ": "", "Ы": "Y", "Ь": "",
-    "Э": "E", "Ю": "Yu", "Я": "Ya",
-    "а": "a", "б": "b", "в": "v", "г": "g", "д": "d", "е": "e",
-    "ё": "e", "ж": "zh", "з": "z", "и": "i", "й": "y", "к": "k",
-    "л": "l", "м": "m", "н": "n", "о": "o", "п": "p", "р": "r",
-    "с": "s", "т": "t", "у": "u", "ф": "f", "х": "kh", "ц": "ts",
-    "ч": "ch", "ш": "sh", "щ": "shch", "ъ": "", "ы": "y", "ь": "",
-    "э": "e", "ю": "yu", "я": "ya",
+    "А": "A",
+    "Б": "B",
+    "В": "V",
+    "Г": "G",
+    "Д": "D",
+    "Е": "E",
+    "Ё": "E",
+    "Ж": "Zh",
+    "З": "Z",
+    "И": "I",
+    "Й": "Y",
+    "К": "K",
+    "Л": "L",
+    "М": "M",
+    "Н": "N",
+    "О": "O",
+    "П": "P",
+    "Р": "R",
+    "С": "S",
+    "Т": "T",
+    "У": "U",
+    "Ф": "F",
+    "Х": "Kh",
+    "Ц": "Ts",
+    "Ч": "Ch",
+    "Ш": "Sh",
+    "Щ": "Shch",
+    "Ъ": "",
+    "Ы": "Y",
+    "Ь": "",
+    "Э": "E",
+    "Ю": "Yu",
+    "Я": "Ya",
+    "а": "a",
+    "б": "b",
+    "в": "v",
+    "г": "g",
+    "д": "d",
+    "е": "e",
+    "ё": "e",
+    "ж": "zh",
+    "з": "z",
+    "и": "i",
+    "й": "y",
+    "к": "k",
+    "л": "l",
+    "м": "m",
+    "н": "n",
+    "о": "o",
+    "п": "p",
+    "р": "r",
+    "с": "s",
+    "т": "t",
+    "у": "u",
+    "ф": "f",
+    "х": "kh",
+    "ц": "ts",
+    "ч": "ch",
+    "ш": "sh",
+    "щ": "shch",
+    "ъ": "",
+    "ы": "y",
+    "ь": "",
+    "э": "e",
+    "ю": "yu",
+    "я": "ya",
 }
 
 
@@ -161,9 +214,7 @@ def compile_latex(
     return result
 
 
-def fix_common_latex_errors(
-    tex_text: str, errors: list[str]
-) -> tuple[str, list[str]]:
+def fix_common_latex_errors(tex_text: str, errors: list[str]) -> tuple[str, list[str]]:
     """Apply automated fixes for common LaTeX errors.
 
     Returns ``(fixed_text, list_of_fix_descriptions)``.
@@ -220,9 +271,8 @@ def fix_common_latex_errors(
     # BUG-189: Fix Python-style pseudocode inside algorithmic environments.
     # LLM generates `# comment` (LaTeX macro param char) and `var_name`
     # (unescaped underscore) inside \STATE commands — causes cascading errors.
-    _algo_pat = re.compile(
-        r"(\\begin\{algorithmic\}.*?\\end\{algorithmic\})", re.DOTALL
-    )
+    _algo_pat = re.compile(r"(\\begin\{algorithmic\}.*?\\end\{algorithmic\})", re.DOTALL)
+
     def _fix_algo_block(m: re.Match) -> str:
         block = m.group(0)
         lines = block.split("\n")
@@ -242,7 +292,7 @@ def fix_common_latex_errors(
                 if part.startswith("\\") or part.startswith("$"):
                     fixed_parts.append(part)
                 else:
-                    fixed_parts.append(re.sub(r'(?<!\\)_', r'\\_', part))
+                    fixed_parts.append(re.sub(r"(?<!\\)_", r"\\_", part))
             line = "".join(fixed_parts)
             out.append(line)
         return "\n".join(out)
@@ -262,14 +312,16 @@ def fix_common_latex_errors(
                 cmd = m.group(1)
                 # Don't remove standard commands
                 _safe_to_remove = {
-                    "textsc", "textsl", "mathbb", "mathcal",
-                    "bm", "boldsymbol",
+                    "textsc",
+                    "textsl",
+                    "mathbb",
+                    "mathcal",
+                    "bm",
+                    "boldsymbol",
                 }
                 if cmd in _safe_to_remove:
                     # Replace \cmd{text} → text
-                    fixed = re.sub(
-                        rf"\\{cmd}\{{([^}}]*)\}}", r"\1", fixed
-                    )
+                    fixed = re.sub(rf"\\{cmd}\{{([^}}]*)\}}", r"\1", fixed)
                     fixes.append(f"Removed undefined \\{cmd}")
 
         # Missing $ inserted — likely double-escaped underscore \\_
@@ -280,9 +332,7 @@ def fix_common_latex_errors(
                 fixes.append("Collapsed double-escaped underscores")
             # Also fix bare underscores outside math mode
             # (conservative — only in obvious identifier patterns)
-            fixed = re.sub(
-                r"(?<!\\)(?<!\$)_(?=[A-Za-z])", r"\\_", fixed
-            )
+            fixed = re.sub(r"(?<!\\)(?<!\$)_(?=[A-Za-z])", r"\\_", fixed)
             if fixed != tex_text:
                 fixes.append("Escaped bare underscores outside math")
 
@@ -305,6 +355,7 @@ def fix_common_latex_errors(
                 if char in fixed:
                     # Whitespace-like → ASCII space; others → remove
                     import unicodedata
+
                     cat = unicodedata.category(char)
                     replacement = " " if cat.startswith("Z") else ""
                     fixed = fixed.replace(char, replacement)
@@ -482,21 +533,13 @@ def check_compiled_quality(
 
     # --- Build warnings summary ---
     if result.unresolved_refs:
-        result.warnings_summary.append(
-            f"{len(result.unresolved_refs)} unresolved reference(s)"
-        )
+        result.warnings_summary.append(f"{len(result.unresolved_refs)} unresolved reference(s)")
     if result.unresolved_cites:
-        result.warnings_summary.append(
-            f"{len(result.unresolved_cites)} unresolved citation(s)"
-        )
+        result.warnings_summary.append(f"{len(result.unresolved_cites)} unresolved citation(s)")
     if result.overfull_hboxes:
-        result.warnings_summary.append(
-            f"{len(result.overfull_hboxes)} overfull hbox(es) > 1pt"
-        )
+        result.warnings_summary.append(f"{len(result.overfull_hboxes)} overfull hbox(es) > 1pt")
     if result.page_count > page_limit:
-        result.warnings_summary.append(
-            f"Page count {result.page_count} exceeds limit {page_limit}"
-        )
+        result.warnings_summary.append(f"Page count {result.page_count} exceeds limit {page_limit}")
     if result.orphan_figures:
         result.warnings_summary.append(
             f"{len(result.orphan_figures)} referenced but undefined figure(s): "
@@ -534,7 +577,8 @@ def remove_missing_figures(tex_text: str, stage_dir: Path) -> tuple[str, list[st
                         new_rel = str(candidates[0].relative_to(stage_dir))
                         logger.info(
                             "Auto-mapped missing figure: %s → %s",
-                            img_rel, new_rel,
+                            img_rel,
+                            new_rel,
                         )
                         return block.replace(img_rel, new_rel)
                 logger.warning(
@@ -788,7 +832,7 @@ _FATAL_ERROR_PATTERNS = [
     "extra alignment tab",
     "misplaced alignment tab",
     "missing \\begin{document}",
-    "file `" ,  # file not found (sty, cls)
+    "file `",  # file not found (sty, cls)
     "file not found",
 ]
 

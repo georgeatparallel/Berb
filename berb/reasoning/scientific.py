@@ -38,10 +38,10 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from .base import (
-    ReasoningMethod,
-    ReasoningContext,
-    ReasoningResult,
     MethodType,
+    ReasoningContext,
+    ReasoningMethod,
+    ReasoningResult,
 )
 from .registry import ReasonerRegistry
 
@@ -106,7 +106,7 @@ class ScientificMethod(ReasoningMethod):
 
     def __init__(
         self,
-        router: Any = None,      # NEW: Primary (ExtendedNadirClawRouter)
+        router: Any = None,  # NEW: Primary (ExtendedNadirClawRouter)
         llm_client: Any = None,  # DEPRECATED: Fallback only
         **kwargs: Any,
     ):
@@ -141,7 +141,7 @@ class ScientificMethod(ReasoningMethod):
             Exception: If reasoning fails
         """
         import uuid
-        
+
         start_time = time.time()
         self._run_id = f"scientific-{uuid.uuid4().hex[:8]}"
 
@@ -166,14 +166,10 @@ class ScientificMethod(ReasoningMethod):
             experiment = await self._design_experiment(hypothesis, context)
 
             # Step 3: Analyze (simulated or actual)
-            analysis = await self._analyze_results(
-                hypothesis, experiment, context
-            )
+            analysis = await self._analyze_results(hypothesis, experiment, context)
 
             # Step 4: Draw conclusion
-            conclusion = await self._draw_conclusion(
-                observation, hypothesis, analysis, context
-            )
+            conclusion = await self._draw_conclusion(observation, hypothesis, analysis, context)
 
             # Step 5: Identify next steps
             next_steps = await self._identify_next_steps(conclusion, context)
@@ -214,10 +210,10 @@ class ScientificMethod(ReasoningMethod):
                 duration_sec=duration,
                 model_used=context.metadata.get("model", "unknown"),
             )
-            
+
             # Track cost if router supports it
             self._track_cost(duration)
-            
+
             return scientific_result
 
         except Exception as e:
@@ -466,17 +462,19 @@ Respond in JSON format:
             "Test boundary conditions",
             "Explore underlying mechanisms",
         ]
-    
+
     def _track_cost(self, duration_sec: float) -> None:
         """Track cost for scientific execution."""
         if self.router is None or self._run_id is None:
             return
-        
-        if hasattr(self.router, 'track_cost'):
+
+        if hasattr(self.router, "track_cost"):
             # Estimate tokens for scientific method (5 phases)
-            estimated_input = 600 + 800 + 600 + 1000 + 800  # observation→hypothesis→prediction→experiment→analysis
+            estimated_input = (
+                600 + 800 + 600 + 1000 + 800
+            )  # observation→hypothesis→prediction→experiment→analysis
             estimated_output = 500 + 600 + 400 + 800 + 600
-            
+
             self.router.track_cost(
                 method="scientific",
                 phase="all",

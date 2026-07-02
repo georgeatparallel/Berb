@@ -18,8 +18,8 @@ Example:
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from dataclasses import dataclass
+from typing import Any
 
 import httpx
 
@@ -30,16 +30,18 @@ logger = logging.getLogger(__name__)
 # Data Classes
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @dataclass
 class ContextChunk:
     """Retrieved memory chunk.
-    
+
     Attributes:
         content: Memory content
         source: Source type (session/knowledge/skill)
         relevance: Relevance score (0-1)
         cache_tier: Cache tier (L1/L2/L3)
     """
+
     content: str
     source: str
     relevance: float
@@ -49,28 +51,30 @@ class ContextChunk:
 @dataclass
 class PreflightResult:
     """Preflight validation result.
-    
+
     Attributes:
         verdict: PASS | ENRICH | WARN | BLOCK
         confidence: Confidence score (0-1)
         reason: Validation reasoning
         enrichment: Optional enrichment text
     """
+
     verdict: str
     confidence: float
     reason: str
-    enrichment: Optional[str] = None
+    enrichment: str | None = None
 
 
 @dataclass
 class IngestResult:
     """Ingest result.
-    
+
     Attributes:
         status: Success/failure status
         session_id: Session ID
         entry_number: Entry number in session
     """
+
     status: str
     session_id: str
     entry_number: int
@@ -80,86 +84,84 @@ class IngestResult:
 # Mnemo Bridge Client
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class MnemoBridge:
     """Bridge to Mnemo Cortex memory system.
-    
+
     Provides:
     - Context retrieval from memory
     - Session ingestion (auto-capture)
     - Preflight validation
     - Session writeback
-    
+
     Example:
         >>> bridge = MnemoBridge(config)
         >>> context = await bridge.get_context("research topic")
         >>> await bridge.ingest(prompt, response)
     """
-    
+
     def __init__(
         self,
         server_url: str = "http://localhost:50001",
         agent_id: str = "autoresearch",
-        auth_token: Optional[str] = None,
+        auth_token: str | None = None,
         timeout_sec: int = 30,
     ):
         """Initialize Mnemo Bridge.
-        
+
         Args:
             server_url: Mnemo Cortex server URL
             agent_id: Agent ID for tenant isolation
             auth_token: Optional auth token
             timeout_sec: Request timeout
         """
-        self.server_url = server_url.rstrip('/')
+        self.server_url = server_url.rstrip("/")
         self.agent_id = agent_id
         self.auth_token = auth_token
         self.timeout_sec = timeout_sec
-        
+
         self._client = httpx.AsyncClient(
             base_url=self.server_url,
             timeout=httpx.Timeout(timeout_sec),
         )
-        
+
         if auth_token:
             self._client.headers["Authorization"] = f"Bearer {auth_token}"
-        
-        logger.info(
-            f"MnemoBridge initialized: server={server_url}, "
-            f"agent={agent_id}"
-        )
-    
+
+        logger.info(f"MnemoBridge initialized: server={server_url}, agent={agent_id}")
+
     async def close(self) -> None:
         """Close HTTP client."""
         await self._client.aclose()
-    
+
     async def __aenter__(self) -> MnemoBridge:
         """Async context manager entry."""
         return self
-    
+
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         """Async context manager exit."""
         await self.close()
-    
+
     # ─────────────────────────────────────────────────────────────────────────
     # Context Retrieval
     # ─────────────────────────────────────────────────────────────────────────
-    
+
     async def get_context(
         self,
         prompt: str,
-        persona: Optional[str] = None,
+        persona: str | None = None,
         max_results: int = 5,
-    ) -> List[ContextChunk]:
+    ) -> list[ContextChunk]:
         """Retrieve relevant memories for a prompt.
-        
+
         Args:
             prompt: Prompt to search context for
             persona: Persona mode (default/strict/creative)
             max_results: Maximum results to return
-        
+
         Returns:
             List of ContextChunk objects
-        
+
         Example:
             >>> chunks = await bridge.get_context("symplectic integrators")
             >>> for chunk in chunks:
@@ -177,7 +179,7 @@ class MnemoBridge:
             )
             response.raise_for_status()
             data = response.json()
-            
+
             chunks = [
                 ContextChunk(
                     content=chunk["content"],
@@ -187,38 +189,37 @@ class MnemoBridge:
                 )
                 for chunk in data.get("chunks", [])
             ]
-            
+
             logger.debug(
-                f"Retrieved {len(chunks)} context chunks "
-                f"(latency={data.get('latency_ms', 0)}ms)"
+                f"Retrieved {len(chunks)} context chunks (latency={data.get('latency_ms', 0)}ms)"
             )
-            
+
             return chunks
-        
+
         except httpx.HTTPError as e:
             logger.warning(f"Failed to get context: {e}")
             return []
-    
+
     # ─────────────────────────────────────────────────────────────────────────
     # Session Ingestion
     # ─────────────────────────────────────────────────────────────────────────
-    
+
     async def ingest(
         self,
         prompt: str,
         response: str,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> IngestResult:
         """Archive a prompt/response pair to memory.
-        
+
         Args:
             prompt: User prompt
             response: AI response
             metadata: Optional metadata (stage, timing, etc.)
-        
+
         Returns:
             IngestResult with session info
-        
+
         Example:
             >>> result = await bridge.ingest(prompt, response, {"stage": 8})
             >>> print(f"Session {result.session_id}, entry {result.entry_number}")
@@ -235,44 +236,41 @@ class MnemoBridge:
             )
             response_obj.raise_for_status()
             data = response_obj.json()
-            
+
             result = IngestResult(
                 status=data.get("status", "success"),
                 session_id=data.get("session_id", ""),
                 entry_number=data.get("entry_number", 0),
             )
-            
-            logger.debug(
-                f"Ingested to session {result.session_id}, "
-                f"entry {result.entry_number}"
-            )
-            
+
+            logger.debug(f"Ingested to session {result.session_id}, entry {result.entry_number}")
+
             return result
-        
+
         except httpx.HTTPError as e:
             logger.warning(f"Failed to ingest: {e}")
             return IngestResult(status="error", session_id="", entry_number=0)
-    
+
     # ─────────────────────────────────────────────────────────────────────────
     # Preflight Validation
     # ─────────────────────────────────────────────────────────────────────────
-    
+
     async def preflight(
         self,
         prompt: str,
         draft_response: str,
-        persona: Optional[str] = None,
+        persona: str | None = None,
     ) -> PreflightResult:
         """Validate a draft response before sending.
-        
+
         Args:
             prompt: Original prompt
             draft_response: Draft AI response to validate
             persona: Persona mode (default/strict/creative)
-        
+
         Returns:
             PreflightResult with verdict and reasoning
-        
+
         Example:
             >>> result = await bridge.preflight(prompt, draft, persona="strict")
             >>> if result.verdict == "BLOCK":
@@ -290,21 +288,20 @@ class MnemoBridge:
             )
             response_obj.raise_for_status()
             data = response_obj.json()
-            
+
             result = PreflightResult(
                 verdict=data.get("verdict", "PASS"),
                 confidence=data.get("confidence", 0.0),
                 reason=data.get("reason", ""),
                 enrichment=data.get("enrichment"),
             )
-            
+
             logger.debug(
-                f"Preflight verdict: {result.verdict} "
-                f"(confidence={result.confidence:.2f})"
+                f"Preflight verdict: {result.verdict} (confidence={result.confidence:.2f})"
             )
-            
+
             return result
-        
+
         except httpx.HTTPError as e:
             logger.warning(f"Failed preflight: {e}")
             return PreflightResult(
@@ -312,26 +309,26 @@ class MnemoBridge:
                 confidence=0.0,
                 reason=f"Preflight error: {e}",
             )
-    
+
     # ─────────────────────────────────────────────────────────────────────────
     # Session Writeback
     # ─────────────────────────────────────────────────────────────────────────
-    
+
     async def writeback(
         self,
         session_id: str,
         summary: str,
-        key_facts: List[str],
-        decisions: List[str],
-    ) -> Dict[str, Any]:
+        key_facts: list[str],
+        decisions: list[str],
+    ) -> dict[str, Any]:
         """Archive completed session with curated summary.
-        
+
         Args:
             session_id: Session ID to archive
             summary: Session summary
             key_facts: Key facts from session
             decisions: Decisions made
-        
+
         Returns:
             Writeback result dict
         """
@@ -348,18 +345,18 @@ class MnemoBridge:
             )
             response_obj.raise_for_status()
             return response_obj.json()
-        
+
         except httpx.HTTPError as e:
             logger.warning(f"Failed writeback: {e}")
             return {"status": "error", "error": str(e)}
-    
+
     # ─────────────────────────────────────────────────────────────────────────
     # Health Check
     # ─────────────────────────────────────────────────────────────────────────
-    
-    async def health_check(self) -> Dict[str, Any]:
+
+    async def health_check(self) -> dict[str, Any]:
         """Check Mnemo server health.
-        
+
         Returns:
             Health status dict
         """
@@ -370,34 +367,34 @@ class MnemoBridge:
         except httpx.HTTPError as e:
             logger.warning(f"Mnemo health check failed: {e}")
             return {"status": "unhealthy", "error": str(e)}
-    
+
     # ─────────────────────────────────────────────────────────────────────────
     # Context Formatting
     # ─────────────────────────────────────────────────────────────────────────
-    
+
     @staticmethod
     def format_context_for_prompt(
-        chunks: List[ContextChunk],
+        chunks: list[ContextChunk],
         section_title: str = "Relevant Past Context",
     ) -> str:
         """Format context chunks for injection into prompt.
-        
+
         Args:
             chunks: List of context chunks
             section_title: Section title for formatted context
-        
+
         Returns:
             Formatted context string for prompt injection
         """
         if not chunks:
             return ""
-        
+
         lines = [f"\n\n== {section_title} ==\n"]
-        
+
         for i, chunk in enumerate(chunks, 1):
             lines.append(f"\n[{i}] Source: {chunk.source} (Relevance: {chunk.relevance:.2f})")
             lines.append(f"    {chunk.content}")
-        
+
         lines.append("\n== End Context ==\n\n")
-        
+
         return "".join(lines)

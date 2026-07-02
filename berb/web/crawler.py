@@ -105,7 +105,7 @@ class WebCrawler:
         """Crawl multiple URLs using Crawl4AI's async engine."""
         results = []
         try:
-            from crawl4ai import AsyncWebCrawler, CrawlerRunConfig, BrowserConfig
+            from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig
 
             browser_config = BrowserConfig(headless=True)
             run_config = CrawlerRunConfig(
@@ -114,11 +114,21 @@ class WebCrawler:
                 remove_overlay_elements=True,
             )
 
+            # NOTE: browser launch (context manager entry) is intentionally
+            # inside this same try/except Exception block, not just the
+            # `from crawl4ai import ...` line. Unlike crawl()/crawl_sync(),
+            # which already fall back to urllib on *any* Crawl4AI failure,
+            # this method previously only caught ImportError here — a
+            # browser-launch failure (missing Playwright binaries, sandbox
+            # restrictions, etc.) would propagate uncaught and, in the worst
+            # case, hang instead of degrading to the urllib fallback below.
             async with AsyncWebCrawler(config=browser_config) as crawler:
                 for url in urls:
                     err = check_url_ssrf(url)
                     if err:
-                        results.append(CrawlResult(url=url, success=False, error=err, elapsed_seconds=0.0))
+                        results.append(
+                            CrawlResult(url=url, success=False, error=err, elapsed_seconds=0.0)
+                        )
                         continue
                     t0 = time.monotonic()
                     try:
@@ -126,34 +136,54 @@ class WebCrawler:
                         elapsed = time.monotonic() - t0
                         if raw.success:
                             md = self._extract_markdown(raw)
-                            results.append(CrawlResult(
-                                url=url, markdown=md,
-                                title=getattr(raw, "title", "") or "",
-                                success=True, elapsed_seconds=elapsed,
-                                metadata=raw.metadata if hasattr(raw, "metadata") and raw.metadata else {},
-                            ))
+                            results.append(
+                                CrawlResult(
+                                    url=url,
+                                    markdown=md,
+                                    title=getattr(raw, "title", "") or "",
+                                    success=True,
+                                    elapsed_seconds=elapsed,
+                                    metadata=raw.metadata
+                                    if hasattr(raw, "metadata") and raw.metadata
+                                    else {},
+                                )
+                            )
                         else:
-                            results.append(CrawlResult(
-                                url=url, success=False,
-                                error=getattr(raw, "error_message", "crawl failed"),
-                                elapsed_seconds=elapsed,
-                            ))
+                            results.append(
+                                CrawlResult(
+                                    url=url,
+                                    success=False,
+                                    error=getattr(raw, "error_message", "crawl failed"),
+                                    elapsed_seconds=elapsed,
+                                )
+                            )
                     except Exception as exc:  # noqa: BLE001
                         elapsed = time.monotonic() - t0
-                        results.append(CrawlResult(url=url, success=False, error=str(exc), elapsed_seconds=elapsed))
-        except ImportError:
-            # Crawl4AI browser not set up — use urllib for each
+                        results.append(
+                            CrawlResult(
+                                url=url, success=False, error=str(exc), elapsed_seconds=elapsed
+                            )
+                        )
+        except Exception as exc:  # noqa: BLE001
+            # Crawl4AI unavailable (ImportError), or its browser failed to
+            # launch — fall back to urllib for each URL, same as
+            # crawl()/crawl_sync().
+            logger.debug("Crawl4AI unavailable for crawl_many (%s), using urllib fallback", exc)
             for url in urls:
                 err = check_url_ssrf(url)
                 if err:
-                    results.append(CrawlResult(url=url, success=False, error=err, elapsed_seconds=0.0))
+                    results.append(
+                        CrawlResult(url=url, success=False, error=err, elapsed_seconds=0.0)
+                    )
                     continue
                 t0 = time.monotonic()
                 try:
                     results.append(self._crawl_with_urllib(url, t0))
                 except Exception as exc:  # noqa: BLE001
                     elapsed = time.monotonic() - t0
-                    results.append(CrawlResult(url=url, success=False, error=str(exc), elapsed_seconds=elapsed))
+                    results.append(
+                        CrawlResult(url=url, success=False, error=str(exc), elapsed_seconds=elapsed)
+                    )
         return results
 
     # ------------------------------------------------------------------
@@ -162,7 +192,7 @@ class WebCrawler:
 
     async def _crawl_with_crawl4ai(self, url: str, t0: float) -> CrawlResult:
         """Use Crawl4AI for high-quality extraction."""
-        from crawl4ai import AsyncWebCrawler, CrawlerRunConfig, BrowserConfig
+        from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig
 
         browser_config = BrowserConfig(headless=True)
         run_config = CrawlerRunConfig(
@@ -178,13 +208,16 @@ class WebCrawler:
         if raw.success:
             md = self._extract_markdown(raw)
             return CrawlResult(
-                url=url, markdown=md,
+                url=url,
+                markdown=md,
                 title=getattr(raw, "title", "") or "",
-                success=True, elapsed_seconds=elapsed,
+                success=True,
+                elapsed_seconds=elapsed,
                 metadata=raw.metadata if hasattr(raw, "metadata") and raw.metadata else {},
             )
         return CrawlResult(
-            url=url, success=False,
+            url=url,
+            success=False,
             error=getattr(raw, "error_message", "Unknown crawl4ai error"),
             elapsed_seconds=elapsed,
         )
@@ -226,23 +259,34 @@ class WebCrawler:
 
         elapsed = time.monotonic() - t0
         return CrawlResult(
-            url=url, markdown=markdown, title=title,
-            success=bool(markdown.strip()), elapsed_seconds=elapsed,
+            url=url,
+            markdown=markdown,
+            title=title,
+            success=bool(markdown.strip()),
+            elapsed_seconds=elapsed,
         )
 
     @staticmethod
     def _html_to_markdown(html: str) -> str:
         """Best-effort HTML → Markdown conversion via regex."""
-        text = re.sub(r"<(script|style|noscript)[^>]*>.*?</\1>", "", html, flags=re.DOTALL | re.IGNORECASE)
+        text = re.sub(
+            r"<(script|style|noscript)[^>]*>.*?</\1>", "", html, flags=re.DOTALL | re.IGNORECASE
+        )
         text = re.sub(r"<h1[^>]*>(.*?)</h1>", r"\n# \1\n", text, flags=re.DOTALL | re.IGNORECASE)
         text = re.sub(r"<h2[^>]*>(.*?)</h2>", r"\n## \1\n", text, flags=re.DOTALL | re.IGNORECASE)
         text = re.sub(r"<h3[^>]*>(.*?)</h3>", r"\n### \1\n", text, flags=re.DOTALL | re.IGNORECASE)
         text = re.sub(r"<li[^>]*>(.*?)</li>", r"\n- \1", text, flags=re.DOTALL | re.IGNORECASE)
         text = re.sub(r"<p[^>]*>(.*?)</p>", r"\n\1\n", text, flags=re.DOTALL | re.IGNORECASE)
         text = re.sub(r"<br\s*/?>", "\n", text, flags=re.IGNORECASE)
-        text = re.sub(r"<a[^>]*href=[\"']([^\"']*)[\"'][^>]*>(.*?)</a>", r"[\2](\1)", text, flags=re.DOTALL | re.IGNORECASE)
+        text = re.sub(
+            r"<a[^>]*href=[\"']([^\"']*)[\"'][^>]*>(.*?)</a>",
+            r"[\2](\1)",
+            text,
+            flags=re.DOTALL | re.IGNORECASE,
+        )
         text = re.sub(r"<[^>]+>", "", text)
         import html as _html
+
         text = _html.unescape(text)
         text = re.sub(r"\n{3,}", "\n\n", text)
         text = re.sub(r" {2,}", " ", text)

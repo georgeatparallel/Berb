@@ -37,6 +37,7 @@ logger = logging.getLogger(__name__)
 # Result dataclass
 # ---------------------------------------------------------------------------
 
+
 @dataclass(frozen=True)
 class CodeAgentResult:
     """Output from a code agent invocation."""
@@ -55,6 +56,7 @@ class CodeAgentResult:
 # ---------------------------------------------------------------------------
 # Protocol
 # ---------------------------------------------------------------------------
+
 
 class CodeAgentProvider(Protocol):
     """Protocol for code generation backends."""
@@ -108,6 +110,7 @@ class CodeAgentProvider(Protocol):
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _to_text(value: str | bytes | None) -> str:
     if value is None:
         return ""
@@ -160,6 +163,7 @@ def format_feedback_for_agent(
 # LlmCodeAgent — wraps existing LLM chat API (backward-compatible)
 # ---------------------------------------------------------------------------
 
+
 class LlmCodeAgent:
     """Code agent backed by the existing OpenAI-compatible LLM chat API.
 
@@ -209,10 +213,7 @@ class LlmCodeAgent:
         )
         # Higher max_tokens for reasoning models
         _code_max_tokens = sp.max_tokens or 8192
-        if any(
-            self._config.llm.primary_model.startswith(p)
-            for p in ("gpt-5", "o3", "o4")
-        ):
+        if any(self._config.llm.primary_model.startswith(p) for p in ("gpt-5", "o3", "o4")):
             _code_max_tokens = max(_code_max_tokens, 16384)
 
         try:
@@ -227,8 +228,7 @@ class LlmCodeAgent:
             # Retry on empty response with higher token limit
             if not files and not resp.content.strip():
                 logger.warning(
-                    "LlmCodeAgent: empty response (len=%d, finish=%s). "
-                    "Retrying with 32768 tokens.",
+                    "LlmCodeAgent: empty response (len=%d, finish=%s). Retrying with 32768 tokens.",
                     len(resp.content),
                     resp.finish_reason,
                 )
@@ -345,9 +345,7 @@ class LlmCodeAgent:
         )
 
         start = time.monotonic()
-        all_files_ctx = "\n\n".join(
-            f"```filename:{f}\n{c}\n```" for f, c in files.items()
-        )
+        all_files_ctx = "\n\n".join(f"```filename:{f}\n{c}\n```" for f, c in files.items())
         try:
             rp = self._pm.sub_prompt(
                 "code_repair",
@@ -383,6 +381,7 @@ class LlmCodeAgent:
 # ---------------------------------------------------------------------------
 # CLI agent base — shared subprocess logic for Claude Code / Codex
 # ---------------------------------------------------------------------------
+
 
 class _CliAgentBase:
     """Shared infrastructure for CLI-based coding agents."""
@@ -577,6 +576,7 @@ class _CliAgentBase:
 # ClaudeCodeAgent
 # ---------------------------------------------------------------------------
 
+
 class ClaudeCodeAgent(_CliAgentBase):
     """Code agent backed by Claude Code CLI (``claude -p``)."""
 
@@ -585,11 +585,15 @@ class ClaudeCodeAgent(_CliAgentBase):
     def _build_cmd(self, prompt: str, workdir: Path) -> list[str]:
         cmd = [
             self._binary,
-            "-p", prompt,
+            "-p",
+            prompt,
             "--dangerously-skip-permissions",
-            "--output-format", "text",
-            "--allowed-tools", "Bash Edit Write Read",
-            "--add-dir", str(workdir),
+            "--output-format",
+            "text",
+            "--allowed-tools",
+            "Bash Edit Write Read",
+            "--add-dir",
+            str(workdir),
         ]
         if self._model:
             cmd += ["--model", self._model]
@@ -611,11 +615,18 @@ class ClaudeCodeAgent(_CliAgentBase):
         timeout_sec: int = 600,
     ) -> CodeAgentResult:
         prompt = self._generate_prompt(
-            topic, exp_plan, metric_key, pkg_hint, compute_budget, extra_guidance,
+            topic,
+            exp_plan,
+            metric_key,
+            pkg_hint,
+            compute_budget,
+            extra_guidance,
         )
         cmd = self._build_cmd(prompt, workdir)
         rc, stdout, stderr, elapsed, to = self._run_subprocess(
-            cmd, workdir, timeout_sec or self._default_timeout,
+            cmd,
+            workdir,
+            timeout_sec or self._default_timeout,
         )
         return self._build_result(workdir, rc, stdout, stderr, elapsed, to)
 
@@ -633,12 +644,18 @@ class ClaudeCodeAgent(_CliAgentBase):
     ) -> CodeAgentResult:
         _seed_workdir(workdir, current_files)
         prompt = self._refine_prompt(
-            current_files, run_summaries, metric_key, metric_direction,
-            topic, extra_hints,
+            current_files,
+            run_summaries,
+            metric_key,
+            metric_direction,
+            topic,
+            extra_hints,
         )
         cmd = self._build_cmd(prompt, workdir)
         rc, stdout, stderr, elapsed, to = self._run_subprocess(
-            cmd, workdir, timeout_sec or self._default_timeout,
+            cmd,
+            workdir,
+            timeout_sec or self._default_timeout,
         )
         return self._build_result(workdir, rc, stdout, stderr, elapsed, to)
 
@@ -654,7 +671,9 @@ class ClaudeCodeAgent(_CliAgentBase):
         prompt = self._repair_prompt(files, issues)
         cmd = self._build_cmd(prompt, workdir)
         rc, stdout, stderr, elapsed, to = self._run_subprocess(
-            cmd, workdir, timeout_sec or self._default_timeout,
+            cmd,
+            workdir,
+            timeout_sec or self._default_timeout,
         )
         return self._build_result(workdir, rc, stdout, stderr, elapsed, to)
 
@@ -662,6 +681,7 @@ class ClaudeCodeAgent(_CliAgentBase):
 # ---------------------------------------------------------------------------
 # CodexAgent
 # ---------------------------------------------------------------------------
+
 
 class CodexAgent(_CliAgentBase):
     """Code agent backed by OpenAI Codex CLI (``codex exec``)."""
@@ -671,10 +691,13 @@ class CodexAgent(_CliAgentBase):
     def _build_cmd(self, prompt: str, workdir: Path) -> list[str]:
         cmd = [
             self._binary,
-            "exec", prompt,
-            "--sandbox", "workspace-write",
+            "exec",
+            prompt,
+            "--sandbox",
+            "workspace-write",
             "--json",
-            "-C", str(workdir),
+            "-C",
+            str(workdir),
         ]
         if self._model:
             cmd += ["-m", self._model]
@@ -694,11 +717,18 @@ class CodexAgent(_CliAgentBase):
         timeout_sec: int = 600,
     ) -> CodeAgentResult:
         prompt = self._generate_prompt(
-            topic, exp_plan, metric_key, pkg_hint, compute_budget, extra_guidance,
+            topic,
+            exp_plan,
+            metric_key,
+            pkg_hint,
+            compute_budget,
+            extra_guidance,
         )
         cmd = self._build_cmd(prompt, workdir)
         rc, stdout, stderr, elapsed, to = self._run_subprocess(
-            cmd, workdir, timeout_sec or self._default_timeout,
+            cmd,
+            workdir,
+            timeout_sec or self._default_timeout,
         )
         return self._build_result(workdir, rc, stdout, stderr, elapsed, to)
 
@@ -716,12 +746,18 @@ class CodexAgent(_CliAgentBase):
     ) -> CodeAgentResult:
         _seed_workdir(workdir, current_files)
         prompt = self._refine_prompt(
-            current_files, run_summaries, metric_key, metric_direction,
-            topic, extra_hints,
+            current_files,
+            run_summaries,
+            metric_key,
+            metric_direction,
+            topic,
+            extra_hints,
         )
         cmd = self._build_cmd(prompt, workdir)
         rc, stdout, stderr, elapsed, to = self._run_subprocess(
-            cmd, workdir, timeout_sec or self._default_timeout,
+            cmd,
+            workdir,
+            timeout_sec or self._default_timeout,
         )
         return self._build_result(workdir, rc, stdout, stderr, elapsed, to)
 
@@ -737,7 +773,9 @@ class CodexAgent(_CliAgentBase):
         prompt = self._repair_prompt(files, issues)
         cmd = self._build_cmd(prompt, workdir)
         rc, stdout, stderr, elapsed, to = self._run_subprocess(
-            cmd, workdir, timeout_sec or self._default_timeout,
+            cmd,
+            workdir,
+            timeout_sec or self._default_timeout,
         )
         return self._build_result(workdir, rc, stdout, stderr, elapsed, to)
 
@@ -745,6 +783,7 @@ class CodexAgent(_CliAgentBase):
 # ---------------------------------------------------------------------------
 # Factory
 # ---------------------------------------------------------------------------
+
 
 def create_code_agent(
     config: RCConfig,
@@ -766,8 +805,7 @@ def create_code_agent(
         binary = agent_cfg.binary_path or shutil.which("claude")
         if not binary:
             raise RuntimeError(
-                "Claude Code binary not found. "
-                "Install it or set experiment.code_agent.binary_path."
+                "Claude Code binary not found. Install it or set experiment.code_agent.binary_path."
             )
         return ClaudeCodeAgent(  # type: ignore[return-value]
             binary_path=binary,
@@ -781,8 +819,7 @@ def create_code_agent(
         binary = agent_cfg.binary_path or shutil.which("codex")
         if not binary:
             raise RuntimeError(
-                "Codex binary not found. "
-                "Install it or set experiment.code_agent.binary_path."
+                "Codex binary not found. Install it or set experiment.code_agent.binary_path."
             )
         return CodexAgent(  # type: ignore[return-value]
             binary_path=binary,

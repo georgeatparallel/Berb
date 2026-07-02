@@ -406,11 +406,17 @@ def _execute_literature_collect(
             len(expanded_queries),
             len(queries),
         )
+        _pplx = config.perplexity
         papers = search_papers_multi_query(
             expanded_queries,
             limit_per_query=40,
             year_min=year_min,
             s2_api_key=config.llm.s2_api_key,
+            perplexity_top_up=_pplx.enabled,
+            perplexity_min_candidates=_pplx.literature_min_candidates,
+            perplexity_min_failed_sources=_pplx.literature_min_failed_sources,
+            perplexity_domain_filter=list(_pplx.domain_filter) or None,
+            perplexity_recency_filter=_pplx.recency_filter or None,
         )
         if papers:
             real_search_succeeded = True

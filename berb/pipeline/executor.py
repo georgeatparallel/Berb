@@ -35,6 +35,11 @@ from berb.pipeline.stages import (
 from berb.pipeline.registry import get_registration
 from berb.prompts import PromptManager
 
+# Re-exported for backward compatibility: callers (e.g. packaging.py) import
+# _extract_paper_title from here rather than the _figure_helpers module it
+# actually lives in.
+from berb.pipeline._figure_helpers import _extract_paper_title  # noqa: F401
+
 logger = logging.getLogger(__name__)
 
 # ============================================================================
@@ -357,27 +362,6 @@ def execute_stage(
     return result
 
 
-def _sanitize_fabricated_data(
-    paper_text: str,
-    run_dir: Path,
-) -> tuple[str, dict]:
-    """Sanitize potentially fabricated numerical data from paper.
-
-    P5 TODO: Implement full sanitization with experiment data verification.
-    For now, this is a stub that passes tests but doesn't modify content.
-
-    Args:
-        paper_text: Paper text to sanitize
-        run_dir: Run directory with experiment results
-
-    Returns:
-        Tuple of (sanitized text, sanitization report)
-    """
-    # Stub implementation - P5 TODO
-    report = {
-        "sanitized": False,
-        "numbers_replaced": 0,
-        "numbers_kept": 0,
-        "note": "Sanitization not yet implemented",
-    }
-    return paper_text, report
+from berb.pipeline.stage_impls._review_publish import (  # noqa: E402,F401
+    _sanitize_fabricated_data,
+)

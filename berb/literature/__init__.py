@@ -10,32 +10,34 @@ for handling 200-400 papers efficiently.
 """
 
 from .citation_classifier import (
-    CitationClassifier,
-    CitationIntent,
     CitationClassification,
-    PaperCitationProfile,
+    CitationClassifier,
     CitationClassifierConfig,
+    CitationIntent,
+    PaperCitationProfile,
     classify_citations,
 )
 from .citation_graph import (
-    CitationGraphEngine,
     CitationGraphClient,
     CitationGraphConfig,
+    CitationGraphEngine,
     Cluster,
     Contradiction,
     JournalQuality,
-    Paper as CitationGraphPaper,
     analyze_citation_network,
 )
+from .citation_graph import (
+    Paper as CitationGraphPaper,
+)
 from .evidence_map import (
+    ClaimEvidence,
+    ConsensusLevel,
+    EvidenceConsensusConfig,
     EvidenceConsensusMapper,
     EvidenceMap,
     EvidenceMapGenerator,
-    ClaimEvidence,
     StudyProfile,
     StudyType,
-    ConsensusLevel,
-    EvidenceConsensusConfig,
     build_evidence_map,
 )
 from .fs_processor import (
@@ -49,39 +51,41 @@ from .fs_query import (
 )
 from .models import Author, Paper
 from .multimodal_search import (
-    MultimodalLiteratureAgent,
-    MultimodalPaper,
-    FigureAnalysis,
     ExtractedChartData,
     ExtractedTableData,
+    FigureAnalysis,
+    MultimodalLiteratureAgent,
+    MultimodalPaper,
     analyze_paper_multimodal,
 )
 from .recency_filter import (
+    RecencyAwareRanker,
     RecencyFilter,
     RecencyFilterConfig,
-    RecencyAwareRanker,
     filter_papers_by_recency,
     rank_papers_with_recency,
 )
 from .search import search_papers
 from .section_analysis import (
-    SectionCitationAnalyzer,
-    SectionCitation,
-    PaperSection,
-    CitationPurpose,
-    PaperCitationProfile as SectionPaperCitationProfile,
-    CitationRecommendation,
-    SectionCitationAnalysis,
-    SectionAnalysisConfig,
     CitationPlacementOptimizer,
+    CitationPurpose,
+    CitationRecommendation,
+    PaperSection,
+    SectionAnalysisConfig,
+    SectionCitation,
+    SectionCitationAnalysis,
+    SectionCitationAnalyzer,
     analyze_section_citations,
 )
+from .section_analysis import (
+    PaperCitationProfile as SectionPaperCitationProfile,
+)
 from .structured_notes import (
-    StructuredNotesGenerator,
-    PaperReadingNote,
     ClaimWithEvidence,
+    PaperReadingNote,
     ReadingNotesCollection,
     ReadingNotesConfig,
+    StructuredNotesGenerator,
     generate_reading_notes,
 )
 from .verify import (

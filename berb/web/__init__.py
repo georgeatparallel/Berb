@@ -21,34 +21,31 @@ Public API
 """
 
 from berb.web._ssrf import check_url_ssrf
+from berb.web.agent import WebSearchAgent
 from berb.web.crawler import WebCrawler
-from berb.web.search import WebSearchClient
-from berb.web.searxng_client import SearXNGClient, SearXNGConfig
 from berb.web.firecrawl_client import (
+    CrawlResult,
     FirecrawlClient,
     FirecrawlConfig,
+    MapResult,
     ScrapeFormat,
     ScrapeResult,
-    CrawlResult,
-    MapResult,
 )
-from berb.web.scholar import GoogleScholarClient
 from berb.web.pdf_extractor import PDFExtractor
-from berb.web.agent import WebSearchAgent
+from berb.web.scholar import GoogleScholarClient
+from berb.web.search import WebSearchClient
+from berb.web.searxng_client import SearXNGClient, SearXNGConfig
 
 __all__ = [
     # Security
     "check_url_ssrf",
-    
     # Crawling
     "WebCrawler",
-    
     # Search
     "WebSearchClient",
     "SearXNGClient",
     "SearXNGConfig",
     "GoogleScholarClient",
-    
     # Scraping/Crawling
     "FirecrawlClient",
     "FirecrawlConfig",
@@ -56,10 +53,8 @@ __all__ = [
     "ScrapeResult",
     "CrawlResult",
     "MapResult",
-    
     # PDF
     "PDFExtractor",
-    
     # Agent
     "WebSearchAgent",
 ]

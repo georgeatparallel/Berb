@@ -21,8 +21,9 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from difflib import SequenceMatcher
 from typing import Any
 
@@ -178,6 +179,92 @@ def _compute_similarity(
 
 
 # ---------------------------------------------------------------------------
+# Perplexity-backed novelty grounding
+# ---------------------------------------------------------------------------
+#
+# The keyword/title-similarity scoring above only catches overlap with
+# papers already retrieved via search.py's academic cascade. It can't
+# answer "has this exact idea been published" the way a reasoning model
+# with live search access can — sonar-reasoning-pro is asked to search
+# AND reason about conceptual overlap, not just retrieve candidates for
+# local scoring. This supplements _assess_novelty()'s score; it never
+# replaces it, and it degrades to a no-op without an API key.
+
+_NOVELTY_PROMPT_TEMPLATE = """Research topic: {topic}
+
+Proposed hypotheses:
+{hypotheses}
+
+Search for existing published work that overlaps with these hypotheses —
+not just similar topics, but the same specific idea or approach.
+
+Return ONLY a JSON object in this exact shape, nothing else:
+{{"likely_novel": true/false, "confidence": 0.0-1.0, \
+"overlapping_work": [{{"title": "...", "why": "..."}}], "reasoning": "..."}}
+
+Rules:
+- "likely_novel": false only if you found work that does substantially
+  the same thing, not just a related topic.
+- "overlapping_work" should only list papers you actually found via search.
+- Keep "reasoning" to 1-2 sentences."""
+
+
+def _extract_json_object(text: str) -> dict[str, Any] | None:
+    """Parse a JSON object out of LLM output, tolerating markdown fences."""
+    cleaned = text.strip()
+    if cleaned.startswith("```"):
+        cleaned = cleaned.strip("`")
+        if cleaned.lower().startswith("json"):
+            cleaned = cleaned[4:]
+        cleaned = cleaned.strip()
+    try:
+        result = json.loads(cleaned)
+    except (json.JSONDecodeError, ValueError):
+        return None
+    return result if isinstance(result, dict) else None
+
+
+def _check_perplexity_novelty(
+    topic: str,
+    hypotheses_text: str,
+    *,
+    api_key: str = "",
+) -> dict[str, Any] | None:
+    """Ask Perplexity Sonar (search + reasoning) whether this has been done.
+
+    Returns None if no API key is configured or the check fails for any
+    reason — this is a supplementary signal, never a blocker.
+    """
+    key = api_key or os.environ.get("PERPLEXITY_API_KEY", "")
+    if not key:
+        return None
+
+    try:
+        from berb.llm.deep_query_client import DeepQueryClient
+
+        client = DeepQueryClient(api_key=key)
+        prompt = _NOVELTY_PROMPT_TEMPLATE.format(
+            topic=topic, hypotheses=hypotheses_text[:6000]
+        )
+        result = client.search(prompt, model="reasoning", max_tokens=2000, temperature=0.1)
+    except RuntimeError as exc:
+        logger.warning("Perplexity novelty check failed: %s", exc)
+        return None
+
+    payload = _extract_json_object(result.content)
+    if not payload or "likely_novel" not in payload:
+        logger.warning("Perplexity novelty check returned unparseable content")
+        return None
+
+    return {
+        "likely_novel": bool(payload.get("likely_novel", True)),
+        "confidence": float(payload.get("confidence", 0.5)),
+        "overlapping_work": payload.get("overlapping_work", []),
+        "reasoning": str(payload.get("reasoning", "")),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -190,6 +277,8 @@ def check_novelty(
     max_search_results: int = 30,
     similarity_threshold: float = 0.25,
     s2_api_key: str = "",
+    perplexity_check: bool = True,
+    perplexity_api_key: str = "",
 ) -> dict[str, Any]:
     """Check whether the proposed research has significant overlap with existing work.
 
@@ -208,11 +297,17 @@ def check_novelty(
         Minimum similarity to flag a paper as potentially overlapping.
     s2_api_key:
         Optional Semantic Scholar API key.
+    perplexity_check:
+        Whether to also run the Perplexity search+reasoning grounding
+        check. No-ops if PERPLEXITY_API_KEY isn't configured either way.
+    perplexity_api_key:
+        Optional Perplexity API key (falls back to PERPLEXITY_API_KEY env).
 
     Returns
     -------
     dict with keys: topic, hypotheses_checked, similar_papers_found,
-    novelty_score, assessment, similar_papers, recommendation, generated.
+    novelty_score, assessment, similar_papers, recommendation, generated,
+    perplexity_check (None if not run).
     """
     # Extract keywords from topic + hypotheses
     combined_text = f"{topic}\n{hypotheses_text}"
@@ -257,9 +352,7 @@ def check_novelty(
             similarity_threshold,
         )
     except Exception:  # noqa: BLE001
-        logger.warning(
-            "Real novelty search failed, checking pipeline papers only", exc_info=True
-        )
+        logger.warning("Real novelty search failed, checking pipeline papers only", exc_info=True)
 
     # Also check papers already collected by the pipeline
     if papers_already_seen:
@@ -313,6 +406,28 @@ def check_novelty(
     else:
         recommendation = "proceed"
 
+    # --- Perplexity grounding check (supplements, doesn't replace, the
+    # keyword-based score above — catches conceptual overlap that keyword
+    # matching against retrieved candidates alone would miss) ---
+    pplx_result: dict[str, Any] | None = None
+    if perplexity_check:
+        pplx_result = _check_perplexity_novelty(
+            topic, hypotheses_text, api_key=perplexity_api_key
+        )
+        if pplx_result and not pplx_result["likely_novel"] and pplx_result["confidence"] >= 0.6:
+            # Perplexity found the same idea already published with
+            # reasonable confidence — don't let a locally-computed "high"
+            # novelty score wave this through unexamined.
+            logger.warning(
+                "Perplexity flagged likely overlap (confidence=%.2f) despite "
+                "local novelty_score=%.3f: %s",
+                pplx_result["confidence"],
+                novelty_score,
+                pplx_result["reasoning"],
+            )
+            if recommendation == "proceed":
+                recommendation = "differentiate"
+
     # Count hypotheses
     hyp_count = len(re.findall(r"^##\s+H\d+", hypotheses_text, re.MULTILINE))
     if hyp_count == 0:
@@ -331,7 +446,8 @@ def check_novelty(
         "similarity_threshold": similarity_threshold,
         "search_coverage": search_coverage,
         "total_papers_retrieved": total_papers_retrieved,
-        "generated": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "perplexity_check": pplx_result,
+        "generated": datetime.now(UTC).isoformat(timespec="seconds"),
     }
 
 
@@ -371,7 +487,7 @@ def _assess_novelty(
     # Take top-5 most similar
     top = similar_papers[:5]
     max_sim = max(p["similarity"] for p in top)
-    avg_sim = sum(p["similarity"] for p in top) / len(top)
+    sum(p["similarity"] for p in top) / len(top)
 
     # High-citation papers with high similarity are more concerning
     high_cite_overlap = sum(

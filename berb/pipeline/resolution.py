@@ -8,7 +8,7 @@ computes a topological execution order at runtime.
 
 from __future__ import annotations
 
-from collections import defaultdict, deque
+from collections import defaultdict
 
 from berb.pipeline.contracts import CONTRACTS
 from berb.pipeline.stages import Stage
@@ -44,20 +44,29 @@ def resolve_stage_order(
             in_degree[stage] = in_degree.get(stage, 0) + 1
             dependents[dep].add(stage)
 
-    # Kahn's algorithm: start with stages that have zero in-degree
-    queue: deque[Stage] = deque()
-    for stage, degree in in_degree.items():
-        if degree == 0:
-            queue.append(stage)
+    # Kahn's algorithm: start with stages that have zero in-degree.
+    # Ties (multiple stages simultaneously eligible) are broken by ascending
+    # stage number so the result is deterministic and matches the intended
+    # numeric stage ordering whenever the dependency graph allows more than
+    # one valid topological order (e.g. sibling stages that both depend on
+    # the same upstream stage but not on each other).
+    queue: list[Stage] = sorted(
+        (stage for stage, degree in in_degree.items() if degree == 0),
+        key=int,
+    )
 
     result: list[Stage] = []
     while queue:
-        stage = queue.popleft()
+        stage = queue.pop(0)
         result.append(stage)
+        newly_ready: list[Stage] = []
         for dependent in dependents.get(stage, set()):
             in_degree[dependent] -= 1
             if in_degree[dependent] == 0:
-                queue.append(dependent)
+                newly_ready.append(dependent)
+        if newly_ready:
+            queue.extend(newly_ready)
+            queue.sort(key=int)
 
     # If start_from is given, skip everything before it
     if start_from is not None:

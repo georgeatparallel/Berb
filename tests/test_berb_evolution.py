@@ -158,15 +158,17 @@ class TestExtractLessons:
         stage_dir = run_dir / "stage-15"
         stage_dir.mkdir(parents=True)
         (stage_dir / "decision_structured.json").write_text(
-            json.dumps({
-                "decision": "refine",
-                "raw_text_excerpt": (
-                    "## Decision\n**REFINE**\n\n"
-                    "## Justification\n"
-                    "The analysis provides promising evidence but lacks statistical rigor."
-                ),
-                "generated": "2026-03-11T05:15:43+00:00",
-            }),
+            json.dumps(
+                {
+                    "decision": "refine",
+                    "raw_text_excerpt": (
+                        "## Decision\n**REFINE**\n\n"
+                        "## Justification\n"
+                        "The analysis provides promising evidence but lacks statistical rigor."
+                    ),
+                    "generated": "2026-03-11T05:15:43+00:00",
+                }
+            ),
             encoding="utf-8",
         )
         results = [self._make_result(15, "done", decision="refine")]
@@ -178,10 +180,12 @@ class TestExtractLessons:
         runs_dir = run_dir / "stage-12" / "runs"
         runs_dir.mkdir(parents=True)
         (runs_dir / "run-1.json").write_text(
-            json.dumps({
-                "metrics": {"loss": 0.5},
-                "stderr": "RuntimeWarning: invalid value encountered in divide",
-            }),
+            json.dumps(
+                {
+                    "metrics": {"loss": 0.5},
+                    "stderr": "RuntimeWarning: invalid value encountered in divide",
+                }
+            ),
             encoding="utf-8",
         )
         results = [self._make_result(12, "done")]
@@ -198,8 +202,7 @@ class TestExtractLessons:
         )
         results = [self._make_result(12, "done")]
         lessons = extract_lessons(results, run_dir=run_dir)
-        assert any("accuracy" in l.description and "nan" in l.description.lower()
-                    for l in lessons)
+        assert any("accuracy" in l.description and "nan" in l.description.lower() for l in lessons)
 
     def test_no_runtime_lessons_without_run_dir(self) -> None:
         results = [self._make_result(12, "done")]
@@ -229,10 +232,10 @@ class TestEvolutionStore:
     def test_append_many(self, tmp_path: Path) -> None:
         store = EvolutionStore(tmp_path / "evo")
         lessons = [
-            LessonEntry("s1", 1, "system", "error", "err1",
-                        datetime.now(timezone.utc).isoformat()),
-            LessonEntry("s2", 2, "pipeline", "info", "info1",
-                        datetime.now(timezone.utc).isoformat()),
+            LessonEntry("s1", 1, "system", "error", "err1", datetime.now(timezone.utc).isoformat()),
+            LessonEntry(
+                "s2", 2, "pipeline", "info", "info1", datetime.now(timezone.utc).isoformat()
+            ),
         ]
         store.append_many(lessons)
         assert store.count() == 2
@@ -249,10 +252,10 @@ class TestEvolutionStore:
     def test_query_for_stage_returns_relevant_lessons(self, tmp_path: Path) -> None:
         store = EvolutionStore(tmp_path / "evo")
         now = datetime.now(timezone.utc).isoformat(timespec="seconds")
-        store.append(LessonEntry("hypothesis_gen", 8, "pipeline", "error",
-                                 "Failed hypothesis", now))
-        store.append(LessonEntry("paper_draft", 17, "writing", "warning",
-                                 "Draft too short", now))
+        store.append(
+            LessonEntry("hypothesis_gen", 8, "pipeline", "error", "Failed hypothesis", now)
+        )
+        store.append(LessonEntry("paper_draft", 17, "writing", "warning", "Draft too short", now))
         result = store.query_for_stage("hypothesis_gen", max_lessons=5)
         # hypothesis_gen lesson should be boosted
         assert len(result) >= 1
@@ -262,8 +265,7 @@ class TestEvolutionStore:
         store = EvolutionStore(tmp_path / "evo")
         now = datetime.now(timezone.utc).isoformat(timespec="seconds")
         for i in range(10):
-            store.append(LessonEntry("stage_1", 1, "system", "error",
-                                     f"Error {i}", now))
+            store.append(LessonEntry("stage_1", 1, "system", "error", f"Error {i}", now))
         result = store.query_for_stage("stage_1", max_lessons=3)
         assert len(result) == 3
 
@@ -274,8 +276,11 @@ class TestEvolutionStore:
     def test_build_overlay_returns_formatted_text(self, tmp_path: Path) -> None:
         store = EvolutionStore(tmp_path / "evo")
         now = datetime.now(timezone.utc).isoformat(timespec="seconds")
-        store.append(LessonEntry("hypothesis_gen", 8, "experiment", "error",
-                                 "Code syntax error in experiment", now))
+        store.append(
+            LessonEntry(
+                "hypothesis_gen", 8, "experiment", "error", "Code syntax error in experiment", now
+            )
+        )
         overlay = store.build_overlay("hypothesis_gen")
         assert "Lessons from Prior Runs" in overlay
         assert "Code syntax error" in overlay

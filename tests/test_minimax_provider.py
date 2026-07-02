@@ -22,6 +22,7 @@ from berb.llm.client import LLMClient, LLMConfig, LLMResponse
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 class _DummyHTTPResponse:
     """Minimal stub for ``urllib.request.urlopen`` results."""
 
@@ -413,6 +414,7 @@ class TestMiniMaxLiveAPI:
         )
         # MiniMax M2.5 may wrap JSON in markdown code fences
         import re
+
         text = resp.content.strip()
         fence_match = re.search(r"```(?:json)?\s*\n(.*?)```", text, re.DOTALL)
         if fence_match:

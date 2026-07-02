@@ -17,7 +17,7 @@ class PhysicsPromptAdapter(PromptAdapter):
     def get_code_generation_blocks(self, context: dict[str, Any]) -> PromptBlocks:
         domain = self.domain
         paradigm = domain.experiment_paradigm
-        libs = ", ".join(domain.core_libraries) if domain.core_libraries else "numpy, scipy"
+        ", ".join(domain.core_libraries) if domain.core_libraries else "numpy, scipy"
 
         code_hints = domain.code_generation_hints or self._default_code_hints(paradigm)
 
@@ -43,9 +43,15 @@ class PhysicsPromptAdapter(PromptAdapter):
         )
 
         if domain.standard_baselines:
-            design_context += f"\nStandard reference methods: {', '.join(domain.standard_baselines)}\n"
+            design_context += (
+                f"\nStandard reference methods: {', '.join(domain.standard_baselines)}\n"
+            )
 
-        stats = ", ".join(domain.statistical_tests) if domain.statistical_tests else "convergence order analysis"
+        stats = (
+            ", ".join(domain.statistical_tests)
+            if domain.statistical_tests
+            else "convergence order analysis"
+        )
 
         return PromptBlocks(
             experiment_design_context=design_context,
@@ -54,7 +60,8 @@ class PhysicsPromptAdapter(PromptAdapter):
 
     def get_result_analysis_blocks(self, context: dict[str, Any]) -> PromptBlocks:
         return PromptBlocks(
-            result_analysis_hints=self.domain.result_analysis_hints or (
+            result_analysis_hints=self.domain.result_analysis_hints
+            or (
                 "Physics result analysis:\n"
                 "- Convergence: fit log(error) vs log(h) for order\n"
                 "- Conservation: track energy/momentum drift\n"

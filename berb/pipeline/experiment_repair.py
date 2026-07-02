@@ -226,9 +226,7 @@ def select_best_results(
     # Sort by quality score (descending)
     candidates.sort(key=lambda x: x[0], reverse=True)
     best_score, best_cycle, best_summary = candidates[0]
-    logger.info(
-        "Best experiment results from cycle %d (score=%.2f)", best_cycle, best_score
-    )
+    logger.info("Best experiment results from cycle %d (score=%.2f)", best_cycle, best_score)
     return best_summary
 
 
@@ -304,7 +302,9 @@ def run_repair_loop(
     if not summary:
         logger.warning("[%s] Repair loop: no experiment_summary.json found", run_id)
         return ExperimentRepairResult(
-            success=False, total_cycles=0, final_mode=PaperMode.TECHNICAL_REPORT,
+            success=False,
+            total_cycles=0,
+            final_mode=PaperMode.TECHNICAL_REPORT,
         )
 
     # Initial quality assessment — pass user-configured thresholds
@@ -314,8 +314,11 @@ def run_repair_loop(
     if qa.sufficient:
         logger.info("[%s] Repair loop: experiment already sufficient (%s)", run_id, qa.mode.value)
         return ExperimentRepairResult(
-            success=True, total_cycles=0, final_mode=qa.mode,
-            final_assessment=qa, best_experiment_summary=summary,
+            success=True,
+            total_cycles=0,
+            final_mode=qa.mode,
+            final_assessment=qa,
+            best_experiment_summary=summary,
         )
 
     # Load experiment code
@@ -323,7 +326,9 @@ def run_repair_loop(
     if not code:
         logger.warning("[%s] Repair loop: no experiment code found", run_id)
         return ExperimentRepairResult(
-            success=False, total_cycles=0, final_mode=qa.mode,
+            success=False,
+            total_cycles=0,
+            final_mode=qa.mode,
         )
 
     # Collect stdout/stderr for diagnosis
@@ -335,11 +340,14 @@ def run_repair_loop(
     # Create LLM client
     try:
         from berb.llm import create_llm_client
+
         llm = create_llm_client(config)
     except Exception as exc:
         logger.error("[%s] Repair loop: cannot create LLM client: %s", run_id, exc)
         return ExperimentRepairResult(
-            success=False, total_cycles=0, final_mode=qa.mode,
+            success=False,
+            total_cycles=0,
+            final_mode=qa.mode,
         )
 
     cycle_history: list[RepairCycleResult] = []
@@ -367,18 +375,26 @@ def run_repair_loop(
 
         # 2. Build repair prompt
         repair_prompt = build_repair_prompt(
-            diag, code, experiment_plan=plan,
+            diag,
+            code,
+            experiment_plan=plan,
             time_budget_sec=config.experiment.time_budget_sec,
         )
 
         # 3. Get fixed code via LLM (with OpenCode fallback)
         fixed_code = _get_repaired_code(
-            repair_prompt, code, llm, config, run_dir, cycle,
+            repair_prompt,
+            code,
+            llm,
+            config,
+            run_dir,
+            cycle,
         )
 
         if not fixed_code:
             cycle_result = RepairCycleResult(
-                cycle=cycle, diagnosis=diag,
+                cycle=cycle,
+                diagnosis=diag,
                 repair_applied=False,
                 error="Failed to generate repaired code",
             )
@@ -396,18 +412,24 @@ def run_repair_loop(
             (exp_dir / fname).write_text(content, encoding="utf-8")
         logger.info(
             "[%s] Repair cycle %d: saved %d files to %s",
-            run_id, cycle, len(fixed_code), exp_dir,
+            run_id,
+            cycle,
+            len(fixed_code),
+            exp_dir,
         )
 
         # 5. Re-run experiment in sandbox
         sandbox_result = _run_experiment_in_sandbox(
-            exp_dir, config, repair_dir,
+            exp_dir,
+            config,
+            repair_dir,
             timeout_sec=repair_cfg.timeout_sec_per_cycle,
         )
 
         if sandbox_result is None:
             cycle_result = RepairCycleResult(
-                cycle=cycle, diagnosis=diag,
+                cycle=cycle,
+                diagnosis=diag,
                 repair_applied=True,
                 repair_description=f"Fixed {len(fixed_code)} files",
                 error="Sandbox execution failed",
@@ -448,7 +470,12 @@ def run_repair_loop(
 
         logger.info(
             "[%s] Repair cycle %d: score %.1f → %.1f, mode=%s, sufficient=%s",
-            run_id, cycle, old_score, new_score, new_qa.mode.value, new_qa.sufficient,
+            run_id,
+            cycle,
+            old_score,
+            new_score,
+            new_qa.mode.value,
+            new_qa.sufficient,
         )
         print(
             f"[{run_id}] Repair cycle {cycle}: "
@@ -478,7 +505,10 @@ def run_repair_loop(
     elapsed = _time.monotonic() - loop_start
     logger.info(
         "[%s] Repair loop completed: %d cycles in %.1fs, best mode=%s",
-        run_id, len(cycle_history), elapsed, best_mode.value,
+        run_id,
+        len(cycle_history),
+        elapsed,
+        best_mode.value,
     )
 
     # Promote best summary only if a repair cycle actually improved it
@@ -654,7 +684,8 @@ def _repair_via_opencode(
             model=getattr(_oc_cfg, "model", "") or "",
             llm_base_url=getattr(config.llm, "base_url", "") or "",
             api_key_env=getattr(config.llm, "api_key_env", "") or "",
-            llm_provider=getattr(config.llm, "provider", "openai-compatible") or "openai-compatible",
+            llm_provider=getattr(config.llm, "provider", "openai-compatible")
+            or "openai-compatible",
             timeout_sec=getattr(_oc_cfg, "timeout_sec", 600),
             max_retries=getattr(_oc_cfg, "max_retries", 1),
             workspace_cleanup=getattr(_oc_cfg, "workspace_cleanup", True),
@@ -676,7 +707,8 @@ def _repair_via_opencode(
             merged.update(result.files)
             logger.info(
                 "OpenCode repair: %d files generated (%d total after merge)",
-                len(result.files), len(merged),
+                len(result.files),
+                len(merged),
             )
             return merged
 
@@ -729,7 +761,8 @@ def _repair_via_llm(
     merged.update(files)
     logger.info(
         "LLM repair: extracted %d files (%d total after merge)",
-        len(files), len(merged),
+        len(files),
+        len(merged),
     )
     return merged
 
@@ -822,6 +855,7 @@ def _build_experiment_summary_from_run(
     if not metrics and stdout:
         try:
             from berb.experiment.sandbox import parse_metrics
+
             metrics = parse_metrics(stdout)
         except ImportError:
             pass
@@ -855,7 +889,7 @@ def _build_experiment_summary_from_run(
             pass
 
     # Compute per-condition mean metrics
-    for cond_name, cdata in condition_summaries.items():
+    for _cond_name, cdata in condition_summaries.items():
         seeds = cdata.get("seeds", {})
         if seeds:
             cdata["n_seeds"] = len(seeds)

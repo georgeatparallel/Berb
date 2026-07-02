@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -25,9 +25,9 @@ from berb.validation.claim_confidence import (
     ClaimConfidenceResult,
 )
 from berb.validation.source_alignment import (
-    SourceClaimAligner,
-    AlignmentResult,
     AlignmentCheck,
+    AlignmentResult,
+    SourceClaimAligner,
 )
 
 logger = logging.getLogger(__name__)
@@ -99,48 +99,40 @@ class VerificationReport(BaseModel):
     overall_score: float = Field(default=5.0, ge=0.0, le=10.0)
     claims: list[ClaimVerification] = Field(default_factory=list)
     recommendations: list[str] = Field(default_factory=list)
-    generated_at: str = Field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
+    generated_at: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())
 
     def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
         # Calculate derived fields
         self.total_claims = len(self.claims)
         self.well_supported = sum(
-            1 for c in self.claims
-            if c.confidence_level == ClaimConfidenceLevel.WELL_SUPPORTED
+            1 for c in self.claims if c.confidence_level == ClaimConfidenceLevel.WELL_SUPPORTED
         )
         self.weakly_supported = sum(
-            1 for c in self.claims
-            if c.confidence_level == ClaimConfidenceLevel.WEAKLY_SUPPORTED
+            1 for c in self.claims if c.confidence_level == ClaimConfidenceLevel.WEAKLY_SUPPORTED
         )
         self.unsupported = sum(
-            1 for c in self.claims
-            if c.confidence_level == ClaimConfidenceLevel.UNSUPPORTED
+            1 for c in self.claims if c.confidence_level == ClaimConfidenceLevel.UNSUPPORTED
         )
         self.overstated = sum(
-            1 for c in self.claims
-            if c.confidence_level == ClaimConfidenceLevel.OVERSTATED
+            1 for c in self.claims if c.confidence_level == ClaimConfidenceLevel.OVERSTATED
         )
         self.contradicted = sum(
-            1 for c in self.claims
-            if c.confidence_level == ClaimConfidenceLevel.CONTRADICTED
+            1 for c in self.claims if c.confidence_level == ClaimConfidenceLevel.CONTRADICTED
         )
         self.misaligned = sum(
-            1 for c in self.claims
-            if c.alignment_result == AlignmentResult.MISALIGNED
+            1 for c in self.claims if c.alignment_result == AlignmentResult.MISALIGNED
         )
 
         # Calculate overall score
         if self.total_claims > 0:
             self.overall_score = (
-                (self.well_supported * 10 +
-                 self.weakly_supported * 6 +
-                 self.overstated * 3 +
-                 self.unsupported * 2 +
-                 self.contradicted * 1) / self.total_claims
-            )
+                self.well_supported * 10
+                + self.weakly_supported * 6
+                + self.overstated * 3
+                + self.unsupported * 2
+                + self.contradicted * 1
+            ) / self.total_claims
             # Penalize misaligned citations
             self.overall_score -= self.misaligned * 0.5
             self.overall_score = max(0.0, min(10.0, self.overall_score))
@@ -219,9 +211,7 @@ class ClaimVerificationPipeline:
                     alignment_checks.append(check)
 
             # Build verification
-            verification = self._build_verification(
-                claim, confidence_result, alignment_checks
-            )
+            verification = self._build_verification(claim, confidence_result, alignment_checks)
             verifications.append(verification)
 
         # Step 3: Generate report
@@ -258,7 +248,8 @@ class ClaimVerificationPipeline:
         # If claim has citations, use those
         if hasattr(claim, "citations") and claim.citations:
             return [
-                ref for ref in references
+                ref
+                for ref in references
                 if ref.get("id") in claim.citations or ref.get("doi") in claim.citations
             ]
 
@@ -287,8 +278,7 @@ class ClaimVerificationPipeline:
 
         # Check for misaligned citations
         misaligned = [
-            check for check in alignment_checks
-            if check.alignment == AlignmentResult.MISALIGNED
+            check for check in alignment_checks if check.alignment == AlignmentResult.MISALIGNED
         ]
 
         # Determine if revision required
@@ -309,8 +299,7 @@ class ClaimVerificationPipeline:
 
         # Get alignment result (use first if available)
         alignment_result = (
-            alignment_checks[0].alignment if alignment_checks
-            else AlignmentResult.CANNOT_DETERMINE
+            alignment_checks[0].alignment if alignment_checks else AlignmentResult.CANNOT_DETERMINE
         )
 
         return ClaimVerification(
@@ -340,32 +329,23 @@ class ClaimVerificationPipeline:
 
         # Count issues
         unsupported = sum(
-            1 for v in verifications
-            if v.confidence_level == ClaimConfidenceLevel.UNSUPPORTED
+            1 for v in verifications if v.confidence_level == ClaimConfidenceLevel.UNSUPPORTED
         )
         overstated = sum(
-            1 for v in verifications
-            if v.confidence_level == ClaimConfidenceLevel.OVERSTATED
+            1 for v in verifications if v.confidence_level == ClaimConfidenceLevel.OVERSTATED
         )
         misaligned = sum(
-            1 for v in verifications
-            if v.alignment_result == AlignmentResult.MISALIGNED
+            1 for v in verifications if v.alignment_result == AlignmentResult.MISALIGNED
         )
 
         if unsupported > 0:
-            recommendations.append(
-                f"Add citations for {unsupported} unsupported claims"
-            )
+            recommendations.append(f"Add citations for {unsupported} unsupported claims")
 
         if overstated > 0:
-            recommendations.append(
-                f"Soften language for {overstated} overstated claims"
-            )
+            recommendations.append(f"Soften language for {overstated} overstated claims")
 
         if misaligned > 0:
-            recommendations.append(
-                f"Fix {misaligned} misaligned citations"
-            )
+            recommendations.append(f"Fix {misaligned} misaligned citations")
 
         if not recommendations:
             recommendations.append("All claims are well-supported")
@@ -387,9 +367,7 @@ class ClaimVerificationPipeline:
             ClaimVerification
         """
         # Analyze confidence
-        confidence_result = await self.confidence_analyzer.analyze_confidence(
-            claim_text, sources
-        )
+        confidence_result = await self.confidence_analyzer.analyze_confidence(claim_text, sources)
 
         # Check alignment
         alignment_checks = []
@@ -425,10 +403,6 @@ class VerificationConfig:
     flag_unsupported: bool = True
     auto_fix: bool = False
     strict_mode: bool = False
-
-
-# Import dataclass
-from dataclasses import dataclass
 
 
 # Convenience functions

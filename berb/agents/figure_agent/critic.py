@@ -10,12 +10,11 @@ Outputs pass/fail per figure with specific fix suggestions.
 
 from __future__ import annotations
 
-import json
 import logging
 import re
 from typing import Any
 
-from berb.agents.base import BaseAgent, AgentStepResult
+from berb.agents.base import AgentStepResult, BaseAgent
 
 logger = logging.getLogger(__name__)
 
@@ -75,11 +74,18 @@ class CriticAgent(BaseAgent):
                     continue
                 figure_id = fig.get("figure_id", "unknown")
                 if not fig.get("success"):
-                    reviews.append({
-                        "figure_id": figure_id,
-                        "passed": False,
-                        "issues": [{"type": "render_failure", "message": fig.get("error", "Render failed")}],
-                    })
+                    reviews.append(
+                        {
+                            "figure_id": figure_id,
+                            "passed": False,
+                            "issues": [
+                                {
+                                    "type": "render_failure",
+                                    "message": fig.get("error", "Render failed"),
+                                }
+                            ],
+                        }
+                    )
                     all_passed = False
                     continue
 
@@ -101,7 +107,8 @@ class CriticAgent(BaseAgent):
             passed_count = sum(1 for r in reviews if r["passed"])
             self.logger.info(
                 "Critic review: %d/%d figures passed",
-                passed_count, len(reviews),
+                passed_count,
+                len(reviews),
             )
 
             return self._make_result(
@@ -135,21 +142,15 @@ class CriticAgent(BaseAgent):
         issues: list[dict[str, str]] = []
 
         # Dimension 1: Numerical accuracy
-        num_issues = self._check_numerical_accuracy(
-            script_code, condition_summaries, metric_key
-        )
+        num_issues = self._check_numerical_accuracy(script_code, condition_summaries, metric_key)
         issues.extend(num_issues)
 
         # Dimension 2: Text correctness
-        text_issues = self._check_text_correctness(
-            script_code, fig_info
-        )
+        text_issues = self._check_text_correctness(script_code, fig_info)
         issues.extend(text_issues)
 
         # Dimension 3: Visual quality (LLM-based)
-        quality_issues = self._check_visual_quality(
-            script_code, fig_info
-        )
+        quality_issues = self._check_visual_quality(script_code, fig_info)
         issues.extend(quality_issues)
 
         # Dimension 4: Rendered image validation (pixel-level)
@@ -198,7 +199,7 @@ class CriticAgent(BaseAgent):
 
         # Extract expected values from condition summaries
         expected_values = set()
-        for cond, cdata in condition_summaries.items():
+        for _cond, cdata in condition_summaries.items():
             if not isinstance(cdata, dict):
                 continue
             metrics = cdata.get("metrics", {})
@@ -215,33 +216,39 @@ class CriticAgent(BaseAgent):
 
         # Check for degenerate data (all identical or all zero)
         vals_list = sorted(expected_values)
-        if len(vals_list) >= 2 and len(set(round(v, 6) for v in vals_list)) <= 1:
-            issues.append({
-                "type": "numerical_accuracy",
-                "severity": "critical",
-                "message": "All expected metric values are identical — chart will be uninformative",
-            })
+        if len(vals_list) >= 2 and len({round(v, 6) for v in vals_list}) <= 1:
+            issues.append(
+                {
+                    "type": "numerical_accuracy",
+                    "severity": "critical",
+                    "message": "All expected metric values are identical — chart will be uninformative",
+                }
+            )
         if all(v == 0 for v in vals_list):
-            issues.append({
-                "type": "numerical_accuracy",
-                "severity": "critical",
-                "message": "All expected metric values are zero — chart will show no meaningful data",
-            })
+            issues.append(
+                {
+                    "type": "numerical_accuracy",
+                    "severity": "critical",
+                    "message": "All expected metric values are zero — chart will show no meaningful data",
+                }
+            )
 
         # Check if script contains the expected values
         found = expected_values & script_numbers
         missing = expected_values - script_numbers
 
         if missing and len(missing) > len(expected_values) / 2:
-            issues.append({
-                "type": "numerical_accuracy",
-                "severity": "critical",
-                "message": (
-                    f"Script may not contain correct data values. "
-                    f"Expected values like {list(missing)[:3]} not found in script. "
-                    f"Found values: {list(found)[:5]}"
-                ),
-            })
+            issues.append(
+                {
+                    "type": "numerical_accuracy",
+                    "severity": "critical",
+                    "message": (
+                        f"Script may not contain correct data values. "
+                        f"Expected values like {list(missing)[:3]} not found in script. "
+                        f"Found values: {list(found)[:5]}"
+                    ),
+                }
+            )
 
         return issues
 
@@ -266,39 +273,49 @@ class CriticAgent(BaseAgent):
         has_title = "set_title" in script_code or ".title(" in script_code
 
         if not has_xlabel:
-            issues.append({
-                "type": "text_correctness",
-                "severity": "warning",
-                "message": "Missing x-axis label",
-            })
+            issues.append(
+                {
+                    "type": "text_correctness",
+                    "severity": "warning",
+                    "message": "Missing x-axis label",
+                }
+            )
         if not has_ylabel:
-            issues.append({
-                "type": "text_correctness",
-                "severity": "warning",
-                "message": "Missing y-axis label",
-            })
+            issues.append(
+                {
+                    "type": "text_correctness",
+                    "severity": "warning",
+                    "message": "Missing y-axis label",
+                }
+            )
         if not has_title:
-            issues.append({
-                "type": "text_correctness",
-                "severity": "warning",
-                "message": "Missing chart title",
-            })
+            issues.append(
+                {
+                    "type": "text_correctness",
+                    "severity": "warning",
+                    "message": "Missing chart title",
+                }
+            )
 
         # Check for savefig call
         if "savefig" not in script_code:
-            issues.append({
-                "type": "text_correctness",
-                "severity": "critical",
-                "message": "Missing fig.savefig() call — chart will not be saved",
-            })
+            issues.append(
+                {
+                    "type": "text_correctness",
+                    "severity": "critical",
+                    "message": "Missing fig.savefig() call — chart will not be saved",
+                }
+            )
 
         # Check for plt.close to prevent memory leaks
         if "plt.close" not in script_code and "close()" not in script_code:
-            issues.append({
-                "type": "text_correctness",
-                "severity": "warning",
-                "message": "Missing plt.close() — may cause memory leaks",
-            })
+            issues.append(
+                {
+                    "type": "text_correctness",
+                    "severity": "warning",
+                    "message": "Missing plt.close() — may cause memory leaks",
+                }
+            )
 
         return issues
 
@@ -346,18 +363,22 @@ class CriticAgent(BaseAgent):
 
         for issue in result.get("issues", []):
             if isinstance(issue, dict) and issue.get("message"):
-                issues.append({
-                    "type": "visual_quality",
-                    "severity": issue.get("severity", "warning"),
-                    "message": str(issue["message"]),
-                })
+                issues.append(
+                    {
+                        "type": "visual_quality",
+                        "severity": issue.get("severity", "warning"),
+                        "message": str(issue["message"]),
+                    }
+                )
 
         if quality_score < 4:
-            issues.append({
-                "type": "visual_quality",
-                "severity": "critical",
-                "message": f"Overall quality score too low: {quality_score}/10",
-            })
+            issues.append(
+                {
+                    "type": "visual_quality",
+                    "severity": "critical",
+                    "message": f"Overall quality score too low: {quality_score}/10",
+                }
+            )
 
         return issues
 
@@ -365,9 +386,7 @@ class CriticAgent(BaseAgent):
     # Dimension 4: Rendered image validation (pixel-level)
     # ------------------------------------------------------------------
 
-    def _check_rendered_image(
-        self, output_path: str
-    ) -> list[dict[str, str]]:
+    def _check_rendered_image(self, output_path: str) -> list[dict[str, str]]:
         """Check the rendered PNG for visual defects via pixel analysis.
 
         Detects:
@@ -376,8 +395,8 @@ class CriticAgent(BaseAgent):
         """
         issues: list[dict[str, str]] = []
         try:
-            from PIL import Image
             import numpy as np
+            from PIL import Image
 
             img = Image.open(output_path).convert("RGB")
             arr = np.array(img)
@@ -387,14 +406,15 @@ class CriticAgent(BaseAgent):
             white_mask = np.all(arr > 250, axis=2)
             white_ratio = float(np.mean(white_mask))
             if white_ratio > 0.95:
-                issues.append({
-                    "type": "rendered_quality",
-                    "severity": "critical",
-                    "message": (
-                        f"Image is {white_ratio:.0%} white — likely degenerate "
-                        f"or empty chart"
-                    ),
-                })
+                issues.append(
+                    {
+                        "type": "rendered_quality",
+                        "severity": "critical",
+                        "message": (
+                            f"Image is {white_ratio:.0%} white — likely degenerate or empty chart"
+                        ),
+                    }
+                )
 
             # Check 2: Non-white pixels touching edges (possible clipping)
             margin = 3  # pixels
@@ -407,14 +427,16 @@ class CriticAgent(BaseAgent):
                 dark_mask = np.any(edge_slice < 80, axis=-1)
                 dark_ratio = float(np.mean(dark_mask))
                 if dark_ratio > 0.05:
-                    issues.append({
-                        "type": "rendered_quality",
-                        "severity": "warning",
-                        "message": (
-                            f"Content touching {edge_name} edge ({dark_ratio:.0%} "
-                            f"dark pixels) — possible label/title clipping"
-                        ),
-                    })
+                    issues.append(
+                        {
+                            "type": "rendered_quality",
+                            "severity": "warning",
+                            "message": (
+                                f"Content touching {edge_name} edge ({dark_ratio:.0%} "
+                                f"dark pixels) — possible label/title clipping"
+                            ),
+                        }
+                    )
         except ImportError:
             logger.debug("PIL not available — skipping rendered image checks")
         except Exception as exc:

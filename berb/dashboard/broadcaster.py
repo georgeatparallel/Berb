@@ -6,7 +6,7 @@ import asyncio
 import logging
 from typing import Any
 
-from berb.dashboard.collector import DashboardCollector, RunSnapshot
+from berb.dashboard.collector import DashboardCollector
 from berb.server.websocket.events import Event, EventType
 from berb.server.websocket.manager import ConnectionManager
 
@@ -37,9 +37,7 @@ class DashboardBroadcaster:
             prev = self._prev_snapshots.get(snap.run_id)
             if prev is None:
                 # New run discovered
-                await self._manager.broadcast(
-                    Event(type=EventType.RUN_DISCOVERED, data=d)
-                )
+                await self._manager.broadcast(Event(type=EventType.RUN_DISCOVERED, data=d))
             else:
                 # Check for stage changes
                 if d["current_stage"] != prev.get("current_stage"):
@@ -52,9 +50,7 @@ class DashboardBroadcaster:
                         )
                     )
                 elif d["status"] != prev.get("status"):
-                    await self._manager.broadcast(
-                        Event(type=EventType.RUN_STATUS_CHANGED, data=d)
-                    )
+                    await self._manager.broadcast(Event(type=EventType.RUN_STATUS_CHANGED, data=d))
                 # Check for metric updates
                 if d["metrics"] and d["metrics"] != prev.get("metrics"):
                     await self._manager.broadcast(

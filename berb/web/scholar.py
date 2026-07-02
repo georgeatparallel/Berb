@@ -28,7 +28,8 @@ from dataclasses import dataclass, field
 from typing import Any
 
 try:
-    from scholarly import scholarly, ProxyGenerator
+    from scholarly import ProxyGenerator, scholarly
+
     HAS_SCHOLARLY = True
 except ImportError:
     scholarly = None  # type: ignore[assignment]
@@ -42,14 +43,15 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 _MAX_CONSECUTIVE_FAILURES = 3
-_BACKOFF_BASE = 2.0          # seconds — doubles each retry
-_BACKOFF_MAX = 64.0          # cap at ~1 minute
-_BACKOFF_JITTER = 0.5        # ± 50% random jitter
+_BACKOFF_BASE = 2.0  # seconds — doubles each retry
+_BACKOFF_MAX = 64.0  # cap at ~1 minute
+_BACKOFF_JITTER = 0.5  # ± 50% random jitter
 
 
 # ---------------------------------------------------------------------------
 # Data classes
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class ScholarPaper:
@@ -81,6 +83,7 @@ class ScholarPaper:
     def to_literature_paper(self) -> Any:
         """Convert to berb.literature.models.Paper."""
         from berb.literature.models import Author, Paper
+
         authors_tuple = tuple(Author(name=a) for a in self.authors)
         return Paper(
             paper_id=self.scholar_id or f"gs-{hashlib.sha256(self.title.encode()).hexdigest()[:8]}",
@@ -98,6 +101,7 @@ class ScholarPaper:
 # ---------------------------------------------------------------------------
 # Main client
 # ---------------------------------------------------------------------------
+
 
 class GoogleScholarClient:
     """Google Scholar search client using the ``scholarly`` library.
@@ -131,8 +135,7 @@ class GoogleScholarClient:
     ) -> None:
         if not HAS_SCHOLARLY:
             raise ImportError(
-                "scholarly is required for Google Scholar search. "
-                "Install: pip install 'berb[web]'"
+                "scholarly is required for Google Scholar search. Install: pip install 'berb[web]'"
             )
         self.delay = inter_request_delay
         self.max_retries = max_retries
@@ -213,13 +216,15 @@ class GoogleScholarClient:
             self._rate_limit()
             results = []
             for author in scholarly.search_author(name):
-                results.append({
-                    "name": author.get("name", ""),
-                    "affiliation": author.get("affiliation", ""),
-                    "scholar_id": author.get("scholar_id", ""),
-                    "citedby": author.get("citedby", 0),
-                    "interests": author.get("interests", []),
-                })
+                results.append(
+                    {
+                        "name": author.get("name", ""),
+                        "affiliation": author.get("affiliation", ""),
+                        "scholar_id": author.get("scholar_id", ""),
+                        "citedby": author.get("citedby", 0),
+                        "interests": author.get("interests", []),
+                    }
+                )
                 if len(results) >= 5:
                     break
             return results
@@ -239,29 +244,36 @@ class GoogleScholarClient:
 
     def _with_retry(self, op: Any, *, context: str = "") -> Any | None:
         """Execute *op()* with exponential backoff.  Returns None on permanent failure."""
-        last_exc: Exception | None = None
         for attempt in range(self.max_retries + 1):
             try:
                 result = op()
                 self._consecutive_failures = 0  # reset on success
                 return result
             except Exception as exc:  # noqa: BLE001
-                last_exc = exc
                 self._consecutive_failures += 1
                 msg = str(exc).lower()
-                is_block = any(k in msg for k in ("captcha", "429", "too many", "blocked", "rate limit"))
+                is_block = any(
+                    k in msg for k in ("captcha", "429", "too many", "blocked", "rate limit")
+                )
 
                 if attempt < self.max_retries:
                     wait = self._backoff(attempt, long=is_block)
                     logger.warning(
                         "Scholar %s failed (attempt %d/%d, %s): %s — retrying in %.1fs",
-                        context, attempt + 1, self.max_retries, "BLOCK" if is_block else "error", exc, wait,
+                        context,
+                        attempt + 1,
+                        self.max_retries,
+                        "BLOCK" if is_block else "error",
+                        exc,
+                        wait,
                     )
                     time.sleep(wait)
                 else:
                     logger.error(
                         "Scholar %s failed permanently after %d attempts: %s",
-                        context, self.max_retries + 1, exc,
+                        context,
+                        self.max_retries + 1,
+                        exc,
                     )
 
         self._check_health()
@@ -270,7 +282,7 @@ class GoogleScholarClient:
     def _backoff(self, attempt: int, *, long: bool = False) -> float:
         """Return wait time with exponential backoff and jitter."""
         base = _BACKOFF_BASE * (4 if long else 1)  # longer wait on blocks
-        raw = min(base * (2 ** attempt), _BACKOFF_MAX)
+        raw = min(base * (2**attempt), _BACKOFF_MAX)
         jitter = raw * _BACKOFF_JITTER * (2 * random.random() - 1)
         return max(1.0, raw + jitter)
 

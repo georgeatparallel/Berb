@@ -1,14 +1,12 @@
 import pytest
 
+from berb.pipeline.resolution import resolve_stage_order
 from berb.pipeline.stages import (
     DECISION_ROLLBACK,
     GATE_ROLLBACK,
     GATE_STAGES,
     MAX_DECISION_PIVOTS,
-    NEXT_STAGE,
     PHASE_MAP,
-    PREVIOUS_STAGE,
-    STAGE_SEQUENCE,
     TRANSITION_MAP,
     Stage,
     StageStatus,
@@ -18,6 +16,11 @@ from berb.pipeline.stages import (
     default_rollback_stage,
     gate_required,
 )
+
+# STAGE_SEQUENCE, NEXT_STAGE, PREVIOUS_STAGE were removed from
+# berb.pipeline.stages in Phase 3 — stage order is now computed dynamically
+# from StageContract.depends_on via resolve_stage_order().
+STAGE_SEQUENCE = resolve_stage_order()
 
 
 def test_stage_enum_has_exactly_23_members():
@@ -36,16 +39,6 @@ def test_stage_sequence_contains_all_23_stages_in_order():
     assert STAGE_SEQUENCE[0] is Stage.TOPIC_INIT
     assert STAGE_SEQUENCE[-1] is Stage.CITATION_VERIFY
     assert tuple(Stage) == STAGE_SEQUENCE
-
-
-def test_next_stage_boundary_values():
-    assert NEXT_STAGE[Stage.TOPIC_INIT] is Stage.PROBLEM_DECOMPOSE
-    assert NEXT_STAGE[Stage.EXPORT_PUBLISH] is Stage.CITATION_VERIFY
-
-
-def test_previous_stage_boundary_values():
-    assert PREVIOUS_STAGE[Stage.TOPIC_INIT] is None
-    assert PREVIOUS_STAGE[Stage.PROBLEM_DECOMPOSE] is Stage.TOPIC_INIT
 
 
 def test_gate_stages_matches_expected_set():
@@ -297,16 +290,6 @@ def test_transition_outcome_field_values_are_exposed():
 
     assert outcome.checkpoint_required is True
     assert outcome.decision == "block"
-
-
-def test_sequence_and_neighbor_maps_are_consistent_for_all_stages():
-    for idx, stage in enumerate(STAGE_SEQUENCE):
-        expected_prev = STAGE_SEQUENCE[idx - 1] if idx > 0 else None
-        expected_next = (
-            STAGE_SEQUENCE[idx + 1] if idx + 1 < len(STAGE_SEQUENCE) else None
-        )
-        assert PREVIOUS_STAGE[stage] is expected_prev
-        assert NEXT_STAGE[stage] is expected_next
 
 
 def test_transition_map_covers_all_stage_status_values():

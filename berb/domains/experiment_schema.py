@@ -8,20 +8,21 @@ to any research domain.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 import yaml
 
 
-class ConditionRole(str, Enum):
+class ConditionRole(StrEnum):
     """Role of an experimental condition."""
+
     REFERENCE = "reference"  # baseline / reference solver / standard pipeline
     PROPOSED = "proposed"  # the method being investigated
     VARIANT = "variant"  # ablation / parameter variation / robustness check
 
 
-class ExperimentType(str, Enum):
+class ExperimentType(StrEnum):
     COMPARISON = "comparison"
     CONVERGENCE = "convergence"
     PROGRESSIVE_SPEC = "progressive_spec"
@@ -32,6 +33,7 @@ class ExperimentType(str, Enum):
 @dataclass
 class Condition:
     """A single experimental condition (method, configuration, etc.)."""
+
     name: str
     role: str = ConditionRole.PROPOSED.value
     description: str = ""
@@ -43,6 +45,7 @@ class Condition:
 @dataclass
 class MetricSpec:
     """Specification of a metric to evaluate."""
+
     name: str
     direction: str = "minimize"  # "minimize" | "maximize"
     unit: str = ""
@@ -52,6 +55,7 @@ class MetricSpec:
 @dataclass
 class EvaluationSpec:
     """Evaluation protocol for the experiment."""
+
     primary_metric: MetricSpec = field(default_factory=lambda: MetricSpec(name="primary_metric"))
     secondary_metrics: list[MetricSpec] = field(default_factory=list)
     protocol: str = ""
@@ -109,14 +113,8 @@ class UniversalExperimentPlan:
         This allows the universal plan to be consumed by existing pipeline
         code that expects the old key names.
         """
-        baselines = [
-            {"name": c.name, "description": c.description}
-            for c in self.references
-        ]
-        proposed = [
-            {"name": c.name, "description": c.description}
-            for c in self.proposed
-        ]
+        baselines = [{"name": c.name, "description": c.description} for c in self.references]
+        proposed = [{"name": c.name, "description": c.description} for c in self.proposed]
         ablations = [
             {
                 "name": c.name,
@@ -197,35 +195,41 @@ def from_legacy_exp_plan(
         if isinstance(b, str):
             conditions.append(Condition(name=b, role=ConditionRole.REFERENCE.value))
         elif isinstance(b, dict):
-            conditions.append(Condition(
-                name=b.get("name", "baseline"),
-                role=ConditionRole.REFERENCE.value,
-                description=b.get("description", ""),
-            ))
+            conditions.append(
+                Condition(
+                    name=b.get("name", "baseline"),
+                    role=ConditionRole.REFERENCE.value,
+                    description=b.get("description", ""),
+                )
+            )
 
     # Parse proposed_methods → proposed
     for p in data.get("proposed_methods", []):
         if isinstance(p, str):
             conditions.append(Condition(name=p, role=ConditionRole.PROPOSED.value))
         elif isinstance(p, dict):
-            conditions.append(Condition(
-                name=p.get("name", "proposed"),
-                role=ConditionRole.PROPOSED.value,
-                description=p.get("description", ""),
-            ))
+            conditions.append(
+                Condition(
+                    name=p.get("name", "proposed"),
+                    role=ConditionRole.PROPOSED.value,
+                    description=p.get("description", ""),
+                )
+            )
 
     # Parse ablations → variant
     for a in data.get("ablations", []):
         if isinstance(a, str):
             conditions.append(Condition(name=a, role=ConditionRole.VARIANT.value))
         elif isinstance(a, dict):
-            conditions.append(Condition(
-                name=a.get("name", "ablation"),
-                role=ConditionRole.VARIANT.value,
-                description=a.get("description", ""),
-                varies_from=a.get("varies_from", ""),
-                variation=a.get("variation", ""),
-            ))
+            conditions.append(
+                Condition(
+                    name=a.get("name", "ablation"),
+                    role=ConditionRole.VARIANT.value,
+                    description=a.get("description", ""),
+                    varies_from=a.get("varies_from", ""),
+                    variation=a.get("variation", ""),
+                )
+            )
 
     # Parse metrics
     metrics = data.get("metrics", {})
@@ -248,5 +252,7 @@ def from_legacy_exp_plan(
         evaluation=EvaluationSpec(
             primary_metric=MetricSpec(name=primary_name, direction=primary_direction),
         ),
-        raw_yaml=yaml.dump(data, default_flow_style=False) if isinstance(data, dict) else str(plan_yaml),
+        raw_yaml=yaml.dump(data, default_flow_style=False)
+        if isinstance(data, dict)
+        else str(plan_yaml),
     )

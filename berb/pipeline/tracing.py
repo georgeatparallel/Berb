@@ -22,16 +22,18 @@ import logging
 import threading
 import time
 import uuid
+from collections.abc import Generator
 from contextlib import contextmanager
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Generator
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Data model
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class SpanRecord:
@@ -41,10 +43,10 @@ class SpanRecord:
     span_id: str
     parent_span_id: str | None
     name: str
-    start_time: float          # monotonic seconds
-    end_time: float            # monotonic seconds
+    start_time: float  # monotonic seconds
+    end_time: float  # monotonic seconds
     duration_ms: float
-    status: str                # "ok" | "error"
+    status: str  # "ok" | "error"
     error: str | None
     tags: dict[str, Any]
 
@@ -108,6 +110,7 @@ def clear_trace(trace_id: str) -> None:
 # Span context manager
 # ---------------------------------------------------------------------------
 
+
 class Span:
     """A single unit of work within a trace.
 
@@ -137,7 +140,7 @@ class Span:
         self._status = "error"
         self._error = f"{type(exc).__name__}: {exc}"
 
-    def __enter__(self) -> "Span":
+    def __enter__(self) -> Span:
         self._start = time.monotonic()
         return self
 
@@ -194,6 +197,7 @@ def span(
 # ---------------------------------------------------------------------------
 # Internal persistence
 # ---------------------------------------------------------------------------
+
 
 def _record_span(record: SpanRecord) -> None:
     """Append *record* to in-memory store and flush to disk."""

@@ -12,7 +12,7 @@ Features:
 
 Usage:
     from berb.experiment.auto_debugger import AutomatedDebugger
-    
+
     debugger = AutomatedDebugger()
     fix = await debugger.diagnose_and_fix(error, code, context)
 """
@@ -23,14 +23,15 @@ import logging
 import re
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-class ErrorCategory(str, Enum):
+class ErrorCategory(StrEnum):
     """Error classification categories."""
+
     SYNTAX = "syntax"  # Python syntax errors
     RUNTIME = "runtime"  # Exceptions during execution
     LOGIC = "logic"  # Incorrect behavior, no exception
@@ -39,8 +40,9 @@ class ErrorCategory(str, Enum):
     TYPE = "type"  # Type errors
 
 
-class ErrorSeverity(str, Enum):
+class ErrorSeverity(StrEnum):
     """Error severity levels."""
+
     CRITICAL = "critical"  # Cannot proceed
     MAJOR = "major"  # Significant functionality broken
     MINOR = "minor"  # Workaround exists
@@ -50,7 +52,7 @@ class ErrorSeverity(str, Enum):
 @dataclass
 class ErrorDiagnosis:
     """Diagnosis of an error."""
-    
+
     error_message: str
     error_type: str
     category: ErrorCategory
@@ -64,7 +66,7 @@ class ErrorDiagnosis:
 @dataclass
 class FixSuggestion:
     """Suggested fix for an error."""
-    
+
     diagnosis: ErrorDiagnosis
     fix_description: str
     original_code: str
@@ -78,7 +80,7 @@ class FixSuggestion:
 @dataclass
 class DebugResult:
     """Result of automated debugging."""
-    
+
     success: bool
     error_diagnosis: ErrorDiagnosis | None
     fix_suggestion: FixSuggestion | None
@@ -91,13 +93,13 @@ class DebugResult:
 
 class AutomatedDebugger:
     """Automated debugging and self-healing system."""
-    
+
     def __init__(
         self,
         llm_client: Any | None = None,
     ) -> None:
         """Initialize debugger.
-        
+
         Args:
             llm_client: LLM client for fix generation
         """
@@ -105,7 +107,7 @@ class AutomatedDebugger:
         self._knowledge_base: list[dict[str, Any]] = []
         self._fix_history: list[DebugResult] = []
         self._error_patterns = self._load_error_patterns()
-    
+
     def _load_error_patterns(self) -> dict[ErrorCategory, list[dict[str, Any]]]:
         """Load known error patterns and fix strategies."""
         return {
@@ -193,7 +195,7 @@ class AutomatedDebugger:
                 },
             ],
         }
-    
+
     async def diagnose_and_fix(
         self,
         error_message: str,
@@ -201,17 +203,17 @@ class AutomatedDebugger:
         context: dict[str, Any] | None = None,
     ) -> DebugResult:
         """Diagnose error and generate fix.
-        
+
         Args:
             error_message: Error message from traceback
             code: Code that caused the error
             context: Optional context (variables, imports, etc.)
-            
+
         Returns:
             DebugResult with diagnosis and fix
         """
         start_time = datetime.now()
-        
+
         # Check knowledge base first
         kb_match = self._search_knowledge_base(error_message, code)
         if kb_match:
@@ -219,10 +221,10 @@ class AutomatedDebugger:
             result = self._create_result_from_kb(kb_match, code)
             result.knowledge_base_match = True
             return result
-        
+
         # Diagnose error
         diagnosis = await self._diagnose_error(error_message, code, context)
-        
+
         if not diagnosis:
             return DebugResult(
                 success=False,
@@ -230,21 +232,21 @@ class AutomatedDebugger:
                 fix_suggestion=None,
                 total_time_sec=(datetime.now() - start_time).total_seconds(),
             )
-        
+
         # Generate fix based on category
         fix = await self._generate_fix(diagnosis, code, context)
-        
+
         result = DebugResult(
             success=fix is not None,
             error_diagnosis=diagnosis,
             fix_suggestion=fix,
             total_time_sec=(datetime.now() - start_time).total_seconds(),
         )
-        
+
         self._fix_history.append(result)
-        
+
         return result
-    
+
     async def _diagnose_error(
         self,
         error_message: str,
@@ -254,19 +256,19 @@ class AutomatedDebugger:
         """Diagnose the root cause of an error."""
         # Classify error category
         category = self._classify_error(error_message)
-        
+
         # Determine severity
         severity = self._determine_severity(category, error_message)
-        
+
         # Extract location from traceback
         location = self._extract_location(error_message)
-        
+
         # Find root cause
         root_cause = self._identify_root_cause(category, error_message, code)
-        
+
         # Calculate confidence based on pattern matching
         confidence = self._calculate_confidence(category, error_message)
-        
+
         return ErrorDiagnosis(
             error_message=error_message,
             error_type=self._extract_error_type(error_message),
@@ -277,17 +279,17 @@ class AutomatedDebugger:
             root_cause=root_cause,
             confidence=confidence,
         )
-    
+
     def _classify_error(self, error_message: str) -> ErrorCategory:
         """Classify error into category."""
         error_lower = error_message.lower()
-        
+
         # Check patterns for each category
         for category, patterns in self._error_patterns.items():
             for pattern_info in patterns:
                 if re.search(pattern_info["pattern"], error_message, re.IGNORECASE):
                     return category
-        
+
         # Fallback classification
         if "syntax" in error_lower:
             return ErrorCategory.SYNTAX
@@ -299,9 +301,9 @@ class AutomatedDebugger:
             return ErrorCategory.TYPE
         elif any(x in error_lower for x in ["error", "exception", "failed"]):
             return ErrorCategory.RUNTIME
-        
+
         return ErrorCategory.RUNTIME  # Default
-    
+
     def _determine_severity(
         self,
         category: ErrorCategory,
@@ -311,33 +313,33 @@ class AutomatedDebugger:
         # Critical: Cannot proceed at all
         if category in (ErrorCategory.SYNTAX, ErrorCategory.IMPORT):
             return ErrorSeverity.CRITICAL
-        
+
         # Major: Significant functionality broken
         if category == ErrorCategory.RESOURCE:
             return ErrorSeverity.MAJOR
-        
+
         # Check for specific major indicators
         major_indicators = ["crash", "fail", "abort", "terminate"]
         if any(ind in error_message.lower() for ind in major_indicators):
             return ErrorSeverity.MAJOR
-        
+
         # Minor: Workaround exists
         if category in (ErrorCategory.TYPE, ErrorCategory.RUNTIME):
             return ErrorSeverity.MINOR
-        
+
         return ErrorSeverity.MINOR
-    
+
     def _extract_location(self, error_message: str) -> str:
         """Extract error location from traceback."""
         # Pattern: File "path", line N, in function
         pattern = r'File\s+"([^"]+)",\s+line\s+(\d+)'
         match = re.search(pattern, error_message)
-        
+
         if match:
             return f"{match.group(1)}:{match.group(2)}"
-        
+
         return "unknown"
-    
+
     def _identify_root_cause(
         self,
         category: ErrorCategory,
@@ -353,7 +355,7 @@ class AutomatedDebugger:
             ErrorCategory.TYPE: "Type mismatch or incorrect type usage",
             ErrorCategory.LOGIC: "Code runs but produces incorrect results",
         }
-        
+
         # Add specific cause based on error message
         specific_causes = {
             r"NameError": "Variable or function used before definition",
@@ -366,13 +368,13 @@ class AutomatedDebugger:
             r"FileNotFoundError": "File path does not exist",
             r"MemoryError": "Insufficient memory for operation",
         }
-        
+
         for pattern, cause in specific_causes.items():
             if re.search(pattern, error_message, re.IGNORECASE):
                 return cause
-        
+
         return root_causes.get(category, "Unknown error cause")
-    
+
     def _calculate_confidence(
         self,
         category: ErrorCategory,
@@ -380,15 +382,14 @@ class AutomatedDebugger:
     ) -> float:
         """Calculate confidence in diagnosis."""
         # Higher confidence for well-known error patterns
-        base_confidence = 0.7
-        
+
         for pattern_info in self._error_patterns.get(category, []):
             if re.search(pattern_info["pattern"], error_message, re.IGNORECASE):
                 return 0.9  # High confidence for matched pattern
-        
+
         # Lower confidence for unknown patterns
         return 0.5
-    
+
     def _extract_error_type(self, error_message: str) -> str:
         """Extract error type name from message."""
         # Pattern: ErrorType: message
@@ -396,12 +397,12 @@ class AutomatedDebugger:
         if match:
             return match.group(1)
         return "Unknown"
-    
+
     def _extract_traceback(self, error_message: str) -> list[str]:
         """Extract traceback lines."""
         lines = error_message.split("\n")
         traceback = []
-        
+
         in_traceback = False
         for line in lines:
             if "Traceback" in line:
@@ -410,9 +411,9 @@ class AutomatedDebugger:
                 traceback.append(line)
                 if not line.strip().startswith("File") and ":" in line:
                     break  # Reached error message
-        
+
         return traceback if traceback else lines[:5]
-    
+
     async def _generate_fix(
         self,
         diagnosis: ErrorDiagnosis,
@@ -422,14 +423,14 @@ class AutomatedDebugger:
         """Generate fix for diagnosed error."""
         # Find matching strategy
         strategy = self._find_fix_strategy(diagnosis)
-        
+
         if not strategy:
             # Fall back to LLM-based fix generation
             return await self._llm_generate_fix(diagnosis, code, context)
-        
+
         # Apply rule-based fix
         fix_code = self._apply_fix_strategy(strategy, code, diagnosis)
-        
+
         if fix_code:
             return FixSuggestion(
                 diagnosis=diagnosis,
@@ -440,19 +441,19 @@ class AutomatedDebugger:
                 strategy=strategy["strategy"],
                 side_effects=self._get_side_effects(strategy["strategy"]),
             )
-        
+
         return None
-    
+
     def _find_fix_strategy(self, diagnosis: ErrorDiagnosis) -> dict[str, Any] | None:
         """Find fix strategy for diagnosed error."""
         patterns = self._error_patterns.get(diagnosis.category, [])
-        
+
         for pattern_info in patterns:
             if re.search(pattern_info["pattern"], diagnosis.error_message, re.IGNORECASE):
                 return pattern_info
-        
+
         return None
-    
+
     def _apply_fix_strategy(
         self,
         strategy: dict[str, Any],
@@ -461,7 +462,7 @@ class AutomatedDebugger:
     ) -> str | None:
         """Apply rule-based fix strategy."""
         strategy_name = strategy["strategy"]
-        
+
         fix_functions = {
             "fix_indentation": self._fix_indentation,
             "balance_parens": self._balance_parens,
@@ -471,34 +472,34 @@ class AutomatedDebugger:
             "add_zero_check": self._add_zero_check,
             "fix_path": self._fix_file_path,
         }
-        
+
         fix_func = fix_functions.get(strategy_name)
         if fix_func:
             return fix_func(code, diagnosis)
-        
+
         return None
-    
+
     def _fix_indentation(self, code: str, diagnosis: ErrorDiagnosis) -> str:
         """Fix indentation issues."""
         # Convert tabs to 4 spaces
         lines = code.split("\n")
         fixed_lines = []
-        
+
         for line in lines:
             # Count leading tabs and convert to spaces
             stripped = line.lstrip("\t")
             tab_count = len(line) - len(stripped)
             fixed_line = " " * (tab_count * 4) + stripped
             fixed_lines.append(fixed_line)
-        
+
         return "\n".join(fixed_lines)
-    
+
     def _balance_parens(self, code: str, diagnosis: ErrorDiagnosis) -> str:
         """Balance parentheses, brackets, and braces."""
         # Count opening and closing
         opens = code.count("(") + code.count("[") + code.count("{")
         closes = code.count(")") + code.count("]") + code.count("}")
-        
+
         # Add missing closing parens
         if opens > closes:
             code += ")" * (opens - closes)
@@ -508,53 +509,53 @@ class AutomatedDebugger:
             for _ in range(diff):
                 for i in range(len(code) - 1, -1, -1):
                     if code[i] in ")]}":
-                        code = code[:i] + code[i+1:]
+                        code = code[:i] + code[i + 1 :]
                         break
-        
+
         return code
-    
+
     def _add_bounds_check(self, code: str, diagnosis: ErrorDiagnosis) -> str:
         """Add bounds checking for list access."""
         # Find list access patterns and add checks
         pattern = r"(\w+)\[(\w+)\]"
-        
+
         def add_check(match):
             list_name = match.group(1)
             index_name = match.group(2)
             return f"{list_name}[{index_name} if {index_name} < len({list_name}) else 0]"
-        
+
         return re.sub(pattern, add_check, code)
-    
+
     def _add_dict_key_check(self, code: str, diagnosis: ErrorDiagnosis) -> str:
         """Add dictionary key existence check."""
         # Pattern: dict[key] -> dict.get(key, default)
         pattern = r"(\w+)\['(\w+)'\]"
-        
+
         def fix_match(match):
             dict_name = match.group(1)
             key_name = match.group(2)
             return f"{dict_name}.get('{key_name}', None)"
-        
+
         return re.sub(pattern, fix_match, code)
-    
+
     def _add_zero_check(self, code: str, diagnosis: ErrorDiagnosis) -> str:
         """Add division by zero check."""
         # Pattern: x / y -> x / y if y != 0 else 0
         pattern = r"([^/])\s*/\s*(\w+)"
-        
+
         def fix_match(match):
             numerator = match.group(1).strip()
             denominator = match.group(2).strip()
             return f"({numerator} / {denominator} if {denominator} != 0 else 0)"
-        
+
         return re.sub(pattern, fix_match, code)
-    
+
     def _fix_file_path(self, code: str, diagnosis: ErrorDiagnosis) -> str:
         """Fix file path issues."""
         # Add existence check before file operations
         lines = code.split("\n")
         fixed_lines = []
-        
+
         for line in lines:
             if "open(" in line and "with" in line:
                 # Extract path
@@ -562,14 +563,16 @@ class AutomatedDebugger:
                 if match:
                     path = match.group(1)
                     indent = len(line) - len(line.lstrip())
-                    check = " " * indent + f"import os\n"
+                    check = " " * indent + "import os\n"
                     check += " " * indent + f"if not os.path.exists('{path}'):\n"
-                    check += " " * (indent + 4) + f"raise FileNotFoundError('File not found: {path}')\n"
+                    check += (
+                        " " * (indent + 4) + f"raise FileNotFoundError('File not found: {path}')\n"
+                    )
                     fixed_lines.append(check)
             fixed_lines.append(line)
-        
+
         return "\n".join(fixed_lines)
-    
+
     def _define_variable(self, code: str, diagnosis: ErrorDiagnosis) -> str:
         """Define missing variable."""
         # Extract variable name from error
@@ -579,9 +582,9 @@ class AutomatedDebugger:
             # Add definition at top of code
             definition = f"# Auto-defined: {var_name}\n{var_name} = None\n\n"
             return definition + code
-        
+
         return code
-    
+
     def _get_side_effects(self, strategy: str) -> list[str]:
         """Get potential side effects of a fix strategy."""
         side_effects = {
@@ -593,7 +596,7 @@ class AutomatedDebugger:
             "fix_path": ["Adds file existence check, may fail earlier"],
         }
         return side_effects.get(strategy, ["Unknown side effects"])
-    
+
     async def _llm_generate_fix(
         self,
         diagnosis: ErrorDiagnosis,
@@ -614,16 +617,16 @@ CODE:
 ```
 
 Provide the fixed code only, no explanation. Keep changes minimal."""
-        
+
         # In production, call LLM:
         # response = await self._llm_client.chat(
         #     messages=[{"role": "user", "content": prompt}]
         # )
         # fixed_code = response.content
-        
+
         # Placeholder
         fixed_code = code  # No change in placeholder
-        
+
         return FixSuggestion(
             diagnosis=diagnosis,
             fix_description="LLM-generated fix",
@@ -633,7 +636,7 @@ Provide the fixed code only, no explanation. Keep changes minimal."""
             strategy="llm_generation",
             side_effects=["May introduce unintended changes"],
         )
-    
+
     def _search_knowledge_base(
         self,
         error_message: str,
@@ -644,9 +647,9 @@ Provide the fixed code only, no explanation. Keep changes minimal."""
         for entry in self._knowledge_base:
             if entry["error_pattern"] in error_message:
                 return entry
-        
+
         return None
-    
+
     def _create_result_from_kb(
         self,
         kb_entry: dict[str, Any],
@@ -663,7 +666,7 @@ Provide the fixed code only, no explanation. Keep changes minimal."""
             root_cause=kb_entry["root_cause"],
             confidence=kb_entry["confidence"],
         )
-        
+
         fix = FixSuggestion(
             diagnosis=diagnosis,
             fix_description=kb_entry["fix_description"],
@@ -672,14 +675,14 @@ Provide the fixed code only, no explanation. Keep changes minimal."""
             confidence=kb_entry["confidence"],
             strategy=kb_entry["strategy"],
         )
-        
+
         return DebugResult(
             success=True,
             error_diagnosis=diagnosis,
             fix_suggestion=fix,
             knowledge_base_match=True,
         )
-    
+
     def add_to_knowledge_base(
         self,
         error_message: str,
@@ -690,7 +693,7 @@ Provide the fixed code only, no explanation. Keep changes minimal."""
         """Add successful fix to knowledge base."""
         if not success:
             return
-        
+
         entry = {
             "error_message": error_message,
             "error_pattern": self._extract_error_pattern(error_message),
@@ -708,10 +711,10 @@ Provide the fixed code only, no explanation. Keep changes minimal."""
             "confidence": 0.8,
             "learned_at": datetime.now().isoformat(),
         }
-        
+
         self._knowledge_base.append(entry)
         logger.info(f"Added fix to knowledge base (total: {len(self._knowledge_base)})")
-    
+
     def _extract_error_pattern(self, error_message: str) -> str:
         """Extract generalizable pattern from error message."""
         # Replace specific values with placeholders
@@ -719,21 +722,21 @@ Provide the fixed code only, no explanation. Keep changes minimal."""
         pattern = re.sub(r"'[^']+'", "'<VALUE>'", pattern)
         pattern = re.sub(r"\d+", "<NUM>", pattern)
         return pattern
-    
+
     def get_debugging_statistics(self) -> dict[str, Any]:
         """Get debugging statistics."""
         if not self._fix_history:
             return {"error": "No debugging performed"}
-        
+
         successful = sum(1 for r in self._fix_history if r.success)
         kb_matches = sum(1 for r in self._fix_history if r.knowledge_base_match)
-        
+
         category_counts = {}
         for result in self._fix_history:
             if result.error_diagnosis:
                 cat = result.error_diagnosis.category.value
                 category_counts[cat] = category_counts.get(cat, 0) + 1
-        
+
         return {
             "total_debugging_sessions": len(self._fix_history),
             "successful_fixes": successful,
@@ -741,7 +744,8 @@ Provide the fixed code only, no explanation. Keep changes minimal."""
             "knowledge_base_matches": kb_matches,
             "knowledge_base_size": len(self._knowledge_base),
             "category_distribution": category_counts,
-            "avg_time_sec": sum(r.total_time_sec for r in self._fix_history) / len(self._fix_history),
+            "avg_time_sec": sum(r.total_time_sec for r in self._fix_history)
+            / len(self._fix_history),
         }
 
 
@@ -752,18 +756,18 @@ async def auto_debug(
     context: dict[str, Any] | None = None,
 ) -> DebugResult:
     """Quick function to debug an error.
-    
+
     Args:
         error_message: Error message
         code: Code that failed
         context: Optional context
-        
+
     Returns:
         DebugResult
     """
     debugger = AutomatedDebugger()
     result = await debugger.diagnose_and_fix(error_message, code, context)
-    
+
     if result.success and result.fix_suggestion:
         debugger.add_to_knowledge_base(
             error_message,
@@ -771,5 +775,5 @@ async def auto_debug(
             result.fix_suggestion.fixed_code,
             True,
         )
-    
+
     return result

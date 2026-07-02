@@ -61,7 +61,14 @@ class TestTimeGuard:
             "condition_summaries": {"CondA": {"metrics": {"metric": 80.0}}},
             "best_run": {"metrics": {}},
         }
-        plan = {"conditions": [{"name": "CondA"}, {"name": "CondB"}, {"name": "CondC"}, {"name": "CondD"}]}
+        plan = {
+            "conditions": [
+                {"name": "CondA"},
+                {"name": "CondB"},
+                {"name": "CondC"},
+                {"name": "CondD"},
+            ]
+        }
         diag = diagnose_experiment(
             experiment_summary=summary,
             experiment_plan=plan,
@@ -150,9 +157,12 @@ class TestQualityAssessment:
             },
             "best_run": {
                 "metrics": {
-                    "A/0/m": 80.0, "A/1/m": 81.0,
-                    "B/0/m": 85.0, "B/1/m": 86.0,
-                    "C/0/m": 90.0, "C/1/m": 91.0,
+                    "A/0/m": 80.0,
+                    "A/1/m": 81.0,
+                    "B/0/m": 85.0,
+                    "B/1/m": 86.0,
+                    "C/0/m": 90.0,
+                    "C/1/m": 91.0,
                 },
             },
         }
@@ -208,7 +218,10 @@ class TestRepairPrompt:
 
     def test_serialization(self):
         diag = diagnose_experiment(
-            experiment_summary={"condition_summaries": {"A": {"metrics": {"m": 1}}}, "best_run": {"metrics": {}}},
+            experiment_summary={
+                "condition_summaries": {"A": {"metrics": {"m": 1}}},
+                "best_run": {"metrics": {}},
+            },
         )
         d = diag.to_dict()
         assert isinstance(d, dict)
@@ -250,13 +263,14 @@ class TestRealArtifacts:
         # Should be technical_report or preliminary_study at best
         assert qa.mode in (PaperMode.TECHNICAL_REPORT, PaperMode.PRELIMINARY_STUDY)
 
+
 class TestDatasetNotFoundError:
     """BUG-203: HuggingFace DatasetNotFoundError should be caught."""
 
     def test_detects_hf_dataset_not_found(self):
         stderr = (
             "Traceback (most recent call last):\n"
-            "  File \"/workspace/setup.py\", line 11, in main\n"
+            '  File "/workspace/setup.py", line 11, in main\n'
             "datasets.exceptions.DatasetNotFoundError: "
             "Dataset 'cifar10_corrupted' doesn't exist on the Hub or cannot be accessed.\n"
         )

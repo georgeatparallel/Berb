@@ -24,9 +24,24 @@ from berb.pipeline.stages import Stage, StageStatus
 from berb.adapters import AdapterBundle
 
 
+@pytest.fixture(autouse=True)
+def _no_network_literature_search():
+    """Prevent any test in this module from touching real literature APIs.
+
+    _execute_hypothesis_gen calls check_novelty, which calls
+    berb.literature.search.search_papers_multi_query — real network I/O
+    (OpenAlex/Semantic Scholar/arXiv) with blocking time.sleep() retry loops.
+    On Windows, pytest-timeout cannot interrupt a thread blocked in real
+    socket I/O, so an unmocked call here hangs the whole pytest process.
+    """
+    with patch("berb.literature.search.search_papers_multi_query", return_value=[]):
+        yield
+
+
 # ============================================================================
 # 6a. Regression Test - Verifies the fix works
 # ============================================================================
+
 
 class TestRegression_MultiPerspectiveIntegration:
     """Regression tests ensuring MultiPerspectiveMethod integration works."""
@@ -61,16 +76,16 @@ class TestRegression_MultiPerspectiveIntegration:
     def test_hypothesis_gen_uses_multiperspective_method(self, mock_llm, mock_config):
         """REGRESSION: Verify _execute_hypothesis_gen uses MultiPerspectiveMethod."""
         from berb.pipeline.stage_impls._synthesis import _execute_hypothesis_gen
-        
+
         with tempfile.TemporaryDirectory() as tmpdir:
             stage_dir = Path(tmpdir) / "stage_08"
             run_dir = Path(tmpdir) / "run"
             stage_dir.mkdir(parents=True)
             run_dir.mkdir(parents=True)
-            
+
             # Create synthesis.md (required input)
             (run_dir / "synthesis.md").write_text("# Test Synthesis", encoding="utf-8")
-            
+
             # Mock MultiPerspectiveMethod to avoid actual LLM calls
             mock_result = MagicMock()
             mock_result.success = True
@@ -80,10 +95,13 @@ class TestRegression_MultiPerspectiveIntegration:
                 "top_candidates": [],
             }
             mock_result.confidence = 0.85
-            
-            with patch('berb.pipeline.stage_impls._synthesis.MultiPerspectiveMethod') as MockMP:
+
+            with (
+                patch("berb.pipeline.stage_impls._synthesis.MultiPerspectiveMethod") as MockMP,
+                patch("berb.literature.search.search_papers_multi_query", return_value=[]),
+            ):
                 MockMP.return_value.execute = AsyncMock(return_value=mock_result)
-                
+
                 result = _execute_hypothesis_gen(
                     stage_dir=stage_dir,
                     run_dir=run_dir,
@@ -92,10 +110,10 @@ class TestRegression_MultiPerspectiveIntegration:
                     llm=mock_llm,
                     prompts=None,
                 )
-                
+
                 # Verify MultiPerspectiveMethod was called
                 MockMP.assert_called_once()
-                
+
                 # Verify stage completed successfully
                 assert result.stage == Stage.HYPOTHESIS_GEN
                 assert result.status == StageStatus.DONE
@@ -104,19 +122,22 @@ class TestRegression_MultiPerspectiveIntegration:
     def test_hypothesis_gen_fallback_on_failure(self, mock_llm, mock_config):
         """REGRESSION: Verify fallback works when MultiPerspectiveMethod fails."""
         from berb.pipeline.stage_impls._synthesis import _execute_hypothesis_gen
-        
+
         with tempfile.TemporaryDirectory() as tmpdir:
             stage_dir = Path(tmpdir) / "stage_08"
             run_dir = Path(tmpdir) / "run"
             stage_dir.mkdir(parents=True)
             run_dir.mkdir(parents=True)
-            
+
             (run_dir / "synthesis.md").write_text("# Test Synthesis", encoding="utf-8")
-            
+
             # Mock MultiPerspectiveMethod to fail
-            with patch('berb.pipeline.stage_impls._synthesis.MultiPerspectiveMethod') as MockMP:
+            with (
+                patch("berb.pipeline.stage_impls._synthesis.MultiPerspectiveMethod") as MockMP,
+                patch("berb.literature.search.search_papers_multi_query", return_value=[]),
+            ):
                 MockMP.return_value.execute = AsyncMock(side_effect=Exception("Test failure"))
-                
+
                 # Should not raise, should fall back to default
                 result = _execute_hypothesis_gen(
                     stage_dir=stage_dir,
@@ -126,11 +147,11 @@ class TestRegression_MultiPerspectiveIntegration:
                     llm=mock_llm,
                     prompts=None,
                 )
-                
+
                 # Verify stage still completed (fallback succeeded)
                 assert result.stage == Stage.HYPOTHESIS_GEN
                 assert result.status == StageStatus.DONE
-                
+
                 # Verify hypotheses.md was created
                 hypotheses_path = stage_dir / "hypotheses.md"
                 assert hypotheses_path.exists()
@@ -140,13 +161,14 @@ class TestRegression_MultiPerspectiveIntegration:
 # 6b. Edge Case Tests
 # ============================================================================
 
+
 class TestEdgeCases:
     """Edge case tests for FIX-001."""
 
     def test_empty_synthesis_context(self):
         """Test handling of empty synthesis context."""
         from berb.pipeline.stage_impls._synthesis import _SimpleRouter, _LLMProviderWrapper
-        
+
         config = LLMConfig(
             base_url="https://api.openai.com/v1",
             api_key="test-key",
@@ -154,7 +176,7 @@ class TestEdgeCases:
         )
         llm = LLMClient(config)
         router = _SimpleRouter(llm)
-        
+
         # Should work even with empty context
         provider = router.get_provider_for_role("constructive")
         assert isinstance(provider, _LLMProviderWrapper)
@@ -162,38 +184,40 @@ class TestEdgeCases:
     def test_special_characters_in_topic(self):
         """Test handling of special characters in research topic."""
         from berb.reasoning.base import create_context
-        
+
         # Topic with special characters
         topic = "Test: LLM reasoning methods (2026)"
         problem = f"Research topic: {topic}\n\nSynthesis: Test"
-        
+
         context = create_context(
             stage_id="test",
             input_data={"problem": problem, "topic": topic},
             query=problem,
         )
-        
+
         assert context is not None
         assert "stage_id" in context
 
     def test_unicode_in_synthesis(self):
         """Test handling of unicode in synthesis."""
         from berb.pipeline.stage_impls._synthesis import _fallback_hypothesis_gen
-        
+
         config = LLMConfig(
             base_url="https://api.openai.com/v1",
             api_key="test-key",
             primary_model="gpt-4o",
         )
         llm = LLMClient(config)
-        
+
         unicode_synthesis = "Σύνθεση: Test with Greek Ελληνικά"
-        
+
         with tempfile.TemporaryDirectory() as tmpdir:
             stage_dir = Path(tmpdir) / "stage"
             stage_dir.mkdir()
-            
-            with patch('berb.pipeline.stage_impls._synthesis._multi_perspective_generate', return_value={}):
+
+            with patch(
+                "berb.pipeline.stage_impls._synthesis._multi_perspective_generate", return_value={}
+            ):
                 result = _fallback_hypothesis_gen(
                     llm=llm,
                     prompts=None,
@@ -201,32 +225,39 @@ class TestEdgeCases:
                     synthesis=unicode_synthesis,
                     stage_dir=stage_dir,
                 )
-                
+
                 # Should handle unicode without errors
                 assert isinstance(result, str)
 
     def test_null_llm_client(self):
         """Test handling of None LLM client."""
         from berb.pipeline.stage_impls._synthesis import _execute_hypothesis_gen
-        
+
         config = MagicMock()
         config.research.topic = "Test"
-        
+
         with tempfile.TemporaryDirectory() as tmpdir:
             stage_dir = Path(tmpdir) / "stage"
             run_dir = Path(tmpdir) / "run"
             stage_dir.mkdir(parents=True)
             run_dir.mkdir(parents=True)
-            
-            result = _execute_hypothesis_gen(
-                stage_dir=stage_dir,
-                run_dir=run_dir,
-                config=config,
-                adapters=MagicMock(spec=AdapterBundle),
-                llm=None,  # No LLM
-                prompts=None,
-            )
-            
+
+            # _execute_hypothesis_gen unconditionally calls check_novelty(),
+            # which hits real network APIs (OpenAlex/S2/arXiv) via
+            # search_papers_multi_query with blocking time.sleep() retries.
+            # On Windows, pytest-timeout cannot interrupt a thread blocked in
+            # real socket I/O, so leaving this unmocked hangs the whole
+            # pytest process. Mock at the source module.
+            with patch("berb.literature.search.search_papers_multi_query", return_value=[]):
+                result = _execute_hypothesis_gen(
+                    stage_dir=stage_dir,
+                    run_dir=run_dir,
+                    config=config,
+                    adapters=MagicMock(spec=AdapterBundle),
+                    llm=None,  # No LLM
+                    prompts=None,
+                )
+
             # Should use default hypotheses
             assert result.status == StageStatus.DONE
             hypotheses = (stage_dir / "hypotheses.md").read_text(encoding="utf-8")
@@ -237,39 +268,43 @@ class TestEdgeCases:
 # 6c. Failure Injection Tests
 # ============================================================================
 
+
 class TestFailureInjection:
     """Failure injection tests - simulate failure conditions."""
 
     def test_multiperspective_returns_empty_output(self):
         """Test when MultiPerspectiveMethod returns empty output."""
         from berb.pipeline.stage_impls._synthesis import _execute_hypothesis_gen
-        
+
         config = MagicMock()
         config.research.topic = "Test"
-        
+
         mock_llm = MagicMock(spec=LLMClient)
         mock_llm.config = LLMConfig(
             base_url="https://api.openai.com/v1",
             api_key="test",
             primary_model="gpt-4o",
         )
-        
+
         with tempfile.TemporaryDirectory() as tmpdir:
             stage_dir = Path(tmpdir) / "stage"
             run_dir = Path(tmpdir) / "run"
             stage_dir.mkdir(parents=True)
             run_dir.mkdir(parents=True)
             (run_dir / "synthesis.md").write_text("# Test", encoding="utf-8")
-            
+
             # Mock success but with empty output
             mock_result = MagicMock()
             mock_result.success = True
             mock_result.output = {}  # Empty!
             mock_result.confidence = 0.0
-            
-            with patch('berb.pipeline.stage_impls._synthesis.MultiPerspectiveMethod') as MockMP:
+
+            with (
+                patch("berb.pipeline.stage_impls._synthesis.MultiPerspectiveMethod") as MockMP,
+                patch("berb.literature.search.search_papers_multi_query", return_value=[]),
+            ):
                 MockMP.return_value.execute = AsyncMock(return_value=mock_result)
-                
+
                 result = _execute_hypothesis_gen(
                     stage_dir=stage_dir,
                     run_dir=run_dir,
@@ -278,14 +313,14 @@ class TestFailureInjection:
                     llm=mock_llm,
                     prompts=None,
                 )
-                
+
                 # Should fall back gracefully
                 assert result.status == StageStatus.DONE
 
     def test_async_execution_timeout(self):
         """Test handling of async execution timeout."""
         from berb.pipeline.stage_impls._synthesis import _SimpleRouter, _LLMProviderWrapper
-        
+
         config = LLMConfig(
             base_url="https://api.openai.com/v1",
             api_key="test-key",
@@ -293,13 +328,16 @@ class TestFailureInjection:
         )
         llm = LLMClient(config)
         wrapper = _LLMProviderWrapper(llm)
-        
+
         # Should complete without hanging
         import asyncio
+
         loop = asyncio.new_event_loop()
         try:
+
             async def test_complete():
                 return await wrapper.complete("test")
+
             result = loop.run_until_complete(test_complete())
             assert result is not None
         finally:
@@ -308,7 +346,7 @@ class TestFailureInjection:
     def test_router_provider_caching(self):
         """Test that router caches providers correctly."""
         from berb.pipeline.stage_impls._synthesis import _SimpleRouter
-        
+
         config = LLMConfig(
             base_url="https://api.openai.com/v1",
             api_key="test-key",
@@ -316,13 +354,13 @@ class TestFailureInjection:
         )
         llm = LLMClient(config)
         router = _SimpleRouter(llm)
-        
+
         # Get same provider twice - should be cached
         provider1 = router.get_provider_for_role("constructive")
         provider2 = router.get_provider_for_role("constructive")
-        
+
         assert provider1 is provider2  # Same object (cached)
-        
+
         # Different role - should be different
         provider3 = router.get_provider_for_role("destructive")
         assert provider1 is not provider3
@@ -331,6 +369,7 @@ class TestFailureInjection:
 # ============================================================================
 # 6d. Integration Smoke Test
 # ============================================================================
+
 
 class TestIntegrationSmoke:
     """Integration smoke tests - verify patched module integrates correctly."""
@@ -345,7 +384,7 @@ class TestIntegrationSmoke:
             _fallback_hypothesis_gen,
             MultiPerspectiveMethod,
         )
-        
+
         # All imports successful
         assert _execute_synthesis is not None
         assert _execute_hypothesis_gen is not None
@@ -358,16 +397,16 @@ class TestIntegrationSmoke:
         """Test that StageResult is compatible with pipeline."""
         from berb.pipeline.stage_impls._synthesis import _execute_hypothesis_gen
         from berb.pipeline.stages import Stage, StageStatus
-        
+
         config = MagicMock()
         config.research.topic = "Integration test"
-        
+
         with tempfile.TemporaryDirectory() as tmpdir:
             stage_dir = Path(tmpdir) / "stage"
             run_dir = Path(tmpdir) / "run"
             stage_dir.mkdir(parents=True)
             run_dir.mkdir(parents=True)
-            
+
             result = _execute_hypothesis_gen(
                 stage_dir=stage_dir,
                 run_dir=run_dir,
@@ -376,13 +415,13 @@ class TestIntegrationSmoke:
                 llm=None,
                 prompts=None,
             )
-            
+
             # Verify StageResult structure
-            assert hasattr(result, 'stage')
-            assert hasattr(result, 'status')
-            assert hasattr(result, 'artifacts')
-            assert hasattr(result, 'evidence_refs')
-            
+            assert hasattr(result, "stage")
+            assert hasattr(result, "status")
+            assert hasattr(result, "artifacts")
+            assert hasattr(result, "evidence_refs")
+
             # Verify values
             assert result.stage == Stage.HYPOTHESIS_GEN
             assert result.status == StageStatus.DONE
@@ -391,16 +430,16 @@ class TestIntegrationSmoke:
     def test_file_artifact_creation(self):
         """Test that hypothesis file artifacts are created correctly."""
         from berb.pipeline.stage_impls._synthesis import _execute_hypothesis_gen
-        
+
         config = MagicMock()
         config.research.topic = "Test"
-        
+
         with tempfile.TemporaryDirectory() as tmpdir:
             stage_dir = Path(tmpdir) / "stage"
             run_dir = Path(tmpdir) / "run"
             stage_dir.mkdir(parents=True)
             run_dir.mkdir(parents=True)
-            
+
             result = _execute_hypothesis_gen(
                 stage_dir=stage_dir,
                 run_dir=run_dir,
@@ -409,13 +448,13 @@ class TestIntegrationSmoke:
                 llm=None,
                 prompts=None,
             )
-            
+
             # Verify artifacts exist
             assert "hypotheses.md" in result.artifacts
-            
+
             hypotheses_path = stage_dir / "hypotheses.md"
             assert hypotheses_path.exists()
-            
+
             content = hypotheses_path.read_text(encoding="utf-8")
             assert len(content) > 0
 

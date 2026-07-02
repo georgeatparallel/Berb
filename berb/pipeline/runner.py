@@ -156,6 +156,7 @@ async def _execute_single_stage(
     previous_status: StageStatus,
     total_stages: int,
     kb_root: Path | None = None,
+    auto_approve_gates: bool = False,
 ) -> StageResult:
     """Run one stage: print status, record events, write checkpoint."""
     import time as _time
@@ -189,7 +190,7 @@ async def _execute_single_stage(
         config=config,
         adapters=adapters,
         checkpoint_mgr=checkpoint_mgr,
-        auto_approve_gates=False,
+        auto_approve_gates=auto_approve_gates,
     )
     elapsed = _time.monotonic() - t0
 
@@ -226,8 +227,11 @@ async def _execute_single_stage(
     if kb_root is not None and result.status == StageStatus.DONE:
         try:
             stage_dir = run_dir / f"stage-{int(stage):02d}"
-            from berb.knowledge.base import write_stage_to_kb
-
+            # NOTE: intentionally NOT re-importing write_stage_to_kb here —
+            # it's already imported at module scope so that callers/tests can
+            # monkeypatch `berb.pipeline.runner.write_stage_to_kb`. A local
+            # re-import previously shadowed that binding, silently defeating
+            # any monkeypatch of the module-level name.
             write_stage_to_kb(
                 kb_root,
                 stage_id=int(stage),
@@ -303,6 +307,7 @@ async def execute_pipeline(
                 previous_status=previous_status,
                 total_stages=total_stages,
                 kb_root=kb_root,
+                auto_approve_gates=auto_approve_gates,
             )]
         else:
             names = ", ".join(s.name for s in level_stages)
@@ -319,6 +324,7 @@ async def execute_pipeline(
                     previous_status=previous_status,
                     total_stages=total_stages,
                     kb_root=kb_root,
+                    auto_approve_gates=auto_approve_gates,
                 ) for s in level_stages
             ])
 

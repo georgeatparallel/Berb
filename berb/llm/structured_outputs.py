@@ -8,7 +8,7 @@ Paradigm: Declarative schema definition
 
 Usage:
     from berb.llm.structured_outputs import DecompositionOutput
-    
+
     # Use with LLM tool/function calling
     response = client.chat(
         messages,
@@ -22,7 +22,6 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Phase A: Scoping
 # ─────────────────────────────────────────────────────────────────────────────
@@ -30,12 +29,13 @@ from pydantic import BaseModel, Field
 
 class DecompositionOutput(BaseModel):
     """Structured output for Stage 2: Problem Decomposition.
-    
+
     Expected fields:
     - sub_problems: List of sub-problems (max 5)
     - assumptions: Key assumptions with labels
     - failure_modes: Potential failure modes
     """
+
     sub_problems: list[str] = Field(
         ...,
         description="List of 3-5 sub-problems to solve",
@@ -60,11 +60,12 @@ class DecompositionOutput(BaseModel):
 
 class HypothesisOutput(BaseModel):
     """Structured output for Stage 8: Hypothesis Generation.
-    
+
     Expected fields:
     - hypotheses: List of testable hypotheses
     - rationale: Reasoning behind hypotheses
     """
+
     hypotheses: list[dict[str, str]] = Field(
         ...,
         description="List of 3-5 testable hypotheses with statement and rationale",
@@ -85,13 +86,14 @@ class HypothesisOutput(BaseModel):
 
 class ExperimentDesignOutput(BaseModel):
     """Structured output for Stage 9: Experiment Design.
-    
+
     Expected fields:
     - method: Experimental method description
     - variables: Independent/dependent variables
     - controls: Control conditions
     - metrics: Success metrics
     """
+
     method: str = Field(
         ...,
         description="Detailed experimental method",
@@ -115,12 +117,13 @@ class ExperimentDesignOutput(BaseModel):
 
 class CodeGenerationOutput(BaseModel):
     """Structured output for Stage 10: Code Generation.
-    
+
     Expected fields:
     - files: List of files to create
     - implementation: Main implementation code
     - dependencies: Required dependencies
     """
+
     files: list[dict[str, str]] = Field(
         ...,
         description="List of files with path and content",
@@ -143,12 +146,13 @@ class CodeGenerationOutput(BaseModel):
 
 class ResearchDecisionOutput(BaseModel):
     """Structured output for Stage 15: Research Decision.
-    
+
     Expected fields:
     - decision: PROCEED, REFINE, or PIVOT
     - rationale: Reasoning for decision
     - next_steps: Recommended next steps
     """
+
     decision: str = Field(
         ...,
         description="Decision: PROCEED, REFINE, or PIVOT",
@@ -173,13 +177,14 @@ class ResearchDecisionOutput(BaseModel):
 
 class PeerReviewOutput(BaseModel):
     """Structured output for Stage 18: Peer Review.
-    
+
     Expected fields:
     - scores: Scores for each dimension (0-10)
     - strengths: Paper strengths
     - weaknesses: Paper weaknesses
     - recommendations: Recommendations for improvement
     """
+
     scores: dict[str, float] = Field(
         ...,
         description="Scores for novelty, rigor, clarity, impact, experiments (0-10)",
@@ -199,9 +204,10 @@ class PeerReviewOutput(BaseModel):
         description="Recommendations for improvement",
         min_length=1,
     )
-    
+
     class Config:
         """Pydantic config."""
+
         json_schema_extra = {
             "example": {
                 "scores": {
@@ -225,12 +231,13 @@ class PeerReviewOutput(BaseModel):
 
 class CitationVerificationOutput(BaseModel):
     """Structured output for Stage 23: Citation Verification.
-    
+
     Expected fields:
     - verified_citations: List of verified citations
     - unverified_citations: List of unverified citations
     - removed_citations: Citations to remove
     """
+
     verified_citations: list[dict[str, str]] = Field(
         ...,
         description="Citations verified as real and relevant",
@@ -252,13 +259,13 @@ class CitationVerificationOutput(BaseModel):
 
 def get_output_model(stage_name: str) -> type[BaseModel] | None:
     """Get structured output model for a pipeline stage.
-    
+
     Args:
         stage_name: Name of the pipeline stage (e.g., "HYPOTHESIS_GEN")
-        
+
     Returns:
         Pydantic model class or None if no structured output defined
-        
+
     Example:
         >>> model = get_output_model("HYPOTHESIS_GEN")
         >>> model  # HypothesisOutput
@@ -272,20 +279,20 @@ def get_output_model(stage_name: str) -> type[BaseModel] | None:
         "PEER_REVIEW": PeerReviewOutput,
         "CITATION_VERIFY": CitationVerificationOutput,
     }
-    
+
     return stage_to_model.get(stage_name.upper())
 
 
 def validate_output(model: type[BaseModel], data: dict) -> BaseModel:
     """Validate output data against model schema.
-    
+
     Args:
         model: Pydantic model class
         data: Data dictionary to validate
-        
+
     Returns:
         Validated model instance
-        
+
     Raises:
         ValidationError: If data doesn't match schema
     """

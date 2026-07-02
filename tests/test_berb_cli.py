@@ -81,9 +81,7 @@ def test_cmd_run_missing_config_returns_one(
 def test_cmd_validate_missing_config_returns_one(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    args = argparse.Namespace(
-        config=str(tmp_path / "missing.yaml"), no_check_paths=False
-    )
+    args = argparse.Namespace(config=str(tmp_path / "missing.yaml"), no_check_paths=False)
     code = rc_cli.cmd_validate(args)
     assert code == 1
     assert "config file not found" in capsys.readouterr().err
@@ -202,7 +200,8 @@ def test_resolve_config_returns_none_when_missing(
 def test_resolve_config_explicit_path_no_search() -> None:
     result = resolve_config_path("/some/explicit/path.yaml")
     assert result is not None
-    assert str(result) == "/some/explicit/path.yaml"
+    # Use Path comparison to handle platform-specific path separators
+    assert result == Path("/some/explicit/path.yaml")
 
 
 # --- cmd_init tests ---
@@ -256,9 +255,7 @@ def test_cmd_init_refuses_overwrite(
     assert (tmp_path / "config.arc.yaml").read_text() == "existing\n"
 
 
-def test_cmd_init_force_overwrites(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_cmd_init_force_overwrites(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
     _write_example_config(tmp_path / "config.berb.example.yaml")
     (tmp_path / "config.arc.yaml").write_text("old\n")
@@ -307,19 +304,32 @@ def test_resume_finds_existing_checkpoint_dir(
     old_run_dir = tmp_path / "artifacts" / f"rc-20260319-100000-{topic_hash}"
     old_run_dir.mkdir(parents=True)
     (old_run_dir / "checkpoint.json").write_text(
-        json.dumps({"last_completed_stage": 5, "last_completed_name": "HYPOTHESIS_GEN",
-                     "run_id": old_run_dir.name, "timestamp": "2026-03-19T10:00:00Z"})
+        json.dumps(
+            {
+                "last_completed_stage": 5,
+                "last_completed_name": "HYPOTHESIS_GEN",
+                "run_id": old_run_dir.name,
+                "timestamp": "2026-03-19T10:00:00Z",
+            }
+        )
     )
 
-    # Mock execute_pipeline so we don't actually run
+    # Mock execute_pipeline so we don't actually run — it's async now, so
+    # the mock must be an async callable, not a plain lambda.
     import berb.pipeline.runner as runner_mod
-    monkeypatch.setattr(runner_mod, "execute_pipeline", lambda **kw: [])
+
+    async def _fake_execute_pipeline(**kw):
+        return []
+
+    monkeypatch.setattr(runner_mod, "execute_pipeline", _fake_execute_pipeline)
 
     # Also mock preflight
     from unittest.mock import MagicMock
+
     mock_client = MagicMock()
     mock_client.preflight.return_value = (True, "OK")
     import berb.llm as llm_mod
+
     monkeypatch.setattr(llm_mod, "create_llm_client", lambda cfg: mock_client)
 
     args = argparse.Namespace(
@@ -352,12 +362,18 @@ def test_resume_no_checkpoint_warns(
     (tmp_path / "artifacts").mkdir()
 
     import berb.pipeline.runner as runner_mod
-    monkeypatch.setattr(runner_mod, "execute_pipeline", lambda **kw: [])
+
+    async def _fake_execute_pipeline(**kw):
+        return []
+
+    monkeypatch.setattr(runner_mod, "execute_pipeline", _fake_execute_pipeline)
 
     from unittest.mock import MagicMock
+
     mock_client = MagicMock()
     mock_client.preflight.return_value = (True, "OK")
     import berb.llm as llm_mod
+
     monkeypatch.setattr(llm_mod, "create_llm_client", lambda cfg: mock_client)
 
     args = argparse.Namespace(

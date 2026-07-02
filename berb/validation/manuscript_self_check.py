@@ -14,8 +14,7 @@ from __future__ import annotations
 
 import logging
 import re
-from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -23,7 +22,7 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger(__name__)
 
 
-class IssueSeverity(str, Enum):
+class IssueSeverity(StrEnum):
     """Severity of manuscript issues.
 
     Attributes:
@@ -169,8 +168,14 @@ class ManuscriptSelfChecker:
 
     # Hedging patterns that may indicate uncertainty
     HEDGING_PATTERNS = [
-        r"\bmay\b", r"\bmight\b", r"\bcould\b", r"\bsuggests?\b",
-        r"\bappears?\b", r"\bseems?\b", r"\bpossibly\b", r"\bpotentially\b",
+        r"\bmay\b",
+        r"\bmight\b",
+        r"\bcould\b",
+        r"\bsuggests?\b",
+        r"\bappears?\b",
+        r"\bseems?\b",
+        r"\bpossibly\b",
+        r"\bpotentially\b",
     ]
 
     def __init__(
@@ -242,7 +247,10 @@ class ManuscriptSelfChecker:
 
                     # If claim says "proves" but citation only "suggests"
                     if classification.confidence < 0.7:
-                        if any(word in claim_lower for word in ["proves", "demonstrates", "establishes"]):
+                        if any(
+                            word in claim_lower
+                            for word in ["proves", "demonstrates", "establishes"]
+                        ):
                             warnings.append(
                                 MisalignmentWarning(
                                     claim=claim[:200],
@@ -412,13 +420,9 @@ class ManuscriptSelfChecker:
         misalignments = await self.check_citation_claim_alignment(
             paper_text, references, citation_classifications
         )
-        omissions = await self.check_contrasting_evidence_acknowledged(
-            paper_text, evidence_map
-        )
+        omissions = await self.check_contrasting_evidence_acknowledged(paper_text, evidence_map)
         uncited = await self.check_citation_completeness(paper_text)
-        format_errors = await self.check_reference_formatting(
-            references, paper_text
-        )
+        format_errors = await self.check_reference_formatting(references, paper_text)
 
         # Count claims
         total_claims = len(self._extract_claims_with_citations(paper_text))
@@ -432,11 +436,7 @@ class ManuscriptSelfChecker:
         score = max(0.0, score)
 
         # Determine pass/fail
-        passed = (
-            len(misalignments) == 0 and
-            len(omissions) == 0 and
-            score >= 7.0
-        )
+        passed = len(misalignments) == 0 and len(omissions) == 0 and score >= 7.0
 
         return ManuscriptIntegrityReport(
             total_claims=total_claims,
@@ -454,9 +454,7 @@ class ManuscriptSelfChecker:
 
     # Helper methods
 
-    def _extract_claims_with_citations(
-        self, text: str
-    ) -> list[tuple[str, list[str]]]:
+    def _extract_claims_with_citations(self, text: str) -> list[tuple[str, list[str]]]:
         """Extract claims with their citations.
 
         Returns list of (claim_text, [citation_ids])
@@ -512,9 +510,7 @@ class ManuscriptSelfChecker:
 
         return citations
 
-    def _extract_citations_from_text(
-        self, text: str
-    ) -> list[tuple[str, str]]:
+    def _extract_citations_from_text(self, text: str) -> list[tuple[str, str]]:
         """Extract citations with location info."""
         citations = []
 
@@ -525,7 +521,7 @@ class ManuscriptSelfChecker:
             (r"[A-Z][a-z]+\s+\(\d{4}\)", "author-year"),
         ]
 
-        for pattern, style in patterns:
+        for pattern, _style in patterns:
             for match in re.finditer(pattern, text):
                 # Get location (section/paragraph)
                 location = self._get_location(text, match.start())
@@ -559,9 +555,16 @@ class ManuscriptSelfChecker:
     def _has_contrast_language(self, text: str) -> bool:
         """Check if text acknowledges contrasting evidence."""
         contrast_words = [
-            "however", "but", "although", "nevertheless",
-            "in contrast", "on the other hand", "conversely",
-            "despite", "while some studies", "contrasting evidence",
+            "however",
+            "but",
+            "although",
+            "nevertheless",
+            "in contrast",
+            "on the other hand",
+            "conversely",
+            "despite",
+            "while some studies",
+            "contrasting evidence",
         ]
         text_lower = text.lower()
         return any(word in text_lower for word in contrast_words)

@@ -20,7 +20,7 @@ Usage:
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 
 def utcnow() -> datetime:
@@ -34,7 +34,7 @@ def utcnow() -> datetime:
         >>> now.tzinfo
         datetime.timezone.utc
     """
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def utcnow_iso(timespec: str = "seconds") -> str:
@@ -51,7 +51,7 @@ def utcnow_iso(timespec: str = "seconds") -> str:
         >>> ts  # doctest: +SKIP
         '2026-03-29T12:34:56+00:00'
     """
-    return datetime.now(timezone.utc).isoformat(timespec=timespec)
+    return datetime.now(UTC).isoformat(timespec=timespec)
 
 
 def utc_timestamp() -> float:
@@ -65,7 +65,7 @@ def utc_timestamp() -> float:
         >>> isinstance(ts, float)
         True
     """
-    return datetime.now(timezone.utc).timestamp()
+    return datetime.now(UTC).timestamp()
 
 
 def utcnow_str(fmt: str = "%Y-%m-%d %H:%M:%S") -> str:
@@ -82,7 +82,7 @@ def utcnow_str(fmt: str = "%Y-%m-%d %H:%M:%S") -> str:
         >>> len(ts)  # doctest: +SKIP
         15
     """
-    return datetime.now(timezone.utc).strftime(fmt)
+    return datetime.now(UTC).strftime(fmt)
 
 
 def ensure_utc(dt: datetime) -> datetime:
@@ -112,10 +112,10 @@ def ensure_utc(dt: datetime) -> datetime:
 
     if dt.tzinfo is None:
         # Naive datetime - assume UTC
-        return dt.replace(tzinfo=timezone.utc)
+        return dt.replace(tzinfo=UTC)
 
     # Convert to UTC if needed
-    return dt.astimezone(timezone.utc)
+    return dt.astimezone(UTC)
 
 
 def duration_seconds(start: datetime, end: datetime | None = None) -> float:

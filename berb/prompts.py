@@ -89,9 +89,7 @@ class PromptManager:
 
     def __init__(self, overrides_path: str | Path | None = None) -> None:
         # Deep-copy defaults so mutations don't leak across instances
-        self._stages: dict[str, dict[str, Any]] = {
-            k: dict(v) for k, v in _DEFAULT_STAGES.items()
-        }
+        self._stages: dict[str, dict[str, Any]] = {k: dict(v) for k, v in _DEFAULT_STAGES.items()}
         self._blocks: dict[str, str] = dict(_DEFAULT_BLOCKS)
         self._sub_prompts: dict[str, dict[str, Any]] = {
             k: dict(v) for k, v in _DEFAULT_SUB_PROMPTS.items()
@@ -1454,12 +1452,12 @@ _DEFAULT_SUB_PROMPTS: dict[str, dict[str, Any]] = {
             "issues — they indicate the condition is not truly different.\n\n"
             "## Output Format (JSON)\n"
             "```json\n"
-            '{{\n'
+            "{{\n"
             '  "verdict": "APPROVE or REVISE",\n'
             '  "score": 1-10,\n'
             '  "critical_issues": ["issue1", "issue2"],\n'
             '  "suggestions": ["suggestion1", "suggestion2"]\n'
-            '}}\n'
+            "}}\n"
             "```\n\n"
             "Only use verdict REVISE if there are critical issues that would "
             "cause the code to crash or produce scientifically invalid results."
@@ -1531,9 +1529,7 @@ _DEFAULT_STAGES: dict[str, dict[str, Any]] = {
     },
     # ── Phase B: Literature Discovery ────────────────────────────────────
     "search_strategy": {
-        "system": (
-            "You design literature retrieval strategies and source verification plans."
-        ),
+        "system": ("You design literature retrieval strategies and source verification plans."),
         "user": (
             "Create a merged search strategy package.\n"
             "Return a JSON object with keys: search_plan_yaml, sources.\n"
@@ -1649,6 +1645,19 @@ _DEFAULT_STAGES: dict[str, dict[str, Any]] = {
             "- Hypotheses that replicate well-known results already in the literature\n"
             "- Hypotheses that cannot be tested within the compute budget\n\n"
             "Synthesis:\n{synthesis}"
+        ),
+    },
+    "hypothesis_synthesize": {
+        "system": (
+            "You synthesize multiple debated research hypotheses into a single "
+            "markdown document of well-formed, falsifiable hypotheses. Keep the "
+            "strongest, most falsifiable ideas from each perspective; discard "
+            "weak or redundant ones."
+        ),
+        "user": (
+            "Synthesize the following debated perspectives into a final set of "
+            "hypotheses (## H1, ## H2, ... headings), each with rationale, "
+            "measurable prediction, and failure condition.\n\n{perspectives}"
         ),
     },
     # ── Phase D: Experiment Design ───────────────────────────────────────
@@ -2209,6 +2218,17 @@ _DEFAULT_STAGES: dict[str, dict[str, Any]] = {
             "Run context:\n{context}"
         ),
         "max_tokens": 8192,
+    },
+    "analysis_synthesize": {
+        "system": (
+            "You synthesize multiple analytical perspectives on experiment "
+            "results into one coherent, evidence-based analysis. Resolve "
+            "disagreements explicitly and note where perspectives converge."
+        ),
+        "user": (
+            "Synthesize the following perspectives into a single coherent "
+            "analysis.\n\n{perspectives}"
+        ),
     },
     "research_decision": {
         "system": "You are a research program lead making go/no-go decisions.",

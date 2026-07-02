@@ -2,6 +2,444 @@
   "query": "Test",
   "source": "arxiv",
   "limit": 15,
-  "timestamp": 1774779586.5441108,
-  "papers": []
+  "timestamp": 1782982645.062377,
+  "papers": [
+    {
+      "paper_id": "arxiv-1101.4081",
+      "title": "A simple way to speedup Gauss Elimination",
+      "authors": [
+        {
+          "name": "Sivaram Ambikasaran",
+          "affiliation": ""
+        }
+      ],
+      "year": 2011,
+      "abstract": "This article looks at a simple modification to speedup the conventional Gauss Elimination. The proposed modification speeds up the conventional Gauss Elimination by a factor of nearly 9/7 (in the asymptotic limit).",
+      "venue": "math.NA",
+      "citation_count": 0,
+      "doi": "",
+      "arxiv_id": "1101.4081",
+      "url": "https://arxiv.org/abs/1101.4081",
+      "source": "arxiv",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "arxiv-1807.10953",
+      "title": "Goal-Oriented Mutation Testing with Focal Methods",
+      "authors": [
+        {
+          "name": "Sten Vercammen",
+          "affiliation": ""
+        },
+        {
+          "name": "Mohammad Ghafari",
+          "affiliation": ""
+        },
+        {
+          "name": "Serge Demeyer",
+          "affiliation": ""
+        },
+        {
+          "name": "Markus Borg",
+          "affiliation": ""
+        }
+      ],
+      "year": 2018,
+      "abstract": "Mutation testing is the state-of-the-art technique for assessing the fault-detection capacity of a test suite. Unfortunately, mutation testing consumes enormous computing resources because it runs the whole test suite for each and every injected mutant. In this paper we explore fine-grained traceability links at method level (named focal methods), to reduce the execution time of mutation testing and to verify the quality of the test cases for each individual method, instead of the usually verified overall test suite quality. Validation of our approach on the open source Apache Ant project shows a speed-up of 573.5x for the mutants located in focal methods with a quality score of 80%.",
+      "venue": "cs.SE",
+      "citation_count": 0,
+      "doi": "10.1145/3278186.3278190",
+      "arxiv_id": "1807.10953",
+      "url": "https://arxiv.org/abs/1807.10953",
+      "source": "arxiv",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "arxiv-1202.4527",
+      "title": "Study Paper on Test Case generation for GUI Based Testing",
+      "authors": [
+        {
+          "name": "A. Isabella",
+          "affiliation": ""
+        },
+        {
+          "name": "Emi Retna",
+          "affiliation": ""
+        }
+      ],
+      "year": 2012,
+      "abstract": "With the advent of WWW and outburst in technology and software development, testing the software became a major concern. Due to the importance of the testing phase in a software development life cycle, testing has been divided into graphical user interface (GUI) based testing, logical testing, integration testing, etc.GUI Testing has become very important as it provides more sophisticated way to interact with the software. The complexity of testing GUI increased over time. The testing needs to be performed in a way that it provides effectiveness, efficiency, increased fault detection rate and good path coverage. To cover all use cases and to provide testing for all possible (success/failure) scenarios the length of the test sequence is considered important. Intent of this paper is to study some techniques used for test case generation and process for various GUI based software applications.",
+      "venue": "cs.SE",
+      "citation_count": 0,
+      "doi": "",
+      "arxiv_id": "1202.4527",
+      "url": "https://arxiv.org/abs/1202.4527",
+      "source": "arxiv",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "arxiv-2311.05033",
+      "title": "Distribution-free tests for lossless feature selection in classification and regression",
+      "authors": [
+        {
+          "name": "L\u00e1szl\u00f3 Gy\u00f6rfi",
+          "affiliation": ""
+        },
+        {
+          "name": "Tam\u00e1s Linder",
+          "affiliation": ""
+        },
+        {
+          "name": "Harro Walk",
+          "affiliation": ""
+        }
+      ],
+      "year": 2023,
+      "abstract": "We study the problem of lossless feature selection for a $d$-dimensional feature vector $X=(X^{(1)},\\dots ,X^{(d)})$ and label $Y$ for binary classification as well as nonparametric regression. For an index set $S\\subset \\{1,\\dots ,d\\}$, consider the selected $|S|$-dimensional feature subvector $X_S=(X^{(i)}, i\\in S)$. If $L^*$ and $L^*(S)$ stand for the minimum risk based on $X$ and $X_S$, respectively, then $X_S$ is called lossless if $L^*=L^*(S)$. For classification, the minimum risk is the Bayes error probability, while in regression, the minimum risk is the residual variance. We introduce nearest-neighbor based test statistics to test the hypothesis that $X_S$ is lossless. This test statistic is an estimate of the excess risk $L^*(S)-L^*$. Surprisingly, estimating this excess risk turns out to be a functional estimation problem that does not suffer from the curse of dimensionality in the sense that the convergence rate does not depend on the dimension $d$. For the threshold $a_n=\\log n/\\sqrt{n}$, the corresponding tests are proved to be consistent under conditions on the distribution of $(X,Y)$ that are significantly milder than in previous work. Also, our threshold is universal (dimension independent), in contrast to earlier methods where for large $d$ the threshold becomes too large to be useful in practice.",
+      "venue": "math.ST",
+      "citation_count": 0,
+      "doi": "",
+      "arxiv_id": "2311.05033",
+      "url": "https://arxiv.org/abs/2311.05033",
+      "source": "arxiv",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "arxiv-2402.18105",
+      "title": "JEL ratio test for independence between a continuous and a categorical random variable",
+      "authors": [
+        {
+          "name": "Saparya Suresh",
+          "affiliation": ""
+        },
+        {
+          "name": "Sudheesh K. Kattumannil",
+          "affiliation": ""
+        }
+      ],
+      "year": 2024,
+      "abstract": "The categorical Gini covariance is a dependence measure between a numerical variable and a categorical variable. The Gini covariance measures dependence by quantifying the difference between the conditional and unconditional distributional functions. The categorical Gini covariance equals zero if and only if the numerical variable and the categorical variable are independent. We propose a non-parametric test for testing the independence between a numerical and categorical variable using a modified categorical Gini covariance. We used the theory of U-statistics to find the test statistics and study the properties. The test has an asymptotic normal distribution. Since the implementation of a normal-based test is difficult, we develop a jackknife empirical likelihood (JEL) ratio test for testing independence. Extensive Monte Carlo simulation studies are carried out to validate the performance of the proposed JEL ratio test. We illustrate the test procedure using Iris flower data set.",
+      "venue": "stat.ME",
+      "citation_count": 0,
+      "doi": "",
+      "arxiv_id": "2402.18105",
+      "url": "https://arxiv.org/abs/2402.18105",
+      "source": "arxiv",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "arxiv-1801.00973",
+      "title": "A New Wald Test for Hypothesis Testing Based on MCMC outputs",
+      "authors": [
+        {
+          "name": "Yong Li",
+          "affiliation": ""
+        },
+        {
+          "name": "Xiaobin Liu",
+          "affiliation": ""
+        },
+        {
+          "name": "Jun Yu",
+          "affiliation": ""
+        },
+        {
+          "name": "Tao Zeng",
+          "affiliation": ""
+        }
+      ],
+      "year": 2018,
+      "abstract": "In this paper, a new and convenient $\u03c7^2$ wald test based on MCMC outputs is proposed for hypothesis testing. The new statistic can be explained as MCMC version of Wald test and has several important advantages that make it very convenient in practical applications. First, it is well-defined under improper prior distributions and avoids Jeffrey-Lindley's paradox. Second, it's asymptotic distribution can be proved to follow the $\u03c7^2$ distribution so that the threshold values can be easily calibrated from this distribution. Third, it's statistical error can be derived using the Markov chain Monte Carlo (MCMC) approach. Fourth, most importantly, it is only based on the posterior MCMC random samples drawn from the posterior distribution. Hence, it is only the by-product of the posterior outputs and very easy to compute. In addition, when the prior information is available, the finite sample theory is derived for the proposed test statistic. At last, the usefulness of the test is illustrated with several applications to latent variable models widely used in economics and finance.",
+      "venue": "econ.EM",
+      "citation_count": 0,
+      "doi": "",
+      "arxiv_id": "1801.00973",
+      "url": "https://arxiv.org/abs/1801.00973",
+      "source": "arxiv",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "arxiv-0712.3825",
+      "title": "Tests of Machine Intelligence",
+      "authors": [
+        {
+          "name": "Shane Legg",
+          "affiliation": ""
+        },
+        {
+          "name": "Marcus Hutter",
+          "affiliation": ""
+        }
+      ],
+      "year": 2007,
+      "abstract": "Although the definition and measurement of intelligence is clearly of fundamental importance to the field of artificial intelligence, no general survey of definitions and tests of machine intelligence exists. Indeed few researchers are even aware of alternatives to the Turing test and its many derivatives. In this paper we fill this gap by providing a short survey of the many tests of machine intelligence that have been proposed.",
+      "venue": "cs.AI",
+      "citation_count": 0,
+      "doi": "",
+      "arxiv_id": "0712.3825",
+      "url": "https://arxiv.org/abs/0712.3825",
+      "source": "arxiv",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "arxiv-2506.02315",
+      "title": "A Data-Based Architecture for Flight Test without Test Points",
+      "authors": [
+        {
+          "name": "D. Isaiah Harp",
+          "affiliation": ""
+        },
+        {
+          "name": "Joshua Ott",
+          "affiliation": ""
+        },
+        {
+          "name": "John Alora",
+          "affiliation": ""
+        },
+        {
+          "name": "Dylan Asmar",
+          "affiliation": ""
+        }
+      ],
+      "year": 2025,
+      "abstract": "The justification for the \"test point\" derives from the test pilot's obligation to reproduce faithfully the pre-specified conditions of some model prediction. Pilot deviation from those conditions invalidates the model assumptions. Flight test aids have been proposed to increase accuracy on more challenging test points. However, the very existence of databands and tolerances is the problem more fundamental than inadequate pilot skill. We propose a novel approach, which eliminates test points. We start with a high-fidelity digital model of an air vehicle. Instead of using this model to generate a point prediction, we use a machine learning method to produce a reduced-order model (ROM). The ROM has two important properties. First, it can generate a prediction based on any set of conditions the pilot flies. Second, if the test result at those conditions differ from the prediction, the ROM can be updated using the new data. The outcome of flight test is thus a refined ROM at whatever conditions were flown. This ROM in turn updates and validates the high-fidelity model. We present a single example of this \"point-less\" architecture, using T-38C flight test data. We first use a generic aircraft model to build a ROM of longitudinal pitching motion as a hypersurface. We then ingest unconstrained flight test data and use Gaussian Process Regression to update and condition the hypersurface. By proposing a second-order equivalent system for the T-38C, this hypersurface then generates parameters necessary to assess MIL-STD-1797B compliance for longitudinal dynamics.",
+      "venue": "cs.LG",
+      "citation_count": 0,
+      "doi": "",
+      "arxiv_id": "2506.02315",
+      "url": "https://arxiv.org/abs/2506.02315",
+      "source": "arxiv",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "arxiv-1008.0063",
+      "title": "Evolutionary Approach to Test Generation for Functional BIST",
+      "authors": [
+        {
+          "name": "Y. A. Skobtsov",
+          "affiliation": ""
+        },
+        {
+          "name": "D. E. Ivanov",
+          "affiliation": ""
+        },
+        {
+          "name": "V. Y. Skobtsov",
+          "affiliation": ""
+        },
+        {
+          "name": "R. Ubar",
+          "affiliation": ""
+        },
+        {
+          "name": "J. Raik",
+          "affiliation": ""
+        }
+      ],
+      "year": 2010,
+      "abstract": "In the paper, an evolutionary approach to test generation for functional BIST is considered. The aim of the proposed scheme is to minimize the test data volume by allowing the device's microprogram to test its logic, providing an observation structure to the system, and generating appropriate test data for the given architecture. Two methods of deriving a deterministic test set at functional level are suggested. The first method is based on the classical genetic algorithm with binary and arithmetic crossover and mutation operators. The second one uses genetic programming, where test is represented as a sequence of microoperations. In the latter case, we apply two-point crossover based on exchanging test subsequences and mutation implemented as random replacement of microoperations or operands. Experimental data of the program realization showing the efficiency of the proposed methods are presented.",
+      "venue": "cs.NE",
+      "citation_count": 0,
+      "doi": "",
+      "arxiv_id": "1008.0063",
+      "url": "https://arxiv.org/abs/1008.0063",
+      "source": "arxiv",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "arxiv-2506.16732",
+      "title": "On Training-Test (Mis)alignment in Unsupervised Combinatorial Optimization: Observation, Empirical Exploration, and Analysis",
+      "authors": [
+        {
+          "name": "Fanchen Bu",
+          "affiliation": ""
+        },
+        {
+          "name": "Kijung Shin",
+          "affiliation": ""
+        }
+      ],
+      "year": 2025,
+      "abstract": "In unsupervised combinatorial optimization (UCO), during training, one aims to have continuous decisions that are promising in a probabilistic sense for each training instance, which enables end-to-end training on initially discrete and non-differentiable problems. At the test time, for each test instance, starting from continuous decisions, derandomization is typically applied to obtain the final deterministic decisions. Researchers have developed more and more powerful test-time derandomization schemes to enhance the empirical performance and the theoretical guarantee of UCO methods. However, we notice a misalignment between training and testing in the existing UCO methods. Consequently, lower training losses do not necessarily entail better post-derandomization performance, even for the training instances without any data distribution shift. Empirically, we indeed observe such undesirable cases. We explore a preliminary idea to better align training and testing in UCO by including a differentiable version of derandomization into training. Our empirical exploration shows that such an idea indeed improves training-test alignment, but also introduces nontrivial challenges into training.",
+      "venue": "cs.LG",
+      "citation_count": 0,
+      "doi": "",
+      "arxiv_id": "2506.16732",
+      "url": "https://arxiv.org/abs/2506.16732",
+      "source": "arxiv",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "arxiv-1108.1351",
+      "title": "Fast k-means algorithm clustering",
+      "authors": [
+        {
+          "name": "Raied Salman",
+          "affiliation": ""
+        },
+        {
+          "name": "Vojislav Kecman",
+          "affiliation": ""
+        },
+        {
+          "name": "Qi Li",
+          "affiliation": ""
+        },
+        {
+          "name": "Robert Strack",
+          "affiliation": ""
+        },
+        {
+          "name": "Erik Test",
+          "affiliation": ""
+        }
+      ],
+      "year": 2011,
+      "abstract": "k-means has recently been recognized as one of the best algorithms for clustering unsupervised data. Since k-means depends mainly on distance calculation between all data points and the centers, the time cost will be high when the size of the dataset is large (for example more than 500millions of points). We propose a two stage algorithm to reduce the time cost of distance calculation for huge datasets. The first stage is a fast distance calculation using only a small portion of the data to produce the best possible location of the centers. The second stage is a slow distance calculation in which the initial centers used are taken from the first stage. The fast and slow stages represent the speed of the movement of the centers. In the slow stage, the whole dataset can be used to get the exact location of the centers. The time cost of the distance calculation for the fast stage is very low due to the small size of the training data chosen. The time cost of the distance calculation for the slow stage is also minimized due to small number of iterations. Different initial locations of the clusters have been used during the test of the proposed algorithms. For large datasets, experiments show that the 2-stage clustering method achieves better speed-up (1-9 times).",
+      "venue": "cs.DS",
+      "citation_count": 0,
+      "doi": "10.5121/ijcnc.2011.3402",
+      "arxiv_id": "1108.1351",
+      "url": "https://arxiv.org/abs/1108.1351",
+      "source": "arxiv",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "arxiv-2103.04578",
+      "title": "Testing Autonomous Systems with Believed Equivalence Refinement",
+      "authors": [
+        {
+          "name": "Chih-Hong Cheng",
+          "affiliation": ""
+        },
+        {
+          "name": "Rongjie Yan",
+          "affiliation": ""
+        }
+      ],
+      "year": 2021,
+      "abstract": "Continuous engineering of autonomous driving functions commonly requires deploying vehicles in road testing to obtain inputs that cause problematic decisions. Although the discovery leads to producing an improved system, it also challenges the foundation of testing using equivalence classes and the associated relative test coverage criterion. In this paper, we propose believed equivalence, where the establishment of an equivalence class is initially based on expert belief and is subject to a set of available test cases having a consistent valuation. Upon a newly encountered test case that breaks the consistency, one may need to refine the established categorization in order to split the originally believed equivalence into two. Finally, we focus on modules implemented using deep neural networks where every category partitions an input over the real domain. We present both analytical and lazy methods to suggest the refinement. The concept is demonstrated in analyzing multiple autonomous driving modules, indicating the potential of our proposed approach.",
+      "venue": "cs.AI",
+      "citation_count": 0,
+      "doi": "",
+      "arxiv_id": "2103.04578",
+      "url": "https://arxiv.org/abs/2103.04578",
+      "source": "arxiv",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "arxiv-2303.09755",
+      "title": "On the Effect of Instrumentation on Test Flakiness",
+      "authors": [
+        {
+          "name": "Shawn Rasheed",
+          "affiliation": ""
+        },
+        {
+          "name": "Jens Dietrich",
+          "affiliation": ""
+        },
+        {
+          "name": "Amjed Tahir",
+          "affiliation": ""
+        }
+      ],
+      "year": 2023,
+      "abstract": "Test flakiness is a problem that affects testing and processes that rely on it. Several factors cause or influence the flakiness of test outcomes. Test execution order, randomness and concurrency are some of the more common and well-studied causes. Some studies mention code instrumentation as a factor that causes or affects test flakiness. However, evidence for this issue is scarce. In this study, we attempt to systematically collect evidence for the effects of instrumentation on test flakiness. We experiment with common types of instrumentation for Java programs - namely, application performance monitoring, coverage and profiling instrumentation. We then study the effects of instrumentation on a set of nine programs obtained from an existing dataset used to study test flakiness, consisting of popular GitHub projects written in Java. We observe cases where real-world instrumentation causes flakiness in a program. However, this effect is rare. We also discuss a related issue - how instrumentation may interfere with flakiness detection and prevention.",
+      "venue": "cs.SE",
+      "citation_count": 0,
+      "doi": "",
+      "arxiv_id": "2303.09755",
+      "url": "https://arxiv.org/abs/2303.09755",
+      "source": "arxiv",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "arxiv-2601.16175",
+      "title": "Learning to Discover at Test Time",
+      "authors": [
+        {
+          "name": "Mert Yuksekgonul",
+          "affiliation": ""
+        },
+        {
+          "name": "Daniel Koceja",
+          "affiliation": ""
+        },
+        {
+          "name": "Xinhao Li",
+          "affiliation": ""
+        },
+        {
+          "name": "Federico Bianchi",
+          "affiliation": ""
+        },
+        {
+          "name": "Jed McCaleb",
+          "affiliation": ""
+        },
+        {
+          "name": "Xiaolong Wang",
+          "affiliation": ""
+        },
+        {
+          "name": "Jan Kautz",
+          "affiliation": ""
+        },
+        {
+          "name": "Yejin Choi",
+          "affiliation": ""
+        },
+        {
+          "name": "James Zou",
+          "affiliation": ""
+        },
+        {
+          "name": "Carlos Guestrin",
+          "affiliation": ""
+        },
+        {
+          "name": "Yu Sun",
+          "affiliation": ""
+        }
+      ],
+      "year": 2026,
+      "abstract": "How can we use AI to discover a new state of the art for a scientific problem? Prior work in test-time scaling, such as AlphaEvolve, performs search by prompting a frozen LLM. We perform reinforcement learning at test time, so the LLM can continue to train, but now with experience specific to the test problem. This form of continual learning is quite special, because its goal is to produce one great solution rather than many good ones on average, and to solve this very problem rather than generalize to other problems. Therefore, our learning objective and search subroutine are designed to prioritize the most promising solutions. We call this method Test-Time Training to Discover (TTT-Discover). Following prior work, we focus on problems with continuous rewards. We report results for every problem we attempted, across mathematics, GPU kernel engineering, algorithm design, and biology. TTT-Discover sets the new state of the art in almost all of them: (i) Erd\u0151s' minimum overlap problem and an autocorrelation inequality; (ii) a GPUMode kernel competition (up to $2\\times$ faster than prior art); (iii) past AtCoder algorithm competitions; and (iv) denoising problem in single-cell analysis. Our solutions are reviewed by experts or the organizers. All our results are achieved with an open model, OpenAI gpt-oss-120b, and can be reproduced with our publicly available code, in contrast to previous best results that required closed frontier models. Our test-time training runs are performed using Tinker, an API by Thinking Machines, with a cost of only a few hundred dollars per problem.",
+      "venue": "cs.LG",
+      "citation_count": 0,
+      "doi": "",
+      "arxiv_id": "2601.16175",
+      "url": "https://arxiv.org/abs/2601.16175",
+      "source": "arxiv",
+      "_bibtex_override": ""
+    },
+    {
+      "paper_id": "arxiv-2108.00503",
+      "title": "A new goodness of fit test for gamma distribution with censored observations",
+      "authors": [
+        {
+          "name": "Vaisakh K. M.",
+          "affiliation": ""
+        },
+        {
+          "name": "Sreedevi E. P.",
+          "affiliation": ""
+        },
+        {
+          "name": "Sudheesh K. Kattumannil",
+          "affiliation": ""
+        }
+      ],
+      "year": 2021,
+      "abstract": "In the present paper, we develop a new goodness fit test for gamma distribution using the fixed point characterization. U-Statistic theory is employed to derive the test statistic. We discuss how the right censored observations are incorporated in the test developed here. The asymptotic properties of the test statistic in both censored and uncensored cases are studied in detail. Extensive Monte Carlo simulation studies are carried out to validate the performance of the proposed tests. We also illustrate the test procedure using several real data sets.",
+      "venue": "stat.ME",
+      "citation_count": 0,
+      "doi": "",
+      "arxiv_id": "2108.00503",
+      "url": "https://arxiv.org/abs/2108.00503",
+      "source": "arxiv",
+      "_bibtex_override": ""
+    }
+  ]
 }

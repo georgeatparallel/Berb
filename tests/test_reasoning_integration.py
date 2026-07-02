@@ -32,31 +32,32 @@ from berb.llm.extended_router import ExtendedNadirClawRouter
 # Mock Provider for Testing
 # =============================================================================
 
+
 class MockProvider:
     """Mock LLM provider for testing."""
-    
+
     def __init__(self, model: str):
         self.model = model
         self.call_count = 0
-    
+
     def is_healthy(self) -> bool:
         return True
-    
+
     async def chat(self, messages: list[dict], **kwargs) -> any:
         """Mock chat that returns valid JSON."""
         return await self._mock_response(messages)
-    
+
     async def complete(self, prompt: str, **kwargs) -> any:
         """Mock complete (for methods using this API)."""
         return await self._mock_response([{"role": "user", "content": prompt}])
-    
+
     async def _mock_response(self, messages: list[dict]) -> any:
         """Generate mock response based on prompt content."""
         self.call_count += 1
-        
+
         # Extract what type of response is needed from prompt
         prompt = messages[0]["content"].lower() if messages else ""
-        
+
         # Return appropriate mock response based on context
         if "perspective" in prompt or "constructive" in prompt:
             response_content = '{"solution": "Test solution", "key_insights": ["insight1"]}'
@@ -80,22 +81,23 @@ class MockProvider:
             response_content = '{"winner": "pro", "reasoning": "Test", "conclusion": "Conclusion"}'
         else:
             response_content = '{"result": "mock result"}'
-        
+
         from dataclasses import dataclass
-        
+
         @dataclass
         class MockResponse:
             content: str = response_content
             model: str = self.model
             tokens: int = 100
             cost: float = 0.001
-        
+
         return MockResponse()
 
 
 # =============================================================================
 # Test Fixtures
 # =============================================================================
+
 
 @pytest.fixture
 def mock_router():
@@ -116,7 +118,9 @@ def mock_router():
     router.mid_model = "qwen/qwen3.5-flash"
     router.complex_model = "xiaomi/mimo-v2-pro"
     router.simple_model = "minimax/minimax-m2.5:free"
-    router.get_provider_for_role = lambda role: MockProvider(router.role_models.get(role, "test/model"))
+    router.get_provider_for_role = lambda role: MockProvider(
+        router.role_models.get(role, "test/model")
+    )
     router.track_cost = MagicMock()
     return router
 
@@ -141,39 +145,40 @@ def test_context():
 # Multi-Perspective Integration Tests
 # =============================================================================
 
+
 class TestMultiPerspectiveIntegration:
     """Integration tests for Multi-Perspective method."""
-    
+
     @pytest.mark.asyncio
     async def test_with_router(self, mock_router, test_context):
         """Test Multi-Perspective with router."""
         method = MultiPerspectiveMethod(router=mock_router, top_k=2)
         result = await method.execute(test_context)
-        
+
         assert result.success
         assert "perspectives" in result.output
         assert mock_router.track_cost.called
-    
+
     @pytest.mark.asyncio
     async def test_with_llm_client_fallback(self, test_context):
         """Test Multi-Perspective with llm_client fallback."""
         mock_llm = MagicMock()
-        mock_llm.chat = AsyncMock(return_value=MagicMock(
-            content='{"solution": "fallback", "key_insights": ["test"]}'
-        ))
-        
+        mock_llm.chat = AsyncMock(
+            return_value=MagicMock(content='{"solution": "fallback", "key_insights": ["test"]}')
+        )
+
         method = MultiPerspectiveMethod(llm_client=mock_llm, top_k=2)
         result = await method.execute(test_context)
-        
+
         assert result.success
         assert mock_llm.chat.called
-    
+
     @pytest.mark.asyncio
     async def test_cost_tracking(self, mock_router, test_context):
         """Test cost tracking is called."""
         method = MultiPerspectiveMethod(router=mock_router)
         await method.execute(test_context)
-        
+
         assert mock_router.track_cost.called
         call_args = mock_router.track_cost.call_args
         assert call_args[1]["method"] == "multi_perspective"
@@ -183,16 +188,17 @@ class TestMultiPerspectiveIntegration:
 # Pre-Mortem Integration Tests
 # =============================================================================
 
+
 class TestPreMortemIntegration:
     """Integration tests for Pre-Mortem method."""
-    
+
     @pytest.mark.asyncio
     async def test_with_router(self, mock_router, test_context):
         """Test Pre-Mortem with router."""
         test_context.input_data["proposed_design"] = {"test": "design"}
         method = PreMortemMethod(router=mock_router, num_scenarios=2)
         result = await method.execute(test_context)
-        
+
         assert result.success
         assert mock_router.track_cost.called
 
@@ -201,16 +207,17 @@ class TestPreMortemIntegration:
 # Bayesian Integration Tests
 # =============================================================================
 
+
 class TestBayesianIntegration:
     """Integration tests for Bayesian method."""
-    
+
     @pytest.mark.asyncio
     async def test_with_router(self, mock_router, test_context):
         """Test Bayesian with router."""
         test_context.input_data["hypotheses"] = ["H1", "H2"]
         method = BayesianMethod(router=mock_router)
         result = await method.execute(test_context)
-        
+
         assert result.success
 
 
@@ -218,16 +225,17 @@ class TestBayesianIntegration:
 # Debate Integration Tests
 # =============================================================================
 
+
 class TestDebateIntegration:
     """Integration tests for Debate method."""
-    
+
     @pytest.mark.asyncio
     async def test_with_router(self, mock_router, test_context):
         """Test Debate with router."""
         test_context.input_data["topic"] = "Test debate topic"
         method = DebateMethod(router=mock_router, num_arguments=2)
         result = await method.execute(test_context)
-        
+
         assert result.success
         assert "winner" in result.output
 
@@ -236,16 +244,17 @@ class TestDebateIntegration:
 # Dialectical Integration Tests
 # =============================================================================
 
+
 class TestDialecticalIntegration:
     """Integration tests for Dialectical method."""
-    
+
     @pytest.mark.asyncio
     async def test_with_router(self, mock_router, test_context):
         """Test Dialectical with router."""
         test_context.input_data["topic"] = "Test dialectic topic"
         method = DialecticalMethod(router=mock_router)
         result = await method.execute(test_context)
-        
+
         assert result.success
 
 
@@ -253,9 +262,10 @@ class TestDialecticalIntegration:
 # Research Integration Tests
 # =============================================================================
 
+
 class TestResearchIntegration:
     """Integration tests for Research method."""
-    
+
     @pytest.mark.asyncio
     async def test_with_router(self, mock_router, test_context):
         """Test Research with router."""
@@ -263,7 +273,7 @@ class TestResearchIntegration:
         mock_search = MagicMock()
         method = ResearchMethod(router=mock_router, search_client=mock_search, max_iterations=2)
         result = await method.execute(test_context)
-        
+
         assert result.success
 
 
@@ -271,16 +281,17 @@ class TestResearchIntegration:
 # Socratic Integration Tests
 # =============================================================================
 
+
 class TestSocraticIntegration:
     """Integration tests for Socratic method."""
-    
+
     @pytest.mark.asyncio
     async def test_with_router(self, mock_router, test_context):
         """Test Socratic with router."""
         test_context.input_data["question"] = "What is truth?"
         method = SocraticMethod(router=mock_router, depth=1)
         result = await method.execute(test_context)
-        
+
         assert result.success
         assert "key_insights" in result.output
 
@@ -289,16 +300,17 @@ class TestSocraticIntegration:
 # Scientific Integration Tests
 # =============================================================================
 
+
 class TestScientificIntegration:
     """Integration tests for Scientific method."""
-    
+
     @pytest.mark.asyncio
     async def test_with_router(self, mock_router, test_context):
         """Test Scientific with router."""
         test_context.input_data["observation"] = "Test observation"
         method = ScientificMethod(router=mock_router)
         result = await method.execute(test_context)
-        
+
         assert result.success
         assert "hypothesis" in result.output
 
@@ -307,16 +319,17 @@ class TestScientificIntegration:
 # Jury Integration Tests
 # =============================================================================
 
+
 class TestJuryIntegration:
     """Integration tests for Jury method."""
-    
+
     @pytest.mark.asyncio
     async def test_with_router(self, mock_router, test_context):
         """Test Jury with router."""
         test_context.input_data["case"] = "Test case for evaluation"
         method = JuryMethod(router=mock_router, jury_size=3)
         result = await method.execute(test_context)
-        
+
         assert result.success
         assert "verdict" in result.output
 
@@ -325,9 +338,10 @@ class TestJuryIntegration:
 # Cross-Method Integration Tests
 # =============================================================================
 
+
 class TestAllReasonersIntegration:
     """Integration tests for all 9 reasoning methods together."""
-    
+
     @pytest.mark.asyncio
     async def test_all_methods_with_router(self, mock_router, test_context):
         """Test all 9 methods work with router."""
@@ -337,23 +351,28 @@ class TestAllReasonersIntegration:
             ("bayesian", BayesianMethod(router=mock_router)),
             ("debate", DebateMethod(router=mock_router, num_arguments=2)),
             ("dialectical", DialecticalMethod(router=mock_router)),
-            ("research", ResearchMethod(router=mock_router, search_client=MagicMock(), max_iterations=2)),
+            (
+                "research",
+                ResearchMethod(router=mock_router, search_client=MagicMock(), max_iterations=2),
+            ),
             ("socratic", SocraticMethod(router=mock_router, depth=1)),
             ("scientific", ScientificMethod(router=mock_router)),
             ("jury", JuryMethod(router=mock_router, jury_size=3)),
         ]
-        
+
         # Prepare context for each method
-        test_context.input_data.update({
-            "problem": "Test problem",
-            "proposed_design": {"test": "design"},
-            "hypotheses": ["H1"],
-            "topic": "Test topic",
-            "question": "Test question?",
-            "observation": "Test observation",
-            "case": "Test case",
-        })
-        
+        test_context.input_data.update(
+            {
+                "problem": "Test problem",
+                "proposed_design": {"test": "design"},
+                "hypotheses": ["H1"],
+                "topic": "Test topic",
+                "question": "Test question?",
+                "observation": "Test observation",
+                "case": "Test case",
+            }
+        )
+
         results = {}
         for name, method in methods:
             try:
@@ -365,7 +384,7 @@ class TestAllReasonersIntegration:
                 mock_router.track_cost.reset_mock()
             except Exception as e:
                 results[name] = {"success": False, "error": str(e)}
-        
+
         # Verify all methods succeeded
         for name, result in results.items():
             assert result.get("success"), f"{name} failed: {result.get('error', 'unknown')}"
@@ -375,17 +394,16 @@ class TestAllReasonersIntegration:
 # Backward Compatibility Tests
 # =============================================================================
 
+
 class TestBackwardCompatibility:
     """Test backward compatibility with llm_client."""
-    
+
     @pytest.mark.asyncio
     async def test_all_methods_with_llm_client(self, test_context):
         """Test all 9 methods work with llm_client fallback."""
         mock_llm = MagicMock()
-        mock_llm.chat = AsyncMock(return_value=MagicMock(
-            content='{"result": "mock"}'
-        ))
-        
+        mock_llm.chat = AsyncMock(return_value=MagicMock(content='{"result": "mock"}'))
+
         methods = [
             MultiPerspectiveMethod(llm_client=mock_llm, top_k=2),
             PreMortemMethod(llm_client=mock_llm, num_scenarios=2),
@@ -397,17 +415,19 @@ class TestBackwardCompatibility:
             ScientificMethod(llm_client=mock_llm),
             JuryMethod(llm_client=mock_llm, jury_size=3),
         ]
-        
-        test_context.input_data.update({
-            "problem": "Test",
-            "proposed_design": {},
-            "hypotheses": [],
-            "topic": "Test",
-            "question": "Test?",
-            "observation": "Test",
-            "case": "Test",
-        })
-        
+
+        test_context.input_data.update(
+            {
+                "problem": "Test",
+                "proposed_design": {},
+                "hypotheses": [],
+                "topic": "Test",
+                "question": "Test?",
+                "observation": "Test",
+                "case": "Test",
+            }
+        )
+
         for i, method in enumerate(methods):
             result = await method.execute(test_context)
             # Should succeed with fallback

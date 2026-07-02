@@ -137,7 +137,9 @@ class TestJSONParsing:
 
 class TestCSVParsing:
     def test_parse_condition_csv(self, parser, tmp_run_dir):
-        csv_content = "condition,seed,metric,value\nmethod_a,42,accuracy,0.95\nmethod_b,42,accuracy,0.88\n"
+        csv_content = (
+            "condition,seed,metric,value\nmethod_a,42,accuracy,0.95\nmethod_b,42,accuracy,0.88\n"
+        )
         (tmp_run_dir / "results.csv").write_text(csv_content)
 
         result = parser.parse(tmp_run_dir)

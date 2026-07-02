@@ -83,19 +83,14 @@ def main() -> None:
 
         project = Path(tmp) / "project"
         project.mkdir()
-        (project / "utils.py").write_text(
-            "def add(a, b): return a + b\n", encoding="utf-8"
-        )
+        (project / "utils.py").write_text("def add(a, b): return a + b\n", encoding="utf-8")
         (project / "main.py").write_text(
-            "from utils import add\n"
-            "result = add(3, 4)\n"
-            "print(f'primary_metric: {result}')\n",
+            "from utils import add\nresult = add(3, 4)\nprint(f'primary_metric: {result}')\n",
             encoding="utf-8",
         )
         r = sandbox.run_project(project, timeout_sec=60)
         check("project returncode == 0", r.returncode == 0, f"rc={r.returncode}")
-        check("project metric correct", r.metrics.get("primary_metric") == 7.0,
-              str(r.metrics))
+        check("project metric correct", r.metrics.get("primary_metric") == 7.0, str(r.metrics))
 
     # ── Test 3: results.json ───────────────────────────────────
     print("\n--- Test 3: results.json from volume ---")
@@ -110,8 +105,7 @@ def main() -> None:
             "print('primary_metric: 0.92')\n"
         )
         r = sandbox.run(code, timeout_sec=60)
-        check("results.json metric merged", "f1" in r.metrics,
-              str(r.metrics))
+        check("results.json metric merged", "f1" in r.metrics, str(r.metrics))
 
     # ── Test 4: Network isolation ──────────────────────────────
     print("\n--- Test 4: Network isolation ---")
@@ -129,8 +123,7 @@ def main() -> None:
         )
         r = sandbox.run(code, timeout_sec=30)
         network_blocked = "NETWORK_ACCESS: no" in r.stdout
-        check("Network blocked (--network=none)", network_blocked,
-              r.stdout.strip()[:200])
+        check("Network blocked (--network=none)", network_blocked, r.stdout.strip()[:200])
 
     # ── Test 5: GPU visibility ─────────────────────────────────
     print("\n--- Test 5: GPU visibility ---")
@@ -161,9 +154,7 @@ def main() -> None:
     print("\n--- Test 6: Memory limit enforcement ---")
     with tempfile.TemporaryDirectory(prefix="rc_e2e_") as tmp:
         # Set a very low memory limit to trigger OOM
-        cfg = DockerSandboxConfig(
-            gpu_enabled=False, network_policy="none", memory_limit_mb=64
-        )
+        cfg = DockerSandboxConfig(gpu_enabled=False, network_policy="none", memory_limit_mb=64)
         sandbox = DockerSandbox(cfg, Path(tmp) / "work")
         code = (
             "import numpy as np\n"
@@ -173,8 +164,11 @@ def main() -> None:
         )
         r = sandbox.run(code, timeout_sec=30)
         oom = r.returncode != 0
-        check("OOM kills container (64MB limit, 200MB alloc)", oom,
-              f"rc={r.returncode}, stderr={r.stderr.strip()[:200]}")
+        check(
+            "OOM kills container (64MB limit, 200MB alloc)",
+            oom,
+            f"rc={r.returncode}, stderr={r.stderr.strip()[:200]}",
+        )
 
     # ── Test 7: Factory integration ────────────────────────────
     print("\n--- Test 7: Factory integration ---")
@@ -183,8 +177,11 @@ def main() -> None:
         sandbox = create_sandbox(config, Path(tmp) / "work")
         check("Factory returns DockerSandbox", isinstance(sandbox, DockerSandbox))
         r = sandbox.run("print('primary_metric: 42.0')", timeout_sec=30)
-        check("Factory sandbox executes", r.returncode == 0 and r.metrics.get("primary_metric") == 42.0,
-              str(r.metrics))
+        check(
+            "Factory sandbox executes",
+            r.returncode == 0 and r.metrics.get("primary_metric") == 42.0,
+            str(r.metrics),
+        )
 
     # ── Summary ────────────────────────────────────────────────
     print("\n" + "=" * 60)

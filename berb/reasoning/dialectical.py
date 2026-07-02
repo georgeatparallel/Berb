@@ -38,10 +38,10 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from .base import (
-    ReasoningMethod,
-    ReasoningContext,
-    ReasoningResult,
     MethodType,
+    ReasoningContext,
+    ReasoningMethod,
+    ReasoningResult,
 )
 from .registry import ReasonerRegistry
 
@@ -95,7 +95,7 @@ class DialecticalMethod(ReasoningMethod):
 
     def __init__(
         self,
-        router: Any = None,      # NEW: Primary (ExtendedNadirClawRouter)
+        router: Any = None,  # NEW: Primary (ExtendedNadirClawRouter)
         llm_client: Any = None,  # DEPRECATED: Fallback only
         **kwargs: Any,
     ):
@@ -130,7 +130,7 @@ class DialecticalMethod(ReasoningMethod):
             Exception: If dialectic fails
         """
         import uuid
-        
+
         start_time = time.time()
         self._run_id = f"dialectic-{uuid.uuid4().hex[:8]}"
 
@@ -199,10 +199,10 @@ class DialecticalMethod(ReasoningMethod):
                 duration_sec=duration,
                 model_used=context.metadata.get("model", "unknown"),
             )
-            
+
             # Track cost if router supports it
             self._track_cost(duration)
-            
+
             return dialectic_result
 
         except Exception as e:
@@ -304,11 +304,11 @@ Respond in JSON format:
             type="antithesis",
             statement=f"Antithesis: Opposing view to {thesis.statement}",
             supporting_arguments=[
-                f"Counter-argument 1 to thesis",
-                f"Counter-argument 2 to thesis",
+                "Counter-argument 1 to thesis",
+                "Counter-argument 2 to thesis",
             ],
             contradictions=[
-                f"Contradiction with thesis argument 1",
+                "Contradiction with thesis argument 1",
             ],
         )
 
@@ -415,17 +415,17 @@ Respond in JSON format:
                 "Truth from antithesis",
             ],
         )
-    
+
     def _track_cost(self, duration_sec: float) -> None:
         """Track cost for dialectical execution."""
         if self.router is None or self._run_id is None:
             return
-        
-        if hasattr(self.router, 'track_cost'):
+
+        if hasattr(self.router, "track_cost"):
             # Estimate tokens for dialectical (thesis + antithesis + synthesis)
             estimated_input = 800 + 1000 + 1200  # thesis + antithesis + synthesis
             estimated_output = 600 + 800 + 1000
-            
+
             self.router.track_cost(
                 method="dialectical",
                 phase="all",

@@ -11,13 +11,10 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Any
 
 from berb.config import RCConfig
-from berb.llm.client import LLMClient
+from berb.llm.client import LLMClient, LLMResponse
 from berb.pipeline._io_helpers import _read_prior_artifact
-from berb.pipeline.stages import Stage
-from berb.prompts import PromptManager
 
 logger = logging.getLogger(__name__)
 
@@ -123,61 +120,96 @@ def _chat_with_prompt(
     json_mode: bool = False,
     strip_thinking: bool = False,
     stage: object = None,
-) -> str:
-    """Send a prompt to the LLM and return the response content."""
+    retries: int = 1,
+    call_timeout_sec: int | None = None,
+) -> LLMResponse:
+    """Send a prompt to the LLM and return the full response.
+
+    Args:
+        retries: Total attempts (>=1) if the call raises; retries the
+            same request on failure before giving up.
+        call_timeout_sec: Per-call timeout override, restored afterward.
+    """
     messages: list[dict[str, str]] = []
     if system_prompt:
         messages.append({"role": "system", "content": system_prompt})
     messages.append({"role": "user", "content": user_prompt})
-    response = llm.chat(
-        messages,
-        max_tokens=max_tokens,
-        json_mode=json_mode,
-        strip_thinking=strip_thinking,
-        stage=stage,
-    )
-    return response.content
+
+    # Only touch llm.config when actually overriding the timeout — test
+    # doubles and other minimal LLMClient-shaped callers may not have a
+    # .config attribute at all, and shouldn't need one for the common path.
+    original_timeout = None
+    if call_timeout_sec is not None:
+        original_timeout = getattr(getattr(llm, "config", None), "timeout_sec", None)
+        if hasattr(llm, "config"):
+            llm.config.timeout_sec = call_timeout_sec
+
+    attempts = max(1, retries)
+    last_error: Exception | None = None
+    try:
+        for attempt in range(attempts):
+            try:
+                return llm.chat(
+                    messages,
+                    max_tokens=max_tokens,
+                    json_mode=json_mode,
+                    strip_thinking=strip_thinking,
+                    stage=stage,
+                )
+            except Exception as exc:  # noqa: BLE001
+                last_error = exc
+                if attempt == attempts - 1:
+                    raise
+                logger.warning(
+                    "_chat_with_prompt attempt %d/%d failed: %s", attempt + 1, attempts, exc
+                )
+        raise RuntimeError("Unreachable") from last_error
+    finally:
+        if call_timeout_sec is not None and original_timeout is not None:
+            llm.config.timeout_sec = original_timeout
 
 
 def _build_context_preamble(
-    run_dir: Path,
-    stage: Stage,
     config: RCConfig,
-    llm: LLMClient | None = None,
-    prompts: PromptManager | None = None,
+    run_dir: Path,
     *,
-    stage_name: str = "",
-    evolution_overlay: str = "",
-    verbose: bool = True,
-) -> list[dict[str, str]]:
-    """Build a context preamble from prior stage artifacts."""
-    messages: list[dict[str, str]] = []
+    include_goal: bool = False,
+    include_hypotheses: bool = False,
+    include_synthesis: bool = False,
+    include_analysis: bool = False,
+    include_decision: bool = False,
+    include_experiment_data: bool = False,
+) -> str:
+    """Build a markdown context preamble from prior stage artifacts.
 
-    # System context
-    system_context = f"You are an expert AI researcher working on {config.research.topic}."
+    Callers opt into specific prior artifacts via the include_* flags
+    rather than always pulling in the full set — keeps prompts focused
+    on what each stage actually needs.
+    """
+    lines = ["## Research Context", f"Topic: {config.research.topic}"]
     if config.research.domains:
-        domains_str = ", ".join(config.research.domains)
-        system_context += f"\nDomain(s): {domains_str}"
+        lines.append(f"Domains: {', '.join(config.research.domains)}")
 
-    messages.append({"role": "system", "content": system_context})
+    sections: list[tuple[bool, str, str]] = [
+        (include_goal, "goal.md", "Goal"),
+        (include_hypotheses, "hypotheses.md", "Hypotheses"),
+        (include_synthesis, "synthesis.md", "Synthesis"),
+        (include_analysis, "analysis.md", "Analysis"),
+        (include_decision, "decision.md", "Decision"),
+    ]
+    for enabled, fname, label in sections:
+        if not enabled:
+            continue
+        content = _read_prior_artifact(run_dir, fname)
+        if content:
+            lines.append(f"\n### {label}\n{content}")
 
-    # Load prior artifacts
-    prior_artifacts = {
-        "goal.md": "Research Goal",
-        "problem_tree.md": "Problem Decomposition",
-        "search_plan.yaml": "Search Strategy",
-        "cards/": "Literature Knowledge Cards",
-        "synthesis.md": "Knowledge Synthesis",
-        "hypotheses.md": "Research Hypotheses",
-    }
-    for fname, label in prior_artifacts.items():
-        if (run_dir / fname).exists():
-            messages.append({
-                "role": "user",
-                "content": f"[Prior: {label}]\n{(run_dir / fname).read_text()[:2000]}",
-            })
+    if include_experiment_data:
+        exp_summary = _read_prior_artifact(run_dir, "experiment_summary.json")
+        if exp_summary:
+            lines.append(f"\n### Experiment Data\n{exp_summary}")
 
-    return messages
+    return "\n".join(lines)
 
 
 def _extract_topic_keywords(topic: str, domains: tuple[str, ...] | list[str] = ()) -> list[str]:
@@ -190,23 +222,39 @@ def _extract_topic_keywords(topic: str, domains: tuple[str, ...] | list[str] = (
         "be", "been", "being", "have", "has", "had", "do", "does", "did",
         "will", "would", "can", "could", "shall", "should", "may", "might",
     }
-    words = _re.findall(r"[a-zA-Z]{3,}", topic.lower())
-    keywords = [w for w in words if w not in stop_words]
-    # Add domain-specific terms
+    # Allow internal hyphens so compound terms like "agent-based" stay
+    # a single keyword instead of splitting into "agent" + "based".
+    words = _re.findall(r"[a-zA-Z][a-zA-Z-]{2,}", topic.lower())
+    keywords: list[str] = []
+    seen: set[str] = set()
+    for w in words:
+        if w not in stop_words and w not in seen:
+            seen.add(w)
+            keywords.append(w)
+    # Add domain-specific terms. Domains are curated short labels (e.g.
+    # "ml", "cv") rather than prose, so no 3-char minimum here.
     for domain in domains:
-        domain_words = _re.findall(r"[a-zA-Z]{3,}", domain.lower())
-        for dw in domain_words:
-            if dw not in keywords:
+        for dw in _re.findall(r"[a-zA-Z][a-zA-Z-]*", domain.lower()):
+            if dw not in seen:
+                seen.add(dw)
                 keywords.append(dw)
     return keywords[:15]
 
 
 def _topic_constraint_block(topic: str) -> str:
-    """Build a constraint block for prompt injection."""
+    """Build a hard constraint block for prompt injection.
+
+    Prevents topic drift into unrelated environment/infrastructure changes
+    when injected ahead of code-generation or experiment-design prompts.
+    """
     return (
+        "=== HARD TOPIC CONSTRAINT ===\n"
         f"Research Topic: {topic}\n"
+        "PROHIBITED: Do not change the research environment, infrastructure, "
+        "or topic. Stay strictly within the defined research scope.\n"
         "Constraints:\n"
         "- Must be novel and non-trivial\n"
         "- Must be implementable within computational constraints\n"
         "- Must produce publishable results\n"
+        "=== END CONSTRAINT ===\n"
     )

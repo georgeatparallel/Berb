@@ -27,7 +27,17 @@ budget_model: "qwen3-turbo"
 
 # Pipeline behavior - skip experiment and review stages
 enabled_stages:
-  - 1, 2, 3, 4, 5, 6, 7, 8, 16, 17, 22
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  - 16
+  - 17
+  - 22
 stage_overrides:
   4:  # LITERATURE_COLLECT
     max_papers: 15

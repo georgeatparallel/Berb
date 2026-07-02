@@ -53,9 +53,7 @@ class ExperimentMemory:
         """
         hp_str = json.dumps(hyperparams, indent=2, default=str)
         content = (
-            f"Task: {task_type}\n"
-            f"Hyperparameters:\n{hp_str}\n"
-            f"Result: {metric_name}={metric:.4f}"
+            f"Task: {task_type}\nHyperparameters:\n{hp_str}\nResult: {metric_name}={metric:.4f}"
         )
         metadata = {
             "type": "hyperparams",
@@ -69,9 +67,7 @@ class ExperimentMemory:
         # Higher metric → higher confidence (assuming maximize)
         confidence = min(1.0, 0.4 + metric * 0.5)
         embedding = self._embed_fn(content) if self._embed_fn else []
-        return self._store.add(
-            CATEGORY, content, metadata, embedding, confidence
-        )
+        return self._store.add(CATEGORY, content, metadata, embedding, confidence)
 
     def record_architecture(
         self,
@@ -91,11 +87,7 @@ class ExperimentMemory:
         Returns:
             The generated memory entry ID.
         """
-        content = (
-            f"Task: {task_type}\n"
-            f"Architecture: {architecture}\n"
-            f"Performance: {metric:.4f}"
-        )
+        content = f"Task: {task_type}\nArchitecture: {architecture}\nPerformance: {metric:.4f}"
         metadata = {
             "type": "architecture",
             "task_type": task_type,
@@ -106,9 +98,7 @@ class ExperimentMemory:
 
         confidence = min(1.0, 0.4 + metric * 0.5)
         embedding = self._embed_fn(content) if self._embed_fn else []
-        return self._store.add(
-            CATEGORY, content, metadata, embedding, confidence
-        )
+        return self._store.add(CATEGORY, content, metadata, embedding, confidence)
 
     def record_training_trick(
         self,
@@ -128,11 +118,7 @@ class ExperimentMemory:
         Returns:
             The generated memory entry ID.
         """
-        content = (
-            f"Trick: {trick}\n"
-            f"Improvement: {improvement:+.1%}\n"
-            f"Context: {context}"
-        )
+        content = f"Trick: {trick}\nImprovement: {improvement:+.1%}\nContext: {context}"
         metadata = {
             "type": "training_trick",
             "trick": trick,
@@ -143,9 +129,7 @@ class ExperimentMemory:
 
         confidence = 0.6 if improvement > 0 else 0.3
         embedding = self._embed_fn(content) if self._embed_fn else []
-        return self._store.add(
-            CATEGORY, content, metadata, embedding, confidence
-        )
+        return self._store.add(CATEGORY, content, metadata, embedding, confidence)
 
     def recall_best_configs(
         self,
@@ -172,8 +156,7 @@ class ExperimentMemory:
         for i, (entry, score) in enumerate(results, 1):
             metric = entry.metadata.get("metric", "?")
             parts.append(
-                f"{i}. {entry.content.splitlines()[0]} "
-                f"(metric: {metric}, relevance: {score:.2f})"
+                f"{i}. {entry.content.splitlines()[0]} (metric: {metric}, relevance: {score:.2f})"
             )
             # Include hyperparams detail if available
             hp = entry.metadata.get("hyperparams")

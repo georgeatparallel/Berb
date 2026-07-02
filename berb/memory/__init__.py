@@ -9,9 +9,9 @@ Each category supports semantic retrieval via embeddings, time-decay
 weighting, and confidence scoring.
 """
 
-from berb.memory.store import MemoryEntry, MemoryStore
+from berb.memory.decay import confidence_update, time_decay_weight
 from berb.memory.retriever import MemoryRetriever
-from berb.memory.decay import time_decay_weight, confidence_update
+from berb.memory.store import MemoryEntry, MemoryStore
 
 __all__ = [
     "MemoryEntry",

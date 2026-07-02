@@ -161,9 +161,29 @@ def _extract_key_phrases(text: str, max_words: int = 5) -> str:
     """Extract key phrases from a research topic."""
     # Remove common filler words
     stop_words = {
-        "a", "an", "the", "of", "for", "in", "on", "with", "and", "or",
-        "to", "by", "is", "are", "using", "based", "via", "through",
-        "novel", "new", "improved", "efficient", "towards",
+        "a",
+        "an",
+        "the",
+        "of",
+        "for",
+        "in",
+        "on",
+        "with",
+        "and",
+        "or",
+        "to",
+        "by",
+        "is",
+        "are",
+        "using",
+        "based",
+        "via",
+        "through",
+        "novel",
+        "new",
+        "improved",
+        "efficient",
+        "towards",
     }
     words = text.lower().split()
     key_words = [w for w in words if w not in stop_words and len(w) > 2]

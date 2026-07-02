@@ -18,19 +18,22 @@ class BiologyPromptAdapter(PromptAdapter):
         domain = self.domain
 
         return PromptBlocks(
-            compute_budget=domain.compute_budget_guidance or (
+            compute_budget=domain.compute_budget_guidance
+            or (
                 "Bioinformatics analyses can be memory-intensive:\n"
                 "- Use small/subsampled datasets for testing\n"
                 "- Single-cell: cap at 5000 cells for benchmarks\n"
                 "- Genomics: use small chromosomes/regions"
             ),
-            dataset_guidance=domain.dataset_guidance or (
+            dataset_guidance=domain.dataset_guidance
+            or (
                 "Generate synthetic biological data in code:\n"
                 "- Single-cell: use scanpy.datasets or simulate with splatter\n"
                 "- Genomics: generate synthetic sequences\n"
                 "- Do NOT download external datasets"
             ),
-            hp_reporting=domain.hp_reporting_guidance or (
+            hp_reporting=domain.hp_reporting_guidance
+            or (
                 "Report analysis parameters:\n"
                 "HYPERPARAMETERS: {'n_cells': ..., 'n_genes': ..., "
                 "'n_hvg': ..., 'n_pcs': ..., 'resolution': ...}"

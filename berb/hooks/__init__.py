@@ -161,10 +161,7 @@ class SessionStartHook(BaseHook):
                 errors="replace",
                 timeout=5,
             )
-            uncommitted = len([
-                line for line in status_result.stdout.split("\n")
-                if line.strip()
-            ])
+            uncommitted = len([line for line in status_result.stdout.split("\n") if line.strip()])
 
             return {
                 "branch": branch,
@@ -182,6 +179,7 @@ class SessionStartHook(BaseHook):
         try:
             # Search for TODO comments
             import re
+
             todo_pattern = re.compile(r"#\s*TODO[:\s]+(.+)", re.IGNORECASE)
 
             project_dir = Path(project_path)
@@ -191,10 +189,12 @@ class SessionStartHook(BaseHook):
 
                 content = py_file.read_text(encoding="utf-8", errors="ignore")
                 for match in todo_pattern.finditer(content):
-                    todos.append({
-                        "file": str(py_file.relative_to(project_dir)),
-                        "todo": match.group(1).strip()[:100],
-                    })
+                    todos.append(
+                        {
+                            "file": str(py_file.relative_to(project_dir)),
+                            "todo": match.group(1).strip()[:100],
+                        }
+                    )
 
                     if len(todos) >= 10:  # Limit to 10
                         return todos
@@ -261,7 +261,9 @@ class SkillEvaluationHook(BaseHook):
         # Warnings for missing dependencies
         for skill, ready in readiness.items():
             if not ready.get("ready", True):
-                result.warnings.append(f"Skill '{skill}' not ready: {ready.get('reason', 'unknown')}")
+                result.warnings.append(
+                    f"Skill '{skill}' not ready: {ready.get('reason', 'unknown')}"
+                )
 
         return result
 
@@ -286,10 +288,7 @@ class SkillEvaluationHook(BaseHook):
 
         skill_ids = skill_map.get(stage_id, [])
 
-        return [
-            {"id": sid, "name": sid.replace("-", " ").title()}
-            for sid in skill_ids
-        ]
+        return [{"id": sid, "name": sid.replace("-", " ").title()} for sid in skill_ids]
 
     def _evaluate_readiness(
         self,
@@ -429,19 +428,40 @@ class SecurityGuardHook(BaseHook):
 
     # Import whitelist
     SAFE_IMPORTS = {
-        "numpy", "scipy", "pandas", "matplotlib",
-        "torch", "tensorflow", "sklearn",
-        "asyncio", "collections", "dataclasses", "functools",
-        "json", "re", "os", "sys", "pathlib",
-        "logging", "typing", "time", "datetime",
+        "numpy",
+        "scipy",
+        "pandas",
+        "matplotlib",
+        "torch",
+        "tensorflow",
+        "sklearn",
+        "asyncio",
+        "collections",
+        "dataclasses",
+        "functools",
+        "json",
+        "re",
+        "os",
+        "sys",
+        "pathlib",
+        "logging",
+        "typing",
+        "time",
+        "datetime",
     }
 
     # Dangerous patterns
     DANGEROUS_PATTERNS = [
-        "eval(", "exec(", "compile(",
-        "__import__", "importlib.import_module",
-        "os.system", "os.popen", "subprocess.call",
-        "socket.", "urllib.request.urlopen",
+        "eval(",
+        "exec(",
+        "compile(",
+        "__import__",
+        "importlib.import_module",
+        "os.system",
+        "os.popen",
+        "subprocess.call",
+        "socket.",
+        "urllib.request.urlopen",
     ]
 
     async def execute(self, context: dict[str, Any]) -> HookResult:
@@ -531,6 +551,7 @@ class SecurityGuardHook(BaseHook):
 # Hook Manager
 # =============================================================================
 
+
 class HookManager:
     """Manage and trigger hooks.
 
@@ -589,16 +610,18 @@ class HookManager:
                 logger.debug(f"Hook {hook.name} executed: {result.success}")
             except Exception as e:
                 logger.error(f"Hook {hook.name} failed: {e}")
-                results.append(HookResult(
-                    success=False,
-                    errors=[str(e)],
-                ))
+                results.append(
+                    HookResult(
+                        success=False,
+                        errors=[str(e)],
+                    )
+                )
 
         return results
 
     def list_hooks(self) -> list[str]:
         """List all registered hook names."""
-        return list(set(hook.name for hooks in self._hooks.values() for hook in hooks))
+        return list({hook.name for hooks in self._hooks.values() for hook in hooks})
 
     def list_triggers(self) -> list[str]:
         """List all trigger events."""
@@ -608,6 +631,7 @@ class HookManager:
 # =============================================================================
 # Factory Function
 # =============================================================================
+
 
 def create_default_hook_manager() -> HookManager:
     """

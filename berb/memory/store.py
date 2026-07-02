@@ -10,8 +10,8 @@ from __future__ import annotations
 import json
 import logging
 import uuid
-from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -71,9 +71,7 @@ class MemoryStore:
         self._store_dir = Path(store_dir)
         self._max_per_category = max_entries_per_category
         self._confidence_threshold = confidence_threshold
-        self._entries: dict[str, list[MemoryEntry]] = {
-            cat: [] for cat in VALID_CATEGORIES
-        }
+        self._entries: dict[str, list[MemoryEntry]] = {cat: [] for cat in VALID_CATEGORIES}
         self._dirty = False
 
     @property
@@ -105,11 +103,9 @@ class MemoryStore:
             ValueError: If category is invalid.
         """
         if category not in VALID_CATEGORIES:
-            raise ValueError(
-                f"Invalid category '{category}'. Must be one of {VALID_CATEGORIES}"
-            )
+            raise ValueError(f"Invalid category '{category}'. Must be one of {VALID_CATEGORIES}")
 
-        now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        now = datetime.now(UTC).isoformat(timespec="seconds")
         entry_id = uuid.uuid4().hex[:12]
 
         entry = MemoryEntry(
@@ -184,7 +180,7 @@ class MemoryStore:
 
     def mark_accessed(self, entry_id: str) -> bool:
         """Update last_accessed timestamp and increment access count."""
-        now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        now = datetime.now(UTC).isoformat(timespec="seconds")
         for entries in self._entries.values():
             for i, entry in enumerate(entries):
                 if entry.id == entry_id:
@@ -217,8 +213,10 @@ class MemoryStore:
         Returns:
             Number of entries removed.
         """
-        threshold = confidence_threshold if confidence_threshold is not None else self._confidence_threshold
-        now = datetime.now(timezone.utc)
+        threshold = (
+            confidence_threshold if confidence_threshold is not None else self._confidence_threshold
+        )
+        now = datetime.now(UTC)
         removed = 0
 
         for category in VALID_CATEGORIES:
@@ -228,7 +226,7 @@ class MemoryStore:
                 try:
                     created = datetime.fromisoformat(entry.created_at)
                     if created.tzinfo is None:
-                        created = created.replace(tzinfo=timezone.utc)
+                        created = created.replace(tzinfo=UTC)
                     age_days = (now - created).total_seconds() / 86400.0
                 except (ValueError, TypeError):
                     age_days = 0.0

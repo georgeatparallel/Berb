@@ -106,7 +106,9 @@ def strip_thinking_tags(text: str) -> str:
     if "[thinking]" in result.lower():
         result = _BRACKET_THINKING_RE.sub("", result)
         result = re.sub(
-            r"^\[thinking\].*$", "", result,
+            r"^\[thinking\].*$",
+            "",
+            result,
             flags=re.MULTILINE | re.IGNORECASE,
         )
 

@@ -11,10 +11,13 @@ def test_install_opencode_uses_which_resolved_npm_path():
     mock_result = MagicMock()
     mock_result.returncode = 0
 
-    with patch(
-        "berb.cli.shutil.which",
-        return_value=r"C:\Program Files\nodejs\npm.cmd",
-    ), patch("berb.cli.subprocess.run", return_value=mock_result) as run_mock:
+    with (
+        patch(
+            "berb.cli.shutil.which",
+            return_value=r"C:\Program Files\nodejs\npm.cmd",
+        ),
+        patch("berb.cli.subprocess.run", return_value=mock_result) as run_mock,
+    ):
         assert cli._install_opencode() is True
 
     run_mock.assert_called_once()
@@ -30,10 +33,13 @@ def test_is_opencode_installed_uses_which_resolved_path():
     mock_result = MagicMock()
     mock_result.returncode = 0
 
-    with patch(
-        "berb.cli.shutil.which",
-        return_value=r"C:\Users\tester\AppData\Roaming\npm\opencode.cmd",
-    ), patch("berb.cli.subprocess.run", return_value=mock_result) as run_mock:
+    with (
+        patch(
+            "berb.cli.shutil.which",
+            return_value=r"C:\Users\tester\AppData\Roaming\npm\opencode.cmd",
+        ),
+        patch("berb.cli.subprocess.run", return_value=mock_result) as run_mock,
+    ):
         assert cli._is_opencode_installed() is True
 
     run_mock.assert_called_once()

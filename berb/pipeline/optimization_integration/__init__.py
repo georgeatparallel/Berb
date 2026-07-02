@@ -17,33 +17,33 @@ Stage Integration Map:
 # Author: Georgios-Chrysovalantis Chatzivantsidis
 """
 
+from .benchmark_integration import (
+    BenchmarkIntegration,
+    BenchmarkReport,
+    run_benchmark_evaluation,
+)
+from .council_integration import (
+    CouncilIntegration,
+    CouncilStageResult,
+    run_council_stage,
+)
+from .experiment_integration import (
+    ExperimentExecutionResult,
+    ExperimentPoolIntegration,
+    execute_experiment_parallel,
+)
 from .literature_integration import (
     LiteratureFSIntegration,
     organize_literature_stage,
 )
-from .council_integration import (
-    CouncilIntegration,
-    run_council_stage,
-    CouncilStageResult,
-)
-from .experiment_integration import (
-    ExperimentPoolIntegration,
-    execute_experiment_parallel,
-    ExperimentExecutionResult,
+from .validation_integration import (
+    HCEStageResult,
+    ValidationIntegration,
+    evaluate_with_hce,
 )
 from .writing_integration import (
     WritingIntegration,
     write_paper_parallel,
-)
-from .validation_integration import (
-    ValidationIntegration,
-    evaluate_with_hce,
-    HCEStageResult,
-)
-from .benchmark_integration import (
-    BenchmarkIntegration,
-    run_benchmark_evaluation,
-    BenchmarkReport,
 )
 
 __all__ = [

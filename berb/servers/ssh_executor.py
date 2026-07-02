@@ -29,9 +29,13 @@ class SSHExecutor:
         remote = f"{self.host}:{remote_dir}/"
         logger.info("Uploading %s -> %s", local, remote)
         proc = await asyncio.create_subprocess_exec(
-            "rsync", "-az", "--delete",
-            "-e", _SSH_OPTS,
-            local, remote,
+            "rsync",
+            "-az",
+            "--delete",
+            "-e",
+            _SSH_OPTS,
+            local,
+            remote,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -50,14 +54,19 @@ class SSHExecutor:
         logger.info("Running on %s: %s", self.host, full_cmd)
         # P1 FIX: Use accept-new for host key verification
         proc = await asyncio.create_subprocess_exec(
-            "ssh", "-o", "ConnectTimeout=10", "-o", "StrictHostKeyChecking=accept-new",
-            self.host, full_cmd,
+            "ssh",
+            "-o",
+            "ConnectTimeout=10",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            self.host,
+            full_cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
         try:
             stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             proc.kill()
             await proc.wait()
             return {"success": False, "error": f"Timeout after {timeout}s", "returncode": -1}
@@ -76,9 +85,12 @@ class SSHExecutor:
         local = str(local_dir.resolve()) + "/"
         logger.info("Downloading %s -> %s", remote, local)
         proc = await asyncio.create_subprocess_exec(
-            "rsync", "-az",
-            "-e", _SSH_OPTS,
-            remote, local,
+            "rsync",
+            "-az",
+            "-e",
+            _SSH_OPTS,
+            remote,
+            local,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -91,8 +103,13 @@ class SSHExecutor:
         logger.info("Cleaning up %s:%s", self.host, remote_dir)
         # P1 FIX: Use accept-new for host key verification
         proc = await asyncio.create_subprocess_exec(
-            "ssh", "-o", "ConnectTimeout=10", "-o", "StrictHostKeyChecking=accept-new",
-            self.host, f"rm -rf {shlex.quote(remote_dir)}",
+            "ssh",
+            "-o",
+            "ConnectTimeout=10",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            self.host,
+            f"rm -rf {shlex.quote(remote_dir)}",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )

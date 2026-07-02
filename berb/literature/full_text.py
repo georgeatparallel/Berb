@@ -420,7 +420,7 @@ class FullTextExtractor:
         path = parsed.path.lower()
 
         # Academic papers
-        for source, pattern in self.ACADEMIC_PATTERNS.items():
+        for _source, pattern in self.ACADEMIC_PATTERNS.items():
             if re.search(pattern, url, re.IGNORECASE):
                 return "paper"
 

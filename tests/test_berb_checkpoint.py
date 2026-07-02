@@ -7,19 +7,21 @@ import json
 from pathlib import Path
 from typing import cast
 
-from berb.pipeline.executor import StageResult
-from berb.pipeline.runner import (
-    _build_pipeline_summary,
-    _collect_content_metrics,
-    _write_checkpoint,
+from berb.pipeline.checkpoint import (
     read_checkpoint,
     resume_from_checkpoint,
+    write_checkpoint as _write_checkpoint,
 )
+from berb.pipeline.executor import StageResult
+from berb.pipeline.resolution import resolve_stage_order
 from berb.pipeline.stages import (
     NONCRITICAL_STAGES,
-    STAGE_SEQUENCE,
     Stage,
     StageStatus,
+)
+from berb.pipeline.summary import (
+    _collect_content_metrics,
+    build_pipeline_summary as _build_pipeline_summary,
 )
 
 
@@ -77,7 +79,7 @@ class TestNoncriticalStages:
         assert Stage.PAPER_DRAFT not in NONCRITICAL_STAGES
 
     def test_stage_sequence_still_ends_with_citation_verify(self):
-        assert STAGE_SEQUENCE[-1] == Stage.CITATION_VERIFY
+        assert resolve_stage_order()[-1] == Stage.CITATION_VERIFY
 
 
 class TestContentMetrics:
@@ -111,9 +113,9 @@ class TestContentMetrics:
                         "suspicious": 1,
                         "hallucinated": 1,
                         "skipped": 0,
-                        "integrity_score": 0.8
+                        "integrity_score": 0.8,
                     },
-                    "results": []
+                    "results": [],
                 }
             ),
             encoding="utf-8",

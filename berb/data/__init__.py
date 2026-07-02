@@ -20,18 +20,32 @@ _FRAMEWORK_DOCS_DIR = Path(__file__).parent / "framework_docs"
 _FRAMEWORK_REGISTRY: dict[str, dict[str, Any]] = {
     "trl": {
         "file": "trl.md",
-        "keywords": ["trl", "sft", "dpo", "grpo", "ppo trainer", "rlhf",
-                      "sfttrainer", "dpotrainer", "grpotrainer"],
+        "keywords": [
+            "trl",
+            "sft",
+            "dpo",
+            "grpo",
+            "ppo trainer",
+            "rlhf",
+            "sfttrainer",
+            "dpotrainer",
+            "grpotrainer",
+        ],
     },
     "peft": {
         "file": "peft.md",
-        "keywords": ["peft", "lora", "qlora", "adapter", "low-rank",
-                      "parameter-efficient", "dora"],
+        "keywords": ["peft", "lora", "qlora", "adapter", "low-rank", "parameter-efficient", "dora"],
     },
     "transformers_training": {
         "file": "transformers_training.md",
-        "keywords": ["transformers", "huggingface", "trainer", "trainingarguments",
-                      "automodel", "fine-tun"],
+        "keywords": [
+            "transformers",
+            "huggingface",
+            "trainer",
+            "trainingarguments",
+            "automodel",
+            "fine-tun",
+        ],
     },
     "llamafactory": {
         "file": "llamafactory.md",
@@ -95,6 +109,7 @@ def load_framework_docs(framework_ids: list[str], max_chars: int = 8000) -> str:
     )
     return header + "\n---\n\n".join(parts)
 
+
 _SEMINAL_PAPERS_PATH = Path(__file__).parent / "seminal_papers.yaml"
 _CACHE: list[dict[str, Any]] | None = None
 
@@ -136,7 +151,5 @@ def load_seminal_papers(topic: str) -> list[dict[str, Any]]:
                     matched.append(paper)
                 break
 
-    logger.debug(
-        "load_seminal_papers(%r): matched %d papers", topic, len(matched)
-    )
+    logger.debug("load_seminal_papers(%r): matched %d papers", topic, len(matched))
     return matched

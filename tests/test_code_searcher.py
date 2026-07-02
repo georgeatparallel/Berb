@@ -59,7 +59,9 @@ class TestQueryGeneration:
         assert len(queries) == len(set(q.lower().strip() for q in queries))
 
     def test_extract_key_phrases(self):
-        result = _extract_key_phrases("A Novel Approach for Image Classification Using Deep Learning")
+        result = _extract_key_phrases(
+            "A Novel Approach for Image Classification Using Deep Learning"
+        )
         # Should remove filler words
         assert "novel" not in result.lower()
         assert "using" not in result.lower()
@@ -323,14 +325,18 @@ class TestCodeSearchAgent:
 
     def test_search_uses_cache(self, tmp_path):
         cache = SearchCache(cache_dir=tmp_path)
-        cache.put("physics_simulation", "N-body sim", {
-            "api_patterns": ["cached pattern"],
-            "file_structure": {},
-            "evaluation_patterns": [],
-            "library_versions": {},
-            "repos": [],
-            "queries": ["cached query"],
-        })
+        cache.put(
+            "physics_simulation",
+            "N-body sim",
+            {
+                "api_patterns": ["cached pattern"],
+                "file_structure": {},
+                "evaluation_patterns": [],
+                "library_versions": {},
+                "repos": [],
+                "queries": ["cached query"],
+            },
+        )
 
         agent = CodeSearchAgent(cache=cache)
         profile = DomainProfile(

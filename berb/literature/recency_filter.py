@@ -12,7 +12,7 @@ This module provides recency-aware citation filtering:
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -125,7 +125,7 @@ class RecencyFilter:
         Returns:
             Papers with recency scores
         """
-        current_year = datetime.now(timezone.utc).year
+        current_year = datetime.now(UTC).year
         scored_papers = []
 
         for paper in papers:
@@ -198,7 +198,7 @@ class RecencyFilter:
         Returns:
             Filtered papers
         """
-        current_year = datetime.now(timezone.utc).year
+        current_year = datetime.now(UTC).year
         filtered = []
 
         for paper in papers:
@@ -236,7 +236,7 @@ class RecencyFilter:
         if not year:
             return True
 
-        current_year = datetime.now(timezone.utc).year
+        current_year = datetime.now(UTC).year
         age = current_year - year
 
         return age > self.window_years * 2
@@ -310,10 +310,7 @@ class RecencyAwareRanker:
 
             # Combined ranking score
             recency = paper.get("recency_score", 0.5)
-            combined = (
-                (1 - self.recency_weight) * relevance +
-                self.recency_weight * recency
-            )
+            combined = (1 - self.recency_weight) * relevance + self.recency_weight * recency
 
             paper["ranking_score"] = combined
 

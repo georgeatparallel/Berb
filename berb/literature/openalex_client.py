@@ -21,7 +21,6 @@ import json
 import logging
 import random
 import re
-import threading
 import time
 import urllib.error
 import urllib.parse
@@ -151,8 +150,7 @@ def _request_with_retry(
                 wait = min(wait, _MAX_WAIT_SEC)
                 delay = wait + random.uniform(0, wait * 0.2)
                 logger.warning(
-                    "[rate-limit] OpenAlex 429 (Retry-After: %s). "
-                    "Waiting %.1fs (attempt %d/%d)...",
+                    "[rate-limit] OpenAlex 429 (Retry-After: %s). Waiting %.1fs (attempt %d/%d)...",
                     retry_after or "none",
                     delay,
                     attempt + 1,

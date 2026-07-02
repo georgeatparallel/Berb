@@ -18,7 +18,9 @@ from berb.agents.base import AgentStepResult, BaseAgent
 
 logger = logging.getLogger(__name__)
 
-_KNOWLEDGE_PATH = Path(__file__).resolve().parent.parent.parent / "data" / "benchmark_knowledge.yaml"
+_KNOWLEDGE_PATH = (
+    Path(__file__).resolve().parent.parent.parent / "data" / "benchmark_knowledge.yaml"
+)
 
 # ---------------------------------------------------------------------------
 # HuggingFace Hub helpers (optional dependency)
@@ -27,6 +29,7 @@ _KNOWLEDGE_PATH = Path(__file__).resolve().parent.parent.parent / "data" / "benc
 _HF_AVAILABLE = False
 try:
     from huggingface_hub import HfApi  # type: ignore[import-untyped]
+
     _HF_AVAILABLE = True
 except ImportError:
     pass
@@ -134,13 +137,15 @@ class SurveyorAgent(BaseAgent):
                         for ds in datasets:
                             if ds.id not in seen:
                                 seen.add(ds.id)
-                                results.append({
-                                    "name": ds.id,
-                                    "downloads": getattr(ds, "downloads", 0),
-                                    "origin": "huggingface_hub",
-                                    "api": f"datasets.load_dataset('{ds.id}', cache_dir='/workspace/data/hf')",
-                                    "tier": 2,
-                                })
+                                results.append(
+                                    {
+                                        "name": ds.id,
+                                        "downloads": getattr(ds, "downloads", 0),
+                                        "origin": "huggingface_hub",
+                                        "api": f"datasets.load_dataset('{ds.id}', cache_dir='/workspace/data/hf')",
+                                        "tier": 2,
+                                    }
+                                )
                     except Exception:  # noqa: BLE001
                         logger.debug("HF task search failed for %s", task_cat)
 
@@ -157,13 +162,15 @@ class SurveyorAgent(BaseAgent):
                     for ds in datasets:
                         if ds.id not in seen:
                             seen.add(ds.id)
-                            results.append({
-                                "name": ds.id,
-                                "downloads": getattr(ds, "downloads", 0),
-                                "origin": "huggingface_hub",
-                                "api": f"datasets.load_dataset('{ds.id}', cache_dir='/workspace/data/hf')",
-                                "tier": 2,
-                            })
+                            results.append(
+                                {
+                                    "name": ds.id,
+                                    "downloads": getattr(ds, "downloads", 0),
+                                    "origin": "huggingface_hub",
+                                    "api": f"datasets.load_dataset('{ds.id}', cache_dir='/workspace/data/hf')",
+                                    "tier": 2,
+                                }
+                            )
                 except Exception:  # noqa: BLE001
                     logger.debug("HF keyword search failed for %s", kw)
 
@@ -177,9 +184,30 @@ class SurveyorAgent(BaseAgent):
         """Extract 1-3 word search keywords from a topic string."""
         # Remove common filler words to get meaningful search terms
         stop = {
-            "a", "an", "the", "for", "in", "on", "of", "to", "with", "and",
-            "or", "is", "are", "using", "via", "based", "towards", "novel",
-            "new", "improved", "approach", "method", "methods", "study",
+            "a",
+            "an",
+            "the",
+            "for",
+            "in",
+            "on",
+            "of",
+            "to",
+            "with",
+            "and",
+            "or",
+            "is",
+            "are",
+            "using",
+            "via",
+            "based",
+            "towards",
+            "novel",
+            "new",
+            "improved",
+            "approach",
+            "method",
+            "methods",
+            "study",
         }
         words = [w.lower().strip(".,;:!?()[]") for w in topic.split()]
         filtered = [w for w in words if w and w not in stop and len(w) > 2]
@@ -260,9 +288,7 @@ class SurveyorAgent(BaseAgent):
         # 1. Match domains from knowledge base
         domain_ids = self._match_domains(topic)
         if hypothesis:
-            domain_ids = list(dict.fromkeys(
-                domain_ids + self._match_domains(hypothesis)
-            ))
+            domain_ids = list(dict.fromkeys(domain_ids + self._match_domains(hypothesis)))
         self.logger.info("Matched domains: %s", domain_ids)
 
         # 2. Get local candidates
@@ -301,7 +327,9 @@ class SurveyorAgent(BaseAgent):
 
         self.logger.info(
             "Survey complete: %d benchmarks, %d baselines, %d HF datasets",
-            len(all_benchmarks), len(all_baselines), len(hf_datasets),
+            len(all_benchmarks),
+            len(all_baselines),
+            len(hf_datasets),
         )
 
         return self._make_result(True, data=survey_result)

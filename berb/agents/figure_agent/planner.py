@@ -15,7 +15,7 @@ import json
 import logging
 from typing import Any
 
-from berb.agents.base import BaseAgent, AgentStepResult
+from berb.agents.base import AgentStepResult, BaseAgent
 
 logger = logging.getLogger(__name__)
 
@@ -140,11 +140,14 @@ class PlannerAgent(BaseAgent):
                 conditions=conditions,
             )
 
-            return self._make_result(True, data={
-                "figures": figure_plan,
-                "domain": domain,
-                "data_analysis": data_analysis,
-            })
+            return self._make_result(
+                True,
+                data={
+                    "figures": figure_plan,
+                    "domain": domain,
+                    "data_analysis": data_analysis,
+                },
+            )
         except Exception as exc:
             self.logger.error("Planner failed: %s", exc)
             return self._make_result(False, error=str(exc))
@@ -301,12 +304,13 @@ class PlannerAgent(BaseAgent):
         if len(figures) < self._min_figures:
             self.logger.info(
                 "LLM returned %d figures (min %d), adding defaults",
-                len(figures), self._min_figures,
+                len(figures),
+                self._min_figures,
             )
             figures = self._augment_plan(figures, data_analysis, metric_key, conditions)
 
         # Cap at max
-        figures = figures[:self._max_figures]
+        figures = figures[: self._max_figures]
 
         # BUG-36: LLM may return figures as list of strings instead of dicts
         figures = [f for f in figures if isinstance(f, dict)]
@@ -334,73 +338,81 @@ class PlannerAgent(BaseAgent):
 
         # Always include a main results comparison
         if data_analysis["num_conditions"] >= 2:
-            figures.append({
-                "figure_id": "fig_main_results",
-                "chart_type": "bar_comparison",
-                "title": "Method Comparison",
-                "caption": f"Comparison of {metric_key.replace('_', ' ')} across all evaluated methods. "
-                           f"Error bars show 95% confidence intervals.",
-                "data_source": {"type": "condition_comparison", "metric": metric_key},
-                "x_label": "Method",
-                "y_label": metric_key.replace("_", " ").title(),
-                "width": "single_column",
-                "priority": 1,
-                "section": "results",
-            })
+            figures.append(
+                {
+                    "figure_id": "fig_main_results",
+                    "chart_type": "bar_comparison",
+                    "title": "Method Comparison",
+                    "caption": f"Comparison of {metric_key.replace('_', ' ')} across all evaluated methods. "
+                    f"Error bars show 95% confidence intervals.",
+                    "data_source": {"type": "condition_comparison", "metric": metric_key},
+                    "x_label": "Method",
+                    "y_label": metric_key.replace("_", " ").title(),
+                    "width": "single_column",
+                    "priority": 1,
+                    "section": "results",
+                }
+            )
 
         # Ablation grouped bar if ablation exists
         if data_analysis.get("has_ablation"):
-            figures.append({
-                "figure_id": "fig_ablation",
-                "chart_type": "ablation_grouped",
-                "title": "Ablation Study",
-                "caption": "Ablation study showing the contribution of each component. "
-                           "Removing each component independently reveals its importance.",
-                "data_source": {"type": "ablation_comparison", "metric": metric_key},
-                "x_label": "Variant",
-                "y_label": metric_key.replace("_", " ").title(),
-                "width": "single_column",
-                "priority": 1,
-                "section": "results",
-            })
+            figures.append(
+                {
+                    "figure_id": "fig_ablation",
+                    "chart_type": "ablation_grouped",
+                    "title": "Ablation Study",
+                    "caption": "Ablation study showing the contribution of each component. "
+                    "Removing each component independently reveals its importance.",
+                    "data_source": {"type": "ablation_comparison", "metric": metric_key},
+                    "x_label": "Variant",
+                    "y_label": metric_key.replace("_", " ").title(),
+                    "width": "single_column",
+                    "priority": 1,
+                    "section": "results",
+                }
+            )
 
         # Training curve if history exists
         if data_analysis.get("has_training_history"):
-            figures.append({
-                "figure_id": "fig_training_curve",
-                "chart_type": "training_curve",
-                "title": "Training Convergence",
-                "caption": "Training loss curves for all methods. "
-                           "Shaded regions indicate standard deviation across seeds.",
-                "data_source": {"type": "training_history"},
-                "x_label": "Epoch",
-                "y_label": "Loss",
-                "width": "single_column",
-                "priority": 2,
-                "section": "results",
-            })
+            figures.append(
+                {
+                    "figure_id": "fig_training_curve",
+                    "chart_type": "training_curve",
+                    "title": "Training Convergence",
+                    "caption": "Training loss curves for all methods. "
+                    "Shaded regions indicate standard deviation across seeds.",
+                    "data_source": {"type": "training_history"},
+                    "x_label": "Epoch",
+                    "y_label": "Loss",
+                    "width": "single_column",
+                    "priority": 2,
+                    "section": "results",
+                }
+            )
 
         # Multi-metric comparison if multiple metrics
         if data_analysis["num_metrics"] > 2:
             metrics_to_show = [
-                m for m in data_analysis.get("metric_names", [])
-                if m != metric_key and not any(
-                    t in m.lower() for t in ["time", "elapsed", "seed", "runtime"]
-                )
+                m
+                for m in data_analysis.get("metric_names", [])
+                if m != metric_key
+                and not any(t in m.lower() for t in ["time", "elapsed", "seed", "runtime"])
             ][:5]
             if metrics_to_show:
-                figures.append({
-                    "figure_id": "fig_multi_metric",
-                    "chart_type": "grouped_bar",
-                    "title": "Multi-Metric Comparison",
-                    "caption": "Performance comparison across multiple evaluation metrics.",
-                    "data_source": {"type": "multi_metric", "metrics": metrics_to_show},
-                    "x_label": "Method",
-                    "y_label": "Score",
-                    "width": "double_column",
-                    "priority": 2,
-                    "section": "analysis",
-                })
+                figures.append(
+                    {
+                        "figure_id": "fig_multi_metric",
+                        "chart_type": "grouped_bar",
+                        "title": "Multi-Metric Comparison",
+                        "caption": "Performance comparison across multiple evaluation metrics.",
+                        "data_source": {"type": "multi_metric", "metrics": metrics_to_show},
+                        "x_label": "Method",
+                        "y_label": "Score",
+                        "width": "double_column",
+                        "priority": 2,
+                        "section": "analysis",
+                    }
+                )
 
         return figures
 
@@ -414,42 +426,42 @@ class PlannerAgent(BaseAgent):
         """Add default figures to meet minimum count."""
         # BUG-37: chart_type may be non-hashable (list) — force str
         existing_types = {
-            f.get("chart_type") for f in existing
-            if isinstance(f.get("chart_type"), str)
+            f.get("chart_type") for f in existing if isinstance(f.get("chart_type"), str)
         }
         augmented = list(existing)
 
         # Add main comparison if missing
         if "bar_comparison" not in existing_types and data_analysis["num_conditions"] >= 2:
-            augmented.append({
-                "figure_id": "fig_main_results",
-                "chart_type": "bar_comparison",
-                "title": "Method Comparison",
-                "caption": f"Comparison of {metric_key.replace('_', ' ')} across all methods.",
-                "data_source": {"type": "condition_comparison", "metric": metric_key},
-                "x_label": "Method",
-                "y_label": metric_key.replace("_", " ").title(),
-                "width": "single_column",
-                "priority": 1,
-                "section": "results",
-            })
+            augmented.append(
+                {
+                    "figure_id": "fig_main_results",
+                    "chart_type": "bar_comparison",
+                    "title": "Method Comparison",
+                    "caption": f"Comparison of {metric_key.replace('_', ' ')} across all methods.",
+                    "data_source": {"type": "condition_comparison", "metric": metric_key},
+                    "x_label": "Method",
+                    "y_label": metric_key.replace("_", " ").title(),
+                    "width": "single_column",
+                    "priority": 1,
+                    "section": "results",
+                }
+            )
 
         # Add ablation if applicable and missing
-        if (
-            "ablation_grouped" not in existing_types
-            and data_analysis.get("has_ablation")
-        ):
-            augmented.append({
-                "figure_id": "fig_ablation",
-                "chart_type": "ablation_grouped",
-                "title": "Ablation Study",
-                "caption": "Ablation analysis showing component contributions.",
-                "data_source": {"type": "ablation_comparison", "metric": metric_key},
-                "x_label": "Variant",
-                "y_label": metric_key.replace("_", " ").title(),
-                "width": "single_column",
-                "priority": 1,
-                "section": "results",
-            })
+        if "ablation_grouped" not in existing_types and data_analysis.get("has_ablation"):
+            augmented.append(
+                {
+                    "figure_id": "fig_ablation",
+                    "chart_type": "ablation_grouped",
+                    "title": "Ablation Study",
+                    "caption": "Ablation analysis showing component contributions.",
+                    "data_source": {"type": "ablation_comparison", "metric": metric_key},
+                    "x_label": "Variant",
+                    "y_label": metric_key.replace("_", " ").title(),
+                    "width": "single_column",
+                    "priority": 1,
+                    "section": "results",
+                }
+            )
 
         return augmented

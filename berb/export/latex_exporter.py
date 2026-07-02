@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import logging
 import zipfile
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal
 
@@ -157,9 +156,7 @@ class LaTeXExporter:
             config: Exporter configuration
         """
         self.config = config or LaTeXExporterConfig()
-        self.template = self.TEMPLATES.get(
-            self.config.template, self.TEMPLATES["article"]
-        )
+        self.template = self.TEMPLATES.get(self.config.template, self.TEMPLATES["article"])
 
     async def export_latex_project(
         self,
@@ -273,11 +270,11 @@ class LaTeXExporter:
             main += f"\\input{{sections/{section_file}}}\n"
 
         # Bibliography
-        main += f"""
-\\bibliographystyle{{plain}}
-\\bibliography{{references}}
+        main += """
+\\bibliographystyle{plain}
+\\bibliography{references}
 
-\\end{{document}}
+\\end{document}
 """
 
         return main
@@ -339,9 +336,7 @@ class LaTeXExporter:
 
         for section_name, content in section_mapping.items():
             if content:
-                sections[section_name] = self._format_section_tex(
-                    section_name, content
-                )
+                sections[section_name] = self._format_section_tex(section_name, content)
 
         return sections
 

@@ -70,7 +70,7 @@ class ServerRegistry:
 
     def __init__(self, servers: list[ServerEntry] | None = None) -> None:
         self._servers: dict[str, ServerEntry] = {}
-        for s in (servers or []):
+        for s in servers or []:
             self._servers[s.name] = s
 
     def add(self, server: ServerEntry) -> None:

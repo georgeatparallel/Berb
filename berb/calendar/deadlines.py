@@ -33,6 +33,7 @@ class Conference:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Conference:
         """Parse a conference from a YAML dict."""
+
         def _parse_date(val: Any) -> date | None:
             if val is None:
                 return None
@@ -151,18 +152,14 @@ class ConferenceCalendar:
         """Format upcoming deadlines as a readable string."""
         upcoming = self.get_upcoming(domains=domains, days=days)
         if not upcoming:
-            return "No upcoming deadlines in the next {} days.".format(days)
+            return f"No upcoming deadlines in the next {days} days."
         lines = [f"Upcoming Conference Deadlines (next {days} days):", ""]
         for conf in upcoming:
             nd = conf.next_deadline
             days_left = conf.days_until_deadline
             dl_type = "abstract" if nd == conf.abstract_deadline else "paper"
-            lines.append(
-                f"  {conf.name} (Tier {conf.tier})"
-            )
-            lines.append(
-                f"    {dl_type} deadline: {nd} ({days_left} days left)"
-            )
+            lines.append(f"  {conf.name} (Tier {conf.tier})")
+            lines.append(f"    {dl_type} deadline: {nd} ({days_left} days left)")
             if conf.url:
                 lines.append(f"    URL: {conf.url}")
             lines.append("")

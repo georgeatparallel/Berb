@@ -50,46 +50,46 @@ Usage:
     print(f"0-1 test K: {chaos_test.K:.3f}")  # ~1 for chaotic
 """
 
+from .bifurcation import (
+    BifurcationDiagram,
+    BifurcationResult,
+)
+from .entropy import (
+    EntropyResult,
+    approximate_entropy,
+    correlation_dimension,
+    kolmogorov_sinai_entropy,
+    permutation_entropy,
+    sample_entropy,
+)
 from .lyapunov import (
     LyapunovExponentCalculator,
     LyapunovResult,
     compute_lyapunov_exponents,
     is_chaotic,
 )
-from .bifurcation import (
-    BifurcationDiagram,
-    BifurcationResult,
-)
 from .poincare import (
-    PoincareSection,
     PoincareResult,
+    PoincareSection,
     compute_poincare_section,
     hamiltonian_poincare_section,
-)
-from .entropy import (
-    kolmogorov_sinai_entropy,
-    correlation_dimension,
-    approximate_entropy,
-    sample_entropy,
-    permutation_entropy,
-    EntropyResult,
 )
 from .recurrence import (
     RecurrencePlot,
     RecurrenceQuantificationAnalysis,
+    RecurrenceResult,
+    RQAMetrics,
     compute_recurrence_matrix,
     compute_rqa_metrics,
     cross_recurrence,
     joint_recurrence,
-    RQAMetrics,
-    RecurrenceResult,
 )
 from .test_01 import (
-    run_01_chaos_test,
-    run_01_chaos_batch,
-    compute_translation_variables,
-    compute_mean_square_displacement,
     Test01Result,
+    compute_mean_square_displacement,
+    compute_translation_variables,
+    run_01_chaos_batch,
+    run_01_chaos_test,
 )
 
 __all__ = [
@@ -98,17 +98,14 @@ __all__ = [
     "LyapunovResult",
     "compute_lyapunov_exponents",
     "is_chaotic",
-
     # Bifurcation diagrams
     "BifurcationDiagram",
     "BifurcationResult",
-
     # Poincaré sections
     "PoincareSection",
     "PoincareResult",
     "compute_poincare_section",
     "hamiltonian_poincare_section",
-
     # Entropy measures
     "kolmogorov_sinai_entropy",
     "correlation_dimension",
@@ -116,7 +113,6 @@ __all__ = [
     "sample_entropy",
     "permutation_entropy",
     "EntropyResult",
-
     # Recurrence analysis
     "RecurrencePlot",
     "RecurrenceQuantificationAnalysis",
@@ -126,10 +122,11 @@ __all__ = [
     "joint_recurrence",
     "RQAMetrics",
     "RecurrenceResult",
-
     # 0-1 test for chaos
     "test_01_chaos",
     "test_01_batch",
+    "run_01_chaos_batch",
+    "run_01_chaos_test",
     "compute_translation_variables",
     "compute_mean_square_displacement",
     "Test01Result",

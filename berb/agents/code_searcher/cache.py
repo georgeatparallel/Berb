@@ -11,7 +11,6 @@ import hashlib
 import json
 import logging
 import time
-from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
@@ -63,13 +62,16 @@ class SearchCache:
         cache_path = self._cache_path(domain_id, topic)
         cache_path.parent.mkdir(parents=True, exist_ok=True)
 
-        data["_cached_at"] = time.time()
-        data["_domain_id"] = domain_id
-        data["_topic_hash"] = self._topic_hash(topic)
+        payload = {
+            **data,
+            "_cached_at": time.time(),
+            "_domain_id": domain_id,
+            "_topic_hash": self._topic_hash(topic),
+        }
 
         try:
             cache_path.write_text(
-                json.dumps(data, indent=2, default=str),
+                json.dumps(payload, indent=2, default=str),
                 encoding="utf-8",
             )
             logger.debug("Cached result for %s/%s", domain_id, topic[:40])

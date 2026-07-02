@@ -31,9 +31,7 @@ from __future__ import annotations
 
 import argparse
 import logging
-import sys
 from pathlib import Path
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -42,9 +40,10 @@ logger = logging.getLogger(__name__)
 # Command: research-init
 # =============================================================================
 
+
 def cmd_research_init(args: argparse.Namespace) -> int:
     """Start Zotero-integrated research project."""
-    from berb.literature.zotero_integration import ZoteroMCPClient, ZoteroConfig
+    from berb.literature.zotero_integration import ZoteroConfig, ZoteroMCPClient
 
     print(f"Initializing research project: {args.topic}")
 
@@ -97,9 +96,10 @@ def cmd_research_init(args: argparse.Namespace) -> int:
 # Command: zotero-review
 # =============================================================================
 
+
 def cmd_zotero_review(args: argparse.Namespace) -> int:
     """Review Zotero collection."""
-    from berb.literature.zotero_integration import ZoteroMCPClient, ZoteroConfig
+    from berb.literature.zotero_integration import ZoteroConfig, ZoteroMCPClient
 
     print(f"Reviewing Zotero collection: {args.collection}")
 
@@ -112,8 +112,8 @@ def cmd_zotero_review(args: argparse.Namespace) -> int:
         collection_id = None
 
         for coll in collections:
-            if args.collection.lower() in coll.get('name', '').lower():
-                collection_id = coll.get('id')
+            if args.collection.lower() in coll.get("name", "").lower():
+                collection_id = coll.get("id")
                 break
 
         if not collection_id:
@@ -125,15 +125,15 @@ def cmd_zotero_review(args: argparse.Namespace) -> int:
 
         print(f"\nCollection contains {len(papers)} papers:")
         for i, paper in enumerate(papers[:20], 1):
-            title = paper.get('title', 'Unknown')[:80]
-            year = paper.get('year', 'n.d.')
+            title = paper.get("title", "Unknown")[:80]
+            year = paper.get("year", "n.d.")
             print(f"  {i:2d}. [{year}] {title}")
 
         if len(papers) > 20:
             print(f"  ... and {len(papers) - 20} more")
 
         # Generate summary statistics
-        years = [p.get('year') for p in papers if p.get('year')]
+        years = [p.get("year") for p in papers if p.get("year")]
         if years:
             print(f"\nYear range: {min(years)} - {max(years)}")
 
@@ -148,9 +148,10 @@ def cmd_zotero_review(args: argparse.Namespace) -> int:
 # Command: zotero-notes
 # =============================================================================
 
+
 def cmd_zotero_notes(args: argparse.Namespace) -> int:
     """Batch-read papers and generate notes."""
-    from berb.literature.zotero_integration import ZoteroMCPClient, ZoteroConfig
+    from berb.literature.zotero_integration import ZoteroConfig, ZoteroMCPClient
 
     print(f"Generating notes for {len(args.papers)} papers...")
 
@@ -180,14 +181,14 @@ def cmd_zotero_notes(args: argparse.Namespace) -> int:
                 notes.append(note)
                 print(f"  Extracted {len(annotations)} annotations")
             else:
-                print(f"  No annotations found")
+                print("  No annotations found")
 
         # Write notes
         if args.output:
             output_file = Path(args.output)
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
-            with open(output_file, 'w', encoding='utf-8') as f:
+            with open(output_file, "w", encoding="utf-8") as f:
                 f.write("\n\n---\n\n".join(notes))
 
             print(f"\nNotes written to: {output_file}")
@@ -203,9 +204,10 @@ def cmd_zotero_notes(args: argparse.Namespace) -> int:
 # Command: obsidian-ingest
 # =============================================================================
 
+
 def cmd_obsidian_ingest(args: argparse.Namespace) -> int:
     """Ingest Markdown files into Obsidian vault."""
-    from berb.knowledge.obsidian_export import ObsidianExporter, ObsidianConfig
+    from berb.knowledge.obsidian_export import ObsidianConfig, ObsidianExporter
 
     print(f"Ingesting Markdown files from {args.input}")
 
@@ -234,7 +236,7 @@ def cmd_obsidian_ingest(args: argparse.Namespace) -> int:
             print(f"Processing: {md_file.name}")
 
             # Read content
-            content = md_file.read_text(encoding='utf-8')
+            content = md_file.read_text(encoding="utf-8")
 
             # Extract metadata
             title = md_file.stem.replace("_", " ").title()
@@ -260,9 +262,10 @@ def cmd_obsidian_ingest(args: argparse.Namespace) -> int:
 # Command: analyze-results
 # =============================================================================
 
+
 def cmd_analyze_results(args: argparse.Namespace) -> int:
     """Analyze experiment results and generate report."""
-    from berb.agents.specialized import ExperimentAnalystAgent, AgentConfig
+    from berb.agents.specialized import AgentConfig, ExperimentAnalystAgent
 
     print("Analyzing experiment results...")
 
@@ -278,7 +281,7 @@ def cmd_analyze_results(args: argparse.Namespace) -> int:
         llm_client=None,  # Will use default
         verbose=args.verbose,
     )
-    agent = ExperimentAnalystAgent(config)
+    ExperimentAnalystAgent(config)
 
     try:
         # Load data
@@ -286,9 +289,9 @@ def cmd_analyze_results(args: argparse.Namespace) -> int:
 
         dataframes = []
         for df_path in data_files:
-            if df_path.suffix == '.csv':
+            if df_path.suffix == ".csv":
                 df = pd.read_csv(df_path)
-            elif df_path.suffix in ('.xlsx', '.xls'):
+            elif df_path.suffix in (".xlsx", ".xls"):
                 df = pd.read_excel(df_path)
             else:
                 print(f"Warning: Unsupported format: {df_path}")
@@ -305,7 +308,7 @@ def cmd_analyze_results(args: argparse.Namespace) -> int:
         # Generate analysis
         # Note: This would normally call the agent, but we'll create a simple report
         report = "# Experiment Analysis Report\n\n"
-        report += f"## Data Summary\n\n"
+        report += "## Data Summary\n\n"
         report += f"Analyzed {len(dataframes)} data files:\n\n"
 
         for i, df in enumerate(dataframes, 1):
@@ -320,7 +323,7 @@ def cmd_analyze_results(args: argparse.Namespace) -> int:
         if args.output:
             output_file = Path(args.output)
             output_file.parent.mkdir(parents=True, exist_ok=True)
-            output_file.write_text(report, encoding='utf-8')
+            output_file.write_text(report, encoding="utf-8")
             print(f"Report written to: {output_file}")
         else:
             print(report)
@@ -336,10 +339,11 @@ def cmd_analyze_results(args: argparse.Namespace) -> int:
 # Command: rebuttal (already exists in CLI, but enhanced version here)
 # =============================================================================
 
+
 def cmd_rebuttal_enhanced(args: argparse.Namespace) -> int:
     """Generate enhanced rebuttal letter."""
-    from berb.writing.rebuttal_generator import RebuttalGenerator
     from berb.writing.anti_ai import AntiAIEncoder
+    from berb.writing.rebuttal_generator import RebuttalGenerator
 
     print("Generating rebuttal letter...")
 
@@ -356,22 +360,22 @@ def cmd_rebuttal_enhanced(args: argparse.Namespace) -> int:
 
     try:
         # Read reviews
-        reviews_text = reviews_file.read_text(encoding='utf-8')
+        reviews_text = reviews_file.read_text(encoding="utf-8")
 
         # Parse reviews (simple format: one review per section)
         reviews = []
         current_review = {"reviewer": "Unknown", "comments": []}
 
-        for line in reviews_text.split('\n'):
+        for line in reviews_text.split("\n"):
             line = line.strip()
             if not line:
                 continue
 
-            if line.startswith('Reviewer'):
+            if line.startswith("Reviewer"):
                 if current_review["comments"]:
                     reviews.append(current_review)
                 current_review = {"reviewer": line, "comments": []}
-            elif line.startswith('-'):
+            elif line.startswith("-"):
                 current_review["comments"].append(line[1:].strip())
 
         if current_review["comments"]:
@@ -380,7 +384,7 @@ def cmd_rebuttal_enhanced(args: argparse.Namespace) -> int:
         print(f"Parsed {len(reviews)} reviewer comments")
 
         # Generate rebuttal
-        generator = RebuttalGenerator()
+        RebuttalGenerator()
 
         # Simple rebuttal generation (would use LLM in full implementation)
         rebuttal = "# Rebuttal Letter\n\n"
@@ -392,7 +396,7 @@ def cmd_rebuttal_enhanced(args: argparse.Namespace) -> int:
         for review in reviews:
             rebuttal += f"## {review['reviewer']}\n\n"
 
-            for i, comment in enumerate(review['comments'], 1):
+            for i, comment in enumerate(review["comments"], 1):
                 rebuttal += f"**Comment {i}:** {comment}\n\n"
                 rebuttal += "**Response:** We appreciate this comment. "
                 rebuttal += "[Detailed response would be generated by LLM]\n\n"
@@ -403,6 +407,7 @@ def cmd_rebuttal_enhanced(args: argparse.Namespace) -> int:
         if args.no_ai_check:
             encoder = AntiAIEncoder()
             import asyncio
+
             result = asyncio.run(encoder.analyze(rebuttal))
 
             if result.phrases:
@@ -411,7 +416,7 @@ def cmd_rebuttal_enhanced(args: argparse.Namespace) -> int:
 
         # Write rebuttal
         output = Path(args.output) if args.output else Path("rebuttal.md")
-        output.write_text(rebuttal, encoding='utf-8')
+        output.write_text(rebuttal, encoding="utf-8")
         print(f"Rebuttal letter written to: {output}")
 
         return 0
@@ -424,6 +429,7 @@ def cmd_rebuttal_enhanced(args: argparse.Namespace) -> int:
 # =============================================================================
 # Command: mine-writing-patterns
 # =============================================================================
+
 
 def cmd_mine_writing_patterns(args: argparse.Namespace) -> int:
     """Extract writing patterns from corpus."""
@@ -448,8 +454,8 @@ def cmd_mine_writing_patterns(args: argparse.Namespace) -> int:
     try:
         # Load texts
         texts = []
-        for tf in text_files[:args.max_files]:
-            content = tf.read_text(encoding='utf-8')
+        for tf in text_files[: args.max_files]:
+            content = tf.read_text(encoding="utf-8")
             texts.append(content)
 
         print(f"Loaded {len(texts)} texts")
@@ -466,10 +472,11 @@ def cmd_mine_writing_patterns(args: argparse.Namespace) -> int:
         # Save patterns
         if args.output:
             import json
+
             output_file = Path(args.output)
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
-            with open(output_file, 'w', encoding='utf-8') as f:
+            with open(output_file, "w", encoding="utf-8") as f:
                 json.dump(patterns, f, indent=2, ensure_ascii=False)
 
             print(f"\nPatterns saved to: {output_file}")
@@ -485,6 +492,7 @@ def cmd_mine_writing_patterns(args: argparse.Namespace) -> int:
 # Command: verify-citations
 # =============================================================================
 
+
 def cmd_verify_citations(args: argparse.Namespace) -> int:
     """Verify citation accuracy."""
     from berb.pipeline.citation_verification import CitationVerifier, VerifierConfig
@@ -498,11 +506,12 @@ def cmd_verify_citations(args: argparse.Namespace) -> int:
 
     try:
         # Read paper
-        paper_text = paper_file.read_text(encoding='utf-8')
+        paper_text = paper_file.read_text(encoding="utf-8")
 
         # Extract citations (simple regex for DOIs)
         import re
-        doi_pattern = r'10\.\d{4,9}/[-._;()/:A-Z0-9]+'
+
+        doi_pattern = r"10\.\d{4,9}/[-._;()/:A-Z0-9]+"
         dois = re.findall(doi_pattern, paper_text, re.IGNORECASE)
 
         print(f"Found {len(dois)} DOI citations")
@@ -515,26 +524,28 @@ def cmd_verify_citations(args: argparse.Namespace) -> int:
             enable_content_check=False,  # Skip LLM check for speed
         )
 
-        verifier = CitationVerifier(config)
-
         results = []
-        for doi in dois[:args.max_citations]:
-            result = verifier.verify_doi_sync(doi)
-            results.append(result)
+        # BUG-002 fix: Use context manager to ensure proper cleanup
+        with CitationVerifier(config) as verifier:
+            for doi in dois[: args.max_citations]:
+                result = verifier.verify_doi_sync(doi)
+                results.append(result)
 
-            status = "✓" if result.get('valid', False) else "✗"
-            print(f"  {status} {doi[:50]}")
+                status = "✓" if result.get("valid", False) else "✗"
+                print(f"  {status} {doi[:50]}")
+        # HTTP client automatically closed by context manager
 
         # Summary
-        valid_count = sum(1 for r in results if r.get('valid', False))
+        valid_count = sum(1 for r in results if r.get("valid", False))
         print(f"\nVerification complete: {valid_count}/{len(results)} valid citations")
 
         if args.output:
             import json
+
             output_file = Path(args.output)
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
-            with open(output_file, 'w', encoding='utf-8') as f:
+            with open(output_file, "w", encoding="utf-8") as f:
                 json.dump(results, f, indent=2)
 
             print(f"Results saved to: {output_file}")
@@ -550,6 +561,7 @@ def cmd_verify_citations(args: argparse.Namespace) -> int:
 # Command: anti-ai-editing
 # =============================================================================
 
+
 def cmd_anti_ai_editing(args: argparse.Namespace) -> int:
     """Remove AI phrasing from text."""
     from berb.writing.anti_ai import AntiAIEncoder
@@ -563,7 +575,7 @@ def cmd_anti_ai_editing(args: argparse.Namespace) -> int:
 
     try:
         # Read text
-        text = input_file.read_text(encoding='utf-8')
+        text = input_file.read_text(encoding="utf-8")
 
         # Analyze and edit
         encoder = AntiAIEncoder(
@@ -572,6 +584,7 @@ def cmd_anti_ai_editing(args: argparse.Namespace) -> int:
         )
 
         import asyncio
+
         result = asyncio.run(encoder.analyze(text))
 
         print(f"Found {len(result.phrases)} AI-like phrases")
@@ -585,7 +598,7 @@ def cmd_anti_ai_editing(args: argparse.Namespace) -> int:
         # Write revised text
         output_file = Path(args.output) if args.output else input_file
         output_file.parent.mkdir(parents=True, exist_ok=True)
-        output_file.write_text(result.revised_text, encoding='utf-8')
+        output_file.write_text(result.revised_text, encoding="utf-8")
 
         print(f"\nRevised text written to: {output_file}")
 
@@ -600,9 +613,9 @@ def cmd_anti_ai_editing(args: argparse.Namespace) -> int:
 # Command: obsidian-init
 # =============================================================================
 
+
 def cmd_obsidian_init(args: argparse.Namespace) -> int:
     """Bootstrap Obsidian knowledge base."""
-    from berb.knowledge.obsidian_export import ObsidianExporter, ObsidianConfig
 
     vault_path = Path(args.vault).expanduser()
 
@@ -658,7 +671,7 @@ source: ""
 <!-- Bibliographic references -->
 """
 
-        (templates_dir / "Knowledge Card.md").write_text(kc_template, encoding='utf-8')
+        (templates_dir / "Knowledge Card.md").write_text(kc_template, encoding="utf-8")
 
         # Literature note template
         lit_template = """---
@@ -700,7 +713,7 @@ zotero_link: ""
 <!-- Links to related papers -->
 """
 
-        (templates_dir / "Literature Note.md").write_text(lit_template, encoding='utf-8')
+        (templates_dir / "Literature Note.md").write_text(lit_template, encoding="utf-8")
 
         # Experiment report template
         exp_template = """---
@@ -737,7 +750,7 @@ experiment_id: ""
 <!-- Follow-up experiments -->
 """
 
-        (templates_dir / "Experiment Report.md").write_text(exp_template, encoding='utf-8')
+        (templates_dir / "Experiment Report.md").write_text(exp_template, encoding="utf-8")
 
         print("\nCreated templates:")
         print("  - Knowledge Card.md")
@@ -757,7 +770,7 @@ knowledge_base:
 """
 
         config_file = vault_path / "berb-config.yaml"
-        config_file.write_text(config_content, encoding='utf-8')
+        config_file.write_text(config_content, encoding="utf-8")
 
         print(f"\nConfiguration file created: {config_file}")
         print("\nObsidian vault initialized successfully!")
@@ -779,6 +792,7 @@ knowledge_base:
 # =============================================================================
 # Command registration helpers
 # =============================================================================
+
 
 def setup_claude_scholar_commands(parser: argparse._SubParsersAction) -> None:
     """

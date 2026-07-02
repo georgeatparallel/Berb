@@ -12,16 +12,19 @@ metadata that Obsidian can consume.
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import yaml
 
+logger = logging.getLogger(__name__)
+
 
 def _utcnow_iso() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+    return datetime.now(UTC).isoformat(timespec="seconds")
 
 
 # ---------------------------------------------------------------------------
@@ -33,9 +36,7 @@ def _utcnow_iso() -> str:
 class KBEntry:
     """A single knowledge-base entry to be written."""
 
-    category: (
-        str  # questions | literature | experiments | findings | decisions | reviews
-    )
+    category: str  # questions | literature | experiments | findings | decisions | reviews
     entry_id: str  # Unique ID (e.g. "goal-define-run-abc")
     title: str
     content: str  # Markdown body
@@ -65,9 +66,7 @@ def _markdown_frontmatter(entry: KBEntry) -> str:
     if entry.evidence_refs:
         meta["evidence"] = entry.evidence_refs
     return (
-        "---\n"
-        + yaml.dump(meta, default_flow_style=False, allow_unicode=True).rstrip()
-        + "\n---\n"
+        "---\n" + yaml.dump(meta, default_flow_style=False, allow_unicode=True).rstrip() + "\n---\n"
     )
 
 
@@ -78,7 +77,7 @@ def _obsidian_enhancements(entry: KBEntry) -> str:
         tag_line = " ".join(f"#{t}" for t in entry.tags)
         extras.append(f"\n{tag_line}")
     if entry.links:
-        link_line = "Related: " + ", ".join(f"[[{l}]]" for l in entry.links)
+        link_line = "Related: " + ", ".join(f"[[{link}]]" for link in entry.links)
         extras.append(link_line)
     return "\n".join(extras)
 
@@ -223,13 +222,17 @@ def generate_weekly_report(
     statistics into a Markdown report written to ``kb_root/reviews/``.
     """
     if not week_label:
-        week_label = datetime.now(timezone.utc).strftime("%Y-W%W")
+        week_label = datetime.now(UTC).strftime("%Y-W%W")
 
     runs_data: list[dict] = []
     for run_dir in run_dirs:
         summary_path = run_dir / "pipeline_summary.json"
         if summary_path.exists():
-            runs_data.append(json.loads(summary_path.read_text(encoding="utf-8")))
+            # BUG-006 fix: Handle corrupted JSON gracefully
+            try:
+                runs_data.append(json.loads(summary_path.read_text(encoding="utf-8")))
+            except (json.JSONDecodeError, OSError, UnicodeDecodeError) as e:
+                logger.warning(f"Skipping corrupted summary {summary_path}: {e}")
 
     # Build report
     total_runs = len(runs_data)
@@ -239,7 +242,7 @@ def generate_weekly_report(
     total_blocked = sum(r.get("stages_blocked", 0) for r in runs_data)
 
     report_lines = [
-        f"## Summary",
+        "## Summary",
         f"- Week: {week_label}",
         f"- Pipeline runs: {total_runs}",
         f"- Stages executed: {total_stages}",
@@ -260,9 +263,7 @@ def generate_weekly_report(
 
     report_lines.extend(["", "## Recommendations"])
     if total_failed > 0:
-        report_lines.append(
-            f"- ⚠️ {total_failed} stage failures detected. Review error logs."
-        )
+        report_lines.append(f"- ⚠️ {total_failed} stage failures detected. Review error logs.")
     if total_blocked > 0:
         report_lines.append(f"- 🔒 {total_blocked} stages awaiting gate approval.")
     if total_failed == 0 and total_blocked == 0:

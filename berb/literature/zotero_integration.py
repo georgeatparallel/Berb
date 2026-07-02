@@ -30,7 +30,6 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -286,7 +285,9 @@ class ZoteroMCPClient:
             )
 
         # Build URL
-        library_prefix = f"groups/{self.config.library_id}" if self.config.library_type == "group" else "users"
+        library_prefix = (
+            f"groups/{self.config.library_id}" if self.config.library_type == "group" else "users"
+        )
         url = f"/{library_prefix}/{self.config.library_id or 'self'}/collections"
 
         try:
@@ -368,12 +369,16 @@ class ZoteroMCPClient:
                 },
             )
 
-        library_prefix = f"groups/{self.config.library_id}" if self.config.library_type == "group" else "users"
+        library_prefix = (
+            f"groups/{self.config.library_id}" if self.config.library_type == "group" else "users"
+        )
         url = f"/{library_prefix}/{self.config.library_id or 'self'}/collections/{collection_id}/items"
         params = {
             "format": "json",
             "limit": limit,
-            "include": "annotations,notes" if (include_annotations or self.config.include_annotations) else "json",
+            "include": "annotations,notes"
+            if (include_annotations or self.config.include_annotations)
+            else "json",
         }
 
         try:
@@ -394,32 +399,38 @@ class ZoteroMCPClient:
         # Parse creators
         creators = []
         for creator in data.get("creators", []):
-            creators.append({
-                "firstName": creator.get("firstName", ""),
-                "lastName": creator.get("lastName", ""),
-                "creatorType": creator.get("creatorType", ""),
-            })
+            creators.append(
+                {
+                    "firstName": creator.get("firstName", ""),
+                    "lastName": creator.get("lastName", ""),
+                    "creatorType": creator.get("creatorType", ""),
+                }
+            )
 
         # Parse annotations
         annotations = []
         for ann in item.get("annotations", []):
             ann_data = ann.get("data", {})
-            annotations.append(ZoteroAnnotation(
-                id=ann.get("key", ""),
-                type=ann_data.get("annotationType", ""),
-                text=ann_data.get("annotationText", ""),
-                comment=ann_data.get("annotationComment", ""),
-                color=ann_data.get("annotationColor", ""),
-            ).to_dict())
+            annotations.append(
+                ZoteroAnnotation(
+                    id=ann.get("key", ""),
+                    type=ann_data.get("annotationType", ""),
+                    text=ann_data.get("annotationText", ""),
+                    comment=ann_data.get("annotationComment", ""),
+                    color=ann_data.get("annotationColor", ""),
+                ).to_dict()
+            )
 
         # Parse notes
         notes = []
         for note in item.get("notes", []):
             note_data = note.get("data", {})
-            notes.append({
-                "id": note.get("key", ""),
-                "text": note_data.get("note", ""),
-            })
+            notes.append(
+                {
+                    "id": note.get("key", ""),
+                    "text": note_data.get("note", ""),
+                }
+            )
 
         return ZoteroItem(
             id=str(item.get("key", "")),
@@ -492,7 +503,8 @@ class ZoteroMCPClient:
             return self._format_annotations_markdown(item)
         elif format == "json":
             import json
-            return json.dumps([a for a in item.annotations], indent=2)
+
+            return json.dumps(list(item.annotations), indent=2)
         else:
             return "\n".join([a.get("text", "") for a in item.annotations])
 
@@ -581,7 +593,9 @@ class ZoteroMCPClient:
             if field == "title":
                 return [i for i in all_items if query_lower in i.title.lower()][:limit]
             elif field == "creator":
-                return [i for i in all_items if any(query_lower in a.lower() for a in i.authors)][:limit]
+                return [i for i in all_items if any(query_lower in a.lower() for a in i.authors)][
+                    :limit
+                ]
             else:
                 return all_items[:limit]
 
@@ -668,7 +682,7 @@ def create_zotero_client_from_env() -> ZoteroMCPClient:
         >>> client = create_zotero_client_from_env()
     """
     import os
-    
+
     return ZoteroMCPClient(
         ZoteroConfig(
             mcp_url=os.environ.get("ZOTERO_MCP_URL", "http://localhost:8765"),

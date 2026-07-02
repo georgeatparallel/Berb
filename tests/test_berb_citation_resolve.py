@@ -8,6 +8,7 @@ Tests cover:
   - _load_seminal_papers_by_key: index construction
   - _seminal_to_bibtex: BibTeX generation from YAML entries
 """
+
 from __future__ import annotations
 
 from unittest.mock import patch
@@ -20,6 +21,7 @@ from berb.literature.models import Author, Paper
 # ---------------------------------------------------------------------------
 # Helpers to build mock Paper objects
 # ---------------------------------------------------------------------------
+
 
 def _make_paper(
     title: str,
@@ -48,6 +50,7 @@ _SEARCH_PAPERS_PATH = "berb.literature.search.search_papers"
 # Tests for _load_seminal_papers_by_key
 # ---------------------------------------------------------------------------
 
+
 class TestLoadSeminalPapersByKey:
     """Test the seminal papers index builder."""
 
@@ -55,6 +58,7 @@ class TestLoadSeminalPapersByKey:
         from berb.pipeline.stage_impls._review_publish import (
             _load_seminal_papers_by_key,
         )
+
         index = _load_seminal_papers_by_key()
         # The seminal_papers.yaml must contain these foundational papers
         assert "he2016deep" in index
@@ -65,6 +69,7 @@ class TestLoadSeminalPapersByKey:
         from berb.pipeline.stage_impls._review_publish import (
             _load_seminal_papers_by_key,
         )
+
         index = _load_seminal_papers_by_key()
         for key, entry in index.items():
             assert "title" in entry, f"Missing title for {key}"
@@ -76,6 +81,7 @@ class TestLoadSeminalPapersByKey:
         from berb.pipeline.stage_impls._review_publish import (
             _load_seminal_papers_by_key,
         )
+
         with patch(
             "berb.data._load_all",
             side_effect=RuntimeError("disk error"),
@@ -88,11 +94,13 @@ class TestLoadSeminalPapersByKey:
 # Tests for _seminal_to_bibtex
 # ---------------------------------------------------------------------------
 
+
 class TestSeminalToBibtex:
     """Test BibTeX generation from seminal_papers.yaml entries."""
 
     def test_conference_paper(self):
         from berb.pipeline.stage_impls._review_publish import _seminal_to_bibtex
+
         entry = {
             "title": "Deep Residual Learning for Image Recognition",
             "authors": "He et al.",
@@ -108,6 +116,7 @@ class TestSeminalToBibtex:
 
     def test_journal_paper(self):
         from berb.pipeline.stage_impls._review_publish import _seminal_to_bibtex
+
         entry = {
             "title": "Dropout: A Simple Way to Prevent Neural Networks from Overfitting",
             "authors": "Srivastava et al.",
@@ -121,6 +130,7 @@ class TestSeminalToBibtex:
 
     def test_neurips_is_conference(self):
         from berb.pipeline.stage_impls._review_publish import _seminal_to_bibtex
+
         entry = {
             "title": "Attention Is All You Need",
             "authors": "Vaswani et al.",
@@ -135,6 +145,7 @@ class TestSeminalToBibtex:
 # Tests for _resolve_missing_citations
 # ---------------------------------------------------------------------------
 
+
 class TestResolveMissingCitations:
     """Test the full resolution pipeline with BUG-194 fixes."""
 
@@ -144,6 +155,7 @@ class TestResolveMissingCitations:
         from berb.pipeline.stage_impls._review_publish import (
             _resolve_missing_citations,
         )
+
         missing = {"he2016deep", "vaswani2017attention", "srivastava2014dropout"}
         existing_bib = ""
 
@@ -170,6 +182,7 @@ class TestResolveMissingCitations:
         from berb.pipeline.stage_impls._review_publish import (
             _resolve_missing_citations,
         )
+
         existing_bib = "@article{he2016deep, title={Deep Residual Learning}}"
         missing = {"he2016deep"}
         # Mock search_papers to ensure no real API calls (key should be skipped
@@ -187,6 +200,7 @@ class TestResolveMissingCitations:
         from berb.pipeline.stage_impls._review_publish import (
             _resolve_missing_citations,
         )
+
         # Mock a garbage result that has the right year but wrong title
         garbage_paper = _make_paper(
             title="Jokowi and the New Developmentalism",
@@ -216,6 +230,7 @@ class TestResolveMissingCitations:
         from berb.pipeline.stage_impls._review_publish import (
             _resolve_missing_citations,
         )
+
         wrong_year_paper = _make_paper(
             title="Novel Deep Learning Approach by Smith",
             year=2020,  # cite key says 2016
@@ -240,6 +255,7 @@ class TestResolveMissingCitations:
         from berb.pipeline.stage_impls._review_publish import (
             _resolve_missing_citations,
         )
+
         good_paper = _make_paper(
             title="Novel Approach to Feature Extraction in Deep Networks",
             year=2018,
@@ -268,6 +284,7 @@ class TestResolveMissingCitations:
         from berb.pipeline.stage_impls._review_publish import (
             _resolve_missing_citations,
         )
+
         resolved, entries = _resolve_missing_citations(set(), "")
         assert len(resolved) == 0
         assert len(entries) == 0
@@ -277,6 +294,7 @@ class TestResolveMissingCitations:
         from berb.pipeline.stage_impls._review_publish import (
             _resolve_missing_citations,
         )
+
         missing = {"notyearkey", "abc"}
         resolved, entries = _resolve_missing_citations(missing, "")
         assert len(resolved) == 0
@@ -287,6 +305,7 @@ class TestResolveMissingCitations:
         from berb.pipeline.stage_impls._review_publish import (
             _resolve_missing_citations,
         )
+
         # Mix of seminal and non-seminal keys
         missing = {"he2016deep", "unknownauthor2020something"}
         with patch(
@@ -305,6 +324,7 @@ class TestResolveMissingCitations:
         from berb.pipeline.stage_impls._review_publish import (
             _resolve_missing_citations,
         )
+
         missing = {"unknownauthor2020something"}
         with patch(
             _SEARCH_PAPERS_PATH,
@@ -320,6 +340,7 @@ class TestResolveMissingCitations:
         from berb.pipeline.stage_impls._review_publish import (
             _resolve_missing_citations,
         )
+
         # he2016deep IS in seminal_papers.yaml, so it should resolve from there
         missing = {"he2016deep"}
         resolved, entries = _resolve_missing_citations(missing, "")
@@ -335,6 +356,7 @@ class TestResolveMissingCitations:
         from berb.pipeline.stage_impls._review_publish import (
             _resolve_missing_citations,
         )
+
         missing = {"vaswani2017attention"}
         resolved, entries = _resolve_missing_citations(missing, "")
 
@@ -349,6 +371,7 @@ class TestResolveMissingCitations:
         from berb.pipeline.stage_impls._review_publish import (
             _resolve_missing_citations,
         )
+
         missing = {"srivastava2014dropout"}
         resolved, entries = _resolve_missing_citations(missing, "")
 
@@ -391,6 +414,7 @@ class TestResolveMissingCitations:
         from berb.pipeline.stage_impls._review_publish import (
             _resolve_missing_citations,
         )
+
         missing = {"unknownauthor2020something"}
         with patch(_SEARCH_PAPERS_PATH, return_value=[]):
             resolved, entries = _resolve_missing_citations(missing, "")
@@ -404,6 +428,7 @@ class TestResolveMissingCitations:
         from berb.pipeline.stage_impls._review_publish import (
             _resolve_missing_citations,
         )
+
         paper = _make_paper(
             title="Novel Deep Feature Extraction by Li",
             year=2019,  # cite key says 2018, but 1 year off is OK
@@ -430,6 +455,7 @@ class TestResolveMissingCitations:
         from berb.pipeline.stage_impls._review_publish import (
             _resolve_missing_citations,
         )
+
         paper = _make_paper(
             title="AI-Assisted Pipeline for Dynamic Generation of Trustworthy Health Supplement Content at Scale",
             year=2017,
@@ -459,6 +485,7 @@ class TestResolveMissingCitations:
         from berb.pipeline.stage_impls._review_publish import (
             _resolve_missing_citations,
         )
+
         bad_paper = _make_paper(
             title="Convolutional Neural Networks for Sentence Classification",
             year=2018,

@@ -8,10 +8,10 @@ HorizonMath principle: "Discovery is hard, verification is easy."
 
 from .verification import (
     VerifiableMathContent,
-    VerifiedTheorem,
     VerificationReport,
-    verify_theorem,
+    VerifiedTheorem,
     verify_equation,
+    verify_theorem,
 )
 
 __all__ = [

@@ -113,12 +113,18 @@ class TestKeywordDetection:
         assert _keyword_detect("actor-critic algorithm for robot control") == "ml_rl"
 
     def test_physics_keywords(self):
-        assert _keyword_detect("molecular dynamics simulation with Lennard-Jones") == "physics_simulation"
+        assert (
+            _keyword_detect("molecular dynamics simulation with Lennard-Jones")
+            == "physics_simulation"
+        )
         assert _keyword_detect("finite element method for Navier-Stokes equation") == "physics_pde"
 
     def test_chemistry_keywords(self):
         assert _keyword_detect("DFT calculation with PySCF") == "chemistry_qm"
-        assert _keyword_detect("molecular property prediction using RDKit fingerprints") == "chemistry_molprop"
+        assert (
+            _keyword_detect("molecular property prediction using RDKit fingerprints")
+            == "chemistry_molprop"
+        )
 
     def test_biology_keywords(self):
         assert _keyword_detect("single-cell RNA-seq analysis with scanpy") == "biology_singlecell"
@@ -129,10 +135,15 @@ class TestKeywordDetection:
 
     def test_math_keywords(self):
         assert _keyword_detect("Runge-Kutta ODE solver convergence") == "mathematics_numerical"
-        assert _keyword_detect("numerical analysis of quadrature methods") == "mathematics_numerical"
+        assert (
+            _keyword_detect("numerical analysis of quadrature methods") == "mathematics_numerical"
+        )
 
     def test_security_keywords(self):
-        assert _keyword_detect("intrusion detection system for network traffic") == "security_detection"
+        assert (
+            _keyword_detect("intrusion detection system for network traffic")
+            == "security_detection"
+        )
 
     def test_robotics_keywords(self):
         assert _keyword_detect("robot manipulation with MuJoCo") == "robotics_control"
@@ -318,8 +329,7 @@ class TestDetectionAccuracy:
 
         accuracy = correct / total
         assert accuracy > 0.90, (
-            f"Keyword detection accuracy: {accuracy:.1%} ({correct}/{total}). "
-            f"Expected > 90%."
+            f"Keyword detection accuracy: {accuracy:.1%} ({correct}/{total}). Expected > 90%."
         )
 
     def test_full_detection_accuracy(self):
@@ -334,6 +344,5 @@ class TestDetectionAccuracy:
 
         accuracy = correct / total
         assert accuracy > 0.90, (
-            f"Full detection accuracy: {accuracy:.1%} ({correct}/{total}). "
-            f"Expected > 90%."
+            f"Full detection accuracy: {accuracy:.1%} ({correct}/{total}). Expected > 90%."
         )

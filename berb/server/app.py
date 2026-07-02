@@ -14,7 +14,6 @@ from fastapi.staticfiles import StaticFiles
 from berb.config import RCConfig
 from berb.server.middleware.auth import TokenAuthMiddleware
 from berb.server.websocket.manager import ConnectionManager
-from berb.server.websocket.events import Event, EventType
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +98,8 @@ def create_app(
     app.include_router(projects_router)
 
     if not dashboard_only:
-        from berb.server.routes.chat import router as chat_router, set_chat_manager
+        from berb.server.routes.chat import router as chat_router
+        from berb.server.routes.chat import set_chat_manager
 
         set_chat_manager(event_manager)
         app.include_router(chat_router)
@@ -110,8 +110,9 @@ def create_app(
             app.include_router(voice_router)
 
     # --- WebSocket events endpoint ---
-    from fastapi import WebSocket, WebSocketDisconnect
     import uuid
+
+    from fastapi import WebSocket, WebSocketDisconnect
 
     @app.websocket("/ws/events")
     async def events_ws(websocket: WebSocket) -> None:

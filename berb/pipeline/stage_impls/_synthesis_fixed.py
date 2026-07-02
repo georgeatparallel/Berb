@@ -321,6 +321,7 @@ def _execute_hypothesis_gen(
             hypotheses_text=hypotheses_md,
             papers_already_seen=papers_seen,
             s2_api_key=getattr(config.llm, "s2_api_key", ""),
+            perplexity_check=config.perplexity.enabled,
         )
         (stage_dir / "novelty_report.json").write_text(
             json.dumps(novelty_report, indent=2, ensure_ascii=False),

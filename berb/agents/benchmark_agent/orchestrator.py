@@ -128,9 +128,7 @@ class BenchmarkPlan:
         if self.selected_baselines:
             parts.append("\n## Selected Baselines")
             for bl in self.selected_baselines:
-                parts.append(
-                    f"- **{bl.get('name', 'Unknown')}**: {bl.get('paper', 'N/A')}"
-                )
+                parts.append(f"- **{bl.get('name', 'Unknown')}**: {bl.get('paper', 'N/A')}")
                 if bl.get("source"):
                     parts.append(f"  Code: `{bl['source']}`")
 
@@ -230,11 +228,13 @@ class BenchmarkOrchestrator(AgentOrchestrator):
 
         # ── Phase 1: Survey ───────────────────────────────────────
         self.logger.info("Phase 1: Surveying benchmarks")
-        survey_result = self._surveyor.execute({
-            "topic": topic,
-            "hypothesis": hypothesis,
-            "experiment_plan": context.get("experiment_plan", ""),
-        })
+        survey_result = self._surveyor.execute(
+            {
+                "topic": topic,
+                "hypothesis": hypothesis,
+                "experiment_plan": context.get("experiment_plan", ""),
+            }
+        )
         self._accumulate(survey_result)
 
         if not survey_result.success:
@@ -250,10 +250,12 @@ class BenchmarkOrchestrator(AgentOrchestrator):
 
         # ── Phase 2: Select ───────────────────────────────────────
         self.logger.info("Phase 2: Selecting benchmarks and baselines")
-        select_result = self._selector.execute({
-            "topic": topic,
-            "survey": survey,
-        })
+        select_result = self._selector.execute(
+            {
+                "topic": topic,
+                "survey": survey,
+            }
+        )
         self._accumulate(select_result)
 
         if not select_result.success:
@@ -274,14 +276,17 @@ class BenchmarkOrchestrator(AgentOrchestrator):
         for iteration in range(self.max_iterations):
             self.logger.info(
                 "Phase 3: Acquiring code (iteration %d/%d)",
-                iteration + 1, self.max_iterations,
+                iteration + 1,
+                self.max_iterations,
             )
 
             # Acquire
-            acq_result = self._acquirer.execute({
-                "topic": topic,
-                "selection": selection,
-            })
+            acq_result = self._acquirer.execute(
+                {
+                    "topic": topic,
+                    "selection": selection,
+                }
+            )
             self._accumulate(acq_result)
 
             if not acq_result.success:
@@ -291,16 +296,22 @@ class BenchmarkOrchestrator(AgentOrchestrator):
             acquisition = acq_result.data
             self._save_artifact(
                 f"acquisition_{iteration}.json",
-                {k: v for k, v in acquisition.items()
-                 if k not in ("data_loader_code", "baseline_code", "setup_code")},
+                {
+                    k: v
+                    for k, v in acquisition.items()
+                    if k not in ("data_loader_code", "baseline_code", "setup_code")
+                },
             )
 
             # Validate
-            self.logger.info("Phase 4: Validating code (iteration %d/%d)",
-                             iteration + 1, self.max_iterations)
-            val_result = self._validator.execute({
-                "acquisition": acquisition,
-            })
+            self.logger.info(
+                "Phase 4: Validating code (iteration %d/%d)", iteration + 1, self.max_iterations
+            )
+            val_result = self._validator.execute(
+                {
+                    "acquisition": acquisition,
+                }
+            )
             self._accumulate(val_result)
 
             validation = val_result.data

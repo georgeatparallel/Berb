@@ -280,9 +280,15 @@ class VerifiedRegistry:
                     if isinstance(best_data, dict):
                         sub = cls.from_experiment(best_data, metric_direction=metric_direction)
                         _merge_into(target, sub)
-                        logger.debug("from_run_dir(best_only): using experiment_summary_best.json (%d values)", len(sub.values))
+                        logger.debug(
+                            "from_run_dir(best_only): using experiment_summary_best.json (%d values)",
+                            len(sub.values),
+                        )
                 except (OSError, _json_rd.JSONDecodeError, Exception):  # noqa: BLE001
-                    logger.debug("from_run_dir(best_only): failed to load experiment_summary_best.json", exc_info=True)
+                    logger.debug(
+                        "from_run_dir(best_only): failed to load experiment_summary_best.json",
+                        exc_info=True,
+                    )
             if not target.values:
                 # Fallback: no best.json or it was empty — use stage-14/ (non-versioned)
                 s14_path = run_dir / "stage-14" / "experiment_summary.json"
@@ -303,7 +309,9 @@ class VerifiedRegistry:
                         continue
                     sub = cls.from_experiment(es_data, metric_direction=metric_direction)
                     _merge_into(target, sub)
-                    logger.debug("from_run_dir: merged %s (%d values)", es_path.name, len(sub.values))
+                    logger.debug(
+                        "from_run_dir: merged %s (%d values)", es_path.name, len(sub.values)
+                    )
                 except (OSError, _json_rd.JSONDecodeError, Exception):  # noqa: BLE001
                     logger.debug("from_run_dir: skipping %s", es_path, exc_info=True)
 
@@ -315,9 +323,14 @@ class VerifiedRegistry:
                     if isinstance(best_data, dict):
                         sub = cls.from_experiment(best_data, metric_direction=metric_direction)
                         _merge_into(target, sub)
-                        logger.debug("from_run_dir: merged experiment_summary_best.json (%d values)", len(sub.values))
+                        logger.debug(
+                            "from_run_dir: merged experiment_summary_best.json (%d values)",
+                            len(sub.values),
+                        )
                 except (OSError, _json_rd.JSONDecodeError, Exception):  # noqa: BLE001
-                    logger.debug("from_run_dir: skipping experiment_summary_best.json", exc_info=True)
+                    logger.debug(
+                        "from_run_dir: skipping experiment_summary_best.json", exc_info=True
+                    )
 
             # --- 3. All refinement logs (enrichment) ---
             for rl_path in sorted(run_dir.glob("stage-13*/refinement_log.json")):

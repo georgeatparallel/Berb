@@ -67,7 +67,6 @@ enabled_stages:
   - 21
   - 22
   - 23
-
 stage_overrides:
   3:  # Literature — biomedical databases
     extra_sources:

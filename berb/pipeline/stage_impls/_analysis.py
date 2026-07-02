@@ -60,7 +60,7 @@ def _execute_result_analysis(
     runs_dir = _read_prior_artifact(run_dir, "runs/") or ""
     context = ""
     if runs_dir:
-        context = _collect_json_context(Path(runs_dir), max_files=30)
+        context = json.dumps(_collect_json_context(run_dir, Stage.RESULT_ANALYSIS.value))
 
     # --- R13-1: Merge Stage 13 (ITERATIVE_REFINE) results if available ---
     # Stage 13 stores richer per-condition metrics in refinement_log.json

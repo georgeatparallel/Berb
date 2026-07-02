@@ -24,8 +24,7 @@ RUBRICS: dict[str, Rubric] = {
     "rigor": Rubric(
         name="Rigor",
         criteria=(
-            "Scientific rigor. Are experiments well-designed? "
-            "Statistical significance reported?"
+            "Scientific rigor. Are experiments well-designed? Statistical significance reported?"
         ),
         scale="1=no experiments, 3=basic, 5=adequate, 7=thorough, 10=exemplary",
     ),

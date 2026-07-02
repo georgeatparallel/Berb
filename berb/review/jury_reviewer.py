@@ -14,10 +14,10 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from berb.llm.client import LLMProvider
-from berb.reasoning.jury import JuryMethod, Juror, JurorRole, JuryResult
+from berb.reasoning.jury import Juror, JurorRole, JuryMethod, JuryResult
 from berb.review.cross_model_reviewer import (
-    CrossModelReviewer,
     CrossModelReviewConfig,
+    CrossModelReviewer,
     ReviewResult,
     ReviewVerdict,
     Weakness,
@@ -116,9 +116,7 @@ class JuryCrossModelReviewer(CrossModelReviewer):
         super().__init__(review_provider, config)
 
         self.jury_config = jury_config or JuryReviewConfig()
-        self.jury_roles = (
-            self.jury_config.jury_roles or self.DEFAULT_REVIEW_ROLES
-        )
+        self.jury_roles = self.jury_config.jury_roles or self.DEFAULT_REVIEW_ROLES
 
         # Initialize jury method
         self.jury_method = JuryMethod(
@@ -175,13 +173,9 @@ class JuryCrossModelReviewer(CrossModelReviewer):
         """
         if not self.jury_config.enabled:
             # Fall back to standard review
-            return await super().review(
-                paper_text, review_criteria, venue, prior_review
-            )
+            return await super().review(paper_text, review_criteria, venue, prior_review)
 
-        logger.info(
-            f"Starting jury-based review with {len(self.jury_roles)} evaluators..."
-        )
+        logger.info(f"Starting jury-based review with {len(self.jury_roles)} evaluators...")
 
         # Build case for jury
         case = self._build_jury_case(paper_text, review_criteria, venue)
@@ -202,9 +196,7 @@ class JuryCrossModelReviewer(CrossModelReviewer):
         # Compare with prior review if provided
         if prior_review:
             delta = self.compare_with_prior(review_result, prior_review)
-            logger.info(
-                f"Jury review comparison: score change {delta.score_change:+.2f}"
-            )
+            logger.info(f"Jury review comparison: score change {delta.score_change:+.2f}")
 
         logger.info(
             f"Jury review complete: score={review_result.overall_score:.1f}, "
@@ -229,7 +221,10 @@ class JuryCrossModelReviewer(CrossModelReviewer):
         Returns:
             Formatted case string
         """
-        criteria_text = "\n".join(f"- {c}" for c in (criteria or self.VENUE_CRITERIA.get(venue, self.VENUE_CRITERIA["default"])))
+        criteria_text = "\n".join(
+            f"- {c}"
+            for c in (criteria or self.VENUE_CRITERIA.get(venue, self.VENUE_CRITERIA["default"]))
+        )
 
         case = f"""## Paper Review Case
 
@@ -262,9 +257,7 @@ The foreman will synthesize all perspectives into a final review."""
         jurors = []
 
         for role_name in self.jury_roles:
-            juror_role = self._role_mapping.get(
-                role_name, JurorRole.PRACTITIONER
-            )
+            juror_role = self._role_mapping.get(role_name, JurorRole.PRACTITIONER)
 
             # Create juror with role-specific perspective
             perspective = self._get_role_perspective(role_name)
@@ -359,9 +352,7 @@ The foreman will synthesize all perspectives into a final review."""
         strengths = []
         for juror in jury_result.jurors:
             if juror.verdict == "approve":
-                strengths.append(
-                    f"{juror.name}: {juror.reasoning[:100]}"
-                )
+                strengths.append(f"{juror.name}: {juror.reasoning[:100]}")
 
         # Extract actionable improvements from conditions
         actionable_improvements = []
@@ -436,14 +427,24 @@ The foreman will synthesize all perspectives into a final review."""
 
         # Critical keywords
         critical_keywords = [
-            "fundamental flaw", "incorrect", "invalid", "doesn't work",
-            "no evidence", "contradicts", "impossible",
+            "fundamental flaw",
+            "incorrect",
+            "invalid",
+            "doesn't work",
+            "no evidence",
+            "contradicts",
+            "impossible",
         ]
 
         # Major keywords
         major_keywords = [
-            "insufficient", "incomplete", "unclear", "missing",
-            "weak", "limited", "questionable",
+            "insufficient",
+            "incomplete",
+            "unclear",
+            "missing",
+            "weak",
+            "limited",
+            "questionable",
         ]
 
         for keyword in critical_keywords:
@@ -575,9 +576,9 @@ class MultiJuryReviewer:
         else:  # weighted by confidence
             total_confidence = sum(r.confidence for r in reviews)
             if total_confidence > 0:
-                aggregated_score = sum(
-                    r.overall_score * r.confidence for r in reviews
-                ) / total_confidence
+                aggregated_score = (
+                    sum(r.overall_score * r.confidence for r in reviews) / total_confidence
+                )
             else:
                 aggregated_score = sum(scores) / len(scores)
 

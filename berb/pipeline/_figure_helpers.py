@@ -19,8 +19,11 @@ def _safe_filename(name: str) -> str:
     """Sanitize a string for use as a filename."""
     import re as _re
 
-    safe = _re.sub(r"[^\w\-_. ]", "_", name)
-    safe = safe.strip().replace(" ", "_")[:64]
+    # Collapse ".." (path traversal) into a single underscore before
+    # general sanitization, but preserve single dots (e.g. file extensions).
+    safe = _re.sub(r"\.\.+", "_", name)
+    safe = _re.sub(r"[^\w\-_. ]", "_", safe)
+    safe = safe.strip().replace(" ", "_")[:100]
     return safe or "unnamed"
 
 
@@ -77,21 +80,32 @@ def _default_quality_report(threshold: float) -> dict[str, Any]:
 
 
 def _extract_paper_title(md_text: str) -> str:
-    """Extract the paper title from markdown text."""
+    """Extract the paper title from markdown text.
+
+    Searches only the region before the first "Abstract" heading (of any
+    level) — a title appearing after Abstract isn't the paper title.
+    Prefers the first H1 (``# Title``) heading; falls back to a leading
+    bold line (``**Title**``); otherwise returns "Untitled Paper".
+    """
     import re as _re
 
-    # Look for first # Title
-    match = _re.search(r"^#\s+(.+)$", md_text, _re.MULTILINE)
-    if match:
-        return match.group(1).strip()
-    # Fallback: first non-empty line
+    bold_fallback: str | None = None
     for line in md_text.split("\n"):
-        line = line.strip()
-        if line and not line.startswith("#"):
+        stripped = line.strip()
+        if not stripped:
             continue
-        if line.startswith("# "):
-            return line[2:].strip()
-    return "Untitled"
+        heading_match = _re.match(r"^(#+)\s+(.+)$", stripped)
+        if heading_match:
+            heading_text = heading_match.group(2).strip()
+            if heading_text.lower() == "abstract":
+                break
+            if len(heading_match.group(1)) == 1:
+                return heading_text
+            continue
+        bold_match = _re.match(r"^\*\*(.+?)\*\*$", stripped)
+        if bold_match and bold_fallback is None:
+            bold_fallback = bold_match.group(1).strip()
+    return bold_fallback or "Untitled Paper"
 
 
 def _generate_neurips_checklist(paper_text: str, topic: str) -> str:
@@ -127,42 +141,53 @@ def _generate_framework_diagram_prompt(framework_description: str, style: str = 
 
 
 def _multi_perspective_generate(
-    prompt: str,
     llm,
-    *,
-    perspectives: int = 3,
-    temperature_range: tuple[float, float] = (0.3, 0.9),
-) -> list[str]:
-    """Generate multiple responses from different perspectives."""
-    import random as _random
+    roles: dict[str, dict[str, str]],
+    variables: dict[str, object],
+    perspectives_dir: Path,
+) -> dict[str, str]:
+    """Generate one debate response per role, writing each to <role>.md.
 
-    responses: list[str] = []
-    for _ in range(perspectives):
-        temp = _random.uniform(*temperature_range)
+    Each role dict has "system" and "user" prompt templates; "user" is
+    rendered with str.format(**variables) (e.g. "{topic}", "{synthesis}").
+    Roles whose LLM call fails are silently skipped — callers treat a
+    partial or empty result as "fall back to default".
+    """
+    perspectives_dir.mkdir(parents=True, exist_ok=True)
+    results: dict[str, str] = {}
+    for role_name, role_spec in roles.items():
+        system = role_spec.get("system", "")
+        user_template = role_spec.get("user", "")
         try:
-            resp = llm.chat([{"role": "user", "content": prompt}], temperature=temp)
-            responses.append(resp.content)
-        except Exception:
+            user = user_template.format(**variables)
+        except (KeyError, IndexError):
+            user = user_template
+        try:
+            resp = llm.chat([{"role": "user", "content": user}], system=system)
+        except Exception:  # noqa: BLE001
             continue
-    return responses
+        results[role_name] = resp.content
+        (perspectives_dir / f"{role_name}.md").write_text(resp.content, encoding="utf-8")
+    return results
 
 
-def _synthesize_perspectives(responses: list[str], llm, max_length: int = 1000) -> str:
-    """Synthesize multiple perspectives into a single coherent response."""
-    if not responses:
+def _synthesize_perspectives(
+    llm,
+    perspectives: dict[str, str],
+    stage_name: str,
+    prompt_manager,
+) -> str:
+    """Synthesize multiple named debate perspectives into one response.
+
+    Uses prompt_manager.for_stage(stage_name, perspectives=...) — the
+    stage's YAML template must define a {perspectives} placeholder.
+    """
+    if not perspectives:
         return ""
-    if len(responses) == 1:
-        return responses[0][:max_length]
-    combined = "\n---\n".join(r[:500] for r in responses)
-    synthesis_prompt = (
-        "Synthesize the following perspectives into a single coherent analysis:\n\n"
-        f"{combined}"
-    )
-    try:
-        resp = llm.chat([{"role": "user", "content": synthesis_prompt}])
-        return resp.content[:max_length]
-    except Exception:
-        return responses[0][:max_length]
+    formatted = "\n\n".join(f"## {name}\n{content}" for name, content in perspectives.items())
+    sp = prompt_manager.for_stage(stage_name, perspectives=formatted)
+    resp = llm.chat([{"role": "user", "content": sp.user}], system=sp.system)
+    return resp.content
 
 
 def reconcile_figure_refs(

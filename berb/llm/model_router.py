@@ -9,7 +9,7 @@ Paradigm: Functional composition with async support
 
 Usage:
     from berb.llm.model_cascade import CascadingLLMClient, CascadeConfig
-    
+
     config = CascadeConfig(
         cascade=[
             ("deepseek/deepseek-chat", 0.80),  # Try cheap, accept if score >= 0.80
@@ -17,7 +17,7 @@ Usage:
             ("anthropic/claude-sonnet", 0.0),  # Premium, always accept
         ],
     )
-    
+
     client = CascadingLLMClient(base_client=llm_client, config=config)
     response = await client.chat(messages)
 """
@@ -28,8 +28,9 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +38,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class CascadeStep:
     """Represents a single step in the model cascade."""
-    
+
     model: str
     min_score: float  # Minimum quality score to accept (0.0-1.0)
     max_tokens: int | None = None
@@ -47,14 +48,14 @@ class CascadeStep:
 @dataclass
 class CascadeConfig:
     """Configuration for model cascading."""
-    
+
     cascade: list[CascadeStep] = field(default_factory=list)
     quick_eval_enabled: bool = True
     quick_eval_threshold: float = 0.5  # Below this, skip expensive eval
-    
+
     # Fallback: if all cascade steps fail, use this model
     fallback_model: str | None = None
-    
+
     # Statistics tracking
     track_stats: bool = True
 
@@ -62,7 +63,7 @@ class CascadeConfig:
 @dataclass
 class CascadeStats:
     """Statistics for cascade execution."""
-    
+
     steps_tried: int = 0
     final_model: str = ""
     final_score: float = 0.0
@@ -73,7 +74,7 @@ class CascadeStats:
 
 class CascadingLLMClient:
     """LLM client with model cascading support."""
-    
+
     # Cost per 1M tokens (approximate, for estimation)
     MODEL_COSTS = {
         "deepseek": 0.00028,  # $0.28/1M input
@@ -83,7 +84,7 @@ class CascadingLLMClient:
         "claude-sonnet": 0.003,
         "claude-opus": 0.015,
     }
-    
+
     def __init__(
         self,
         base_client: Any,
@@ -91,7 +92,7 @@ class CascadingLLMClient:
         quality_evaluator: Callable | None = None,
     ):
         """Initialize cascading client.
-        
+
         Args:
             base_client: Base LLM client for making API calls
             config: Cascade configuration
@@ -101,12 +102,12 @@ class CascadingLLMClient:
         self._base_client = base_client
         self._config = config
         self._evaluator = quality_evaluator or self._default_evaluator
-        
+
         # Statistics
         self._total_requests = 0
         self._cascade_exits: dict[int, int] = {}  # step -> count
         self._total_saved = 0.0
-    
+
     async def chat(
         self,
         messages: list[dict],
@@ -114,29 +115,29 @@ class CascadingLLMClient:
         **kwargs,
     ) -> Any:
         """Send chat request through cascade.
-        
+
         Args:
             messages: List of message dicts
             stage: Optional pipeline stage (for stage-specific cascade)
             **kwargs: Additional parameters for base client
-            
+
         Returns:
             LLM response from first acceptable model in cascade
         """
         self._total_requests += 1
-        start_time = time.time()
-        
+        time.time()
+
         # Get cascade config for this stage
         cascade = self._get_cascade_for_stage(stage)
-        
+
         last_response = None
         last_error = None
-        
+
         for step_idx, step in enumerate(cascade):
             try:
                 # Try this model
                 logger.debug(f"Cascade step {step_idx + 1}: trying {step.model}")
-                
+
                 response = await self._base_client.chat(
                     messages=messages,
                     model=step.model,
@@ -144,39 +145,37 @@ class CascadingLLMClient:
                     temperature=step.temperature,
                     **kwargs,
                 )
-                
+
                 # Evaluate quality
                 if self._config.quick_eval_enabled:
                     score = self._evaluator(response, messages)
-                    
+
                     logger.debug(f"Cascade step {step_idx + 1}: quality score = {score:.2f}")
-                    
+
                     # Accept if score meets threshold
                     if score >= step.min_score:
                         logger.info(
                             f"Cascade exit at step {step_idx + 1}: "
                             f"{step.model} (score={score:.2f} >= {step.min_score:.2f})"
                         )
-                        
+
                         self._record_cascade_exit(step_idx)
-                        
+
                         return response
-                    
+
                     # Continue to next model in cascade
-                    logger.debug(
-                        f"Cascade continue: score {score:.2f} < {step.min_score:.2f}"
-                    )
+                    logger.debug(f"Cascade continue: score {score:.2f} < {step.min_score:.2f}")
                 else:
                     # No evaluation - accept first response
                     return response
-                
+
                 last_response = response
-                
+
             except Exception as e:  # noqa: BLE001
                 logger.warning(f"Cascade step {step_idx + 1} ({step.model}) failed: {e}")
                 last_error = e
                 continue
-        
+
         # All cascade steps failed or were rejected
         if last_response is not None:
             # Return last response even if below threshold
@@ -185,46 +184,46 @@ class CascadingLLMClient:
                 f"(model={last_response.model})"
             )
             return last_response
-        
+
         if last_error is not None:
             raise RuntimeError(f"All cascade steps failed: {last_error}")
-        
+
         raise RuntimeError("Cascade produced no response")
-    
+
     def _get_cascade_for_stage(self, stage: Any | None) -> list[CascadeStep]:
         """Get cascade configuration for a specific stage.
-        
+
         For now, returns the default cascade. Can be extended with
         stage-specific cascades.
         """
         return self._config.cascade
-    
+
     def _default_evaluator(self, response: Any, messages: list[dict]) -> float:
         """Default quality evaluator.
-        
+
         Uses simple heuristics:
         - Response length (not too short)
         - No refusal patterns
         - Contains expected structure (for JSON tasks)
-        
+
         Args:
             response: LLM response
             messages: Input messages
-            
+
         Returns:
             Quality score 0.0-1.0
         """
         content = getattr(response, "content", "")
-        
+
         if not content:
             return 0.0
-        
+
         score = 1.0
-        
+
         # Penalize very short responses
         if len(content) < 50:
             score -= 0.3
-        
+
         # Penalize refusal patterns
         refusal_patterns = [
             "i cannot",
@@ -233,39 +232,40 @@ class CascadingLLMClient:
             "as an ai",
             "i don't have",
         ]
-        
+
         content_lower = content.lower()
         for pattern in refusal_patterns:
             if pattern in content_lower:
                 score -= 0.2
-        
+
         # Bonus for structured output (if requested)
         if any("json" in str(m.get("content", "")).lower() for m in messages):
             if content.strip().startswith("{") or content.strip().startswith("["):
                 score += 0.2
-        
+
         return max(0.0, min(1.0, score))
-    
+
     def _record_cascade_exit(self, step_idx: int) -> None:
         """Record which step the cascade exited at."""
         self._cascade_exits[step_idx] = self._cascade_exits.get(step_idx, 0) + 1
-    
+
     def get_stats(self) -> dict[str, Any]:
         """Get cascade statistics.
-        
+
         Returns:
             Dictionary with cascade statistics
         """
         total_cascade_exits = sum(self._cascade_exits.values())
-        
+
         # Calculate average exit step
         if total_cascade_exits > 0:
-            avg_exit = sum(
-                step * count for step, count in self._cascade_exits.items()
-            ) / total_cascade_exits
+            avg_exit = (
+                sum(step * count for step, count in self._cascade_exits.items())
+                / total_cascade_exits
+            )
         else:
             avg_exit = 0.0
-        
+
         return {
             "total_requests": self._total_requests,
             "cascade_exits": dict(self._cascade_exits),
@@ -281,15 +281,15 @@ class CascadingLLMClient:
 
 def get_cascade_for_stage(stage_name: str) -> CascadeConfig:
     """Get recommended cascade configuration for a pipeline stage.
-    
+
     Args:
         stage_name: Name of the pipeline stage
-        
+
     Returns:
         CascadeConfig optimized for this stage
     """
     stage_name = stage_name.upper()
-    
+
     # Simple tasks: start with cheapest, quick to accept
     if stage_name in {"TOPIC_INIT", "LITERATURE_COLLECT", "KNOWLEDGE_EXTRACT"}:
         return CascadeConfig(
@@ -299,7 +299,7 @@ def get_cascade_for_stage(stage_name: str) -> CascadeConfig:
                 CascadeStep("anthropic/claude-sonnet-4-5-20250929", min_score=0.0),
             ],
         )
-    
+
     # Reasoning tasks: start with mid-tier, need good reasoning
     elif stage_name in {"HYPOTHESIS_GEN", "RESEARCH_DECISION", "RESULT_ANALYSIS"}:
         return CascadeConfig(
@@ -309,7 +309,7 @@ def get_cascade_for_stage(stage_name: str) -> CascadeConfig:
                 CascadeStep("anthropic/claude-opus-4-6-20250918", min_score=0.0),
             ],
         )
-    
+
     # Creative tasks: can use cheaper models
     elif stage_name in {"PAPER_OUTLINE", "PAPER_DRAFT"}:
         return CascadeConfig(
@@ -318,7 +318,7 @@ def get_cascade_for_stage(stage_name: str) -> CascadeConfig:
                 CascadeStep("anthropic/claude-sonnet-4-5-20250929", min_score=0.0),
             ],
         )
-    
+
     # Critical tasks: start with premium
     elif stage_name in {"PEER_REVIEW", "QUALITY_GATE", "CITATION_VERIFY"}:
         return CascadeConfig(
@@ -327,7 +327,7 @@ def get_cascade_for_stage(stage_name: str) -> CascadeConfig:
             ],
             # No cascading for critical tasks
         )
-    
+
     # Default: balanced cascade
     else:
         return CascadeConfig(

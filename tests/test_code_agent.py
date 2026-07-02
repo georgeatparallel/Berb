@@ -62,7 +62,10 @@ class FakeSandbox:
         self._run_idx = 0
 
     def run_project(
-        self, project_dir: Path, *, entry_point: str = "main.py",
+        self,
+        project_dir: Path,
+        *,
+        entry_point: str = "main.py",
         timeout_sec: int = 300,
     ) -> FakeSandboxResult:
         self.runs.append(project_dir)
@@ -117,7 +120,9 @@ class TestCodeAgentConfig:
 
 class TestPhase1Architecture:
     def test_architecture_planning_produces_spec(
-        self, stage_dir: Path, pm: PromptManager,
+        self,
+        stage_dir: Path,
+        pm: PromptManager,
     ) -> None:
         arch_yaml = (
             "```yaml\nfiles:\n  - name: main.py\n    purpose: entry point\n"
@@ -129,13 +134,16 @@ class TestPhase1Architecture:
         llm = FakeLLM(responses=[arch_yaml, code, review])
 
         agent = CodeAgent(
-            llm=llm, prompts=pm,
+            llm=llm,
+            prompts=pm,
             config=CodeAgentConfig(architecture_planning=True),
             stage_dir=stage_dir,
         )
         result = agent.generate(
-            topic="test topic", exp_plan="objectives: test",
-            metric="accuracy", pkg_hint="numpy, torch",
+            topic="test topic",
+            exp_plan="objectives: test",
+            metric="accuracy",
+            pkg_hint="numpy, torch",
         )
 
         assert result.architecture_spec
@@ -144,19 +152,25 @@ class TestPhase1Architecture:
         assert result.total_llm_calls >= 2  # arch + codegen + review
 
     def test_architecture_planning_disabled(
-        self, stage_dir: Path, pm: PromptManager,
+        self,
+        stage_dir: Path,
+        pm: PromptManager,
     ) -> None:
         code = '```filename:main.py\nprint("metric: 1.0")\n```'
         review = '{"verdict": "APPROVE", "score": 9, "critical_issues": []}'
         llm = FakeLLM(responses=[code, review])
 
         agent = CodeAgent(
-            llm=llm, prompts=pm,
+            llm=llm,
+            prompts=pm,
             config=CodeAgentConfig(architecture_planning=False),
             stage_dir=stage_dir,
         )
         result = agent.generate(
-            topic="test", exp_plan="plan", metric="m", pkg_hint="",
+            topic="test",
+            exp_plan="plan",
+            metric="m",
+            pkg_hint="",
         )
 
         assert result.architecture_spec == ""
@@ -174,17 +188,21 @@ class TestPhase1Architecture:
 
 class TestPhase2ExecFix:
     def test_exec_fix_loop_fixes_crashing_code(
-        self, stage_dir: Path, pm: PromptManager,
+        self,
+        stage_dir: Path,
+        pm: PromptManager,
     ) -> None:
         # Initial code crashes, then fix succeeds
         initial_code = '```filename:main.py\nraise RuntimeError("bug")\n```'
         fixed_code = '```filename:main.py\nprint("metric: 1.0")\n```'
         review = '{"verdict": "APPROVE", "score": 8, "critical_issues": []}'
-        llm = FakeLLM(responses=[
-            initial_code,  # phase 2: initial generation (no arch)
-            fixed_code,    # phase 2: exec-fix iteration
-            review,        # phase 4: review
-        ])
+        llm = FakeLLM(
+            responses=[
+                initial_code,  # phase 2: initial generation (no arch)
+                fixed_code,  # phase 2: exec-fix iteration
+                review,  # phase 4: review
+            ]
+        )
 
         sandbox_results = [
             FakeSandboxResult(returncode=1, stderr="RuntimeError: bug"),
@@ -193,7 +211,8 @@ class TestPhase2ExecFix:
         fake_sandbox = FakeSandbox(results=sandbox_results)
 
         agent = CodeAgent(
-            llm=llm, prompts=pm,
+            llm=llm,
+            prompts=pm,
             config=CodeAgentConfig(
                 architecture_planning=False,
                 exec_fix_max_iterations=3,
@@ -203,45 +222,55 @@ class TestPhase2ExecFix:
             experiment_config=None,
         )
         result = agent.generate(
-            topic="test", exp_plan="plan", metric="metric", pkg_hint="",
+            topic="test",
+            exp_plan="plan",
+            metric="metric",
+            pkg_hint="",
         )
 
         assert result.files
         assert result.total_sandbox_runs >= 1
 
     def test_exec_fix_skipped_without_sandbox(
-        self, stage_dir: Path, pm: PromptManager,
+        self,
+        stage_dir: Path,
+        pm: PromptManager,
     ) -> None:
         code = '```filename:main.py\nprint("m: 1")\n```'
         review = '{"verdict": "APPROVE", "score": 9, "critical_issues": []}'
         llm = FakeLLM(responses=[code, review])
 
         agent = CodeAgent(
-            llm=llm, prompts=pm,
+            llm=llm,
+            prompts=pm,
             config=CodeAgentConfig(architecture_planning=False),
             stage_dir=stage_dir,
             sandbox_factory=None,
         )
         result = agent.generate(
-            topic="t", exp_plan="p", metric="m", pkg_hint="",
+            topic="t",
+            exp_plan="p",
+            metric="m",
+            pkg_hint="",
         )
 
         assert result.total_sandbox_runs == 0
         assert result.files
 
     def test_exec_fix_max_iterations_respected(
-        self, stage_dir: Path, pm: PromptManager,
+        self,
+        stage_dir: Path,
+        pm: PromptManager,
     ) -> None:
         code = '```filename:main.py\nraise RuntimeError("persistent")\n```'
         review = '{"verdict": "APPROVE", "score": 5, "critical_issues": []}'
         llm = FakeLLM(responses=[code, code, code, code, review])
 
-        always_crash = FakeSandbox(
-            results=[FakeSandboxResult(returncode=1, stderr="RuntimeError")]
-        )
+        always_crash = FakeSandbox(results=[FakeSandboxResult(returncode=1, stderr="RuntimeError")])
 
         agent = CodeAgent(
-            llm=llm, prompts=pm,
+            llm=llm,
+            prompts=pm,
             config=CodeAgentConfig(
                 architecture_planning=False,
                 exec_fix_max_iterations=2,
@@ -251,7 +280,10 @@ class TestPhase2ExecFix:
             experiment_config=None,
         )
         result = agent.generate(
-            topic="t", exp_plan="p", metric="m", pkg_hint="",
+            topic="t",
+            exp_plan="p",
+            metric="m",
+            pkg_hint="",
         )
 
         # Should have exactly 2 sandbox runs (max iterations)
@@ -265,22 +297,25 @@ class TestPhase2ExecFix:
 
 class TestPhase3TreeSearch:
     def test_tree_search_generates_multiple_candidates(
-        self, stage_dir: Path, pm: PromptManager,
+        self,
+        stage_dir: Path,
+        pm: PromptManager,
     ) -> None:
         code_a = '```filename:main.py\nprint("metric: 0.5")\n```'
         code_b = '```filename:main.py\nprint("metric: 0.9")\n```'
         review = '{"verdict": "APPROVE", "score": 9, "critical_issues": []}'
         llm = FakeLLM(responses=[code_a, code_b, review])
 
-        sandbox = FakeSandbox(results=[
-            FakeSandboxResult(returncode=0, stdout="metric: 0.5",
-                              metrics={"metric": 0.5}),
-            FakeSandboxResult(returncode=0, stdout="metric: 0.9",
-                              metrics={"metric": 0.9}),
-        ])
+        sandbox = FakeSandbox(
+            results=[
+                FakeSandboxResult(returncode=0, stdout="metric: 0.5", metrics={"metric": 0.5}),
+                FakeSandboxResult(returncode=0, stdout="metric: 0.9", metrics={"metric": 0.9}),
+            ]
+        )
 
         agent = CodeAgent(
-            llm=llm, prompts=pm,
+            llm=llm,
+            prompts=pm,
             config=CodeAgentConfig(
                 architecture_planning=False,
                 tree_search_enabled=True,
@@ -292,25 +327,32 @@ class TestPhase3TreeSearch:
             experiment_config=None,
         )
         result = agent.generate(
-            topic="t", exp_plan="p", metric="metric", pkg_hint="",
+            topic="t",
+            exp_plan="p",
+            metric="metric",
+            pkg_hint="",
         )
 
         assert result.tree_nodes_explored >= 2
         assert result.files
 
     def test_tree_search_fixes_crashing_candidates(
-        self, stage_dir: Path, pm: PromptManager,
+        self,
+        stage_dir: Path,
+        pm: PromptManager,
     ) -> None:
         crash_code = '```filename:main.py\nraise ValueError("x")\n```'
         fixed_code = '```filename:main.py\nprint("metric: 1.0")\n```'
         review = '{"verdict": "APPROVE", "score": 8, "critical_issues": []}'
-        llm = FakeLLM(responses=[
-            crash_code,    # candidate 0
-            crash_code,    # candidate 1
-            fixed_code,    # fix for candidate 0
-            fixed_code,    # fix for candidate 1
-            review,        # review
-        ])
+        llm = FakeLLM(
+            responses=[
+                crash_code,  # candidate 0
+                crash_code,  # candidate 1
+                fixed_code,  # fix for candidate 0
+                fixed_code,  # fix for candidate 1
+                review,  # review
+            ]
+        )
 
         results_seq = [
             FakeSandboxResult(returncode=1, stderr="ValueError: x"),
@@ -321,7 +363,8 @@ class TestPhase3TreeSearch:
         sandbox = FakeSandbox(results=results_seq)
 
         agent = CodeAgent(
-            llm=llm, prompts=pm,
+            llm=llm,
+            prompts=pm,
             config=CodeAgentConfig(
                 architecture_planning=False,
                 tree_search_enabled=True,
@@ -333,7 +376,10 @@ class TestPhase3TreeSearch:
             experiment_config=None,
         )
         result = agent.generate(
-            topic="t", exp_plan="p", metric="metric", pkg_hint="",
+            topic="t",
+            exp_plan="p",
+            metric="metric",
+            pkg_hint="",
         )
 
         assert result.tree_nodes_explored >= 2
@@ -346,14 +392,17 @@ class TestPhase3TreeSearch:
 
 class TestPhase4Review:
     def test_review_approves_on_first_round(
-        self, stage_dir: Path, pm: PromptManager,
+        self,
+        stage_dir: Path,
+        pm: PromptManager,
     ) -> None:
         code = '```filename:main.py\nprint("m: 1")\n```'
         review = '{"verdict": "APPROVE", "score": 9, "critical_issues": []}'
         llm = FakeLLM(responses=[code, review])
 
         agent = CodeAgent(
-            llm=llm, prompts=pm,
+            llm=llm,
+            prompts=pm,
             config=CodeAgentConfig(
                 architecture_planning=False,
                 review_max_rounds=2,
@@ -361,27 +410,35 @@ class TestPhase4Review:
             stage_dir=stage_dir,
         )
         result = agent.generate(
-            topic="t", exp_plan="p", metric="m", pkg_hint="",
+            topic="t",
+            exp_plan="p",
+            metric="m",
+            pkg_hint="",
         )
 
         assert result.review_rounds == 1
 
     def test_review_triggers_fix_on_critical_issues(
-        self, stage_dir: Path, pm: PromptManager,
+        self,
+        stage_dir: Path,
+        pm: PromptManager,
     ) -> None:
         code = '```filename:main.py\nprint("m: 1")\n```'
-        review1 = json.dumps({
-            "verdict": "REVISE",
-            "score": 3,
-            "critical_issues": ["Missing seed handling", "Wrong metric name"],
-            "suggestions": [],
-        })
+        review1 = json.dumps(
+            {
+                "verdict": "REVISE",
+                "score": 3,
+                "critical_issues": ["Missing seed handling", "Wrong metric name"],
+                "suggestions": [],
+            }
+        )
         fixed = '```filename:main.py\nimport random\nrandom.seed(42)\nprint("m: 1")\n```'
         review2 = '{"verdict": "APPROVE", "score": 8, "critical_issues": []}'
         llm = FakeLLM(responses=[code, review1, fixed, review2])
 
         agent = CodeAgent(
-            llm=llm, prompts=pm,
+            llm=llm,
+            prompts=pm,
             config=CodeAgentConfig(
                 architecture_planning=False,
                 review_max_rounds=3,
@@ -390,20 +447,26 @@ class TestPhase4Review:
             stage_dir=stage_dir,
         )
         result = agent.generate(
-            topic="t", exp_plan="p", metric="m", pkg_hint="",
+            topic="t",
+            exp_plan="p",
+            metric="m",
+            pkg_hint="",
         )
 
         assert result.review_rounds == 2
         assert result.total_llm_calls == 4  # codegen + review1 + fix + review2
 
     def test_review_disabled(
-        self, stage_dir: Path, pm: PromptManager,
+        self,
+        stage_dir: Path,
+        pm: PromptManager,
     ) -> None:
         code = '```filename:main.py\nprint("m: 1")\n```'
         llm = FakeLLM(responses=[code])
 
         agent = CodeAgent(
-            llm=llm, prompts=pm,
+            llm=llm,
+            prompts=pm,
             config=CodeAgentConfig(
                 architecture_planning=False,
                 review_max_rounds=0,
@@ -412,7 +475,10 @@ class TestPhase4Review:
             stage_dir=stage_dir,
         )
         result = agent.generate(
-            topic="t", exp_plan="p", metric="m", pkg_hint="",
+            topic="t",
+            exp_plan="p",
+            metric="m",
+            pkg_hint="",
         )
 
         assert result.review_rounds == 0
@@ -426,19 +492,24 @@ class TestPhase4Review:
 
 class TestFullPipeline:
     def test_all_phases_end_to_end(
-        self, stage_dir: Path, pm: PromptManager,
+        self,
+        stage_dir: Path,
+        pm: PromptManager,
     ) -> None:
         arch = "```yaml\nfiles:\n  - name: main.py\n```"
         code = '```filename:main.py\nprint("acc: 0.9")\n```'
         review = '{"verdict": "APPROVE", "score": 9, "critical_issues": []}'
         llm = FakeLLM(responses=[arch, code, review])
 
-        sandbox = FakeSandbox(results=[
-            FakeSandboxResult(returncode=0, stdout="acc: 0.9"),
-        ])
+        sandbox = FakeSandbox(
+            results=[
+                FakeSandboxResult(returncode=0, stdout="acc: 0.9"),
+            ]
+        )
 
         agent = CodeAgent(
-            llm=llm, prompts=pm,
+            llm=llm,
+            prompts=pm,
             config=CodeAgentConfig(
                 architecture_planning=True,
                 exec_fix_max_iterations=2,
@@ -449,8 +520,10 @@ class TestFullPipeline:
             experiment_config=None,
         )
         result = agent.generate(
-            topic="image classification", exp_plan="test plan",
-            metric="accuracy", pkg_hint="torch",
+            topic="image classification",
+            exp_plan="test plan",
+            metric="accuracy",
+            pkg_hint="torch",
         )
 
         assert result.architecture_spec
@@ -461,7 +534,9 @@ class TestFullPipeline:
         assert result.validation_log
 
     def test_agent_writes_attempt_directories(
-        self, stage_dir: Path, pm: PromptManager,
+        self,
+        stage_dir: Path,
+        pm: PromptManager,
     ) -> None:
         code = '```filename:main.py\nprint("x: 1")\n```'
         review = '{"verdict": "APPROVE", "score": 9, "critical_issues": []}'
@@ -470,14 +545,18 @@ class TestFullPipeline:
         sandbox = FakeSandbox()
 
         agent = CodeAgent(
-            llm=llm, prompts=pm,
+            llm=llm,
+            prompts=pm,
             config=CodeAgentConfig(architecture_planning=False),
             stage_dir=stage_dir,
             sandbox_factory=lambda cfg, wd: sandbox,
             experiment_config=None,
         )
         result = agent.generate(
-            topic="t", exp_plan="p", metric="x", pkg_hint="",
+            topic="t",
+            exp_plan="p",
+            metric="x",
+            pkg_hint="",
         )
 
         attempt_dir = stage_dir / "agent_runs" / "attempt_001"
@@ -604,7 +683,6 @@ class TestConfigIntegration:
                 "provider": "openai-compatible",
                 "base_url": "http://localhost:1234/v1",
                 "api_key_env": "TEST",
-                "api_key": "test-key",
                 "primary_model": "test",
                 "fallback_models": [],
             },

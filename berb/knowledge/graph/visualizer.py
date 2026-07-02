@@ -41,10 +41,7 @@ def export_to_dot(graph: KnowledgeGraphBuilder, path: str | Path) -> None:
     for entity in graph._entities.values():
         color = _TYPE_COLORS.get(entity.entity_type, "#CCCCCC")
         label = entity.name[:40].replace('"', '\\"')
-        lines.append(
-            f'  "{entity.id}" [label="{label}", '
-            f'fillcolor="{color}", fontcolor="white"];'
-        )
+        lines.append(f'  "{entity.id}" [label="{label}", fillcolor="{color}", fontcolor="white"];')
 
     # Edges
     for rel in graph._relations:
@@ -72,25 +69,29 @@ def export_to_json_cytoscape(
     elements: list[dict[str, Any]] = []
 
     for entity in graph._entities.values():
-        elements.append({
-            "data": {
-                "id": entity.id,
-                "label": entity.name,
-                "type": entity.entity_type.value,
-                **entity.attributes,
-            },
-        })
+        elements.append(
+            {
+                "data": {
+                    "id": entity.id,
+                    "label": entity.name,
+                    "type": entity.entity_type.value,
+                    **entity.attributes,
+                },
+            }
+        )
 
     for i, rel in enumerate(graph._relations):
-        elements.append({
-            "data": {
-                "id": f"edge_{i}",
-                "source": rel.source_id,
-                "target": rel.target_id,
-                "label": rel.relation_type.value,
-                **rel.attributes,
-            },
-        })
+        elements.append(
+            {
+                "data": {
+                    "id": f"edge_{i}",
+                    "source": rel.source_id,
+                    "target": rel.target_id,
+                    "label": rel.relation_type.value,
+                    **rel.attributes,
+                },
+            }
+        )
 
     path.write_text(
         json.dumps({"elements": elements}, indent=2, ensure_ascii=False),
@@ -119,8 +120,7 @@ def graph_summary(graph: KnowledgeGraphBuilder) -> str:
         rel_counts[rel.relation_type.value] += 1
 
     lines = [
-        f"Knowledge Graph Summary: {graph.entity_count} entities, "
-        f"{graph.relation_count} relations",
+        f"Knowledge Graph Summary: {graph.entity_count} entities, {graph.relation_count} relations",
         "",
         "Entity types:",
     ]

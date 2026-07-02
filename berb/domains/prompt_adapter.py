@@ -145,8 +145,7 @@ class GenericPromptAdapter(PromptAdapter):
         paradigm = domain.experiment_paradigm
 
         design_context = (
-            f"This is a {domain.display_name} experiment.\n"
-            f"Experiment paradigm: {paradigm}\n"
+            f"This is a {domain.display_name} experiment.\nExperiment paradigm: {paradigm}\n"
         )
         if terminology:
             design_context += "Terminology:\n"
@@ -154,9 +153,15 @@ class GenericPromptAdapter(PromptAdapter):
                 design_context += f"  - {key}: {term}\n"
 
         if domain.standard_baselines:
-            design_context += f"Standard baselines in this domain: {', '.join(domain.standard_baselines)}\n"
+            design_context += (
+                f"Standard baselines in this domain: {', '.join(domain.standard_baselines)}\n"
+            )
 
-        stats = ", ".join(domain.statistical_tests) if domain.statistical_tests else "appropriate statistical tests"
+        stats = (
+            ", ".join(domain.statistical_tests)
+            if domain.statistical_tests
+            else "appropriate statistical tests"
+        )
         stat_guidance = f"Use {stats} for result significance testing."
 
         return PromptBlocks(
@@ -169,9 +174,8 @@ class GenericPromptAdapter(PromptAdapter):
         analysis_hints = domain.result_analysis_hints or ""
 
         if domain.statistical_tests:
-            stat_guidance = (
-                "Statistical tests to use for this domain:\n"
-                + "\n".join(f"  - {t}" for t in domain.statistical_tests)
+            stat_guidance = "Statistical tests to use for this domain:\n" + "\n".join(
+                f"  - {t}" for t in domain.statistical_tests
             )
         else:
             stat_guidance = ""
@@ -251,6 +255,7 @@ class GenericPromptAdapter(PromptAdapter):
 # Adapter registry
 # ---------------------------------------------------------------------------
 
+
 # Maps domain_id prefixes to adapter classes.
 # If a domain_id starts with "ml_", the ML adapter is used.
 def _build_adapter_registry() -> dict[str, type[PromptAdapter]]:
@@ -261,41 +266,49 @@ def _build_adapter_registry() -> dict[str, type[PromptAdapter]]:
     }
     try:
         from berb.domains.adapters.physics import PhysicsPromptAdapter
+
         registry["physics_"] = PhysicsPromptAdapter
     except ImportError:
         pass
     try:
         from berb.domains.adapters.economics import EconomicsPromptAdapter
+
         registry["economics_"] = EconomicsPromptAdapter
     except ImportError:
         pass
     try:
         from berb.domains.adapters.biology import BiologyPromptAdapter
+
         registry["biology_"] = BiologyPromptAdapter
     except ImportError:
         pass
     try:
         from berb.domains.adapters.chemistry import ChemistryPromptAdapter
+
         registry["chemistry_"] = ChemistryPromptAdapter
     except ImportError:
         pass
     try:
         from berb.domains.adapters.security import SecurityPromptAdapter
+
         registry["security_"] = SecurityPromptAdapter
     except ImportError:
         pass
     try:
         from berb.domains.adapters.math import MathPromptAdapter
+
         registry["mathematics_"] = MathPromptAdapter
     except ImportError:
         pass
     try:
         from berb.domains.adapters.neuroscience import NeurosciencePromptAdapter
+
         registry["neuroscience_"] = NeurosciencePromptAdapter
     except ImportError:
         pass
     try:
         from berb.domains.adapters.robotics import RoboticsPromptAdapter
+
         registry["robotics_"] = RoboticsPromptAdapter
     except ImportError:
         pass

@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class CodePatterns:
     """Extracted patterns from reference code."""
+
     api_patterns: list[str] = field(default_factory=list)
     file_structure: dict[str, str] = field(default_factory=dict)
     data_patterns: list[str] = field(default_factory=list)
@@ -136,7 +137,7 @@ def _llm_extract(
         combined = ""
         for i, snippet in enumerate(snippets[:5]):
             truncated = snippet[:2000] if len(snippet) > 2000 else snippet
-            combined += f"\n--- Snippet {i+1} ---\n{truncated}\n"
+            combined += f"\n--- Snippet {i + 1} ---\n{truncated}\n"
 
         prompt = _EXTRACT_PROMPT.format(
             topic=topic,
@@ -146,6 +147,7 @@ def _llm_extract(
 
         if hasattr(llm, "chat"):
             import asyncio
+
             try:
                 loop = asyncio.get_running_loop()
             except RuntimeError:

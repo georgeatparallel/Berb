@@ -49,9 +49,7 @@ def _find_acpx() -> str | None:
     if found:
         return found
     # Check OpenClaw's bundled acpx plugin
-    openclaw_acpx = os.path.expanduser(
-        "~/.openclaw/extensions/acpx/node_modules/.bin/acpx"
-    )
+    openclaw_acpx = os.path.expanduser("~/.openclaw/extensions/acpx/node_modules/.bin/acpx")
     if os.path.isfile(openclaw_acpx) and os.access(openclaw_acpx, os.X_OK):
         return openclaw_acpx
     return None
@@ -84,13 +82,15 @@ class ACPClient:
     def from_rc_config(cls, rc_config: Any) -> ACPClient:
         """Build from a Berb ``RCConfig``."""
         acp = rc_config.llm.acp
-        return cls(ACPConfig(
-            agent=acp.agent,
-            cwd=acp.cwd,
-            acpx_command=getattr(acp, "acpx_command", ""),
-            session_name=getattr(acp, "session_name", "berb"),
-            timeout_sec=getattr(acp, "timeout_sec", 1800),
-        ))
+        return cls(
+            ACPConfig(
+                agent=acp.agent,
+                cwd=acp.cwd,
+                acpx_command=getattr(acp, "acpx_command", ""),
+                session_name=getattr(acp, "session_name", "berb"),
+                timeout_sec=getattr(acp, "timeout_sec", 1800),
+            )
+        )
 
     # ------------------------------------------------------------------
     # Public interface (matches LLMClient)
@@ -118,6 +118,7 @@ class ACPClient:
         content = self._send_prompt(prompt_text)
         if strip_thinking:
             from berb.utils.thinking_tags import strip_thinking_tags
+
             content = strip_thinking_tags(content)
         return LLMResponse(
             content=content,
@@ -153,10 +154,19 @@ class ACPClient:
             return
         try:
             subprocess.run(
-                [acpx, "--ttl", "0", "--cwd", self._abs_cwd(),
-                 self.config.agent, "sessions", "close",
-                 self.config.session_name],
-                capture_output=True, timeout=15,
+                [
+                    acpx,
+                    "--ttl",
+                    "0",
+                    "--cwd",
+                    self._abs_cwd(),
+                    self.config.agent,
+                    "sessions",
+                    "close",
+                    self.config.session_name,
+                ],
+                capture_output=True,
+                timeout=15,
             )
         except Exception:  # noqa: BLE001
             pass
@@ -205,25 +215,47 @@ class ACPClient:
 
         # Use 'ensure' which finds existing or creates new
         result = subprocess.run(
-            [acpx, "--ttl", "0", "--cwd", self._abs_cwd(),
-             self.config.agent, "sessions", "ensure",
-             "--name", self.config.session_name],
-            capture_output=True, text=True, encoding="utf-8",
-            errors="replace", timeout=30,
+            [
+                acpx,
+                "--ttl",
+                "0",
+                "--cwd",
+                self._abs_cwd(),
+                self.config.agent,
+                "sessions",
+                "ensure",
+                "--name",
+                self.config.session_name,
+            ],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=30,
         )
         if result.returncode != 0:
             # Fall back to 'new'
             result = subprocess.run(
-                [acpx, "--ttl", "0", "--cwd", self._abs_cwd(),
-                 self.config.agent, "sessions", "new",
-                 "--name", self.config.session_name],
-                capture_output=True, text=True, encoding="utf-8",
-                errors="replace", timeout=30,
+                [
+                    acpx,
+                    "--ttl",
+                    "0",
+                    "--cwd",
+                    self._abs_cwd(),
+                    self.config.agent,
+                    "sessions",
+                    "new",
+                    "--name",
+                    self.config.session_name,
+                ],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=30,
             )
             if result.returncode != 0:
-                raise RuntimeError(
-                    f"Failed to create ACP session: {result.stderr.strip()}"
-                )
+                raise RuntimeError(f"Failed to create ACP session: {result.stderr.strip()}")
         self._session_ready = True
         logger.info("ACP session '%s' ready (%s)", self.config.session_name, self.config.agent)
 
@@ -239,11 +271,11 @@ class ACPClient:
 
     # Localized error snippets for "command line too long" (may be in any OS language)
     _CMD_TOO_LONG_HINTS = (
-        "too long",       # English Windows
-        "trop long",      # French Windows
-        "zu lang",        # German Windows
-        "demasiado larg", # Spanish Windows
-        "e2big",          # POSIX
+        "too long",  # English Windows
+        "trop long",  # French Windows
+        "zu lang",  # German Windows
+        "demasiado larg",  # Spanish Windows
+        "e2big",  # POSIX
     )
 
     # Error patterns that indicate a dead/stale session (retryable)
@@ -300,24 +332,18 @@ class ACPClient:
                 # Fall back to temp-file transport automatically.
                 if not use_file:
                     logger.warning(
-                        "CLI subprocess raised OSError, "
-                        "falling back to temp file: %s",
+                        "CLI subprocess raised OSError, falling back to temp file: %s",
                         os_exc,
                     )
                     use_file = True
                     return self._send_prompt_via_file(acpx, prompt)
-                raise RuntimeError(
-                    f"ACP prompt failed: {os_exc}"
-                ) from os_exc
+                raise RuntimeError(f"ACP prompt failed: {os_exc}") from os_exc
             except RuntimeError as exc:
                 # Detect localized "command line too long" from subprocess stderr
                 exc_lower = str(exc).lower()
-                if not use_file and any(
-                    h in exc_lower for h in self._CMD_TOO_LONG_HINTS
-                ):
+                if not use_file and any(h in exc_lower for h in self._CMD_TOO_LONG_HINTS):
                     logger.warning(
-                        "CLI prompt too long for OS, "
-                        "falling back to temp file: %s",
+                        "CLI prompt too long for OS, falling back to temp file: %s",
                         exc,
                     )
                     use_file = True
@@ -348,16 +374,26 @@ class ACPClient:
         """Send prompt as a CLI argument (original path)."""
         try:
             result = subprocess.run(
-                [acpx, "--approve-all", "--ttl", "0", "--cwd", self._abs_cwd(),
-                 self.config.agent, "-s", self.config.session_name,
-                 prompt],
-                capture_output=True, text=True, encoding="utf-8",
-                errors="replace", timeout=self.config.timeout_sec,
+                [
+                    acpx,
+                    "--approve-all",
+                    "--ttl",
+                    "0",
+                    "--cwd",
+                    self._abs_cwd(),
+                    self.config.agent,
+                    "-s",
+                    self.config.session_name,
+                    prompt,
+                ],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=self.config.timeout_sec,
             )
         except subprocess.TimeoutExpired as exc:
-            raise RuntimeError(
-                f"ACP prompt timed out after {self.config.timeout_sec}s"
-            ) from exc
+            raise RuntimeError(f"ACP prompt timed out after {self.config.timeout_sec}s") from exc
 
         if result.returncode != 0:
             stderr = (result.stderr or "").strip()
@@ -368,7 +404,8 @@ class ACPClient:
     def _send_prompt_via_file(self, acpx: str, prompt: str) -> str:
         """Write prompt to a temp file, ask the agent to read and respond."""
         fd, prompt_path = tempfile.mkstemp(
-            suffix=".md", prefix="rc_prompt_",
+            suffix=".md",
+            prefix="rc_prompt_",
         )
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as f:
@@ -383,11 +420,23 @@ class ACPClient:
 
             try:
                 result = subprocess.run(
-                    [acpx, "--approve-all", "--ttl", "0", "--cwd", self._abs_cwd(),
-                     self.config.agent, "-s", self.config.session_name,
-                     short_prompt],
-                    capture_output=True, text=True, encoding="utf-8",
-                    errors="replace", timeout=self.config.timeout_sec,
+                    [
+                        acpx,
+                        "--approve-all",
+                        "--ttl",
+                        "0",
+                        "--cwd",
+                        self._abs_cwd(),
+                        self.config.agent,
+                        "-s",
+                        self.config.session_name,
+                        short_prompt,
+                    ],
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    timeout=self.config.timeout_sec,
                 )
             except subprocess.TimeoutExpired as exc:
                 raise RuntimeError(
@@ -396,9 +445,7 @@ class ACPClient:
 
             if result.returncode != 0:
                 stderr = (result.stderr or "").strip()
-                raise RuntimeError(
-                    f"ACP prompt failed (exit {result.returncode}): {stderr}"
-                )
+                raise RuntimeError(f"ACP prompt failed (exit {result.returncode}): {stderr}")
 
             return self._extract_response(result.stdout)
         finally:

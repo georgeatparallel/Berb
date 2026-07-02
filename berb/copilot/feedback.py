@@ -6,21 +6,24 @@ import json
 import logging
 import time
 from dataclasses import dataclass
+from datetime import UTC
 from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-FEEDBACK_ACTIONS = frozenset({
-    "approve",   # Continue to next stage
-    "modify",    # Apply modifications and continue
-    "retry",     # Re-run current stage
-    "skip",      # Skip current stage
-    "discuss",   # Enter discussion mode (future)
-    "branch",    # Create exploration branch
-    "rollback",  # Roll back to a previous stage
-})
+FEEDBACK_ACTIONS = frozenset(
+    {
+        "approve",  # Continue to next stage
+        "modify",  # Apply modifications and continue
+        "retry",  # Re-run current stage
+        "skip",  # Skip current stage
+        "discuss",  # Enter discussion mode (future)
+        "branch",  # Create exploration branch
+        "rollback",  # Roll back to a previous stage
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -50,20 +53,18 @@ class FeedbackHandler:
         options: list[str] | None = None,
     ) -> Path:
         """Write a feedback request file for external consumers."""
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         request = {
             "stage": stage,
             "stage_name": stage_name,
             "summary": summary,
             "options": options or list(FEEDBACK_ACTIONS),
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "status": "waiting",
         }
         request_path = self.run_dir / "copilot_feedback_request.json"
-        request_path.write_text(
-            json.dumps(request, indent=2), encoding="utf-8"
-        )
+        request_path.write_text(json.dumps(request, indent=2), encoding="utf-8")
         return request_path
 
     def read_feedback_response(self) -> Feedback | None:
@@ -84,9 +85,7 @@ class FeedbackHandler:
                 modifications=data.get("modifications"),
                 branch_name=str(data.get("branch_name", "")),
                 rollback_to=(
-                    int(data["rollback_to"])
-                    if data.get("rollback_to") is not None
-                    else None
+                    int(data["rollback_to"]) if data.get("rollback_to") is not None else None
                 ),
                 timestamp=str(data.get("timestamp", "")),
             )

@@ -14,9 +14,8 @@ Detection strategy (three-level):
 from __future__ import annotations
 
 import logging
-import re
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -32,7 +31,7 @@ _PROFILES_DIR = Path(__file__).parent / "profiles"
 # ---------------------------------------------------------------------------
 
 
-class ExperimentParadigm(str, Enum):
+class ExperimentParadigm(StrEnum):
     """High-level experiment structure used by different domains."""
 
     COMPARISON = "comparison"  # A vs B (ML, security)
@@ -42,7 +41,7 @@ class ExperimentParadigm(str, Enum):
     ABLATION_STUDY = "ablation_study"  # systematic component removal
 
 
-class MetricType(str, Enum):
+class MetricType(StrEnum):
     SCALAR = "scalar"
     TABLE = "table"
     CONVERGENCE = "convergence"
@@ -71,13 +70,15 @@ class DomainProfile:
 
     # Experiment paradigm
     experiment_paradigm: str = ExperimentParadigm.COMPARISON.value
-    condition_terminology: dict[str, str] = field(default_factory=lambda: {
-        "baseline": "baseline",
-        "proposed": "proposed method",
-        "variant": "ablation",
-        "input": "dataset",
-        "metric": "accuracy/loss",
-    })
+    condition_terminology: dict[str, str] = field(
+        default_factory=lambda: {
+            "baseline": "baseline",
+            "proposed": "proposed method",
+            "variant": "ablation",
+            "input": "dataset",
+            "metric": "accuracy/loss",
+        }
+    )
 
     # Code structure
     typical_file_structure: dict[str, str] = field(default_factory=dict)
@@ -200,95 +201,287 @@ def get_generic_profile() -> DomainProfile:
 # Ordered list: first match wins (more specific patterns first).
 _KEYWORD_RULES: list[tuple[list[str], str]] = [
     # ML sub-domains (most specific first)
-    (["reinforcement learning", "rl agent", "policy gradient", "q-learning",
-      "actor-critic", "reward shaping", "gymnasium", "stable-baselines"],
-     "ml_rl"),
-    (["knowledge distillation", "teacher-student", "model compression",
-      "pruning", "quantization"], "ml_compression"),
-    (["natural language", "nlp", "text classification", "sentiment",
-      "language model", "transformer", "bert", "gpt", "llm", "tokeniz"],
-     "ml_nlp"),
-    (["object detection", "image segmentation", "image classification",
-      "convolutional", "cnn", "resnet", "vit", "vision transformer",
-      "computer vision", "visual"], "ml_vision"),
-    (["graph neural", "gnn", "node classification", "link prediction",
-      "graph convolution", "message passing"], "ml_graph"),
-    (["tabular", "xgboost", "lightgbm", "catboost", "feature engineering"],
-     "ml_tabular"),
-    (["generative adversarial", "gan", "diffusion model", "vae",
-      "variational autoencoder", "image generation"], "ml_generative"),
+    (
+        [
+            "reinforcement learning",
+            "rl agent",
+            "policy gradient",
+            "q-learning",
+            "actor-critic",
+            "reward shaping",
+            "gymnasium",
+            "stable-baselines",
+        ],
+        "ml_rl",
+    ),
+    (
+        [
+            "knowledge distillation",
+            "teacher-student",
+            "model compression",
+            "pruning",
+            "quantization",
+        ],
+        "ml_compression",
+    ),
+    (
+        [
+            "natural language",
+            "nlp",
+            "text classification",
+            "sentiment",
+            "language model",
+            "transformer",
+            "bert",
+            "gpt",
+            "llm",
+            "tokeniz",
+        ],
+        "ml_nlp",
+    ),
+    (
+        [
+            "object detection",
+            "image segmentation",
+            "image classification",
+            "convolutional",
+            "cnn",
+            "resnet",
+            "vit",
+            "vision transformer",
+            "computer vision",
+            "visual",
+        ],
+        "ml_vision",
+    ),
+    (
+        [
+            "graph neural",
+            "gnn",
+            "node classification",
+            "link prediction",
+            "graph convolution",
+            "message passing",
+        ],
+        "ml_graph",
+    ),
+    (["tabular", "xgboost", "lightgbm", "catboost", "feature engineering"], "ml_tabular"),
+    (
+        [
+            "generative adversarial",
+            "gan",
+            "diffusion model",
+            "vae",
+            "variational autoencoder",
+            "image generation",
+        ],
+        "ml_generative",
+    ),
     # Neuroscience (before ML catch-all so "spiking neural" is not swallowed
     # by the "neural network" pattern in ml_generic)
-    (["spiking neural", "spike train", "brian2", "hodgkin-huxley",
-      "integrate-and-fire", "lif model", "izhikevich",
-      "membrane potential", "action potential", "neural circuit",
-      "neural dynamics", "population coding", "neural decoding",
-      "raster plot", "firing rate", "synaptic", "connectome"],
-     "neuroscience_computational"),
-    (["fmri", "eeg", "meg", "neuroimaging", "brain imaging",
-      "nilearn", "mne-python", "bold signal", "brain network",
-      "functional connectivity"], "neuroscience_imaging"),
-    (["neuroscience", "neuron model", "brain simulation",
-      "neural computation", "neural encoding"], "neuroscience_computational"),
-
+    (
+        [
+            "spiking neural",
+            "spike train",
+            "brian2",
+            "hodgkin-huxley",
+            "integrate-and-fire",
+            "lif model",
+            "izhikevich",
+            "membrane potential",
+            "action potential",
+            "neural circuit",
+            "neural dynamics",
+            "population coding",
+            "neural decoding",
+            "raster plot",
+            "firing rate",
+            "synaptic",
+            "connectome",
+        ],
+        "neuroscience_computational",
+    ),
+    (
+        [
+            "fmri",
+            "eeg",
+            "meg",
+            "neuroimaging",
+            "brain imaging",
+            "nilearn",
+            "mne-python",
+            "bold signal",
+            "brain network",
+            "functional connectivity",
+        ],
+        "neuroscience_imaging",
+    ),
+    (
+        [
+            "neuroscience",
+            "neuron model",
+            "brain simulation",
+            "neural computation",
+            "neural encoding",
+        ],
+        "neuroscience_computational",
+    ),
     # Catch-all ML
-    (["neural network", "deep learning", "machine learning", "training loop",
-      "backpropagation", "gradient descent", "pytorch", "tensorflow",
-      "torch", "sklearn"], "ml_generic"),
-
+    (
+        [
+            "neural network",
+            "deep learning",
+            "machine learning",
+            "training loop",
+            "backpropagation",
+            "gradient descent",
+            "pytorch",
+            "tensorflow",
+            "torch",
+            "sklearn",
+        ],
+        "ml_generic",
+    ),
     # Physics
-    (["molecular dynamics", "n-body", "lennard-jones", "force field",
-      "jax-md", "ase", "openmm"], "physics_simulation"),
-    (["partial differential", "pde", "finite element", "finite difference",
-      "fenics", "navier-stokes", "heat equation", "wave equation",
-      "poisson", "laplace"], "physics_pde"),
-    (["quantum mechanics", "schrodinger", "hamiltonian", "wavefunction",
-      "density functional"], "physics_quantum"),
-    (["physics", "simulation", "integrator", "conservation",
-      "energy drift", "symplectic"], "physics_simulation"),
-
+    (
+        ["molecular dynamics", "n-body", "lennard-jones", "force field", "jax-md", "ase", "openmm"],
+        "physics_simulation",
+    ),
+    (
+        [
+            "partial differential",
+            "pde",
+            "finite element",
+            "finite difference",
+            "fenics",
+            "navier-stokes",
+            "heat equation",
+            "wave equation",
+            "poisson",
+            "laplace",
+        ],
+        "physics_pde",
+    ),
+    (
+        ["quantum mechanics", "schrodinger", "hamiltonian", "wavefunction", "density functional"],
+        "physics_quantum",
+    ),
+    (
+        ["physics", "simulation", "integrator", "conservation", "energy drift", "symplectic"],
+        "physics_simulation",
+    ),
     # Chemistry
-    (["quantum chemistry", "dft", "hartree-fock", "pyscf", "ccsd",
-      "molecular orbital", "basis set"], "chemistry_qm"),
-    (["molecular property", "smiles", "rdkit", "fingerprint", "drug",
-      "binding affinity", "admet"], "chemistry_molprop"),
+    (
+        [
+            "quantum chemistry",
+            "dft",
+            "hartree-fock",
+            "pyscf",
+            "ccsd",
+            "molecular orbital",
+            "basis set",
+        ],
+        "chemistry_qm",
+    ),
+    (
+        [
+            "molecular property",
+            "smiles",
+            "rdkit",
+            "fingerprint",
+            "drug",
+            "binding affinity",
+            "admet",
+        ],
+        "chemistry_molprop",
+    ),
     (["chemistry", "molecule", "reaction", "catalyst"], "chemistry_general"),
-
     # Biology
-    (["single-cell", "scrna", "scanpy", "anndata", "leiden",
-      "differential expression", "pseudotime"], "biology_singlecell"),
-    (["genomics", "genome", "variant calling", "sequencing",
-      "biopython", "alignment"], "biology_genomics"),
-    (["protein", "alphafold", "protein folding", "amino acid",
-      "esm"], "biology_protein"),
+    (
+        [
+            "single-cell",
+            "scrna",
+            "scanpy",
+            "anndata",
+            "leiden",
+            "differential expression",
+            "pseudotime",
+        ],
+        "biology_singlecell",
+    ),
+    (
+        ["genomics", "genome", "variant calling", "sequencing", "biopython", "alignment"],
+        "biology_genomics",
+    ),
+    (["protein", "alphafold", "protein folding", "amino acid", "esm"], "biology_protein"),
     (["biology", "bioinformatics", "omics"], "biology_general"),
-
     # Economics
-    (["econometrics", "regression", "instrumental variable",
-      "fixed effect", "panel data", "difference-in-difference",
-      "causal inference", "statsmodels", "linearmodels"],
-     "economics_empirical"),
-    (["economics", "economic", "market", "equilibrium",
-      "utility", "welfare"], "economics_general"),
-
+    (
+        [
+            "econometrics",
+            "regression",
+            "instrumental variable",
+            "fixed effect",
+            "panel data",
+            "difference-in-difference",
+            "causal inference",
+            "statsmodels",
+            "linearmodels",
+        ],
+        "economics_empirical",
+    ),
+    (["economics", "economic", "market", "equilibrium", "utility", "welfare"], "economics_general"),
     # Mathematics
-    (["numerical method", "numerical analysis", "convergence order",
-      "finite difference", "quadrature", "interpolation",
-      "ode solver", "runge-kutta", "sympy"], "mathematics_numerical"),
-    (["optimization", "convex", "linear programming",
-      "gradient-free", "evolutionary algorithm"], "mathematics_optimization"),
-    (["mathematics", "mathematical", "theorem", "proof",
-      "algebra", "topology"], "mathematics_general"),
-
+    (
+        [
+            "numerical method",
+            "numerical analysis",
+            "convergence order",
+            "finite difference",
+            "quadrature",
+            "interpolation",
+            "ode solver",
+            "runge-kutta",
+            "sympy",
+        ],
+        "mathematics_numerical",
+    ),
+    (
+        ["optimization", "convex", "linear programming", "gradient-free", "evolutionary algorithm"],
+        "mathematics_optimization",
+    ),
+    (
+        ["mathematics", "mathematical", "theorem", "proof", "algebra", "topology"],
+        "mathematics_general",
+    ),
     # Security
-    (["intrusion detection", "malware", "anomaly detection",
-      "network traffic", "cybersecurity", "vulnerability",
-      "threat detection", "scapy"], "security_detection"),
-
+    (
+        [
+            "intrusion detection",
+            "malware",
+            "anomaly detection",
+            "network traffic",
+            "cybersecurity",
+            "vulnerability",
+            "threat detection",
+            "scapy",
+        ],
+        "security_detection",
+    ),
     # Robotics / Control
-    (["robot", "robotic", "control", "manipulation",
-      "mujoco", "pybullet", "locomotion", "navigation"],
-     "robotics_control"),
+    (
+        [
+            "robot",
+            "robotic",
+            "control",
+            "manipulation",
+            "mujoco",
+            "pybullet",
+            "locomotion",
+            "navigation",
+        ],
+        "robotics_control",
+    ),
 ]
 
 
@@ -343,7 +536,9 @@ Respond with ONLY the domain_id (e.g., "ml_vision"). Nothing else."""
 
 
 def _llm_detect(
-    topic: str, context: str, llm: Any,
+    topic: str,
+    context: str,
+    llm: Any,
 ) -> str | None:
     """Use LLM to classify a research topic into a domain.
 
@@ -420,7 +615,8 @@ def detect_domain(
         if profile:
             logger.info(
                 "Domain detected via keywords: %s (%s)",
-                profile.display_name, domain_id,
+                profile.display_name,
+                domain_id,
             )
             return profile
         logger.warning(
@@ -436,7 +632,8 @@ def detect_domain(
             if profile:
                 logger.info(
                     "Domain detected via LLM: %s (%s)",
-                    profile.display_name, domain_id,
+                    profile.display_name,
+                    domain_id,
                 )
                 return profile
 
@@ -461,7 +658,8 @@ async def detect_domain_async(
         if profile:
             logger.info(
                 "Domain detected via keywords: %s (%s)",
-                profile.display_name, domain_id,
+                profile.display_name,
+                domain_id,
             )
             return profile
 
@@ -473,7 +671,8 @@ async def detect_domain_async(
             if profile:
                 logger.info(
                     "Domain detected via LLM: %s (%s)",
-                    profile.display_name, domain_id,
+                    profile.display_name,
+                    domain_id,
                 )
                 return profile
 
@@ -494,6 +693,12 @@ def detect_domain_id(topic: str, hypotheses: str = "", literature: str = "") -> 
 def is_ml_domain(domain: DomainProfile) -> bool:
     """Check if a domain profile represents an ML/AI domain."""
     return domain.domain_id.startswith("ml_") or domain.domain_id in (
-        "ml_generic", "ml_vision", "ml_nlp", "ml_rl", "ml_graph",
-        "ml_tabular", "ml_generative", "ml_compression",
+        "ml_generic",
+        "ml_vision",
+        "ml_nlp",
+        "ml_rl",
+        "ml_graph",
+        "ml_tabular",
+        "ml_generative",
+        "ml_compression",
     )

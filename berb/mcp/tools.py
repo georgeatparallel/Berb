@@ -60,7 +60,10 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
         "inputSchema": {
             "type": "object",
             "properties": {
-                "paper_path": {"type": "string", "description": "Path to paper markdown or LaTeX file"},
+                "paper_path": {
+                    "type": "string",
+                    "description": "Path to paper markdown or LaTeX file",
+                },
                 "run_id": {"type": "string", "description": "Associated run ID (optional)"},
             },
             "required": ["paper_path"],
@@ -73,7 +76,11 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "type": "object",
             "properties": {
                 "run_id": {"type": "string", "description": "The pipeline run ID"},
-                "format": {"type": "string", "enum": ["markdown", "latex"], "description": "Output format"},
+                "format": {
+                    "type": "string",
+                    "enum": ["markdown", "latex"],
+                    "description": "Output format",
+                },
             },
             "required": ["run_id"],
         },

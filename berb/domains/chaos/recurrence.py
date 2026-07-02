@@ -31,7 +31,6 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Optional
 
 import numpy as np
 from scipy.spatial.distance import cdist
@@ -163,7 +162,7 @@ class RecurrencePlot:
         Returns:
             Binary recurrence matrix (n_points, n_points)
         """
-        n_points = len(trajectory)
+        len(trajectory)
 
         # Compute pairwise distances
         distances = cdist(trajectory, trajectory, metric=self.metric)
@@ -252,18 +251,24 @@ class RecurrenceQuantificationAnalysis:
         vert_lines = self._find_vertical_lines(recurrence_matrix)
 
         # Filter by minimum length
-        diag_lines = [l for l in diag_lines if l >= self.min_line_length]
-        vert_lines = [l for l in vert_lines if l >= self.min_line_length]
+        diag_lines = [line_len for line_len in diag_lines if line_len >= self.min_line_length]
+        vert_lines = [line_len for line_len in vert_lines if line_len >= self.min_line_length]
 
         # Determinism (ratio of diagonal line points)
         if total_points > 0:
-            det = sum(l * diag_lines.count(l) for l in set(diag_lines)) / total_points
+            det = (
+                sum(line_len * diag_lines.count(line_len) for line_len in set(diag_lines))
+                / total_points
+            )
         else:
             det = 0.0
 
         # Laminarity (ratio of vertical line points)
         if total_points > 0:
-            lam = sum(l * vert_lines.count(l) for l in set(vert_lines)) / total_points
+            lam = (
+                sum(line_len * vert_lines.count(line_len) for line_len in set(vert_lines))
+                / total_points
+            )
         else:
             lam = 0.0
 

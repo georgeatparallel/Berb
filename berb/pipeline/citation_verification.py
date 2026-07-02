@@ -39,19 +39,20 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-class VerificationLayer(str, Enum):
+class VerificationLayer(StrEnum):
     """Citation verification layer."""
 
     FORMAT = "format"  # DOI/arXiv ID format
     API = "api"  # CrossRef/DataCite/arXiv API
     INFO = "info"  # Title/author/year match
     CONTENT = "content"  # Claim-citation alignment
+    WEB_GROUND = "web_ground"  # Live web corroboration (Perplexity Sonar)
 
 
 @dataclass
@@ -63,18 +64,24 @@ class VerifierConfig:
         enable_api_check: Enable Layer 2 (default: True)
         enable_info_check: Enable Layer 3 (default: True)
         enable_content_check: Enable Layer 4 (default: True)
+        enable_web_check: Enable Layer 5 (default: True; no-ops if no
+            PERPLEXITY_API_KEY is configured, rather than failing every
+            citation)
         crossref_api_url: CrossRef API URL
         arxiv_api_url: arXiv API URL
         semantic_scholar_api_url: Semantic Scholar API URL
         timeout: API request timeout in seconds
         llm_client: LLM client for content check
         min_confidence: Minimum confidence for valid citation
+        perplexity_api_key: Perplexity API key for Layer 5 (falls back to
+            the PERPLEXITY_API_KEY env var)
     """
 
     enable_format_check: bool = True
     enable_api_check: bool = True
     enable_info_check: bool = True
     enable_content_check: bool = True
+    enable_web_check: bool = True
 
     crossref_api_url: str = "https://api.crossref.org/works"
     arxiv_api_url: str = "http://export.arxiv.org/api/query"
@@ -88,6 +95,9 @@ class VerifierConfig:
 
     min_confidence: float = 0.6
     """Minimum confidence for valid citation"""
+
+    perplexity_api_key: str = ""
+    """Perplexity API key for Layer 5 web-grounding check"""
 
 
 @dataclass
@@ -121,8 +131,8 @@ class CitationVerificationResult:
         return {
             "citation": self.citation,
             "is_valid": self.is_valid,
-            "layers_passed": [l.value for l in self.layers_passed],
-            "layers_failed": [l.value for l in self.layers_failed],
+            "layers_passed": [layer.value for layer in self.layers_passed],
+            "layers_failed": [layer.value for layer in self.layers_failed],
             "confidence": self.confidence,
             "errors": self.errors,
             "warnings": self.warnings,
@@ -200,6 +210,9 @@ class CitationVerifier:
         result = CitationVerificationResult(citation=citation)
 
         # Layer 1: Format check
+        # NOTE: defaults True so Layer 2's gate below doesn't NameError when
+        # enable_format_check=False but enable_api_check=True.
+        format_valid = True
         if self.config.enable_format_check:
             format_valid = await self._check_format(citation)
             if format_valid:
@@ -237,13 +250,44 @@ class CitationVerifier:
                 result.layers_failed.append(VerificationLayer.CONTENT)
                 result.warnings.append(f"Low claim-citation alignment: {alignment:.2f}")
 
+        # Layer 5: Web-grounding check (Perplexity Sonar) — does this
+        # citation exist and get corroborated externally? Distinct from
+        # Layer 4, which asks whether it supports THIS claim specifically.
+        # No-ops (doesn't count as pass or fail) if no API key is
+        # configured, rather than failing every citation.
+        if self.config.enable_web_check:
+            web_status = await self._check_web_ground(citation, claim_text)
+            if web_status is not None:
+                if web_status == "verified":
+                    result.layers_passed.append(VerificationLayer.WEB_GROUND)
+                else:
+                    result.layers_failed.append(VerificationLayer.WEB_GROUND)
+                    if web_status == "inaccurate":
+                        result.errors.append(
+                            "Web-grounding check found the citation inaccurate"
+                        )
+                    else:
+                        result.warnings.append("Web-grounding check could not verify citation")
+
         # Calculate overall confidence
         result.confidence = self._calculate_confidence(result)
 
-        # Determine validity
+        # Determine validity. Tolerance scales with how many layers are
+        # actually enabled — a flat "allow 1 failure" gets proportionally
+        # stricter as more layers are added (4 → 5 with Layer 5).
+        enabled_layer_count = sum(
+            [
+                self.config.enable_format_check,
+                self.config.enable_api_check,
+                self.config.enable_info_check,
+                self.config.enable_content_check,
+                self.config.enable_web_check,
+            ]
+        )
+        max_allowed_failures = max(1, round(enabled_layer_count * 0.3))
         result.is_valid = (
-            VerificationLayer.FORMAT in result.layers_passed and
-            len(result.layers_failed) <= 1  # Allow 1 layer failure
+            VerificationLayer.FORMAT in result.layers_passed
+            and len(result.layers_failed) <= max_allowed_failures
         )
 
         return result
@@ -382,10 +426,7 @@ class CitationVerifier:
                 return {
                     "source": "datacite",
                     "title": attributes.get("titles", [{}])[0].get("title", ""),
-                    "authors": [
-                        c.get("name", "")
-                        for c in attributes.get("creators", [])
-                    ],
+                    "authors": [c.get("name", "") for c in attributes.get("creators", [])],
                     "year": attributes.get("publicationYear"),
                     "publisher": attributes.get("publisher", ""),
                 }
@@ -472,7 +513,7 @@ class CitationVerifier:
         # Use LLM for alignment check
         prompt = f"""Analyze if this citation supports the claim:
 
-Citation: {citation.get('title', 'Unknown')} by {', '.join(citation.get('authors', ['Unknown']))} ({citation.get('year', 'n.d.')})
+Citation: {citation.get("title", "Unknown")} by {", ".join(citation.get("authors", ["Unknown"]))} ({citation.get("year", "n.d.")})
 
 Claim: {claim_text}
 
@@ -496,6 +537,39 @@ Respond with just a number."""
 
         # Fallback to keyword alignment
         return self._keyword_alignment(citation, claim_text)
+
+    async def _check_web_ground(
+        self,
+        citation: dict[str, Any],
+        claim_text: str | None,
+    ) -> str | None:
+        """Layer 5: Live web corroboration via Perplexity Sonar.
+
+        Returns "verified", "unverified", "inaccurate", or None if the
+        check couldn't run at all (no API key configured — a no-op, not
+        a failure).
+        """
+        import os
+
+        api_key = self.config.perplexity_api_key or os.environ.get("PERPLEXITY_API_KEY", "")
+        if not api_key:
+            return None
+
+        title = citation.get("title", "")
+        authors = ", ".join(citation.get("authors", []) or []) or "Unknown"
+        year = citation.get("year", "n.d.")
+        citation_text = f"{title} by {authors} ({year})"
+        claimed_finding = claim_text or f"This work is titled '{title}'."
+
+        try:
+            from berb.llm.deep_query_client import DeepQueryClient
+
+            client = DeepQueryClient(api_key=api_key)
+            result = client.verify_citation(citation_text, claimed_finding)
+            return result["status"]
+        except Exception as e:  # noqa: BLE001
+            logger.debug(f"Perplexity web-grounding check failed: {e}")
+            return None
 
     def _keyword_alignment(
         self,
@@ -540,18 +614,19 @@ Respond with just a number."""
         if not result.layers_passed:
             return 0.0
 
-        # Base confidence from passed layers
+        # Base confidence from passed layers. Rebalanced from the original
+        # 4-layer weights (0.15/0.35/0.30/0.20) to make room for Layer 5 —
+        # web-grounding is an independent real-world check, weighted
+        # comparably to API verification.
         layer_weights = {
-            VerificationLayer.FORMAT: 0.15,
-            VerificationLayer.API: 0.35,
-            VerificationLayer.INFO: 0.30,
+            VerificationLayer.FORMAT: 0.10,
+            VerificationLayer.API: 0.25,
+            VerificationLayer.INFO: 0.20,
             VerificationLayer.CONTENT: 0.20,
+            VerificationLayer.WEB_GROUND: 0.25,
         }
 
-        confidence = sum(
-            layer_weights.get(layer, 0.0)
-            for layer in result.layers_passed
-        )
+        confidence = sum(layer_weights.get(layer, 0.0) for layer in result.layers_passed)
 
         # Adjust for claim alignment
         if result.claim_alignment > 0:
@@ -614,6 +689,8 @@ def create_verifier_from_env() -> CitationVerifier:
         CITATION_ENABLE_API: Enable API check true/false
         CITATION_ENABLE_INFO: Enable info check true/false
         CITATION_ENABLE_CONTENT: Enable content check true/false
+        CITATION_ENABLE_WEB: Enable web-grounding check true/false
+            (no-ops regardless if PERPLEXITY_API_KEY isn't set)
         CITATION_TIMEOUT: API timeout in seconds
 
     Returns:
@@ -626,7 +703,9 @@ def create_verifier_from_env() -> CitationVerifier:
             enable_format_check=os.environ.get("CITATION_ENABLE_FORMAT", "true").lower() == "true",
             enable_api_check=os.environ.get("CITATION_ENABLE_API", "true").lower() == "true",
             enable_info_check=os.environ.get("CITATION_ENABLE_INFO", "true").lower() == "true",
-            enable_content_check=os.environ.get("CITATION_ENABLE_CONTENT", "true").lower() == "true",
+            enable_content_check=os.environ.get("CITATION_ENABLE_CONTENT", "true").lower()
+            == "true",
+            enable_web_check=os.environ.get("CITATION_ENABLE_WEB", "true").lower() == "true",
             timeout=int(os.environ.get("CITATION_TIMEOUT", "30")),
         )
     )

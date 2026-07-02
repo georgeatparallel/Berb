@@ -32,6 +32,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class CodeSearchResult:
     """Complete result from a code search operation."""
+
     patterns: CodePatterns = field(default_factory=CodePatterns)
     repos_found: list[RepoInfo] = field(default_factory=list)
     snippets_found: list[CodeSnippet] = field(default_factory=list)
@@ -179,16 +180,17 @@ class CodeSearchAgent:
                 repos = self._github.search_repos(queries[0], max_results=10)
                 # Filter: recent, well-starred
                 repos = [
-                    r for r in repos
+                    r
+                    for r in repos
                     if r.stars >= 10  # minimum quality threshold
                 ]
-                result.repos_found = repos[:self._max_repos * 2]
+                result.repos_found = repos[: self._max_repos * 2]
             except Exception:
                 logger.warning("Repo search failed, continuing", exc_info=True)
 
         # 4. Search GitHub code (use remaining queries)
         code_snippets: list[str] = []
-        for query in queries[1:self._max_code_searches + 1]:
+        for query in queries[1 : self._max_code_searches + 1]:
             try:
                 snippets = self._github.search_code(query, max_results=5)
                 result.snippets_found.extend(snippets)
@@ -196,7 +198,7 @@ class CodeSearchAgent:
                 logger.warning("Code search failed for query: %s", query)
 
         # 5. Read key files from top repos
-        for repo in result.repos_found[:self._max_repos]:
+        for repo in result.repos_found[: self._max_repos]:
             try:
                 analysis = self._analyze_repo(repo)
                 if analysis:
@@ -264,14 +266,21 @@ class CodeSearchAgent:
 
         # Identify and read key files
         key_patterns = [
-            "main.py", "run.py", "train.py", "experiment.py",
-            "requirements.txt", "setup.py", "pyproject.toml",
+            "main.py",
+            "run.py",
+            "train.py",
+            "experiment.py",
+            "requirements.txt",
+            "setup.py",
+            "pyproject.toml",
         ]
         for pattern in key_patterns:
             matches = [f for f in file_tree if f.endswith(pattern)]
             for match in matches[:1]:  # first match only
                 content = self._github.get_file_content(
-                    repo.full_name, match, max_size_kb=50,
+                    repo.full_name,
+                    match,
+                    max_size_kb=50,
                 )
                 if content:
                     analysis.key_files[match] = content

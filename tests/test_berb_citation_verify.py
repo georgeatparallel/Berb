@@ -117,16 +117,10 @@ class TestParseBibtexEntries:
 
 class TestTitleSimilarity:
     def test_identical(self) -> None:
-        assert (
-            title_similarity("Attention Is All You Need", "Attention Is All You Need")
-            == 1.0
-        )
+        assert title_similarity("Attention Is All You Need", "Attention Is All You Need") == 1.0
 
     def test_case_insensitive(self) -> None:
-        assert (
-            title_similarity("attention is all you need", "ATTENTION IS ALL YOU NEED")
-            == 1.0
-        )
+        assert title_similarity("attention is all you need", "ATTENTION IS ALL YOU NEED") == 1.0
 
     def test_high_similarity(self) -> None:
         sim = title_similarity(
@@ -205,9 +199,7 @@ class TestVerifyByArxivId:
 class TestVerifyByDoi:
     def test_verified_crossref(self) -> None:
         mock_resp = MagicMock()
-        mock_resp.read.return_value = json.dumps(SAMPLE_CROSSREF_RESPONSE).encode(
-            "utf-8"
-        )
+        mock_resp.read.return_value = json.dumps(SAMPLE_CROSSREF_RESPONSE).encode("utf-8")
         mock_resp.__enter__ = lambda s: s
         mock_resp.__exit__ = MagicMock(return_value=False)
 
@@ -334,9 +326,7 @@ class TestVerifyCitations:
         arxiv_resp.__exit__ = MagicMock(return_value=False)
 
         crossref_resp = MagicMock()
-        crossref_resp.read.return_value = json.dumps(SAMPLE_CROSSREF_RESPONSE).encode(
-            "utf-8"
-        )
+        crossref_resp.read.return_value = json.dumps(SAMPLE_CROSSREF_RESPONSE).encode("utf-8")
         crossref_resp.__enter__ = lambda s: s
         crossref_resp.__exit__ = MagicMock(return_value=False)
 
@@ -386,21 +376,15 @@ class TestVerifyCitations:
 
 class TestVerificationReport:
     def test_integrity_score(self) -> None:
-        report = VerificationReport(
-            total=10, verified=7, suspicious=1, hallucinated=2, skipped=0
-        )
+        report = VerificationReport(total=10, verified=7, suspicious=1, hallucinated=2, skipped=0)
         assert report.integrity_score == 0.7
 
     def test_integrity_score_with_skips(self) -> None:
-        report = VerificationReport(
-            total=10, verified=6, suspicious=0, hallucinated=2, skipped=2
-        )
+        report = VerificationReport(total=10, verified=6, suspicious=0, hallucinated=2, skipped=2)
         assert report.integrity_score == 0.75
 
     def test_integrity_score_all_skipped(self) -> None:
-        report = VerificationReport(
-            total=3, verified=0, suspicious=0, hallucinated=0, skipped=3
-        )
+        report = VerificationReport(total=3, verified=0, suspicious=0, hallucinated=0, skipped=3)
         assert report.integrity_score == 1.0
 
     def test_to_dict(self) -> None:
@@ -590,11 +574,22 @@ class TestStage23Integration:
         assert Stage.CITATION_VERIFY == 23
 
     def test_stage_in_sequence(self) -> None:
-        from berb.pipeline.stages import Stage, STAGE_SEQUENCE, NEXT_STAGE
+        from berb.pipeline.contracts import CONTRACTS
+        from berb.pipeline.resolution import resolve_stage_order
+        from berb.pipeline.stages import Stage
 
-        assert Stage.CITATION_VERIFY in STAGE_SEQUENCE
-        assert NEXT_STAGE[Stage.EXPORT_PUBLISH] == Stage.CITATION_VERIFY
-        assert NEXT_STAGE[Stage.CITATION_VERIFY] is None
+        order = resolve_stage_order()
+        assert Stage.CITATION_VERIFY in order
+        assert order[-1] == Stage.CITATION_VERIFY
+        # Kahn's algorithm doesn't guarantee strict adjacency for stages
+        # that become eligible simultaneously (e.g. KNOWLEDGE_ARCHIVE also
+        # depends only on EXPORT_PUBLISH) — the real invariant is the
+        # declared dependency, not positional adjacency in the flattened
+        # order.
+        assert Stage.EXPORT_PUBLISH in CONTRACTS[Stage.CITATION_VERIFY].depends_on
+        idx_export = order.index(Stage.EXPORT_PUBLISH)
+        idx_citation = order.index(Stage.CITATION_VERIFY)
+        assert idx_citation > idx_export
 
     def test_contract_exists(self) -> None:
         from berb.pipeline.contracts import CONTRACTS
@@ -606,10 +601,11 @@ class TestStage23Integration:
         assert "references_verified.bib" in contract.output_files
 
     def test_executor_registered(self) -> None:
-        from berb.pipeline.executor import _STAGE_EXECUTORS
+        import berb.pipeline.executor  # noqa: F401 — import triggers @register_stage
+        from berb.pipeline.registry import get_registration
         from berb.pipeline.stages import Stage
 
-        assert Stage.CITATION_VERIFY in _STAGE_EXECUTORS
+        assert get_registration(Stage.CITATION_VERIFY) is not None
 
     def test_phase_map(self) -> None:
         from berb.pipeline.stages import PHASE_MAP, Stage
@@ -618,6 +614,6 @@ class TestStage23Integration:
         assert Stage.CITATION_VERIFY in finalization_stages
 
     def test_total_stages_is_23(self) -> None:
-        from berb.pipeline.stages import STAGE_SEQUENCE
+        from berb.pipeline.resolution import resolve_stage_order
 
-        assert len(STAGE_SEQUENCE) == 23
+        assert len(resolve_stage_order()) == 23

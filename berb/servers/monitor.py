@@ -21,7 +21,10 @@ class ServerMonitor:
     async def check_status(self, server: ServerEntry) -> dict[str, Any]:
         """Check a single server's status via SSH (nvidia-smi, free, uptime)."""
         try:
-            result = await _ssh_command(server.host, "nvidia-smi --query-gpu=utilization.gpu,memory.used,memory.total --format=csv,noheader,nounits 2>/dev/null; echo '---'; free -m | head -2; echo '---'; uptime")
+            result = await _ssh_command(
+                server.host,
+                "nvidia-smi --query-gpu=utilization.gpu,memory.used,memory.total --format=csv,noheader,nounits 2>/dev/null; echo '---'; free -m | head -2; echo '---'; uptime",
+            )
             status = _parse_status_output(result, server)
             status["reachable"] = True
         except Exception as exc:
@@ -37,7 +40,7 @@ class ServerMonitor:
         tasks = [self.check_status(s) for s in servers]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         out: dict[str, dict[str, Any]] = {}
-        for server, result in zip(servers, results):
+        for server, result in zip(servers, results, strict=False):
             if isinstance(result, Exception):
                 out[server.name] = {"reachable": False, "error": str(result)}
             else:
@@ -56,12 +59,17 @@ class ServerMonitor:
 
 async def _ssh_command(host: str, command: str) -> str:
     """Run a command on a remote host via SSH.
-    
+
     P1 FIX: Uses accept-new for host key verification (more secure than no).
     """
     proc = await asyncio.create_subprocess_exec(
-        "ssh", "-o", "ConnectTimeout=5", "-o", "StrictHostKeyChecking=accept-new",
-        host, command,
+        "ssh",
+        "-o",
+        "ConnectTimeout=5",
+        "-o",
+        "StrictHostKeyChecking=accept-new",
+        host,
+        command,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
@@ -78,16 +86,18 @@ def _parse_status_output(raw: str, server: ServerEntry) -> dict[str, Any]:
 
     # GPU section
     if len(sections) >= 1:
-        gpu_lines = [l.strip() for l in sections[0].strip().splitlines() if l.strip()]
+        gpu_lines = [line.strip() for line in sections[0].strip().splitlines() if line.strip()]
         gpus = []
         for line in gpu_lines:
             parts = [p.strip() for p in line.split(",")]
             if len(parts) >= 3:
-                gpus.append({
-                    "utilization_pct": int(parts[0]),
-                    "memory_used_mb": int(parts[1]),
-                    "memory_total_mb": int(parts[2]),
-                })
+                gpus.append(
+                    {
+                        "utilization_pct": int(parts[0]),
+                        "memory_used_mb": int(parts[1]),
+                        "memory_total_mb": int(parts[2]),
+                    }
+                )
         status["gpu"] = {"count": len(gpus), "devices": gpus}
 
     # Memory section

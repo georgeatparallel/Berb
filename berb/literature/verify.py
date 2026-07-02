@@ -19,6 +19,7 @@ All network I/O uses stdlib ``urllib`` — zero extra pip dependencies.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import re
@@ -28,10 +29,10 @@ import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
-from enum import Enum
-from typing import Sequence
+from enum import StrEnum
+from pathlib import Path
 
-from berb.literature.models import Author, Paper
+from berb.literature.models import Paper
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +41,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 
-class VerifyStatus(str, Enum):
+class VerifyStatus(StrEnum):
     """Verification outcome for a single citation."""
 
     VERIFIED = "verified"
@@ -217,9 +218,7 @@ def verify_by_arxiv_id(arxiv_id: str, expected_title: str) -> CitationResult | N
     # arXiv returns an "error" entry when ID is invalid
     entry = entries[0]
     found_title_el = entry.find("atom:title", _ARXIV_NS)
-    found_title = (
-        (found_title_el.text or "").strip() if found_title_el is not None else ""
-    )
+    found_title = (found_title_el.text or "").strip() if found_title_el is not None else ""
     found_title = re.sub(r"\s+", " ", found_title)
 
     # Check for arXiv error responses (they return entry with id but title "Error")
@@ -456,11 +455,13 @@ def verify_by_openalex(title: str) -> CitationResult | None:
 
     Returns *None* only on network failure (allows fallthrough to S2).
     """
-    params = urllib.parse.urlencode({
-        "filter": "title.search:" + title.replace(",", " ").replace(":", " "),
-        "per_page": "5",
-        "mailto": _OPENALEX_EMAIL,
-    })
+    params = urllib.parse.urlencode(
+        {
+            "filter": "title.search:" + title.replace(",", " ").replace(":", " "),
+            "per_page": "5",
+            "mailto": _OPENALEX_EMAIL,
+        }
+    )
     url = f"{_OPENALEX_API}?{params}"
 
     try:
@@ -530,9 +531,6 @@ def verify_by_openalex(title: str) -> CitationResult | None:
 # ---------------------------------------------------------------------------
 # Verification result cache (avoids re-verifying known papers)
 # ---------------------------------------------------------------------------
-
-import hashlib
-from pathlib import Path
 
 _CACHE_DIR = Path.home() / ".cache" / "berb" / "citation_verify"
 
@@ -634,9 +632,7 @@ def verify_by_title_search(
             confidence=best_sim,
             method="title_search",
             details=(
-                f"Partial match (sim={best_sim:.2f}): '{best_paper.title}'"
-                if best_paper
-                else ""
+                f"Partial match (sim={best_sim:.2f}): '{best_paper.title}'" if best_paper else ""
             ),
             matched_paper=best_paper,
         )
@@ -687,9 +683,9 @@ def verify_citations(
     report = VerificationReport(total=len(entries))
 
     # Adaptive delays: OpenAlex/CrossRef can be queried much faster than arXiv
-    _DELAY_ARXIV = inter_verify_delay       # arXiv: conservative (1.5s default)
-    _DELAY_CROSSREF = 0.3                   # CrossRef: 50 req/s polite pool
-    _DELAY_OPENALEX = 0.2                   # OpenAlex: 10K/day
+    _DELAY_ARXIV = inter_verify_delay  # arXiv: conservative (1.5s default)
+    _DELAY_CROSSREF = 0.3  # CrossRef: 50 req/s polite pool
+    _DELAY_OPENALEX = 0.2  # OpenAlex: 10K/day
     api_call_count = 0
 
     # BUG-22: Global timeout — stop verifying after 5 minutes total
@@ -700,21 +696,24 @@ def verify_citations(
         # BUG-22: Check global timeout — mark remaining as SKIPPED
         if time.monotonic() - _verify_start > _VERIFY_TIMEOUT_SEC:
             logger.warning(
-                "Verification timeout (%.0fs). Marking remaining %d/%d "
-                "citations as SKIPPED.",
-                _VERIFY_TIMEOUT_SEC, len(entries) - i, len(entries),
+                "Verification timeout (%.0fs). Marking remaining %d/%d citations as SKIPPED.",
+                _VERIFY_TIMEOUT_SEC,
+                len(entries) - i,
+                len(entries),
             )
             for remaining_entry in entries[i:]:
                 _rkey = remaining_entry.get("key", f"unknown_{i}")
                 _rtitle = remaining_entry.get("title", "")
-                report.results.append(CitationResult(
-                    cite_key=_rkey,
-                    title=_rtitle,
-                    status=VerifyStatus.SKIPPED,
-                    confidence=0.0,
-                    method="skipped",
-                    details="Verification timeout exceeded",
-                ))
+                report.results.append(
+                    CitationResult(
+                        cite_key=_rkey,
+                        title=_rtitle,
+                        status=VerifyStatus.SKIPPED,
+                        confidence=0.0,
+                        method="skipped",
+                        details="Verification timeout exceeded",
+                    )
+                )
                 report.skipped += 1
             break
 
@@ -829,7 +828,6 @@ def verify_citations(
                 method="skipped",
                 details="All verification methods failed (network error?)",
             )
-
 
         result = CitationResult(
             cite_key=key,
