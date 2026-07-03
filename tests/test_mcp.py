@@ -262,7 +262,10 @@ class TestSSETransport:
 
         asyncio.run(_run())
 
-    def test_receive_not_implemented(self) -> None:
+    def test_receive_raises_when_not_running(self) -> None:
+        # receive() blocks on the inbound queue populated by start(); calling
+        # it before start() is a programming error, so it raises immediately
+        # instead of hanging (see berb/mcp/transport.py).
         transport = SSETransport()
-        with pytest.raises(NotImplementedError):
+        with pytest.raises(RuntimeError, match="not running"):
             asyncio.run(transport.receive())

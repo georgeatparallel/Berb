@@ -96,6 +96,16 @@ class SharedResearchMemory:
         # asyncio.Lock for async methods (created lazily to avoid event loop issues)
         self._async_lock: asyncio.Lock | None = None
 
+        # Monotonic flush sequencing.  Each store() increments _flush_seq inside
+        # _lock and captures the value.  Outside _lock the thread acquires
+        # _flush_lock and only writes to disk if its captured seq exceeds the
+        # last-written seq (_flush_seq_written).  This prevents an older snapshot
+        # (captured by a thread that lost a race) from overwriting a newer one
+        # that was already persisted by a concurrent thread.
+        self._flush_lock = threading.Lock()
+        self._flush_seq: int = 0
+        self._flush_seq_written: int = 0
+
         # Core memory structures
         self._entries: list[MemoryEntry] = []
         self._key_value_store: dict[str, Any] = {}
@@ -107,11 +117,14 @@ class SharedResearchMemory:
         self._error_fix_mappings: dict[str, str] = {}  # error_pattern → fix
         self._clarifications: dict[str, Any] = {}  # question → answer
         self._execution_traces: list[dict] = []
-
-        # Load from persistent storage if available
+        
+        # Load from persistent storage if available.  The lock is not strictly
+        # required here because __init__ runs before the object is shared with
+        # any other thread, but acquiring it keeps all disk-read paths uniform.
         if self._storage_path and self._storage_path.exists():
-            self._load_from_disk()
-
+            with self._sync_lock:
+                self._load_from_disk()
+        
         logger.info(f"Initialized shared memory for project {project_id}")
 
     def _get_async_lock(self) -> asyncio.Lock:
@@ -150,7 +163,13 @@ class SharedResearchMemory:
             entry_type=entry_type,
             metadata=metadata or {},
         )
-        # P0 2026-04-02 FIX: Use _sync_lock for synchronous methods
+        # Acquire the RLock for the full compound mutation so that concurrent
+        # callers (e.g. multiple async tasks running on a thread-pool executor)
+        # cannot interleave the append, trajectory-prune, kv-update, and disk
+        # persist steps.  RLock allows the same thread to re-enter (e.g. when
+        # store_execution_trace() holds the lock and then calls store()).
+        disk_snapshot: dict | None = None
+        my_seq: int = 0
         with self._sync_lock:
             # Add to entries list (trajectory)
             self._entries.append(entry)
@@ -163,9 +182,24 @@ class SharedResearchMemory:
             # Update agent state
             self._update_agent_activity(agent_id)
 
-            # Persist if configured
+            # Take a lightweight snapshot of current state inside the lock.
+            # The actual disk writes happen OUTSIDE the lock so that concurrent
+            # writers are not blocked during I/O (which could take tens of ms
+            # on a slow or network-mounted filesystem, or hang indefinitely on
+            # failure, causing all agents to stall).
             if self._storage_path:
-                self._save_to_disk()
+                self._flush_seq += 1
+                my_seq = self._flush_seq
+                disk_snapshot = self._make_disk_snapshot()
+
+        # Persist outside _lock, but serialised by _flush_lock with a sequence
+        # check: only write if no newer snapshot has already been persisted.
+        # This prevents an older snapshot from overwriting a newer disk state.
+        if disk_snapshot is not None:
+            with self._flush_lock:
+                if my_seq > self._flush_seq_written:
+                    self._save_to_disk(disk_snapshot)
+                    self._flush_seq_written = my_seq
 
         logger.debug(f"Stored {key} ({entry_type}) from agent {agent_id}")
 
@@ -208,7 +242,11 @@ class SharedResearchMemory:
             agent_id: ID of storing agent
             metadata: Optional metadata
         """
-        self._code_snapshots[version] = code
+        # Acquire the lock before mutating _code_snapshots so no concurrent
+        # reader (get_code_snapshot) sees the new dict entry while _key_value_store
+        # still holds the old value.  store() re-enters the RLock safely.
+        with self._sync_lock:
+            self._code_snapshots[version] = code
         self.store(
             f"code:{version}",
             code,
@@ -239,7 +277,10 @@ class SharedResearchMemory:
             success: Whether fix was successful
         """
         key = f"error_fix:{error_pattern}"
-        self._error_fix_mappings[error_pattern] = fix
+        # Protect the specialized dict mutation so concurrent readers
+        # via get_error_fix() cannot observe a partial/torn update.
+        with self._sync_lock:
+            self._error_fix_mappings[error_pattern] = fix
 
         self.store(
             key,
@@ -266,7 +307,10 @@ class SharedResearchMemory:
         agent_id: str,
     ) -> None:
         """Store clarification (Q→A mapping)."""
-        self._clarifications[question] = answer
+        # Protect the specialized dict mutation so concurrent readers
+        # via get_clarification() cannot observe a partial/torn update.
+        with self._sync_lock:
+            self._clarifications[question] = answer
         self.store(
             f"clarification:{question}",
             answer,
@@ -324,12 +368,13 @@ class SharedResearchMemory:
         initial_status: str = "idle",
     ) -> None:
         """Register an agent."""
-        self._agent_states[agent_id] = AgentState(
-            agent_id=agent_id,
-            status=initial_status,
-            current_task=None,
-            last_update=datetime.now(UTC),
-        )
+        with self._sync_lock:
+            self._agent_states[agent_id] = AgentState(
+                agent_id=agent_id,
+                status=initial_status,
+                current_task=None,
+                last_update=datetime.now(UTC),
+            )
         logger.info(f"Registered agent: {agent_id}")
 
     def update_agent_status(
@@ -339,15 +384,17 @@ class SharedResearchMemory:
         task: str | None = None,
     ) -> None:
         """Update agent status."""
-        if agent_id not in self._agent_states:
-            self.register_agent(agent_id, status)
-            return
+        with self._sync_lock:
+            if agent_id not in self._agent_states:
+                # register_agent re-enters the RLock safely.
+                self.register_agent(agent_id, status)
+                return
 
-        state = self._agent_states[agent_id]
-        state.status = status
-        state.current_task = task
-        state.last_update = datetime.now(UTC)
-
+            state = self._agent_states[agent_id]
+            state.status = status
+            state.current_task = task
+            state.last_update = datetime.now(UTC)
+    
     def _update_agent_activity(self, agent_id: str) -> None:
         """Update agent activity timestamp."""
         if agent_id in self._agent_states:
@@ -388,14 +435,10 @@ class SharedResearchMemory:
             "timestamp": datetime.now(UTC).isoformat(),
         }
 
-        # Protect the deque append and the agent-state counter update under the
-        # same lock so that concurrent send_message() calls cannot interleave
-        # the compound read-modify-write on messages_sent (BUG-002).
         with self._sync_lock:
             self._message_queue.append(message)
+            # messages_sent is a read-modify-write; must be inside the lock.
             if from_agent in self._agent_states:
-                # messages_sent += 1 is three bytecodes (LOAD/ADD/STORE) and is
-                # NOT atomic without an explicit lock, even under CPython's GIL.
                 self._agent_states[from_agent].messages_sent += 1
 
         logger.debug(f"Message {message_type} from {from_agent} to {to_agent or 'all'}")
@@ -406,21 +449,16 @@ class SharedResearchMemory:
         message_type: str | None = None,
     ) -> list[dict]:
         """Get messages for an agent."""
-        # Snapshot the queue and update the counter atomically under the lock
-        # so that a concurrent send_message() cannot cause a lost increment on
-        # messages_received (BUG-002 — same compound read-modify-write issue).
         with self._sync_lock:
             messages = [
-                msg
-                for msg in self._message_queue
+                msg for msg in self._message_queue
                 if (msg["to"] is None or msg["to"] == agent_id)
                 and (message_type is None or msg["type"] == message_type)
             ]
             if agent_id in self._agent_states:
                 self._agent_states[agent_id].messages_received += len(messages)
-
-        return messages
-
+            return messages
+    
     # ========== Trajectory & Analytics ==========
 
     def get_trajectory(
@@ -499,33 +537,60 @@ class SharedResearchMemory:
 
     # ========== Persistence ==========
 
-    def _save_to_disk(self) -> None:
-        """Save memory to disk."""
+    def _make_disk_snapshot(self) -> dict:
+        """Return a serializable copy of all stores.
+
+        MUST be called while holding ``self._sync_lock`` so the snapshot is
+        internally consistent.  Callers should release the lock before
+        passing the returned dict to ``_save_to_disk``.
+        """
+        return {
+            "entries": [e.to_dict() for e in self._entries],
+            "kv_store": dict(self._key_value_store),
+            "code_snapshots": dict(self._code_snapshots),
+            "error_fix_mappings": dict(self._error_fix_mappings),
+            "clarifications": dict(self._clarifications),
+            "execution_traces": list(self._execution_traces),
+        }
+
+    def _save_to_disk(self, snapshot: dict | None = None) -> None:
+        """Write memory state to disk.
+
+        Pass a *snapshot* dict (built via :meth:`_make_disk_snapshot` while
+        holding ``self._sync_lock``) to avoid re-acquiring the lock here.  If no
+        snapshot is provided the method acquires the lock itself, which is
+        safe but means the caller should NOT be holding the lock (to avoid
+        blocking other writers during I/O).
+        """
         if not self._storage_path:
             return
+
+        if snapshot is None:
+            with self._sync_lock:
+                snapshot = self._make_disk_snapshot()
 
         self._storage_path.mkdir(parents=True, exist_ok=True)
 
         # Save entries
         entries_file = self._storage_path / "entries.json"
         with open(entries_file, "w", encoding="utf-8") as f:
-            json.dump([e.to_dict() for e in self._entries], f, indent=2)
+            json.dump(snapshot["entries"], f, indent=2)
 
         # Save key-value store
         kv_file = self._storage_path / "kv_store.json"
         with open(kv_file, "w", encoding="utf-8") as f:
-            json.dump(self._key_value_store, f, indent=2)
+            json.dump(snapshot["kv_store"], f, indent=2)
 
         # Save specialized stores
-        for store_name, store_data in [
-            ("code_snapshots", self._code_snapshots),
-            ("error_fix_mappings", self._error_fix_mappings),
-            ("clarifications", self._clarifications),
-            ("execution_traces", self._execution_traces),
+        for store_name, snapshot_key in [
+            ("code_snapshots", "code_snapshots"),
+            ("error_fix_mappings", "error_fix_mappings"),
+            ("clarifications", "clarifications"),
+            ("execution_traces", "execution_traces"),
         ]:
             store_file = self._storage_path / f"{store_name}.json"
             with open(store_file, "w", encoding="utf-8") as f:
-                json.dump(store_data, f, indent=2)
+                json.dump(snapshot[snapshot_key], f, indent=2)
 
         logger.debug(f"Saved memory to {self._storage_path}")
 
@@ -576,31 +641,45 @@ class SharedResearchMemory:
             logger.error(f"Failed to load memory: {e}")
 
     def clear(self) -> None:
-        """Clear all memory."""
-        self._entries.clear()
-        self._key_value_store.clear()
-        self._code_snapshots.clear()
-        self._error_fix_mappings.clear()
-        self._clarifications.clear()
-        self._execution_traces.clear()
-        self._message_queue.clear()
+        """Clear all memory and persist the empty state to disk.
+
+        Persisting after clear ensures that a process restart does not reload
+        stale data from a previous run's snapshot files.
+        """
+        disk_snapshot: dict | None = None
+        with self._sync_lock:
+            self._entries.clear()
+            self._key_value_store.clear()
+            self._code_snapshots.clear()
+            self._error_fix_mappings.clear()
+            self._clarifications.clear()
+            self._execution_traces.clear()
+            self._message_queue.clear()
+            # Advance the flush sequence so any in-flight store() flush is
+            # superseded by this clear snapshot.
+            self._flush_seq += 1
+            my_seq = self._flush_seq
+            if self._storage_path:
+                disk_snapshot = self._make_disk_snapshot()
+
+        if disk_snapshot is not None:
+            with self._flush_lock:
+                if my_seq > self._flush_seq_written:
+                    self._save_to_disk(disk_snapshot)
+                    self._flush_seq_written = my_seq
 
         logger.info("Cleared all memory")
 
 
-# Global memory instance — protected by _memory_lock against check-then-act
-# races when two threads call get_shared_memory() simultaneously.
+# Global memory instance and the lock that protects singleton creation.
+# Two threads that both see _memory as None would each construct a new
+# SharedResearchMemory, losing any state written by the first instance.
 _memory: SharedResearchMemory | None = None
 _memory_lock = threading.Lock()
 
 
 def get_shared_memory(project_id: str) -> SharedResearchMemory:
-    """Get (or create) the global shared memory singleton for *project_id*.
-
-    Thread-safe: a module-level Lock serialises the check-and-assign so that
-    two threads racing here cannot each create a separate instance and silently
-    discard one another's writes (BUG-001).
-    """
+    """Get global shared memory instance (thread-safe singleton)."""
     global _memory
     with _memory_lock:
         if _memory is None or _memory._project_id != project_id:

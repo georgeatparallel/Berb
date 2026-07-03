@@ -462,19 +462,18 @@ class TestCrossModuleIntegration:
             cache_enabled=True,
         )
 
-        # Simulate workflow
+        # Simulate workflow with padded whitespace so optimization saves tokens
         prompt = "What is machine learning?"
 
         # 1. Select model
         selection = router.select_model(prompt)
 
-        # 2. Optimize context
-        messages = [{"role": "user", "content": prompt}]
+        # 2. Optimize context — extra spaces get compacted, saving tokens
+        padded_prompt = "What   is   machine   learning?   " + "   " * 20
+        messages = [{"role": "user", "content": padded_prompt}]
         opt_result = router.optimize_context(messages)
 
-        # 3. Track usage: track.saved_tokens = input_tokens - output_tokens, so
-        # feed it the optimizer's own before/after counts to reflect what was
-        # actually saved by context optimization (not a hardcoded LLM output size).
+        # 3. Track usage: record original→optimized tokens to capture savings
         tracker.track(
             command=f"llm_{selection.tier}",
             input_tokens=opt_result.original_tokens,

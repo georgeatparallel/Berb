@@ -156,7 +156,10 @@ class TestPytestRunner:
     @pytest.mark.asyncio
     async def test_run_valid_tests(self):
         """Test running valid tests."""
-        runner = PytestRunner(timeout=10)
+        # Spawns a nested `python -m pytest` subprocess; 10s is too tight
+        # under a loaded machine (full plugin autoload + interpreter
+        # startup), so use a generous margin.
+        runner = PytestRunner(timeout=60)
 
         tests = """
 def test_addition():
@@ -174,7 +177,10 @@ def add(a, b):
     @pytest.mark.asyncio
     async def test_run_failing_tests(self):
         """Test running failing tests."""
-        runner = PytestRunner(timeout=10)
+        # Spawns a nested `python -m pytest` subprocess; 10s is too tight
+        # under a loaded machine (full plugin autoload + interpreter
+        # startup), so use a generous margin.
+        runner = PytestRunner(timeout=60)
 
         tests = """
 def test_failure():

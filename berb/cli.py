@@ -586,8 +586,8 @@ _PROVIDER_URLS = {
 _PROVIDER_MODELS = {
     "openai": ("gpt-4o", ["gpt-4.1", "gpt-4o-mini"]),
     "openrouter": (
-        "anthropic/claude-3.5-sonnet",
-        ["google/gemini-pro-1.5", "meta-llama/llama-3.1-70b-instruct"],
+        "openai/gpt-4o",
+        ["openai/gpt-4.1", "anthropic/claude-sonnet-4-5-20250929", "openai/gpt-4o-mini"],
     ),
     "deepseek": ("deepseek-chat", ["deepseek-reasoner"]),
     "minimax": ("MiniMax-M2.5", ["MiniMax-M2.5-highspeed"]),
@@ -617,17 +617,17 @@ def cmd_init(args: argparse.Namespace) -> int:
         )
         return 1
 
-    # Interactive provider prompt (TTY only, else default to openai)
-    choice = "1"
+    # Interactive provider prompt (TTY only, else default to openrouter)
+    choice = "2"
     if sys.stdin.isatty():
         print("Select LLM provider:")
         print("  1) openai       (requires OPENAI_API_KEY)")
-        print("  2) openrouter   (requires OPENROUTER_API_KEY)")
+        print("  2) openrouter   (requires OPENROUTER_API_KEY)  [default]")
         print("  3) deepseek     (requires DEEPSEEK_API_KEY)")
         print("  4) minimax      (requires MINIMAX_API_KEY)")
         print("  5) acp          (local AI agent — no API key needed)")
         try:
-            raw = input("Choice [1]: ").strip()
+            raw = input("Choice [2]: ").strip()
         except (EOFError, KeyboardInterrupt):
             raw = ""
         if raw in _PROVIDER_CHOICES:
@@ -648,7 +648,7 @@ def cmd_init(args: argparse.Namespace) -> int:
         content = content.replace('base_url: "https://openrouter.ai/api/v1"', 'base_url: ""')
         content = content.replace('api_key_env: "OPENROUTER_API_KEY"', 'api_key_env: ""')
     else:
-        base_url = _PROVIDER_URLS.get(provider, "https://api.openai.com/v1")
+        base_url = _PROVIDER_URLS.get(provider, "https://openrouter.ai/api/v1")
         content = content.replace(
             'base_url: "https://openrouter.ai/api/v1"', f'base_url: "{base_url}"'
         )
@@ -659,10 +659,19 @@ def cmd_init(args: argparse.Namespace) -> int:
 
     if provider in _PROVIDER_MODELS:
         primary, fallbacks = _PROVIDER_MODELS[provider]
-        content = content.replace('primary_model: "gpt-4o"', f'primary_model: "{primary}"')
+        content = content.replace('primary_model: "openai/gpt-4o"', f'primary_model: "{primary}"')
         # Replace fallback models block
-        old_fallbacks = '  fallback_models:\n    - "gpt-4.1"\n    - "gpt-4o-mini"'
-        new_fallbacks = "  fallback_models:\n" + "".join(f'    - "{m}"\n' for m in fallbacks)
+        # NOTE: must match configs/config.arc.example.yaml's actual fallback
+        # block, otherwise this replace() silently no-ops.
+        old_fallbacks = (
+            '  fallback_models:\n'
+            '    - "openai/gpt-4.1"\n'
+            '    - "anthropic/claude-sonnet-4-5-20250929"\n'
+            '    - "openai/gpt-4o-mini"'
+        )
+        new_fallbacks = "  fallback_models:\n" + "".join(
+            f'    - "{m}"\n' for m in fallbacks
+        )
         content = content.replace(old_fallbacks, new_fallbacks.rstrip("\n"))
 
     dest.write_text(content, encoding="utf-8")

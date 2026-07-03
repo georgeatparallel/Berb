@@ -206,15 +206,16 @@ class TokenBucketRateLimiter:
         self._token_tokens = float(tokens_per_minute)
         self._last_update = time.monotonic()
 
-        # Lock for thread safety
-        self._lock = None  # Lazy init
+        # BUG-004 FIX: Lock must be created eagerly here, not lazily on first
+        # use. Lazy init had a TOCTOU window — two threads could both see
+        # self._lock is None and each create a separate Lock, so one thread
+        # would end up operating without mutual exclusion.
+        import threading
+
+        self._lock = threading.Lock()
 
     def _get_lock(self):
-        """Get or create lock (lazy initialization)."""
-        if self._lock is None:
-            import threading
-
-            self._lock = threading.Lock()
+        """Return the lock created eagerly in __init__ (BUG-004)."""
         return self._lock
 
     def _refill(self) -> None:

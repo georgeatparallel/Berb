@@ -239,7 +239,7 @@ class TestNoncriticalStageSkip:
                 "api_key_env": "RC_TEST_KEY",
             },
         }
-        return RCConfig.from_dict(data, project_root=tmp_path, check_paths=False)
+        return RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
 
     def test_noncritical_stage_failure_is_skipped(self, tmp_path: Path) -> None:
         import asyncio

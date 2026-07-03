@@ -97,8 +97,25 @@ DANGEROUS_BUILTINS: frozenset[str] = frozenset(
         "exec",
         "compile",
         "__import__",
+        # Dynamic introspection — used to bypass string-pattern blocklists
+        "globals",
+        "locals",
+        "vars",
     }
 )
+
+# importlib paths that bypass the BANNED_MODULES import check.
+DANGEROUS_IMPORTLIB_CALLS: frozenset[str] = frozenset(
+    {
+        "importlib.import_module",
+        "importlib.util.spec_from_file_location",
+        "importlib.util.module_from_spec",
+        "importlib.machinery.SourceFileLoader",
+    }
+)
+
+# Builtins / names whose subscript or attribute access signals an escape attempt.
+_BUILTINS_NAMES: frozenset[str] = frozenset({"__builtins__", "builtins"})
 
 # Modules that should not be imported at all.
 BANNED_MODULES: frozenset[str] = frozenset(
@@ -232,6 +249,45 @@ class _SecurityVisitor(ast.NodeVisitor):
                     severity="error",
                     category="security",
                     message=f"Dangerous call: {name}()",
+                    line=node.lineno,
+                    col=node.col_offset,
+                )
+            )
+        elif name in DANGEROUS_IMPORTLIB_CALLS:
+            self.issues.append(
+                ValidationIssue(
+                    severity="error",
+                    category="security",
+                    message=f"importlib bypass attempt: {name}()",
+                    line=node.lineno,
+                    col=node.col_offset,
+                )
+            )
+        # Detect getattr(__builtins__, <anything>) — encoding bypass pattern
+        elif name == "getattr" and len(node.args) >= 2:
+            first_arg = node.args[0]
+            if isinstance(first_arg, ast.Name) and first_arg.id in _BUILTINS_NAMES:
+                self.issues.append(
+                    ValidationIssue(
+                        severity="error",
+                        category="security",
+                        message="getattr() on __builtins__ is not allowed (encoding bypass)",
+                        line=node.lineno,
+                        col=node.col_offset,
+                    )
+                )
+        self.generic_visit(node)
+
+    # -- subscript access on __builtins__ --
+
+    def visit_Subscript(self, node: ast.Subscript) -> None:
+        # Detect __builtins__['eval'] / builtins['exec'] patterns
+        if isinstance(node.value, ast.Name) and node.value.id in _BUILTINS_NAMES:
+            self.issues.append(
+                ValidationIssue(
+                    severity="error",
+                    category="security",
+                    message=f"Subscript access on {node.value.id} is not allowed (encoding bypass)",
                     line=node.lineno,
                     col=node.col_offset,
                 )

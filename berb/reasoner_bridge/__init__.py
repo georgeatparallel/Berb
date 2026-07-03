@@ -313,8 +313,8 @@ Output JSON: {{
 
             try:
                 data = json.loads(response.content)
-            except Exception as e:
-                logger.warning(f"Failed to parse JSON response: {e}")
+            except (json.JSONDecodeError, ValueError, KeyError) as e:
+                logger.warning("Failed to parse hypothesis response: %s", e)
                 data = {"hypothesis": response.content, "key_insights": [], "confidence": 0.5}
 
             return HypothesisCandidate(
@@ -378,8 +378,8 @@ Score each hypothesis."""
             try:
                 data = json.loads(response.content)
                 scores = data.get("scores", [])
-            except Exception as e:
-                logger.warning(f"Failed to parse scores JSON: {e}")
+            except (json.JSONDecodeError, ValueError, KeyError) as e:
+                logger.warning("Failed to parse scoring response: %s", e)
                 scores = []
 
             # Attach scores to candidates
@@ -489,8 +489,8 @@ Analyze experiment performance."""
 
             try:
                 data = json.loads(response.content)
-            except Exception as e:
-                logger.warning(f"Failed to parse stress test JSON: {e}")
+            except (json.JSONDecodeError, ValueError, KeyError) as e:
+                logger.warning("Failed to parse stress-test response: %s", e)
                 data = {}
 
             return StressTestResult(
@@ -563,11 +563,14 @@ Vet this paper for quality issues."""
 
             try:
                 data = json.loads(response.content)
-            except Exception as e:
-                logger.warning(f"Failed to parse context vetting JSON: {e}")
+            except (json.JSONDecodeError, ValueError, KeyError) as e:
+                logger.warning("Failed to parse vetting response: %s", e)
                 data = {}
 
-            data.setdefault("severity", "medium")
+            # Ensure severity is always present (contract requirement)
+            if "severity" not in data:
+                data["severity"] = "low"
+
             return data
 
         except Exception as e:

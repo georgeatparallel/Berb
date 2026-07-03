@@ -197,7 +197,7 @@ class TestEdgeCases:
         )
 
         assert context is not None
-        assert context.stage_id == "test"
+        assert hasattr(context, "stage_id") and context.stage_id == "test"
 
     def test_unicode_in_synthesis(self):
         """Test handling of unicode in synthesis."""

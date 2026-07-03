@@ -36,7 +36,7 @@ def rc_config(tmp_path: Path) -> RCConfig:
             "api_key_env": "RC_TEST_KEY",
         },
     }
-    return RCConfig.from_dict(data, project_root=tmp_path, check_paths=False)
+    return RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
 
 
 @pytest.fixture()

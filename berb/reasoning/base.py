@@ -318,7 +318,7 @@ class ReasoningMethod(ABC):
 
 def create_context(
     stage_id: str,
-    stage_name: str,
+    stage_name: str = "",
     input_data: dict[str, Any] | None = None,
     **metadata: Any,
 ) -> ReasoningContext:

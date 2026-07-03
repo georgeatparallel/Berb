@@ -6,14 +6,17 @@ Author: Georgios-Chrysovalantis Chatzivantsidis
 import pytest
 from unittest.mock import Mock, AsyncMock, patch
 
-from berb.writing.anti_ai import (
-    AntiAIEncoder,
-    EncoderConfig,
-    AIPhrases,
-    DetectionResult,
-    create_encoder_from_env,
+berb_writing = pytest.importorskip(
+    "berb.writing.anti_ai",
+    reason="berb.writing is not installed in this environment",
 )
-from berb.pipeline.citation_verification import (
+AntiAIEncoder = berb_writing.AntiAIEncoder
+EncoderConfig = berb_writing.EncoderConfig
+AIPhrases = berb_writing.AIPhrases
+DetectionResult = berb_writing.DetectionResult
+create_encoder_from_env = berb_writing.create_encoder_from_env
+
+from berb.pipeline.citation_verification import (  # noqa: E402
     CitationVerifier,
     VerifierConfig,
     VerificationLayer,

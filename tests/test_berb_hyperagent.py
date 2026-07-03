@@ -381,23 +381,27 @@ class TestMetaAgent:
         agent = MetaAgent(config=cfg)
         assert agent.state.variant_id == "v0"
 
-    def test_generate_error_handling_improvement_raises(self, tmp_path):
+    def test_generate_error_handling_improvement_falls_back_on_llm_failure(self, tmp_path):
+        # With a MagicMock config, the real LLM call inside _get_llm() /
+        # llm.chat() fails to produce compilable Python, so the method
+        # falls back to returning the original code unchanged rather than
+        # raising (see berb/hyperagent/meta_agent.py).
         cfg = MagicMock()
         agent = MetaAgent(config=cfg)
-        with pytest.raises(NotImplementedError):
-            agent._generate_error_handling_improvement("some code")
+        result = agent._generate_error_handling_improvement("some code")
+        assert result == "some code"
 
-    def test_generate_performance_optimization_raises(self, tmp_path):
+    def test_generate_performance_optimization_falls_back_on_llm_failure(self, tmp_path):
         cfg = MagicMock()
         agent = MetaAgent(config=cfg)
-        with pytest.raises(NotImplementedError):
-            agent._generate_performance_optimization("some code")
+        result = agent._generate_performance_optimization("some code")
+        assert result == "some code"
 
-    def test_generate_meta_improvement_raises(self, tmp_path):
+    def test_generate_meta_improvement_falls_back_on_llm_failure(self, tmp_path):
         cfg = MagicMock()
         agent = MetaAgent(config=cfg)
-        with pytest.raises(NotImplementedError):
-            agent._generate_meta_improvement()
+        result = agent._generate_meta_improvement()
+        assert result == agent.modification_code
 
 
 # ---------------------------------------------------------------------------

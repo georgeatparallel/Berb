@@ -546,7 +546,7 @@ class TestHypothesisGenNoveltyIntegration:
                 "api_key_env": "RC_TEST_KEY",
             },
         }
-        config = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False)
+        config = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
         adapters = AdapterBundle()
 
         with patch("berb.literature.search.search_papers_multi_query") as mock_search:
@@ -591,7 +591,7 @@ class TestHypothesisGenNoveltyIntegration:
                 "api_key_env": "RC_TEST_KEY",
             },
         }
-        config = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False)
+        config = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
         adapters = AdapterBundle()
 
         with patch(
