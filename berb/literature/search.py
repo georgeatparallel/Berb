@@ -239,6 +239,7 @@ def search_papers_multi_query(
     perplexity_min_failed_sources: int = 2,
     perplexity_domain_filter: list[str] | None = None,
     perplexity_recency_filter: str | None = None,
+    perplexity_api_key: str = "",
 ) -> list[Paper]:
     """Run multiple queries and return deduplicated union.
 
@@ -290,6 +291,7 @@ def search_papers_multi_query(
                 year_min=year_min,
                 domain_filter=perplexity_domain_filter,
                 recency_filter=perplexity_recency_filter,
+                api_key=perplexity_api_key,
             )
             if top_up:
                 deduped = _deduplicate(deduped + top_up)
@@ -305,6 +307,7 @@ def _perplexity_top_up(
     year_min: int,
     domain_filter: list[str] | None,
     recency_filter: str | None,
+    api_key: str = "",
 ) -> list[Paper]:
     """Run a single Perplexity search using the primary query as a top-up.
 
@@ -324,6 +327,7 @@ def _perplexity_top_up(
         year_min=year_min,
         domain_filter=domain_filter,
         recency_filter=recency_filter,
+        api_key=api_key,
     )
 
 

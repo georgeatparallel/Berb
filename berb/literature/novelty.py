@@ -328,6 +328,8 @@ def check_novelty(
             queries,
             limit_per_query=min(15, max_search_results),
             s2_api_key=s2_api_key,
+            perplexity_top_up=perplexity_check,
+            perplexity_api_key=perplexity_api_key,
         )
         total_papers_retrieved = len(found)
         for paper in found[:max_search_results]:

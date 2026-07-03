@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 from pathlib import Path
 from typing import Any
@@ -417,6 +418,7 @@ def _execute_literature_collect(
             perplexity_min_failed_sources=_pplx.literature_min_failed_sources,
             perplexity_domain_filter=list(_pplx.domain_filter) or None,
             perplexity_recency_filter=_pplx.recency_filter or None,
+            perplexity_api_key=os.environ.get(_pplx.api_key_env, ""),
         )
         if papers:
             real_search_succeeded = True

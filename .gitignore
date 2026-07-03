@@ -20,10 +20,11 @@ output/
 experiment_metaclaw/
 promotional/
 
-# Legacy experiment artifacts (pre-v5)
-exp/
-logs/
-writing/
+# Legacy experiment artifacts (pre-v5) — root-level only; berb/writing/ is
+# a real source package and must not be excluded.
+/exp/
+/logs/
+/writing/
 
 # Root-level config (local overrides, not committed)
 /config.yaml

@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Any
 
@@ -275,6 +276,7 @@ def _execute_hypothesis_gen(
             papers_already_seen=papers_seen,
             s2_api_key=getattr(config.llm, "s2_api_key", ""),
             perplexity_check=config.perplexity.enabled,
+            perplexity_api_key=os.environ.get(config.perplexity.api_key_env, ""),
         )
         (stage_dir / "novelty_report.json").write_text(
             json.dumps(novelty_report, indent=2, ensure_ascii=False),
