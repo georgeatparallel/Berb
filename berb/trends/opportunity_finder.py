@@ -67,19 +67,17 @@ class OpportunityFinder:
             parts = line.split("|")
             topic = parts[0].split(":", 1)[-1].strip() if parts else line
             why = parts[1].split(":", 1)[-1].strip() if len(parts) > 1 else ""
-            feasibility = (
-                parts[2].split(":", 1)[-1].strip().lower()
-                if len(parts) > 2
-                else "medium"
-            )
+            feasibility = parts[2].split(":", 1)[-1].strip().lower() if len(parts) > 2 else "medium"
 
             if topic:
-                opportunities.append({
-                    "topic": topic,
-                    "rationale": why,
-                    "feasibility": feasibility,
-                    "source": "llm",
-                })
+                opportunities.append(
+                    {
+                        "topic": topic,
+                        "rationale": why,
+                        "feasibility": feasibility,
+                        "source": "llm",
+                    }
+                )
 
         return opportunities[:5]
 
@@ -94,21 +92,23 @@ class OpportunityFinder:
         methods = trend_analysis.get("method_trends", [])
 
         # Combine trending keywords with methods for opportunity generation
-        for i, kw in enumerate(keywords[:3]):
-            for j, method in enumerate(methods[:2]):
+        for _i, kw in enumerate(keywords[:3]):
+            for _j, method in enumerate(methods[:2]):
                 topic = (
                     f"Applying {method['method']} to "
                     f"{kw['keyword']} in {domains[0] if domains else 'ML'}"
                 )
-                opportunities.append({
-                    "topic": topic,
-                    "rationale": (
-                        f"'{kw['keyword']}' is trending ({kw['count']} mentions) "
-                        f"and '{method['method']}' is a popular method"
-                    ),
-                    "feasibility": "medium",
-                    "source": "heuristic",
-                })
+                opportunities.append(
+                    {
+                        "topic": topic,
+                        "rationale": (
+                            f"'{kw['keyword']}' is trending ({kw['count']} mentions) "
+                            f"and '{method['method']}' is a popular method"
+                        ),
+                        "feasibility": "medium",
+                        "source": "heuristic",
+                    }
+                )
                 if len(opportunities) >= 5:
                     break
             if len(opportunities) >= 5:

@@ -32,8 +32,8 @@ from __future__ import annotations
 
 import logging
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Sequence
 
 import numpy as np
 from scipy.spatial.distance import cdist
@@ -159,8 +159,8 @@ def correlation_dimension(
 
     for r in radii:
         # Count pairs within radius r
-        C_r = np.sum(distances < r) / (n_points * (n_points - 1))
-        correlation_integrals.append(C_r)
+        c_r = np.sum(distances < r) / (n_points * (n_points - 1))
+        correlation_integrals.append(c_r)
 
     correlation_integrals = np.array(correlation_integrals)
 
@@ -175,20 +175,20 @@ def correlation_dimension(
         )
 
     log_r = np.log(radii[valid])
-    log_C = np.log(correlation_integrals[valid])
+    log_c = np.log(correlation_integrals[valid])
 
     # Linear fit
-    coeffs = np.polyfit(log_r, log_C, 1)
-    D2 = coeffs[0]
+    coeffs = np.polyfit(log_r, log_c, 1)
+    d2 = coeffs[0]
 
     # Goodness of fit
-    log_C_fit = np.polyval(coeffs, log_r)
-    r_squared = 1 - np.sum((log_C - log_C_fit) ** 2) / np.sum((log_C - np.mean(log_C)) ** 2)
+    log_c_fit = np.polyval(coeffs, log_r)
+    r_squared = 1 - np.sum((log_c - log_c_fit) ** 2) / np.sum((log_c - np.mean(log_c)) ** 2)
 
     confidence = max(0.0, min(1.0, r_squared))
 
     return EntropyResult(
-        value=float(D2),
+        value=float(d2),
         method="grassberger_procaccia",
         confidence=confidence,
         parameters={
@@ -231,7 +231,7 @@ def approximate_entropy(
     """
     n = len(time_series)
 
-    if n < 10 ** m:
+    if n < 10**m:
         return EntropyResult(
             value=np.nan,
             method="approximate_entropy",
@@ -250,8 +250,8 @@ def approximate_entropy(
             vectors[i] = x[i : i + m]
         return vectors
 
-    X_m = form_vectors(time_series, m)
-    X_m1 = form_vectors(time_series, m + 1)
+    x_m = form_vectors(time_series, m)
+    x_m1 = form_vectors(time_series, m + 1)
 
     # Count matches within tolerance r
     def count_matches(vectors: np.ndarray, r: float) -> float:
@@ -266,10 +266,10 @@ def approximate_entropy(
 
         return np.mean(matches / (n - 1))
 
-    C_m = count_matches(X_m, r)
-    C_m1 = count_matches(X_m1, r)
+    c_m = count_matches(x_m, r)
+    c_m1 = count_matches(x_m1, r)
 
-    if C_m <= 0 or C_m1 <= 0:
+    if c_m <= 0 or c_m1 <= 0:
         return EntropyResult(
             value=np.nan,
             method="approximate_entropy",
@@ -277,7 +277,7 @@ def approximate_entropy(
             warnings=["No matches found - try larger r or longer series"],
         )
 
-    apen = -np.log(C_m1 / C_m)
+    apen = -np.log(c_m1 / c_m)
 
     return EntropyResult(
         value=float(apen),
@@ -313,7 +313,7 @@ def sample_entropy(
     """
     n = len(time_series)
 
-    if n < 10 ** m:
+    if n < 10**m:
         return EntropyResult(
             value=np.nan,
             method="sample_entropy",
@@ -332,11 +332,11 @@ def sample_entropy(
             vectors[i] = x[i : i + m]
         return vectors
 
-    X_m = form_vectors(time_series, m)
-    X_m1 = form_vectors(time_series, m + 1)
+    x_m = form_vectors(time_series, m)
+    x_m1 = form_vectors(time_series, m + 1)
 
-    n_m = len(X_m)
-    n_m1 = len(X_m1)
+    len(x_m)
+    len(x_m1)
 
     # Count template matches (excluding self-matches)
     def count_matches_nodiag(vectors: np.ndarray, r: float) -> int:
@@ -351,10 +351,10 @@ def sample_entropy(
 
         return total_matches
 
-    A = count_matches_nodiag(X_m1, r)  # Matches of length m+1
-    B = count_matches_nodiag(X_m, r)   # Matches of length m
+    a = count_matches_nodiag(x_m1, r)  # Matches of length m+1
+    b = count_matches_nodiag(x_m, r)  # Matches of length m
 
-    if B == 0:
+    if b == 0:
         return EntropyResult(
             value=np.nan,
             method="sample_entropy",
@@ -362,7 +362,7 @@ def sample_entropy(
             warnings=["No matches found - try larger r"],
         )
 
-    sampen = -np.log(A / B)
+    sampen = -np.log(a / b)
 
     return EntropyResult(
         value=float(sampen),

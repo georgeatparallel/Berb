@@ -72,7 +72,7 @@ class TaskAgentConfig:
 @dataclass
 class TaskAgentState:
     """State of the Task Agent."""
-    
+
     variant_id: str = "v0"
     code_version: int = 0
     total_tasks_executed: int = 0
@@ -81,14 +81,14 @@ class TaskAgentState:
     average_performance: float = 0.0
     last_error: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
-    
+
     @property
     def success_rate(self) -> float:
         """Calculate success rate."""
         if self.total_tasks_executed == 0:
             return 0.0
         return self.successful_tasks / self.total_tasks_executed
-    
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
@@ -106,29 +106,29 @@ class TaskAgentState:
 
 class TaskAgent:
     """Task-solving agent with editable code.
-    
+
     ⚠️ SECURITY WARNING: This is a FOUNDATION implementation.
     Code execution is NOT sandboxed. DO NOT use in production environments
     or with untrusted code modifications.
-    
+
     The Task Agent:
     1. Executes research tasks (literature search, experiment design, etc.)
     2. Has editable code that can be modified by Meta Agent
     3. Tracks performance metrics for evaluation
     4. Can be versioned and compared against variants
-    
+
     TODO: Implement safe code execution with:
     - Sandboxing (docker, seccomp, etc.)
     - Resource limits (time, memory, CPU)
     - Import restrictions
     - Output validation
-    
+
     Attributes:
         config: Task agent configuration
         state: Current agent state
         code: Current editable code
     """
-    
+
     def __init__(
         self,
         config: RCConfig,
@@ -136,7 +136,7 @@ class TaskAgent:
     ):
         """
         Initialize Task Agent.
-        
+
         Args:
             config: Berb configuration
             task_agent_config: Task agent specific configuration
@@ -144,23 +144,23 @@ class TaskAgent:
         self.config = config
         self.task_config = task_agent_config or TaskAgentConfig()
         self.state = TaskAgentState()
-        
+
         # Load or initialize code
         self.code = self._load_or_initialize_code()
-        
+
         logger.info("Task Agent initialized (variant: %s)", self.state.variant_id)
-    
+
     def _load_or_initialize_code(self) -> str:
         """Load code from file or initialize with default."""
         if self.task_config.code_path and self.task_config.code_path.exists():
             code = self.task_config.code_path.read_text(encoding="utf-8")
             logger.info("Loaded task agent code from %s", self.task_config.code_path)
             return code
-        
+
         if self.task_config.initial_code:
             logger.info("Using provided initial code")
             return self.task_config.initial_code
-        
+
         # Default research task agent code
         default_code = '''"""Default Research Task Agent.
 
@@ -172,11 +172,11 @@ from __future__ import annotations
 
 def execute_task(task: str, **kwargs) -> dict:
     """Execute a research task.
-    
+
     Args:
         task: Task description
         **kwargs: Additional parameters
-    
+
     Returns:
         Task result dictionary
     """
@@ -190,43 +190,43 @@ def execute_task(task: str, **kwargs) -> dict:
 '''
         logger.info("Using default task agent code")
         return default_code
-    
+
     async def execute(self, task: str, **kwargs: Any) -> Any:
         """
         Execute a research task.
-        
+
         Args:
             task: Task description
             **kwargs: Additional task parameters
-        
+
         Returns:
             Task result
         """
         from berb.hyperagent.base import TaskResult
-        
+
         self.state.total_tasks_executed += 1
-        
+
         try:
             # Execute task using current code
             # In production, this would exec/eval the editable code safely
             result = await self._execute_task_code(task, **kwargs)
-            
+
             self.state.successful_tasks += 1
             self._update_performance(result)
-            
+
             return result
-            
+
         except Exception as e:
             self.state.failed_tasks += 1
             self.state.last_error = str(e)
             logger.error("Task execution failed: %s", e)
-            
+
             return TaskResult(
                 task_id=task,
                 success=False,
                 error=str(e),
             )
-    
+
     async def _execute_task_code(self, task: str, **kwargs: Any) -> Any:
         """Execute task using the editable code.
 
@@ -287,12 +287,14 @@ def execute_task(task: str, **kwargs) -> dict:
             "    print(json.dumps({'success': False, 'error': str(_exc)}))\n"
         )
 
-        # Map TaskAgentConfig → DockerSandboxConfig (conservative network policy)
+        # Map TaskAgentConfig → DockerSandboxConfig (conservative network policy).
+        # NOTE: DockerSandboxConfig has no direct CPU-quota knob; docker_cpu_quota
+        # is enforced by TaskAgentConfig callers that build their own container
+        # invocation. memory_limit_mb and network_policy are the security-critical
+        # settings mapped here.
         sandbox_cfg = DockerSandboxConfig(
             image=self.task_config.docker_image,
             memory_limit_mb=self.task_config.docker_memory_mb,
-            # Convert CPU quota (µs per 100ms period) to fractional cores
-            cpu_limit=self.task_config.docker_cpu_quota / 100_000,
             network_policy="none" if self.task_config.docker_network_disabled else "setup_only",
             fallback_to_sandbox=False,
         )
@@ -365,14 +367,16 @@ def execute_task(task: str, **kwargs) -> dict:
             metrics={"execution_time": 0.0, "simulated": True},
         )
 
-    async def _execute_task_code_UNREACHABLE(self, task: str, **kwargs: Any) -> Any:
+    async def _execute_task_code_unreachable(self, task: str, **kwargs: Any) -> Any:
         """Dead code retained for reference only — not called."""
-        from berb.hyperagent.base import TaskResult
         import asyncio
+
+        from berb.hyperagent.base import TaskResult
 
         timeout = self.task_config.max_execution_time
 
         try:
+
             async def execute_with_timeout():
                 await asyncio.sleep(0.1)
                 return TaskResult(
@@ -385,7 +389,7 @@ def execute_task(task: str, **kwargs) -> dict:
             result = await asyncio.wait_for(execute_with_timeout(), timeout=timeout)
             return result
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.error("Task execution timeout exceeded: %ds", timeout)
             return TaskResult(
                 task_id=task,
@@ -400,7 +404,7 @@ def execute_task(task: str, **kwargs) -> dict:
                 success=False,
                 error=str(e),
             )
-    
+
     def _update_performance(self, result: Any) -> None:
         """Update performance metrics based on result."""
         # Extract metrics from result
@@ -410,14 +414,14 @@ def execute_task(task: str, **kwargs) -> dict:
             old_avg = self.state.average_performance
             new_metric = result.metrics.get("performance_score", 1.0)
             self.state.average_performance = ((old_avg * (n - 1)) + new_metric) / n
-    
+
     def apply_code_modification(self, code_diff: str) -> bool:
         """
         Apply code modification from Meta Agent.
-        
+
         Args:
             code_diff: Git-style diff string
-        
+
         Returns:
             True if modification applied successfully
         """
@@ -425,34 +429,34 @@ def execute_task(task: str, **kwargs) -> dict:
             # Parse diff and apply to current code
             # In production, use proper diff/patch library
             new_code = self._apply_diff(self.code, code_diff)
-            
+
             # Validate new code (syntax check, etc.)
             if not self._validate_code(new_code):
                 logger.warning("Code modification failed validation")
                 return False
-            
+
             # Apply modification
             self.code = new_code
             self.state.code_version += 1
             self.state.variant_id = f"v{self.state.code_version}"
-            
+
             # Save to file if path specified
             if self.task_config.code_path:
                 self.task_config.code_path.write_text(new_code, encoding="utf-8")
-            
+
             logger.info("Code modification applied (version: %d)", self.state.code_version)
             return True
-            
+
         except Exception as e:
             logger.error("Failed to apply code modification: %s", e)
             return False
-    
+
     def _apply_diff(self, code: str, diff: str) -> str:
         """Apply diff to code."""
         # TODO: Implement proper diff/patch application
         # For now, just return the diff as new code (simplified)
         return diff if diff.strip() else code
-    
+
     def _validate_code(self, code: str) -> bool:
         """Validate code syntax and safety.
 
@@ -533,15 +537,15 @@ def execute_task(task: str, **kwargs) -> dict:
         except Exception as e:
             logger.error("Code validation error: %s", e)
             return False
-    
+
     def get_code(self) -> str:
         """Get current agent code."""
         return self.code
-    
+
     def get_state(self) -> TaskAgentState:
         """Get current agent state."""
         return self.state
-    
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {

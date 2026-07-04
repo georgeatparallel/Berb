@@ -13,7 +13,22 @@ import pytest
 from berb.adapters import AdapterBundle
 from berb.config import RCConfig
 from berb.pipeline import executor as rc_executor
+from berb.pipeline.registry import get_registration
 from berb.pipeline.stages import Stage, StageStatus
+
+
+def _patch_stage_executor(
+    monkeypatch: pytest.MonkeyPatch, stage: Stage, fn: object
+) -> None:
+    """Temporarily replace a stage's registered executor function.
+
+    execute_stage() looks up stage implementations via the plugin
+    registry (berb.pipeline.registry), not a module-level dict — patch
+    the StageRegistration's .fn in place so monkeypatch auto-restores it.
+    """
+    registration = get_registration(stage)
+    assert registration is not None, f"No registration found for {stage.name}"
+    monkeypatch.setattr(registration, "fn", fn)
 
 
 class FakeLLMClient:
@@ -86,13 +101,15 @@ def _write_prior_artifact(run_dir: Path, stage_num: int, filename: str, content:
 
 
 def test_executor_map_has_23_entries() -> None:
-    executor_map = getattr(rc_executor, "EXECUTOR_MAP", rc_executor._STAGE_EXECUTORS)
-    assert len(executor_map) == 23
+    from berb.pipeline.registry import get_all_registrations
+
+    assert len(get_all_registrations()) == 23
 
 
 def test_every_stage_member_has_matching_executor() -> None:
-    executor_map = getattr(rc_executor, "EXECUTOR_MAP", rc_executor._STAGE_EXECUTORS)
-    assert set(executor_map.keys()) == set(Stage)
+    from berb.pipeline.registry import get_all_registrations
+
+    assert set(get_all_registrations().keys()) == set(Stage)
 
 
 def test_stage_result_dataclass_fields() -> None:
@@ -322,7 +339,7 @@ def test_execute_stage_contract_validation_missing_output_file_marks_failed(
             stage=Stage.TOPIC_INIT, status=StageStatus.DONE, artifacts=("goal.md",)
         )
 
-    monkeypatch.setitem(rc_executor._STAGE_EXECUTORS, Stage.TOPIC_INIT, bad_executor)
+    _patch_stage_executor(monkeypatch, Stage.TOPIC_INIT, bad_executor)
     result = rc_executor.execute_stage(
         Stage.TOPIC_INIT,
         run_dir=run_dir,
@@ -358,7 +375,7 @@ def test_execute_stage_contract_validation_missing_output_directory_marks_failed
             artifacts=("cards/",),
         )
 
-    monkeypatch.setitem(rc_executor._STAGE_EXECUTORS, Stage.KNOWLEDGE_EXTRACT, bad_executor)
+    _patch_stage_executor(monkeypatch, Stage.KNOWLEDGE_EXTRACT, bad_executor)
     result = rc_executor.execute_stage(
         Stage.KNOWLEDGE_EXTRACT,
         run_dir=run_dir,
@@ -413,7 +430,7 @@ def test_execute_stage_gate_behavior_auto_approve_true_keeps_done(
             artifacts=("shortlist.jsonl",),
         )
 
-    monkeypatch.setitem(rc_executor._STAGE_EXECUTORS, Stage.LITERATURE_SCREEN, good_executor)
+    _patch_stage_executor(monkeypatch, Stage.LITERATURE_SCREEN, good_executor)
     result = rc_executor.execute_stage(
         Stage.LITERATURE_SCREEN,
         run_dir=run_dir,
@@ -452,7 +469,7 @@ def test_execute_stage_gate_behavior_auto_approve_false_blocks(
             artifacts=("shortlist.jsonl",),
         )
 
-    monkeypatch.setitem(rc_executor._STAGE_EXECUTORS, Stage.LITERATURE_SCREEN, good_executor)
+    _patch_stage_executor(monkeypatch, Stage.LITERATURE_SCREEN, good_executor)
     result = rc_executor.execute_stage(
         Stage.LITERATURE_SCREEN,
         run_dir=run_dir,
@@ -508,7 +525,7 @@ def test_execute_stage_executor_exception_returns_failed(
         _ = llm
         raise RuntimeError("stage exploded")
 
-    monkeypatch.setitem(rc_executor._STAGE_EXECUTORS, Stage.TOPIC_INIT, raising_executor)
+    _patch_stage_executor(monkeypatch, Stage.TOPIC_INIT, raising_executor)
     result = rc_executor.execute_stage(
         Stage.TOPIC_INIT,
         run_dir=run_dir,
@@ -538,26 +555,39 @@ def test_execute_stage_executor_exception_returns_failed(
     ],
 )
 def test_stage_executor_mapping_values_are_callable(stage: Stage) -> None:
-    assert callable(rc_executor._STAGE_EXECUTORS[stage])
+    from berb.pipeline.registry import get_registration
+
+    registration = get_registration(stage)
+    assert registration is not None
+    assert callable(registration.fn)
 
 
 class TestStageHealth:
     def test_stage_health_json_written(self, tmp_path: Path) -> None:
+        from unittest.mock import MagicMock, patch
+
         from berb.pipeline.executor import execute_stage
         from berb.pipeline.stages import Stage
 
         config = RCConfig.load(
-            Path(__file__).parent.parent / "config.berb.example.yaml",
+            Path(__file__).parent.parent / "configs" / "config.arc.example.yaml",
             check_paths=False,
         )
-        result = execute_stage(
-            Stage.TOPIC_INIT,
-            run_dir=tmp_path,
-            run_id="test-health",
-            config=config,
-            adapters=AdapterBundle(),
-            auto_approve_gates=True,
-        )
+        with patch("berb.pipeline.executor.LLMClient") as mock_llm_cls:
+            mock_client = MagicMock()
+            mock_client.chat.return_value = MagicMock(
+                content='{"topic": "test", "research_questions": ["q1"]}'
+            )
+            mock_llm_cls.from_rc_config.return_value = mock_client
+
+            result = execute_stage(
+                Stage.TOPIC_INIT,
+                run_dir=tmp_path,
+                run_id="test-health",
+                config=config,
+                adapters=AdapterBundle(),
+                auto_approve_gates=True,
+            )
         health_path = tmp_path / "stage-01" / "stage_health.json"
         assert result is not None
         assert health_path.exists()
@@ -569,7 +599,7 @@ class TestStageHealth:
         from berb.pipeline.stages import Stage
 
         config = RCConfig.load(
-            Path(__file__).parent.parent / "config.berb.example.yaml",
+            Path(__file__).parent.parent / "configs" / "config.arc.example.yaml",
             check_paths=False,
         )
 
@@ -606,7 +636,7 @@ class TestStageHealth:
         from berb.pipeline.stages import Stage
 
         config = RCConfig.load(
-            Path(__file__).parent.parent / "config.berb.example.yaml",
+            Path(__file__).parent.parent / "configs" / "config.arc.example.yaml",
             check_paths=False,
         )
 
@@ -1242,8 +1272,21 @@ class TestSynthesizePerspectives:
 
 
 class TestHypothesisGenDebate:
+    @pytest.fixture(autouse=True)
+    def _no_live_novelty_search(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # _execute_hypothesis_gen runs a (non-blocking) novelty check that
+        # hits real academic-search APIs unless mocked — without this every
+        # test in this class hangs retrying live network calls in a
+        # sandboxed environment.
+        monkeypatch.setattr(
+            "berb.literature.search.search_papers_multi_query", lambda *a, **kw: []
+        )
+
     def test_hypothesis_gen_with_llm_creates_perspectives(
-        self, tmp_path: Path, rc_config: RCConfig, adapters: AdapterBundle
+        self,
+        tmp_path: Path,
+        rc_config: RCConfig,
+        adapters: AdapterBundle,
     ) -> None:
         run_dir = tmp_path / "run"
         run_dir.mkdir()
@@ -1258,9 +1301,10 @@ class TestHypothesisGenDebate:
         assert "hypotheses.md" in result.artifacts
         perspectives_dir = stage_dir / "perspectives"
         assert perspectives_dir.exists()
-        # Should have 3 perspective files (innovator, pragmatist, contrarian)
+        # Should have 4 perspective files (constructive, destructive, systemic, minimalist)
+        # from MultiPerspectiveMethod
         perspective_files = list(perspectives_dir.glob("*.md"))
-        assert len(perspective_files) == 3
+        assert len(perspective_files) == 4
 
     def test_hypothesis_gen_without_llm_no_perspectives(
         self, tmp_path: Path, rc_config: RCConfig, adapters: AdapterBundle
@@ -1280,6 +1324,20 @@ class TestHypothesisGenDebate:
 
 
 class TestResultAnalysisDebate:
+    @pytest.fixture(autouse=True)
+    def _no_live_figure_generation(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # _execute_result_analysis may run FigureOrchestrator, which calls
+        # Google GenAI (nano banana) for real unless mocked. The caller
+        # already wraps this in try/except and falls back gracefully, so
+        # raising is simpler and safer than faking a FigurePlan object.
+        def _raise(*a: object, **kw: object) -> None:
+            raise RuntimeError("figure generation disabled in tests")
+
+        monkeypatch.setattr(
+            "berb.agents.figure_agent.orchestrator.FigureOrchestrator.orchestrate",
+            _raise,
+        )
+
     def test_result_analysis_with_llm_creates_perspectives(
         self, tmp_path: Path, rc_config: RCConfig, adapters: AdapterBundle
     ) -> None:
@@ -1786,9 +1844,20 @@ class TestComputeBudgetBlock:
         assert "time_budget_sec" in block or "Compute Budget" in block
 
     def test_compute_budget_injected_into_code_generation(
-        self, tmp_path: Path, run_dir: Path, adapters: AdapterBundle
+        self,
+        tmp_path: Path,
+        run_dir: Path,
+        adapters: AdapterBundle,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         import sys
+
+        # For non-ML-classified topics, code generation runs a GitHub code
+        # search unless mocked — avoid hitting live network/rate limits.
+        monkeypatch.setattr(
+            "berb.agents.code_searcher.CodeSearchAgent.search",
+            lambda self, **kw: None,
+        )
 
         data = {
             "project": {"name": "rc-test", "mode": "docs-first"},

@@ -4,13 +4,13 @@
 """
 
 from berb.i18n.academic_languages import (
+    LANGUAGE_PROFILES,
     AcademicLanguageProfile,
     MultilingualWritingAssistant,
     WritingDirection,
-    LANGUAGE_PROFILES,
+    detect_language_from_text,
     get_language_profile,
     list_supported_languages,
-    detect_language_from_text,
 )
 
 __all__ = [

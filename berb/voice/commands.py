@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 
-class VoiceCommand(str, Enum):
+class VoiceCommand(StrEnum):
     """Recognized voice commands."""
 
     START = "start"

@@ -11,16 +11,16 @@ from __future__ import annotations
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from enum import Enum
+from datetime import UTC, datetime
+from enum import StrEnum
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-class MethodType(str, Enum):
+class MethodType(StrEnum):
     """Type of reasoning method."""
-    
+
     MULTI_PERSPECTIVE = "multi_perspective"
     PRE_MORTEM = "pre_mortem"
     BAYESIAN = "bayesian"
@@ -35,7 +35,7 @@ class MethodType(str, Enum):
 @dataclass
 class ReasoningContext:
     """Context for reasoning execution.
-    
+
     Attributes:
         stage_id: ID of the pipeline stage (e.g., "HYPOTHESIS_GEN")
         stage_name: Human-readable stage name
@@ -43,30 +43,30 @@ class ReasoningContext:
         metadata: Additional metadata
         created_at: Timestamp when context was created
     """
-    
+
     stage_id: str
     """ID of the pipeline stage (e.g., 'HYPOTHESIS_GEN', 'EXPERIMENT_DESIGN')"""
-    
+
     stage_name: str
     """Human-readable stage name"""
-    
+
     input_data: dict[str, Any] = field(default_factory=dict)
     """Input data for reasoning"""
-    
+
     metadata: dict[str, Any] = field(default_factory=dict)
     """Additional metadata (topic, domain, constraints, etc.)"""
-    
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     """Timestamp when context was created (UTC)"""
-    
+
     def get(self, key: str, default: Any = None) -> Any:
         """Get value from input_data."""
         return self.input_data.get(key, default)
-    
+
     def set(self, key: str, value: Any) -> None:
         """Set value in input_data."""
         self.input_data[key] = value
-    
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
@@ -76,7 +76,7 @@ class ReasoningContext:
             "metadata": self.metadata,
             "created_at": self.created_at.isoformat(),
         }
-    
+
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ReasoningContext:
         """Create from dictionary.
@@ -110,7 +110,7 @@ class ReasoningContext:
             If value is invalid, returns current UTC time with warning.
         """
         if value is None:
-            return datetime.now(timezone.utc)
+            return datetime.now(UTC)
 
         # BUG-R003 FIX: Try ISO format first (preferred)
         try:
@@ -134,22 +134,20 @@ class ReasoningContext:
                     f"Invalid datetime format '{value}': unable to parse. "
                     f"Using current time as fallback."
                 )
-                return datetime.now(timezone.utc)
+                return datetime.now(UTC)
 
         # BUG-R003 FIX: Ensure timezone-aware (assume UTC if naive)
         if dt.tzinfo is None:
-            logger.debug(
-                f"Naive datetime detected '{value}', assuming UTC"
-            )
-            dt = dt.replace(tzinfo=timezone.utc)
+            logger.debug(f"Naive datetime detected '{value}', assuming UTC")
+            dt = dt.replace(tzinfo=UTC)
 
-        return dt.astimezone(timezone.utc)
+        return dt.astimezone(UTC)
 
 
 @dataclass
 class ReasoningResult:
     """Result from reasoning method execution.
-    
+
     Attributes:
         method_type: Type of reasoning method used
         success: Whether execution was successful
@@ -159,28 +157,28 @@ class ReasoningResult:
         error: Error message if failed
         duration_sec: Execution duration in seconds
     """
-    
+
     method_type: MethodType
     """Type of reasoning method used"""
-    
+
     success: bool = True
     """Whether execution was successful"""
-    
+
     output: dict[str, Any] = field(default_factory=dict)
     """Output data from reasoning"""
-    
+
     confidence: float = 1.0
     """Confidence score (0-1)"""
-    
+
     metadata: dict[str, Any] = field(default_factory=dict)
     """Additional metadata (model_used, tokens, cost, etc.)"""
-    
+
     error: str | None = None
     """Error message if failed"""
-    
+
     duration_sec: float = 0.0
     """Execution duration in seconds"""
-    
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
@@ -192,7 +190,7 @@ class ReasoningResult:
             "error": self.error,
             "duration_sec": self.duration_sec,
         }
-    
+
     @classmethod
     def success_result(
         cls,
@@ -209,7 +207,7 @@ class ReasoningResult:
             confidence=confidence,
             metadata=metadata,
         )
-    
+
     @classmethod
     def error_result(
         cls,
@@ -228,18 +226,18 @@ class ReasoningResult:
 
 class ReasoningMethod(ABC):
     """Abstract base class for all reasoning methods.
-    
+
     All reasoning methods must implement this interface.
-    
+
     Attributes:
         method_type: Type of reasoning method
         name: Human-readable name
         description: Description of the method
     """
-    
+
     method_type: MethodType
     """Type of reasoning method (class attribute)"""
-    
+
     def __init__(
         self,
         name: str | None = None,
@@ -247,7 +245,7 @@ class ReasoningMethod(ABC):
     ):
         """
         Initialize reasoning method.
-        
+
         Args:
             name: Human-readable name (default: from class)
             description: Description of the method
@@ -255,59 +253,59 @@ class ReasoningMethod(ABC):
         self.name = name or self.__class__.__name__
         self.description = description or self.__doc__ or ""
         self._logger = logging.getLogger(self.__class__.__name__)
-    
+
     @abstractmethod
     async def execute(self, context: ReasoningContext) -> ReasoningResult:
         """
         Execute reasoning method.
-        
+
         Args:
             context: Reasoning context with input data
-        
+
         Returns:
             ReasoningResult with output and metadata
-        
+
         Raises:
             Exception: If reasoning fails
         """
         pass
-    
+
     async def __aenter__(self) -> ReasoningMethod:
         """Async context manager entry."""
         return self
-    
+
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-        """Async context manager exit."""
+        """Async context manager exit. Override in subclasses that hold resources."""
         pass
-    
+
     def validate_context(self, context: ReasoningContext) -> bool:
         """
         Validate reasoning context.
-        
+
         Override in subclasses to add specific validation.
-        
+
         Args:
             context: Context to validate
-        
+
         Returns:
             True if valid, False otherwise
         """
         if not context.stage_id:
             self._logger.warning("Context missing stage_id")
             return False
-        
+
         if not context.input_data:
             self._logger.warning("Context missing input_data")
             return False
-        
+
         return True
-    
+
     def get_capabilities(self) -> dict[str, Any]:
         """
         Get method capabilities.
-        
+
         Override in subclasses to provide specific capabilities.
-        
+
         Returns:
             Dictionary of capabilities
         """
@@ -326,16 +324,16 @@ def create_context(
 ) -> ReasoningContext:
     """
     Create reasoning context helper function.
-    
+
     Args:
         stage_id: ID of the pipeline stage
         stage_name: Human-readable stage name
         input_data: Input data for reasoning
         **metadata: Additional metadata
-    
+
     Returns:
         ReasoningContext instance
-    
+
     Examples:
         >>> ctx = create_context(
         ...     stage_id="HYPOTHESIS_GEN",

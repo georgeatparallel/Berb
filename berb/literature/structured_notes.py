@@ -13,17 +13,15 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from berb.reasoning.multi_perspective import MultiPerspectiveMethod, PerspectiveType
-from berb.reasoning.base import ReasoningContext
 from berb.llm.client import LLMProvider
-from berb.literature.citation_classifier import CitationClassification, CitationIntent
+from berb.reasoning.base import ReasoningContext
+from berb.reasoning.multi_perspective import MultiPerspectiveMethod
 
 logger = logging.getLogger(__name__)
 
@@ -100,8 +98,8 @@ class PaperReadingNote(BaseModel):
     def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
         if not self.created_at:
-            self.created_at = datetime.now(timezone.utc).isoformat()
-        self.updated_at = datetime.now(timezone.utc).isoformat()
+            self.created_at = datetime.now(UTC).isoformat()
+        self.updated_at = datetime.now(UTC).isoformat()
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
@@ -136,35 +134,41 @@ class PaperReadingNote(BaseModel):
         for i, finding in enumerate(self.key_findings, 1):
             lines.append(f"{i}. {finding}")
 
-        lines.extend([
-            "",
-            "## Limitations",
-            "",
-        ])
+        lines.extend(
+            [
+                "",
+                "## Limitations",
+                "",
+            ]
+        )
 
         for i, limit in enumerate(self.limitations, 1):
             lines.append(f"{i}. {limit}")
 
-        lines.extend([
-            "",
-            "## Extracted Claims",
-            "",
-        ])
+        lines.extend(
+            [
+                "",
+                "## Extracted Claims",
+                "",
+            ]
+        )
 
         for claim in self.claims[:5]:
             lines.append(f"- {claim.claim_text} (confidence: {claim.confidence:.2f})")
 
-        lines.extend([
-            "",
-            "## Relevance",
-            "",
-            self.relevance_to_topic,
-            "",
-            f"**Quality:** {self.quality_assessment:.1f}/10",
-            f"**Contribution Type:** {self.contribution_type}",
-            "",
-            f"*Generated: {self.created_at}*",
-        ])
+        lines.extend(
+            [
+                "",
+                "## Relevance",
+                "",
+                self.relevance_to_topic,
+                "",
+                f"**Quality:** {self.quality_assessment:.1f}/10",
+                f"**Contribution Type:** {self.contribution_type}",
+                "",
+                f"*Generated: {self.created_at}*",
+            ]
+        )
 
         return "\n".join(lines)
 
@@ -190,7 +194,7 @@ class ReadingNotesCollection(BaseModel):
         super().__init__(**kwargs)
         self.total_notes = len(self.notes)
         if not self.created_at:
-            self.created_at = datetime.now(timezone.utc).isoformat()
+            self.created_at = datetime.now(UTC).isoformat()
 
     def add_note(self, note: PaperReadingNote) -> None:
         """Add a note to collection.
@@ -200,7 +204,7 @@ class ReadingNotesCollection(BaseModel):
         """
         self.notes[note.paper_id] = note
         self.total_notes = len(self.notes)
-        self.updated_at = datetime.now(timezone.utc).isoformat()
+        self.updated_at = datetime.now(UTC).isoformat()
 
     def get_notes_by_contribution(
         self,
@@ -214,10 +218,7 @@ class ReadingNotesCollection(BaseModel):
         Returns:
             List of matching notes
         """
-        return [
-            n for n in self.notes.values()
-            if n.contribution_type == contribution_type
-        ]
+        return [n for n in self.notes.values() if n.contribution_type == contribution_type]
 
     def get_high_quality_notes(
         self,
@@ -231,10 +232,7 @@ class ReadingNotesCollection(BaseModel):
         Returns:
             List of high-quality notes
         """
-        return [
-            n for n in self.notes.values()
-            if n.quality_assessment >= min_quality
-        ]
+        return [n for n in self.notes.values() if n.quality_assessment >= min_quality]
 
     def export_to_json(self, path: Path | str) -> None:
         """Export collection to JSON file.
@@ -411,14 +409,10 @@ class StructuredNotesGenerator:
 
         # Extract information using multi-perspective reasoning
         if self.multi_perspective_method and paper_text:
-            extraction = await self._multi_perspective_extraction(
-                paper_text, topic
-            )
+            extraction = await self._multi_perspective_extraction(paper_text, topic)
         else:
             # Fallback to heuristic extraction
-            extraction = await self._heuristic_extraction(
-                paper_metadata, paper_text, topic
-            )
+            extraction = await self._heuristic_extraction(paper_metadata, paper_text, topic)
 
         # Build note
         note = PaperReadingNote(
@@ -503,31 +497,21 @@ class StructuredNotesGenerator:
 
         # Run each perspective
         for perspective_name, perspective_def in self.NOTE_PERSPECTIVES.items():
-            problem = self._build_perspective_problem(
-                paper_text, topic, perspective_def
-            )
+            problem = self._build_perspective_problem(paper_text, topic, perspective_def)
 
             try:
                 result = await self._run_perspective(problem, perspective_name)
 
                 # Extract relevant content based on perspective
                 if perspective_name == "methodologist":
-                    extraction["methodology"] = self._extract_section(
-                        result.content, "methodology"
-                    )
+                    extraction["methodology"] = self._extract_section(result.content, "methodology")
                 elif perspective_name == "critic":
-                    extraction["limitations"] = self._extract_list(
-                        result.content, "limitations"
-                    )
+                    extraction["limitations"] = self._extract_list(result.content, "limitations")
                 elif perspective_name == "synthesizer":
-                    extraction["key_findings"] = self._extract_list(
-                        result.content, "findings"
-                    )
+                    extraction["key_findings"] = self._extract_list(result.content, "findings")
                     extraction["claims"] = self._extract_claims(result.content)
                 elif perspective_name == "connector":
-                    extraction["relevance"] = self._extract_section(
-                        result.content, "relevance"
-                    )
+                    extraction["relevance"] = self._extract_section(result.content, "relevance")
 
             except Exception as e:
                 logger.warning(f"Perspective {perspective_name} failed: {e}")
@@ -552,8 +536,8 @@ class StructuredNotesGenerator:
         """
         return f"""Paper Analysis Task
 
-**Role:** {perspective_def['role']}
-**Focus:** {perspective_def['focus']}
+**Role:** {perspective_def["role"]}
+**Focus:** {perspective_def["focus"]}
 
 **Paper Text:**
 {paper_text[:8000]}  # Truncate for context limits
@@ -561,7 +545,7 @@ class StructuredNotesGenerator:
 **Research Topic:** {topic}
 
 **Your Questions:**
-{chr(10).join(f"- {q}" for q in perspective_def['questions'])}
+{chr(10).join(f"- {q}" for q in perspective_def["questions"])}
 
 Please provide detailed answers to each question based on the paper content.
 Organize your response with clear sections for each question."""
@@ -581,7 +565,7 @@ Organize your response with clear sections for each question."""
             Perspective result
         """
         if not self.multi_perspective_method:
-            return type('Result', (), {"content": ""})()
+            return type("Result", (), {"content": ""})()
 
         context = ReasoningContext(
             stage_id="NOTE_GENERATION",
@@ -659,8 +643,13 @@ Organize your response with clear sections for each question."""
 
         # Look for claim patterns
         claim_indicators = [
-            "we found", "we show", "we demonstrate", "our results",
-            "this paper", "our approach", "experiments show",
+            "we found",
+            "we show",
+            "we demonstrate",
+            "our results",
+            "this paper",
+            "our approach",
+            "experiments show",
         ]
 
         sentences = content.split(".")
@@ -786,7 +775,13 @@ Organize your response with clear sections for each question."""
         # Venue prestige
         venue = paper_metadata.get("venue", "").lower()
         prestigious_venues = [
-            "nature", "science", "pnas", "neurips", "icml", "acl", "cvpr",
+            "nature",
+            "science",
+            "pnas",
+            "neurips",
+            "icml",
+            "acl",
+            "cvpr",
         ]
         for v in prestigious_venues:
             if v in venue:
@@ -861,11 +856,11 @@ Organize your response with clear sections for each question."""
             return
 
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 data = json.load(f)
 
             notes_dict = data.get("notes", {})
-            for paper_id, note_data in notes_dict.items():
+            for _paper_id, note_data in notes_dict.items():
                 note = PaperReadingNote(**note_data)
                 self.collection.add_note(note)
 

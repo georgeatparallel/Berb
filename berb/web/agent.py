@@ -26,7 +26,7 @@ from typing import Any
 from berb.web.crawler import CrawlResult, WebCrawler
 from berb.web.pdf_extractor import PDFContent, PDFExtractor
 from berb.web.scholar import GoogleScholarClient, ScholarPaper
-from berb.web.search import SearchResult, WebSearchClient, WebSearchResponse
+from berb.web.search import SearchResult, WebSearchClient
 
 logger = logging.getLogger(__name__)
 
@@ -78,13 +78,12 @@ class WebSearchAgentResult:
         # Google Scholar papers
         if self.scholar_papers:
             parts.append("## Google Scholar Papers")
-            for i, p in enumerate(self.scholar_papers[:10], 1):
+            for _i, p in enumerate(self.scholar_papers[:10], 1):
                 authors = ", ".join(p.authors[:3])
                 if len(p.authors) > 3:
                     authors += " et al."
                 parts.append(
-                    f"- **{p.title}** ({authors}, {p.year}) "
-                    f"[{p.citation_count} citations]"
+                    f"- **{p.title}** ({authors}, {p.year}) [{p.citation_count} citations]"
                 )
                 if p.abstract:
                     parts.append(f"  {p.abstract[:200]}...")
@@ -239,14 +238,10 @@ class WebSearchAgent:
     # Pipeline steps
     # ------------------------------------------------------------------
 
-    def _run_web_search(
-        self, result: WebSearchAgentResult, queries: list[str]
-    ) -> None:
+    def _run_web_search(self, result: WebSearchAgentResult, queries: list[str]) -> None:
         """Run web search across all queries."""
         try:
-            responses = self.web_client.search_multi(
-                queries, max_results=self.max_web_results
-            )
+            responses = self.web_client.search_multi(queries, max_results=self.max_web_results)
             for resp in responses:
                 result.web_results.extend(resp.results)
                 if resp.answer and not result.search_answer:
@@ -254,21 +249,15 @@ class WebSearchAgent:
         except Exception as exc:  # noqa: BLE001
             logger.warning("Web search failed: %s", exc)
 
-    def _run_scholar_search(
-        self, result: WebSearchAgentResult, topic: str
-    ) -> None:
+    def _run_scholar_search(self, result: WebSearchAgentResult, topic: str) -> None:
         """Run Google Scholar search."""
         try:
-            papers = self.scholar_client.search(
-                topic, limit=self.max_scholar_results
-            )
+            papers = self.scholar_client.search(topic, limit=self.max_scholar_results)
             result.scholar_papers.extend(papers)
         except Exception as exc:  # noqa: BLE001
             logger.warning("Scholar search failed: %s", exc)
 
-    def _run_crawling(
-        self, result: WebSearchAgentResult, urls: list[str]
-    ) -> None:
+    def _run_crawling(self, result: WebSearchAgentResult, urls: list[str]) -> None:
         """Crawl URLs for full content."""
         try:
             loop = None
@@ -284,18 +273,12 @@ class WebSearchAgent:
                     if cr.has_content:
                         result.crawled_pages.append(cr)
             else:
-                crawl_results = asyncio.run(
-                    self.crawler.crawl_many(urls[: self.max_crawl_urls])
-                )
-                result.crawled_pages.extend(
-                    cr for cr in crawl_results if cr.has_content
-                )
+                crawl_results = asyncio.run(self.crawler.crawl_many(urls[: self.max_crawl_urls]))
+                result.crawled_pages.extend(cr for cr in crawl_results if cr.has_content)
         except Exception as exc:  # noqa: BLE001
             logger.warning("Crawling failed: %s", exc)
 
-    def _run_pdf_extraction(
-        self, result: WebSearchAgentResult, urls: list[str]
-    ) -> None:
+    def _run_pdf_extraction(self, result: WebSearchAgentResult, urls: list[str]) -> None:
         """Extract text from PDF URLs."""
         for url in urls[:5]:
             try:

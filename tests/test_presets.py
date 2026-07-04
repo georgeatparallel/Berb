@@ -92,7 +92,7 @@ class TestPresetRegistry:
 
     def test_create_registry(self):
         """Test creating registry."""
-        catalog_path = Path(__file__).parent.parent / "presets" / "catalog"
+        catalog_path = Path(__file__).parent.parent / "berb" / "presets" / "catalog"
         registry = PresetRegistry(catalog_path)
         assert len(registry.presets) > 0
 
@@ -283,14 +283,14 @@ class TestPresetMerging:
         """Test merging preset with user config."""
         registry = get_registry()
         preset = get_preset("ml-conference")
-        
+
         user_config = {
             "max_budget_usd": 3.00,
             "primary_model": "gpt-4o",
         }
-        
+
         merged = registry.merge_with_config(preset, user_config)
-        
+
         # User config should override
         assert merged["max_budget_usd"] == 3.00
         assert merged["primary_model"] == "gpt-4o"
@@ -301,15 +301,15 @@ class TestPresetMerging:
         """Test deep merge of nested dicts."""
         registry = get_registry()
         preset = get_preset("ml-conference")
-        
+
         user_config = {
             "stage_overrides": {
                 8: {"num_hypotheses": 10},
             },
         }
-        
+
         merged = registry.merge_with_config(preset, user_config)
-        
+
         # User override should apply
         assert merged["stage_overrides"][8]["num_hypotheses"] == 10
         # Other stage overrides should remain
@@ -322,14 +322,14 @@ class TestCustomPresets:
     def test_create_custom_preset(self):
         """Test creating custom preset."""
         registry = get_registry()
-        
+
         custom = registry.create_custom_preset(
             name="my-custom-ml",
             base_preset="ml-conference",
             description="My custom ML preset",
             max_budget_usd=2.00,
         )
-        
+
         assert custom is not None
         assert custom.name == "my-custom-ml"
         assert custom.max_budget_usd == 2.00
@@ -338,14 +338,14 @@ class TestCustomPresets:
     def test_create_custom_from_scratch(self):
         """Test creating custom preset from scratch."""
         registry = get_registry()
-        
+
         custom = registry.create_custom_preset(
             name="scratch-preset",
             description="Created from scratch",
             primary_model="gpt-4o",
             max_budget_usd=1.00,
         )
-        
+
         assert custom is not None
         assert custom.name == "scratch-preset"
         assert custom.primary_model == "gpt-4o"

@@ -33,7 +33,8 @@ class TestSearchResult:
 class TestWebSearchResponse:
     def test_has_results_true(self):
         r = WebSearchResponse(
-            query="test", results=[SearchResult(title="A", url="u")],
+            query="test",
+            results=[SearchResult(title="A", url="u")],
         )
         assert r.has_results
 
@@ -132,6 +133,7 @@ class TestWebSearchClient:
         with patch.dict("sys.modules", {"tavily": mock_tavily_module}):
             client = WebSearchClient(api_key="test-key")
             import time
+
             response = client._search_tavily("test query", 10, None, None, time.monotonic())
             assert response.source == "tavily"
             assert len(response.results) == 1
@@ -151,7 +153,4 @@ class TestWebSearchClient:
         assert len(responses) == 2
         # Second query should have same URL deduped
         if responses[0].results:
-            assert all(
-                r.url != responses[0].results[0].url
-                for r in responses[1].results
-            )
+            assert all(r.url != responses[0].results[0].url for r in responses[1].results)

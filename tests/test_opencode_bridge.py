@@ -53,17 +53,12 @@ class TestComplexityScorer:
             "condition_3: ablation with reduced generator\n"
             "Custom loss function and custom layer for cross-modal attention.\n"
         )
-        result = score_complexity(
-            plan, topic="Multi-modal GAN for vision-language synthesis"
-        )
+        result = score_complexity(plan, topic="Multi-modal GAN for vision-language synthesis")
         assert result.score > 0.6
         assert result.recommendation == "beast_mode"
 
     def test_historical_failures_boost_score(self):
-        plan = (
-            "Train a simple model with encoder and decoder.\n"
-            "condition_0: baseline\n"
-        )
+        plan = "Train a simple model with encoder and decoder.\ncondition_0: baseline\n"
         score_without = score_complexity(plan, topic="test", historical_failures=0)
         score_with = score_complexity(plan, topic="test", historical_failures=3)
         assert score_with.score > score_without.score
@@ -136,25 +131,31 @@ class TestOpenCodeBridge:
             assert OpenCodeBridge.check_available() is False
 
     def test_check_available_returns_false_on_timeout(self):
-        with patch(
-            "berb.pipeline.opencode_bridge.shutil.which",
-            return_value=r"C:\Users\tester\AppData\Roaming\npm\opencode.cmd",
-        ), patch(
-            "berb.pipeline.opencode_bridge.subprocess.run",
-            side_effect=subprocess.TimeoutExpired(cmd="opencode", timeout=15),
+        with (
+            patch(
+                "berb.pipeline.opencode_bridge.shutil.which",
+                return_value=r"C:\Users\tester\AppData\Roaming\npm\opencode.cmd",
+            ),
+            patch(
+                "berb.pipeline.opencode_bridge.subprocess.run",
+                side_effect=subprocess.TimeoutExpired(cmd="opencode", timeout=15),
+            ),
         ):
             assert OpenCodeBridge.check_available() is False
 
     def test_check_available_returns_true(self):
         mock_result = MagicMock()
         mock_result.returncode = 0
-        with patch(
-            "berb.pipeline.opencode_bridge.shutil.which",
-            return_value=r"C:\Users\tester\AppData\Roaming\npm\opencode.cmd",
-        ), patch(
-            "berb.pipeline.opencode_bridge.subprocess.run",
-            return_value=mock_result,
-        ) as run_mock:
+        with (
+            patch(
+                "berb.pipeline.opencode_bridge.shutil.which",
+                return_value=r"C:\Users\tester\AppData\Roaming\npm\opencode.cmd",
+            ),
+            patch(
+                "berb.pipeline.opencode_bridge.subprocess.run",
+                return_value=mock_result,
+            ) as run_mock,
+        ):
             assert OpenCodeBridge.check_available() is True
         assert run_mock.call_args.args[0][0].endswith("opencode.cmd")
 
@@ -203,7 +204,10 @@ class TestOpenCodeBridge:
         assert cfg["model"] == "openai/gpt-5.2"
         assert "provider" in cfg
         assert "openai" in cfg["provider"]
-        assert cfg["provider"]["openai"]["options"]["baseURL"] == "https://huaxi.openai.azure.com/openai/v1"
+        assert (
+            cfg["provider"]["openai"]["options"]["baseURL"]
+            == "https://huaxi.openai.azure.com/openai/v1"
+        )
         assert "{env:AZURE_OPENAI_API_KEY}" in cfg["provider"]["openai"]["options"]["apiKey"]
 
     def test_opencode_config_openai_format(self, tmp_path):
@@ -267,9 +271,12 @@ class TestOpenCodeBridge:
         assert resolved == "anthropic/claude-sonnet-4-6"
 
     def test_resolve_model_no_model_default(self):
-        """Empty model string → default Anthropic model."""
+        """Empty model string → OPENCODE_DEFAULT_MODEL (OpenRouter-routed Claude Sonnet)."""
+        from berb.pipeline.opencode_bridge import OPENCODE_DEFAULT_MODEL
+
         bridge = OpenCodeBridge()
-        assert bridge._resolve_opencode_model() == "anthropic/claude-sonnet-4-6"
+        assert bridge._resolve_opencode_model() == OPENCODE_DEFAULT_MODEL
+        assert bridge._resolve_opencode_model() == "openrouter/anthropic/claude-sonnet-4.6"
 
     def test_collect_files_ignores_pycache(self, tmp_path):
         (tmp_path / "main.py").write_text("print('hello')")
@@ -328,12 +335,14 @@ class TestOpenCodeBridge:
     def test_generate_returns_error_on_cli_failure(self, tmp_path):
         bridge = OpenCodeBridge(max_retries=0, workspace_cleanup=True)
 
-        with patch.object(OpenCodeBridge, "check_available", return_value=True), \
-             patch.object(
-                 bridge,
-                 "_invoke_opencode",
-                 return_value=(False, "CLI error", 1.5),
-             ):
+        with (
+            patch.object(OpenCodeBridge, "check_available", return_value=True),
+            patch.object(
+                bridge,
+                "_invoke_opencode",
+                return_value=(False, "CLI error", 1.5),
+            ),
+        ):
             result = bridge.generate(
                 stage_dir=tmp_path,
                 topic="test",
@@ -352,8 +361,10 @@ class TestOpenCodeBridge:
             (workspace / "requirements.txt").write_text("torch")
             return True, "success", 5.0
 
-        with patch.object(OpenCodeBridge, "check_available", return_value=True), \
-             patch.object(bridge, "_invoke_opencode", side_effect=fake_invoke):
+        with (
+            patch.object(OpenCodeBridge, "check_available", return_value=True),
+            patch.object(bridge, "_invoke_opencode", side_effect=fake_invoke),
+        ):
             result = bridge.generate(
                 stage_dir=tmp_path,
                 topic="test",
@@ -371,13 +382,16 @@ class TestOpenCodeBridge:
         mock_result.stdout = "{}"
         mock_result.stderr = ""
 
-        with patch(
-            "berb.pipeline.opencode_bridge.shutil.which",
-            return_value=r"C:\Users\tester\AppData\Roaming\npm\opencode.cmd",
-        ), patch(
-            "berb.pipeline.opencode_bridge.subprocess.run",
-            return_value=mock_result,
-        ) as run_mock:
+        with (
+            patch(
+                "berb.pipeline.opencode_bridge.shutil.which",
+                return_value=r"C:\Users\tester\AppData\Roaming\npm\opencode.cmd",
+            ),
+            patch(
+                "berb.pipeline.opencode_bridge.subprocess.run",
+                return_value=mock_result,
+            ) as run_mock,
+        ):
             success, _log, _elapsed = bridge._invoke_opencode(tmp_path, "test prompt")
 
         assert success is True
@@ -431,10 +445,10 @@ class TestEnsureMainEntryPoint:
         """When main.py is library-only and another file has __main__, swap."""
         lib_code = "class Model:\n    pass\n\ndef train(model):\n    pass\n"
         entry_code = (
-            'from main import Model, train\n\n'
+            "from main import Model, train\n\n"
             'if __name__ == "__main__":\n'
-            '    m = Model()\n'
-            '    train(m)\n'
+            "    m = Model()\n"
+            "    train(m)\n"
         )
         files = {
             "main.py": lib_code,
@@ -442,7 +456,7 @@ class TestEnsureMainEntryPoint:
         }
         result = OpenCodeBridge._ensure_main_entry_point(files)
         # main.py should now contain the entry point code
-        assert '__main__' in result["main.py"]
+        assert "__main__" in result["main.py"]
         # The old main.py content should be in run_experiment.py
         assert result["run_experiment.py"] == lib_code
 
@@ -451,7 +465,7 @@ class TestEnsureMainEntryPoint:
         code = "import torch\n\ndef main():\n    print('training')\n"
         files = {"main.py": code}
         result = OpenCodeBridge._ensure_main_entry_point(files)
-        assert '__main__' in result["main.py"]
+        assert "__main__" in result["main.py"]
         assert "main()" in result["main.py"]
 
     def test_inject_entry_for_run_function(self):
@@ -459,7 +473,7 @@ class TestEnsureMainEntryPoint:
         code = "def run_experiment():\n    print('running')\n"
         files = {"main.py": code}
         result = OpenCodeBridge._ensure_main_entry_point(files)
-        assert '__main__' in result["main.py"]
+        assert "__main__" in result["main.py"]
         assert "run_experiment()" in result["main.py"]
 
     def test_no_known_entry_function_warns(self):

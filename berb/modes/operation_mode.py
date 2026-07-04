@@ -11,8 +11,8 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
-from enum import Enum
+from datetime import UTC, datetime
+from enum import StrEnum
 from pathlib import Path
 from typing import Any, Literal
 
@@ -21,7 +21,7 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger(__name__)
 
 
-class OperationMode(str, Enum):
+class OperationMode(StrEnum):
     """Operation mode for the research pipeline.
 
     Attributes:
@@ -33,7 +33,7 @@ class OperationMode(str, Enum):
     COLLABORATIVE = "collaborative"
 
 
-class FeedbackAction(str, Enum):
+class FeedbackAction(StrEnum):
     """Actions available in collaborative mode.
 
     Attributes:
@@ -125,7 +125,7 @@ class HumanFeedback(BaseModel):
         description="Confidence scores for stage output components",
     )
     timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
     )
     metadata: dict[str, Any] = Field(default_factory=dict)
 
@@ -176,36 +176,36 @@ class StageSummary(BaseModel):
             Formatted string for terminal display
         """
         lines = [
-            f"\n{'='*60}",
+            f"\n{'=' * 60}",
             f"Stage {self.stage_number}: {self.stage_name}",
-            f"{'='*60}",
+            f"{'=' * 60}",
             f"Status: {self.status.upper()}",
-            f"\n📋 Output Summary:",
+            "\n📋 Output Summary:",
             f"   {self.output_summary}",
         ]
 
         if self.key_decisions:
-            lines.append(f"\n🔑 Key Decisions:")
+            lines.append("\n🔑 Key Decisions:")
             for decision in self.key_decisions:
                 lines.append(f"   • {decision}")
 
         if self.alternatives_considered:
-            lines.append(f"\n🔄 Alternatives Considered:")
+            lines.append("\n🔄 Alternatives Considered:")
             for alt in self.alternatives_considered:
                 lines.append(f"   • {alt}")
 
         if self.confidence_scores:
-            lines.append(f"\n📊 Confidence Scores:")
+            lines.append("\n📊 Confidence Scores:")
             for key, score in self.confidence_scores.items():
                 bar = "█" * int(score * 10) + "░" * (10 - int(score * 10))
                 lines.append(f"   {key}: [{bar}] {score:.0%}")
 
         if self.warnings:
-            lines.append(f"\n⚠️  Warnings:")
+            lines.append("\n⚠️  Warnings:")
             for warning in self.warnings:
                 lines.append(f"   ⚠️  {warning}")
 
-        lines.append(f"\n{'='*60}")
+        lines.append(f"\n{'=' * 60}")
         return "\n".join(lines)
 
     def format_for_json(self) -> str:
@@ -242,11 +242,11 @@ class AuditTrail:
         """Load existing audit trail from file."""
         if self.filepath.exists():
             try:
-                with open(self.filepath, "r", encoding="utf-8") as f:
+                with open(self.filepath, encoding="utf-8") as f:
                     data = json.load(f)
                     self.entries = data.get("entries", [])
                     logger.info(f"Loaded {len(self.entries)} audit trail entries")
-            except (json.JSONDecodeError, IOError) as e:
+            except (OSError, json.JSONDecodeError) as e:
                 logger.warning(f"Could not load audit trail: {e}")
                 self.entries = []
 
@@ -255,12 +255,12 @@ class AuditTrail:
         try:
             with open(self.filepath, "w", encoding="utf-8") as f:
                 json.dump(
-                    {"entries": self.entries, "updated_at": datetime.now(timezone.utc).isoformat()},
+                    {"entries": self.entries, "updated_at": datetime.now(UTC).isoformat()},
                     f,
                     indent=2,
                 )
             logger.debug(f"Saved audit trail with {len(self.entries)} entries")
-        except IOError as e:
+        except OSError as e:
             logger.error(f"Failed to save audit trail: {e}")
 
     def record_feedback(self, feedback: HumanFeedback) -> None:
@@ -294,7 +294,7 @@ class AuditTrail:
             "type": "stage_completion",
             "stage_number": stage_number,
             "stage_name": stage_name,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "output_path": output_path,
             "metadata": metadata or {},
         }
@@ -320,7 +320,7 @@ class AuditTrail:
             "stage_number": stage_number,
             "approved_by": approved_by,
             "feedback": feedback,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         }
         self.entries.append(entry)
         self._save()
@@ -344,7 +344,7 @@ class AuditTrail:
             "stage_number": stage_number,
             "reason": reason,
             "requested_action": requested_action,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         }
         self.entries.append(entry)
         self._save()
@@ -358,11 +358,7 @@ class AuditTrail:
         Returns:
             List of audit entries for the stage
         """
-        return [
-            entry
-            for entry in self.entries
-            if entry.get("stage_number") == stage_number
-        ]
+        return [entry for entry in self.entries if entry.get("stage_number") == stage_number]
 
     def get_full_report(self) -> dict[str, Any]:
         """Get full audit trail report.
@@ -372,21 +368,15 @@ class AuditTrail:
         """
         return {
             "total_entries": len(self.entries),
-            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "generated_at": datetime.now(UTC).isoformat(),
             "entries": self.entries,
             "summary": {
                 "stage_completions": sum(
                     1 for e in self.entries if e["type"] == "stage_completion"
                 ),
-                "approvals": sum(
-                    1 for e in self.entries if e["type"] == "stage_approval"
-                ),
-                "rejections": sum(
-                    1 for e in self.entries if e["type"] == "stage_rejection"
-                ),
-                "feedback_entries": sum(
-                    1 for e in self.entries if e["type"] == "human_feedback"
-                ),
+                "approvals": sum(1 for e in self.entries if e["type"] == "stage_approval"),
+                "rejections": sum(1 for e in self.entries if e["type"] == "stage_rejection"),
+                "feedback_entries": sum(1 for e in self.entries if e["type"] == "human_feedback"),
             },
         }
 
@@ -469,14 +459,10 @@ class OperationModeManager:
             return await self._collect_json_feedback(summary)
         else:  # api
             # API mode: feedback submitted via POST /research/{id}/feedback
-            logger.info(
-                f"Stage {summary.stage_number} awaiting approval via API..."
-            )
+            logger.info(f"Stage {summary.stage_number} awaiting approval via API...")
             return None  # Will be provided via API
 
-    async def _collect_cli_feedback(
-        self, summary: StageSummary
-    ) -> HumanFeedback:
+    async def _collect_cli_feedback(self, summary: StageSummary) -> HumanFeedback:
         """Collect feedback via CLI interaction.
 
         Args:
@@ -511,10 +497,10 @@ class OperationModeManager:
                 timeout=self.collaborative_config.approval_timeout_minutes * 60,
             )
             action = action.strip().upper() or "A"
-        except asyncio.TimeoutError:
+        except TimeoutError as e:
             raise TimeoutError(
                 f"Approval timeout after {self.collaborative_config.approval_timeout_minutes} minutes"
-            )
+            ) from e
 
         # Process action
         if action == "A":
@@ -542,9 +528,7 @@ class OperationModeManager:
                 action=FeedbackAction.REJECT,
                 feedback_text=feedback_text,
             )
-            self.audit_trail.record_rejection(
-                summary.stage_number, feedback_text, "regenerate"
-            )
+            self.audit_trail.record_rejection(summary.stage_number, feedback_text, "regenerate")
         elif action == "H" and summary.stage_number == 8:
             hypothesis = input("Enter additional hypothesis: ").strip()
             feedback = HumanFeedback(
@@ -578,9 +562,7 @@ class OperationModeManager:
         self.audit_trail.record_feedback(feedback)
         return feedback
 
-    async def _collect_json_feedback(
-        self, summary: StageSummary
-    ) -> HumanFeedback:
+    async def _collect_json_feedback(self, summary: StageSummary) -> HumanFeedback:
         """Collect feedback via JSON input.
 
         Args:
@@ -615,10 +597,10 @@ class OperationModeManager:
             self.audit_trail.record_feedback(feedback)
             return feedback
 
-        except asyncio.TimeoutError:
+        except TimeoutError as e:
             raise TimeoutError(
                 f"Approval timeout after {self.collaborative_config.approval_timeout_minutes} minutes"
-            )
+            ) from e
         except json.JSONDecodeError as e:
             logger.error(f"Invalid JSON feedback: {e}")
             return HumanFeedback(

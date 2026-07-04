@@ -19,8 +19,8 @@ from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from berb.modes.operation_mode import CollaborativeConfig, OperationMode
 from berb.modes.workflow import WorkflowConfig, WorkflowManager, WorkflowType
-from berb.modes.operation_mode import OperationMode, CollaborativeConfig
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 
 class ResearchJobCreate(BaseModel):
     """Request to create a new research job."""
+
     topic: str
     workflow: WorkflowType = WorkflowType.FULL_RESEARCH
     preset: str = "ml-conference"
@@ -49,6 +50,7 @@ class ResearchJobCreate(BaseModel):
 
 class ResearchJobResponse(BaseModel):
     """Response for research job."""
+
     id: str
     topic: str
     workflow: WorkflowType
@@ -67,6 +69,7 @@ class ResearchJobResponse(BaseModel):
 
 class PresetResponse(BaseModel):
     """Response for preset."""
+
     name: str
     description: str
     tags: list[str]
@@ -78,6 +81,7 @@ class PresetResponse(BaseModel):
 
 class FeedbackSubmission(BaseModel):
     """Feedback submission for collaborative mode."""
+
     action: str  # approve, edit, reject, skip
     feedback_text: str | None = None
     confidence_scores: dict[str, float] | None = None
@@ -141,10 +145,10 @@ async def readyz():
 @app.post("/api/v1/research")
 async def create_research_job(job: ResearchJobCreate) -> ResearchJobResponse:
     """Create a new research job.
-    
+
     Args:
         job: Research job configuration
-        
+
     Returns:
         Created research job response
     """
@@ -162,27 +166,27 @@ async def create_research_job(job: ResearchJobCreate) -> ResearchJobResponse:
             include_supplementary=job.include_supplementary,
             operation_mode=job.operation_mode,
         )
-        
-        workflow_manager = WorkflowManager(
+
+        WorkflowManager(
             workflow=job.workflow,
             config=workflow_config,
         )
-        
+
         # Create collaborative config if needed
-        collaborative_config = None
         if job.operation_mode == OperationMode.COLLABORATIVE:
-            collaborative_config = CollaborativeConfig(
+            CollaborativeConfig(
                 pause_after_stages=job.pause_after_stages,
                 approval_timeout_minutes=job.approval_timeout_minutes,
             )
-        
+
         # Generate job ID
-        import hashlib
         import datetime
+        import hashlib
+
         ts = datetime.datetime.now(datetime.UTC).strftime("%Y%m%d-%H%M%S")
         topic_hash = hashlib.sha256(job.topic.encode()).hexdigest()[:6]
         job_id = f"rc-{ts}-{topic_hash}"
-        
+
         # Create response (in real implementation, this would queue the job)
         return ResearchJobResponse(
             id=job_id,
@@ -196,19 +200,19 @@ async def create_research_job(job: ResearchJobCreate) -> ResearchJobResponse:
             duration_seconds=0.0,
             created_at=datetime.datetime.now(datetime.UTC).isoformat(),
         )
-        
+
     except Exception as e:
-        logger.error(f"Error creating research job: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Error creating research job: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
 @app.get("/api/v1/research/{job_id}")
 async def get_research_job(job_id: str) -> ResearchJobResponse:
     """Get research job status.
-    
+
     Args:
         job_id: Job ID
-        
+
     Returns:
         Research job response
     """
@@ -232,25 +236,26 @@ async def get_research_job(job_id: str) -> ResearchJobResponse:
 @app.get("/api/v1/research/{job_id}/stream")
 async def stream_research_job(job_id: str):
     """Server-Sent Events stream for research job progress.
-    
+
     Args:
         job_id: Job ID
-        
+
     Returns:
         SSE stream of job progress
     """
     # In real implementation, this would stream real-time updates
-    from fastapi.responses import StreamingResponse
     import asyncio
-    
+
+    from fastapi.responses import StreamingResponse
+
     async def event_stream():
         """Generate SSE events."""
         import json
-        
+
         for i in range(10):
             await asyncio.sleep(1)
             yield f"data: {json.dumps({'progress': (i + 1) * 10, 'stage': i % 23 + 1})}\n\n"
-    
+
     return StreamingResponse(
         event_stream(),
         media_type="text/event-stream",
@@ -268,12 +273,12 @@ async def approve_research_stage(
     feedback: FeedbackSubmission | None = None,
 ) -> dict[str, str]:
     """Approve a stage in collaborative mode.
-    
+
     Args:
         job_id: Job ID
         stage_number: Stage number to approve
         feedback: Optional feedback
-        
+
     Returns:
         Success message
     """
@@ -287,12 +292,12 @@ async def submit_research_feedback(
     feedback: FeedbackSubmission,
 ) -> dict[str, str]:
     """Submit feedback for a stage in collaborative mode.
-    
+
     Args:
         job_id: Job ID
         stage_number: Stage number
         feedback: Feedback submission
-        
+
     Returns:
         Success message
     """
@@ -302,10 +307,10 @@ async def submit_research_feedback(
 @app.get("/api/v1/research/{job_id}/artifacts")
 async def get_research_artifacts(job_id: str) -> dict[str, Any]:
     """Get research job artifacts.
-    
+
     Args:
         job_id: Job ID
-        
+
     Returns:
         Artifacts dictionary
     """
@@ -322,10 +327,10 @@ async def get_research_artifacts(job_id: str) -> dict[str, Any]:
 @app.delete("/api/v1/research/{job_id}")
 async def cancel_research_job(job_id: str) -> dict[str, str]:
     """Cancel a running research job.
-    
+
     Args:
         job_id: Job ID
-        
+
     Returns:
         Success message
     """
@@ -340,7 +345,7 @@ async def cancel_research_job(job_id: str) -> dict[str, str]:
 @app.get("/api/v1/presets")
 async def list_presets() -> list[PresetResponse]:
     """List all available presets.
-    
+
     Returns:
         List of presets
     """
@@ -396,10 +401,10 @@ async def list_presets() -> list[PresetResponse]:
 @app.get("/api/v1/presets/{preset_name}")
 async def get_preset(preset_name: str) -> PresetResponse:
     """Get a specific preset.
-    
+
     Args:
         preset_name: Preset name
-        
+
     Returns:
         Preset details
     """
@@ -421,24 +426,24 @@ active_connections: list[WebSocket] = []
 @app.websocket("/api/v1/research/{job_id}/ws")
 async def websocket_endpoint(websocket: WebSocket, job_id: str):
     """WebSocket for real-time job updates.
-    
+
     Args:
         websocket: WebSocket connection
         job_id: Job ID
     """
     await websocket.accept()
     active_connections.append(websocket)
-    
+
     try:
         while True:
             # Receive messages
-            data = await websocket.receive_text()
-            
+            await websocket.receive_text()
+
             # Send updates
             await websocket.send_text(
-                f'{{"stage": 8, "status": "running", "progress": 78, "message": "Generating hypotheses..."}}'
+                '{"stage": 8, "status": "running", "progress": 78, "message": "Generating hypotheses..."}'
             )
-            
+
     except WebSocketDisconnect:
         active_connections.remove(websocket)
         logger.info(f"WebSocket disconnected for job {job_id}")
@@ -451,7 +456,7 @@ async def websocket_endpoint(websocket: WebSocket, job_id: str):
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     uvicorn.run(
         "berb.api.server:app",
         host="127.0.0.1",

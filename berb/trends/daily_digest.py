@@ -71,8 +71,7 @@ class DailyDigest:
 
             if isinstance(authors, list):
                 author_str = ", ".join(
-                    a if isinstance(a, str) else a.get("name", "")
-                    for a in authors[:3]
+                    a if isinstance(a, str) else a.get("name", "") for a in authors[:3]
                 )
                 if len(authors) > 3:
                     author_str += " et al."
@@ -95,13 +94,15 @@ class DailyDigest:
 
             stars = "*" * relevance
             link = f"[{title}]({url})" if url else title
-            lines.extend([
-                f"### {i}. {link}",
-                f"**Authors**: {author_str}",
-                f"**Relevance**: {stars}",
-                f"**Summary**: {summary}",
-                "",
-            ])
+            lines.extend(
+                [
+                    f"### {i}. {link}",
+                    f"**Authors**: {author_str}",
+                    f"**Relevance**: {stars}",
+                    f"**Summary**: {summary}",
+                    "",
+                ]
+            )
 
         return "\n".join(lines)
 
@@ -127,24 +128,23 @@ class DailyDigest:
 
             if isinstance(authors, list):
                 author_str = ", ".join(
-                    a if isinstance(a, str) else a.get("name", "")
-                    for a in authors[:3]
+                    a if isinstance(a, str) else a.get("name", "") for a in authors[:3]
                 )
                 if len(authors) > 3:
                     author_str += " et al."
             else:
                 author_str = str(authors)
 
-            short_abstract = (
-                abstract[:200] + "..." if len(abstract) > 200 else abstract
-            )
+            short_abstract = abstract[:200] + "..." if len(abstract) > 200 else abstract
             link = f"[{title}]({url})" if url else title
-            lines.extend([
-                f"### {i}. {link}",
-                f"**Authors**: {author_str}",
-                f"**Abstract**: {short_abstract}",
-                "",
-            ])
+            lines.extend(
+                [
+                    f"### {i}. {link}",
+                    f"**Authors**: {author_str}",
+                    f"**Abstract**: {short_abstract}",
+                    "",
+                ]
+            )
 
         return "\n".join(lines)
 

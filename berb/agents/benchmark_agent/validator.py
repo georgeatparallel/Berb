@@ -21,16 +21,63 @@ logger = logging.getLogger(__name__)
 
 # Packages available in Docker image (no pip install needed)
 _BUILTIN_MODULES = {
-    "torch", "torchvision", "torchaudio", "numpy", "scipy", "sklearn",
-    "pandas", "matplotlib", "seaborn", "tqdm", "gymnasium", "networkx",
-    "timm", "einops", "torchmetrics", "transformers", "datasets",
-    "accelerate", "peft", "trl", "bitsandbytes", "tokenizers",
-    "safetensors", "h5py", "tensorboard", "PIL", "yaml", "kornia",
-    "albumentations", "cv2", "mujoco", "os", "sys", "json", "re",
-    "pathlib", "typing", "collections", "functools", "itertools",
-    "math", "random", "copy", "dataclasses", "abc", "io", "csv",
-    "glob", "shutil", "time", "datetime", "logging", "warnings",
-    "argparse", "pickle", "struct", "hashlib",
+    "torch",
+    "torchvision",
+    "torchaudio",
+    "numpy",
+    "scipy",
+    "sklearn",
+    "pandas",
+    "matplotlib",
+    "seaborn",
+    "tqdm",
+    "gymnasium",
+    "networkx",
+    "timm",
+    "einops",
+    "torchmetrics",
+    "transformers",
+    "datasets",
+    "accelerate",
+    "peft",
+    "trl",
+    "bitsandbytes",
+    "tokenizers",
+    "safetensors",
+    "h5py",
+    "tensorboard",
+    "PIL",
+    "yaml",
+    "kornia",
+    "albumentations",
+    "cv2",
+    "mujoco",
+    "os",
+    "sys",
+    "json",
+    "re",
+    "pathlib",
+    "typing",
+    "collections",
+    "functools",
+    "itertools",
+    "math",
+    "random",
+    "copy",
+    "dataclasses",
+    "abc",
+    "io",
+    "csv",
+    "glob",
+    "shutil",
+    "time",
+    "datetime",
+    "logging",
+    "warnings",
+    "argparse",
+    "pickle",
+    "struct",
+    "hashlib",
 }
 
 
@@ -62,7 +109,8 @@ class ValidatorAgent(BaseAgent):
         warnings: list[str] = []
         # Extract import statements
         import_pattern = re.compile(
-            r"^\s*(?:import|from)\s+(\w+)", re.MULTILINE,
+            r"^\s*(?:import|from)\s+(\w+)",
+            re.MULTILINE,
         )
         imports = set(import_pattern.findall(code))
 
@@ -85,9 +133,7 @@ class ValidatorAgent(BaseAgent):
 
         for mod in imports:
             if mod not in allowed:
-                warnings.append(
-                    f"{label}: import '{mod}' not in Docker image or requirements"
-                )
+                warnings.append(f"{label}: import '{mod}' not in Docker image or requirements")
 
         return warnings
 
@@ -130,8 +176,7 @@ class ValidatorAgent(BaseAgent):
 
         user = (
             f"Benchmarks: {', '.join(benchmark_names)}\n"
-            f"Baselines: {', '.join(baseline_names)}\n\n"
-            + "\n\n".join(code_sections)
+            f"Baselines: {', '.join(baseline_names)}\n\n" + "\n\n".join(code_sections)
         )
 
         return self._chat_json(system, user, max_tokens=2048)
@@ -179,8 +224,11 @@ class ValidatorAgent(BaseAgent):
         llm_review: dict[str, Any] = {}
         if not all_errors:
             llm_review = self._llm_review(
-                data_code, baseline_code, setup_code,
-                benchmark_names, baseline_names,
+                data_code,
+                baseline_code,
+                setup_code,
+                benchmark_names,
+                baseline_names,
             )
             if llm_review.get("severity") == "error":
                 all_errors.extend(llm_review.get("issues", []))
@@ -202,7 +250,8 @@ class ValidatorAgent(BaseAgent):
         self.logger.info(
             "Validation %s: %d errors, %d warnings",
             "PASSED" if passed else "FAILED",
-            len(all_errors), len(all_warnings),
+            len(all_errors),
+            len(all_warnings),
         )
 
         return self._make_result(passed, data=result)

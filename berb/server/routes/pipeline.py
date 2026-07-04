@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re as _re
+from datetime import UTC
 from pathlib import Path
 from typing import Any
 
@@ -13,7 +15,6 @@ from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
-import re as _re
 _RUN_ID_RE = _re.compile(r"^rc-\d{8}-\d{6}-[a-f0-9]+$")
 
 
@@ -26,6 +27,7 @@ def _validated_run_dir(run_id: str) -> Path:
     if not run_dir.resolve().is_relative_to(Path("artifacts").resolve()):
         raise HTTPException(status_code=400, detail=f"Invalid run_id: {run_id}")
     return run_dir
+
 
 router = APIRouter(prefix="/api", tags=["pipeline"])
 
@@ -54,6 +56,7 @@ _run_task: asyncio.Task[Any] | None = None
 def _get_app_state() -> dict[str, Any]:
     """Get shared application state (set by app.py)."""
     from berb.server.app import _app_state
+
     return _app_state
 
 
@@ -70,13 +73,14 @@ async def start_pipeline(req: PipelineStartRequest) -> PipelineStartResponse:
 
     if req.topic:
         import dataclasses
+
         new_research = dataclasses.replace(config.research, topic=req.topic)
         config = dataclasses.replace(config, research=new_research)
 
     import hashlib
-    from datetime import datetime, timezone
+    from datetime import datetime
 
-    ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    ts = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
     topic_hash = hashlib.sha256(config.research.topic.encode()).hexdigest()[:6]
     run_id = f"rc-{ts}-{topic_hash}"
     run_dir = _validated_run_dir(run_id)
@@ -99,18 +103,14 @@ async def start_pipeline(req: PipelineStartRequest) -> PipelineStartResponse:
             if kb_root:
                 kb_root.mkdir(parents=True, exist_ok=True)
 
-            loop = asyncio.get_event_loop()
-            results = await loop.run_in_executor(
-                None,
-                lambda: execute_pipeline(
-                    run_dir=run_dir,
-                    run_id=run_id,
-                    config=config,
-                    adapters=AdapterBundle(),
-                    auto_approve_gates=req.auto_approve,
-                    skip_noncritical=True,
-                    kb_root=kb_root,
-                ),
+            results = await execute_pipeline(
+                run_dir=run_dir,
+                run_id=run_id,
+                config=config,
+                adapters=AdapterBundle(),
+                auto_approve_gates=req.auto_approve,
+                skip_noncritical=True,
+                kb_root=kb_root,
             )
             done = sum(1 for r in results if r.status.value == "done")
             failed = sum(1 for r in results if r.status.value == "failed")
@@ -161,12 +161,14 @@ async def pipeline_stages() -> dict[str, Any]:
 
     stages = []
     for s in Stage:
-        stages.append({
-            "number": int(s),
-            "name": s.name,
-            "label": getattr(s, "label", s.name.replace("_", " ").title()),
-            "phase": getattr(s, "phase", ""),
-        })
+        stages.append(
+            {
+                "number": int(s),
+                "name": s.name,
+                "label": getattr(s, "label", s.name.replace("_", " ").title()),
+                "phase": getattr(s, "phase", ""),
+            }
+        )
     return {"stages": stages}
 
 

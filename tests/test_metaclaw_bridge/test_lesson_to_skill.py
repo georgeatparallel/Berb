@@ -49,28 +49,36 @@ def test_list_existing_skills_missing_dir():
 
 
 def test_parse_skills_response_valid():
-    response = json.dumps([
-        {
-            "name": "arc-fix-nan",
-            "description": "Prevent NaN in loss",
-            "category": "coding",
-            "content": "# Fix NaN\n1. Check inputs\n2. Use grad clipping",
-        }
-    ])
+    response = json.dumps(
+        [
+            {
+                "name": "arc-fix-nan",
+                "description": "Prevent NaN in loss",
+                "category": "coding",
+                "content": "# Fix NaN\n1. Check inputs\n2. Use grad clipping",
+            }
+        ]
+    )
     parsed = _parse_skills_response(response)
     assert len(parsed) == 1
     assert parsed[0]["name"] == "arc-fix-nan"
 
 
 def test_parse_skills_response_with_code_fence():
-    response = "```json\n" + json.dumps([
-        {
-            "name": "arc-test",
-            "description": "test",
-            "category": "coding",
-            "content": "test content",
-        }
-    ]) + "\n```"
+    response = (
+        "```json\n"
+        + json.dumps(
+            [
+                {
+                    "name": "arc-test",
+                    "description": "test",
+                    "category": "coding",
+                    "content": "test content",
+                }
+            ]
+        )
+        + "\n```"
+    )
     parsed = _parse_skills_response(response)
     assert len(parsed) == 1
 

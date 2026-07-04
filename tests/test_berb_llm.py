@@ -63,9 +63,7 @@ def _capture_raw_call(
 
     monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
     client = _make_client()
-    resp = client._raw_call(
-        model, [{"role": "user", "content": "hello"}], 123, 0.2, False
-    )
+    resp = client._raw_call(model, [{"role": "user", "content": "hello"}], 123, 0.2, False)
     request = captured["request"]
     assert isinstance(request, urllib.request.Request)
     data = request.data
@@ -123,9 +121,7 @@ def test_llm_client_initialization_stores_config():
 
 
 def test_llm_client_model_chain_is_primary_plus_fallbacks():
-    client = _make_client(
-        primary_model="gpt-5.4", fallback_models=["gpt-4.1", "gpt-4o"]
-    )
+    client = _make_client(primary_model="gpt-5.4", fallback_models=["gpt-4.1", "gpt-4o"])
     assert client._model_chain == ["gpt-5.4", "gpt-4.1", "gpt-4o"]
 
 
@@ -173,9 +169,7 @@ def test_parse_response_with_valid_payload_via_raw_call(
         "choices": [{"message": {"content": "hello"}, "finish_reason": "stop"}],
         "usage": {"prompt_tokens": 1, "completion_tokens": 2, "total_tokens": 3},
     }
-    _, parsed, _ = _capture_raw_call(
-        monkeypatch, model="gpt-5.2", response_data=response
-    )
+    _, parsed, _ = _capture_raw_call(monkeypatch, model="gpt-5.2", response_data=response)
     assert parsed.content == "hello"
     assert parsed.model == "gpt-5.2"
     assert parsed.prompt_tokens == 1
@@ -189,9 +183,7 @@ def test_parse_response_truncated_when_finish_reason_length(
         "choices": [{"message": {"content": "partial"}, "finish_reason": "length"}],
         "usage": {},
     }
-    _, parsed, _ = _capture_raw_call(
-        monkeypatch, model="gpt-5.2", response_data=response
-    )
+    _, parsed, _ = _capture_raw_call(monkeypatch, model="gpt-5.2", response_data=response)
     assert parsed.finish_reason == "length"
     assert parsed.truncated is True
 
@@ -200,9 +192,7 @@ def test_parse_response_missing_optional_fields_graceful(
     monkeypatch: pytest.MonkeyPatch,
 ):
     response = {"choices": [{"message": {"content": None}}]}
-    _, parsed, _ = _capture_raw_call(
-        monkeypatch, model="gpt-5.2", response_data=response
-    )
+    _, parsed, _ = _capture_raw_call(monkeypatch, model="gpt-5.2", response_data=response)
     assert parsed.content == ""
     assert parsed.prompt_tokens == 0
     assert parsed.completion_tokens == 0
@@ -213,6 +203,7 @@ def test_parse_response_missing_optional_fields_graceful(
 def test_from_rc_config_builds_expected_llm_config():
     rc_config = SimpleNamespace(
         llm=SimpleNamespace(
+            provider="openrouter",
             base_url="https://proxy.example/v1",
             api_key="inline-key",
             api_key_env="OPENAI_API_KEY",
@@ -226,6 +217,27 @@ def test_from_rc_config_builds_expected_llm_config():
     assert client.config.api_key == "inline-key"
     assert client.config.wire_api == "responses"
     assert client.config.primary_model == "o3"
+    assert client.config.fallback_models == ["o3-mini", "gpt-4o"]
+
+
+def test_from_rc_config_wires_fallback_models_for_same_provider_chain():
+    # fallback_models is a same-provider model chain (e.g. MiniMax's own
+    # "MiniMax-M2.5-highspeed" fallback), not exclusively an OpenRouter
+    # concern — from_rc_config wires it through unconditionally and trusts
+    # the operator to configure IDs valid for the selected provider
+    # (see berb/llm/client.py from_rc_config).
+    rc_config = SimpleNamespace(
+        llm=SimpleNamespace(
+            provider="openai",
+            base_url="https://api.openai.com/v1",
+            api_key="inline-key",
+            api_key_env="OPENAI_API_KEY",
+            wire_api="chat_completions",
+            primary_model="gpt-4o",
+            fallback_models=("o3-mini", "gpt-4o"),
+        )
+    )
+    client = LLMClient.from_rc_config(rc_config)
     assert client.config.fallback_models == ["o3-mini", "gpt-4o"]
 
 
@@ -251,9 +263,7 @@ def test_responses_wire_api_uses_responses_endpoint(monkeypatch: pytest.MonkeyPa
 
     monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
     client = _make_client(primary_model="gpt-4.1", wire_api="responses")
-    resp = client._raw_call(
-        "gpt-4.1", [{"role": "user", "content": "hello"}], 123, 0.2, False
-    )
+    resp = client._raw_call("gpt-4.1", [{"role": "user", "content": "hello"}], 123, 0.2, False)
 
     request = captured["request"]
     assert isinstance(request, urllib.request.Request)
@@ -264,9 +274,7 @@ def test_responses_wire_api_uses_responses_endpoint(monkeypatch: pytest.MonkeyPa
     assert isinstance(data, bytes)
     body = json.loads(data.decode("utf-8"))
     assert body["model"] == "gpt-4.1"
-    assert body["input"] == [
-        {"role": "user", "content": [{"type": "input_text", "text": "hello"}]}
-    ]
+    assert body["input"] == [{"role": "user", "content": [{"type": "input_text", "text": "hello"}]}]
     assert body["max_output_tokens"] == 123
     assert resp.content == "hello"
     assert resp.prompt_tokens == 11
@@ -297,9 +305,7 @@ def test_responses_wire_api_includes_temperature_for_gpt5_models(
 
     monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
     client = _make_client(primary_model="gpt-5.2", wire_api="responses")
-    _ = client._raw_call(
-        "gpt-5.2", [{"role": "user", "content": "hello"}], 55, 0.2, False
-    )
+    _ = client._raw_call("gpt-5.2", [{"role": "user", "content": "hello"}], 55, 0.2, False)
 
     request = captured["request"]
     assert isinstance(request, urllib.request.Request)
@@ -451,9 +457,7 @@ def test_raw_call_adds_json_mode_response_format(monkeypatch: pytest.MonkeyPatch
 
     monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
     client = _make_client()
-    _ = client._raw_call(
-        "gpt-5.2", [{"role": "user", "content": "json"}], 50, 0.1, True
-    )
+    _ = client._raw_call("gpt-5.2", [{"role": "user", "content": "json"}], 50, 0.1, True)
     request = captured["request"]
     assert isinstance(request, urllib.request.Request)
     data = request.data

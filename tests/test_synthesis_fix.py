@@ -26,7 +26,7 @@ class TestSimpleRouter:
         )
         llm = LLMClient(config)
         router = _SimpleRouter(llm)
-        
+
         assert router.llm == llm
         assert router._providers == {}
 
@@ -39,12 +39,12 @@ class TestSimpleRouter:
         )
         llm = LLMClient(config)
         router = _SimpleRouter(llm)
-        
+
         # Get provider for different roles
         provider1 = router.get_provider_for_role("constructive")
         provider2 = router.get_provider_for_role("destructive")
         provider3 = router.get_provider_for_role("constructive")  # Should be cached
-        
+
         assert isinstance(provider1, _LLMProviderWrapper)
         assert isinstance(provider2, _LLMProviderWrapper)
         assert provider1 is provider3  # Cached
@@ -62,17 +62,17 @@ class TestLLMProviderWrapper:
             api_key="test-key",
             primary_model="gpt-4o",
         )
-        
+
         # Mock LLMClient to avoid actual API calls
         mock_llm = MagicMock(spec=LLMClient)
         mock_llm.config = config
         mock_llm.chat.return_value = MagicMock(content="Test response")
-        
+
         wrapper = _LLMProviderWrapper(mock_llm)
-        
+
         # Call complete
         result = await wrapper.complete("Test prompt")
-        
+
         assert result.content == "Test response"
         mock_llm.chat.assert_called_once()
 
@@ -85,7 +85,7 @@ class TestLLMProviderWrapper:
         )
         llm = LLMClient(config)
         wrapper = _LLMProviderWrapper(llm)
-        
+
         assert wrapper.model == "gpt-4o"
 
 
@@ -95,16 +95,18 @@ class TestFallbackHypothesisGen:
     def test_fallback_with_empty_perspectives(self):
         """Test fallback returns default when perspectives fail."""
         from berb.llm.client import LLMConfig
-        
+
         config = LLMConfig(
             base_url="https://api.openai.com/v1",
             api_key="test-key",
             primary_model="gpt-4o",
         )
         llm = LLMClient(config)
-        
+
         # Mock _multi_perspective_generate to return empty
-        with patch('berb.pipeline.stage_impls._synthesis._multi_perspective_generate', return_value={}):
+        with patch(
+            "berb.pipeline.stage_impls._synthesis._multi_perspective_generate", return_value={}
+        ):
             result = _fallback_hypothesis_gen(
                 llm=llm,
                 prompts=None,
@@ -112,7 +114,7 @@ class TestFallbackHypothesisGen:
                 synthesis="Test synthesis",
                 stage_dir=Path("/tmp/test"),
             )
-            
+
             # Result should be non-empty and contain hypothesis-like content
             assert len(result) > 50  # Default hypotheses are substantial
             assert "H" in result  # Contains section headers
@@ -120,22 +122,28 @@ class TestFallbackHypothesisGen:
     def test_fallback_with_perspectives(self):
         """Test fallback synthesizes when perspectives succeed."""
         from berb.llm.client import LLMConfig
-        
+
         config = LLMConfig(
             base_url="https://api.openai.com/v1",
             api_key="test-key",
             primary_model="gpt-4o",
         )
         llm = LLMClient(config)
-        
+
         # Mock perspective generation and synthesis
         mock_perspectives = {
             "constructive": "Constructive perspective content",
             "destructive": "Destructive perspective content",
         }
-        
-        with patch('berb.pipeline.stage_impls._synthesis._multi_perspective_generate', return_value=mock_perspectives):
-            with patch('berb.pipeline.stage_impls._synthesis._synthesize_perspectives', return_value="Synthesized hypotheses"):
+
+        with patch(
+            "berb.pipeline.stage_impls._synthesis._multi_perspective_generate",
+            return_value=mock_perspectives,
+        ):
+            with patch(
+                "berb.pipeline.stage_impls._synthesis._synthesize_perspectives",
+                return_value="Synthesized hypotheses",
+            ):
                 result = _fallback_hypothesis_gen(
                     llm=llm,
                     prompts=None,
@@ -143,7 +151,7 @@ class TestFallbackHypothesisGen:
                     synthesis="Test synthesis",
                     stage_dir=Path("/tmp/test"),
                 )
-                
+
                 assert result == "Synthesized hypotheses"
 
 
@@ -159,7 +167,7 @@ class TestAdversarialValidation:
         )
         llm = LLMClient(config)
         router = _SimpleRouter(llm)
-        
+
         # Unknown role should still work
         provider = router.get_provider_for_role("unknown_role_xyz")
         assert isinstance(provider, _LLMProviderWrapper)
@@ -169,7 +177,7 @@ class TestAdversarialValidation:
         mock_llm = MagicMock()
         # Remove config attribute
         del mock_llm.config
-        
+
         wrapper = _LLMProviderWrapper(mock_llm)
         assert wrapper.model == "unknown"
 
@@ -177,20 +185,25 @@ class TestAdversarialValidation:
         """Test fallback creates perspective directory."""
         import tempfile
         from berb.llm.client import LLMConfig
-        
+
         config = LLMConfig(
             base_url="https://api.openai.com/v1",
             api_key="test-key",
             primary_model="gpt-4o",
         )
         llm = LLMClient(config)
-        
+
         with tempfile.TemporaryDirectory() as tmpdir:
             stage_dir = Path(tmpdir) / "stage_test"
-            
+
             # Mock both functions to avoid actual LLM calls
-            with patch('berb.pipeline.stage_impls._synthesis._multi_perspective_generate', return_value={}):
-                with patch('berb.pipeline.stage_impls._synthesis._default_hypotheses', return_value="# Test"):
+            with patch(
+                "berb.pipeline.stage_impls._synthesis._multi_perspective_generate", return_value={}
+            ):
+                with patch(
+                    "berb.pipeline.stage_impls._synthesis._default_hypotheses",
+                    return_value="# Test",
+                ):
                     _fallback_hypothesis_gen(
                         llm=llm,
                         prompts=None,
@@ -198,6 +211,6 @@ class TestAdversarialValidation:
                         synthesis="Test",
                         stage_dir=stage_dir,
                     )
-                    
+
                     # Directory should be created (by _multi_perspective_generate)
                     assert stage_dir.exists() or True  # May not create if mocked

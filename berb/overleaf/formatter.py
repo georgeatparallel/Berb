@@ -31,15 +31,15 @@ class LatexFormatter:
     def strip_local_comments(content: str) -> str:
         """Remove Berb-internal comments from LaTeX."""
         lines = content.splitlines(keepends=True)
-        return "".join(
-            line for line in lines
-            if not line.strip().startswith("% BERB:")
-        )
+        return "".join(line for line in lines if not line.strip().startswith("% BERB:"))
 
     @staticmethod
     def fix_encoding(content: str) -> str:
         """Ensure UTF-8 input encoding package is declared."""
-        if "\\usepackage[utf8]{inputenc}" not in content and "\\usepackage{inputenc}" not in content:
+        if (
+            "\\usepackage[utf8]{inputenc}" not in content
+            and "\\usepackage{inputenc}" not in content
+        ):
             # Insert after documentclass
             content = re.sub(
                 r"(\\documentclass.*?\n)",

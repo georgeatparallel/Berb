@@ -43,11 +43,23 @@ def _make_server(
 
 @pytest.fixture
 def registry() -> ServerRegistry:
-    return ServerRegistry([
-        _make_server("local", "localhost", vram_gb=48, priority=1),
-        _make_server("cloud1", "cloud.host", server_type="cloud", vram_gb=80, priority=3, cost=2.0, cloud_provider="aws"),
-        _make_server("hpc", "hpc.host", server_type="slurm", vram_gb=40, priority=2, scheduler="slurm"),
-    ])
+    return ServerRegistry(
+        [
+            _make_server("local", "localhost", vram_gb=48, priority=1),
+            _make_server(
+                "cloud1",
+                "cloud.host",
+                server_type="cloud",
+                vram_gb=80,
+                priority=3,
+                cost=2.0,
+                cloud_provider="aws",
+            ),
+            _make_server(
+                "hpc", "hpc.host", server_type="slurm", vram_gb=40, priority=2, scheduler="slurm"
+            ),
+        ]
+    )
 
 
 # ══════════════════════════════════════════════════════════════════

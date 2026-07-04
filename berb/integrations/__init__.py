@@ -6,16 +6,16 @@ External service integrations (scite.ai, etc.).
 """
 
 from berb.integrations.scite_mcp import (
+    CitationProfile,
+    ReferenceCheckReport,
+    SciteCitationType,
     SciteClient,
     SciteConfig,
     SciteIntegration,
     SciteIntegrationConfig,
-    SciteCitationType,
     SmartCitationResult,
-    CitationProfile,
-    ReferenceCheckReport,
-    get_citation_profile,
     check_manuscript_references,
+    get_citation_profile,
 )
 
 __all__ = [

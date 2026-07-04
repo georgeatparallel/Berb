@@ -69,9 +69,7 @@ def run_dir(tmp_path: Path) -> Path:
     # Stage 14 — result analysis
     s14 = d / "stage-14-result_analysis"
     s14.mkdir()
-    (s14 / "experiment_summary.json").write_text(
-        json.dumps({"accuracy": 0.92}), encoding="utf-8"
-    )
+    (s14 / "experiment_summary.json").write_text(json.dumps({"accuracy": 0.92}), encoding="utf-8")
 
     # Stage 18 — peer review
     s18 = d / "stage-18-peer_review"
@@ -111,9 +109,7 @@ class TestResearchRepository:
         assert len(results) >= 2
 
     def test_search_by_type(self, populated_repo: ResearchRepository) -> None:
-        results = populated_repo.search(
-            "paper", artifact_type="literature_summary"
-        )
+        results = populated_repo.search("paper", artifact_type="literature_summary")
         assert len(results) >= 1
 
     def test_search_no_results(self, populated_repo: ResearchRepository) -> None:

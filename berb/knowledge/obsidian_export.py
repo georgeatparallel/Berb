@@ -39,7 +39,7 @@ from __future__ import annotations
 import logging
 import os
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -228,7 +228,7 @@ class ObsidianExporter:
         """
         folder_path = self.vault / (folder or self.config.knowledge_folder)
         title = card.get("title", "Untitled")
-        card_id = card.get("id", f"kc-{datetime.now().strftime('%Y%m%d%H%M%S')}")
+        card.get("id", f"kc-{datetime.now().strftime('%Y%m%d%H%M%S')}")
 
         # Generate filename
         filename = self._slugify(title) + ".md"
@@ -292,7 +292,7 @@ class ObsidianExporter:
         """
         folder_path = self.vault / (folder or self.config.results_folder)
         title = report.get("title", "Untitled Experiment")
-        report_id = report.get("id", f"exp-{datetime.now().strftime('%Y%m%d%H%M%S')}")
+        report.get("id", f"exp-{datetime.now().strftime('%Y%m%d%H%M%S')}")
 
         # Generate filename
         date_str = datetime.now().strftime("%Y-%m-%d")
@@ -447,9 +447,9 @@ class ObsidianExporter:
         # Frontmatter
         if self.config.include_frontmatter:
             lines.append("---")
-            lines.append(f"title: \"{card.get('title', 'Untitled')}\"")
+            lines.append(f'title: "{card.get("title", "Untitled")}"')
             lines.append(f"id: {card.get('id', '')}")
-            lines.append(f"type: knowledge-card")
+            lines.append("type: knowledge-card")
             lines.append(f"created: {card.get('created', datetime.now().isoformat())}")
 
             # Tags
@@ -497,9 +497,9 @@ class ObsidianExporter:
         # Frontmatter
         if self.config.include_frontmatter:
             lines.append("---")
-            lines.append(f"title: \"{report.get('title', 'Untitled')}\"")
+            lines.append(f'title: "{report.get("title", "Untitled")}"')
             lines.append(f"id: {report.get('id', '')}")
-            lines.append(f"type: experiment-report")
+            lines.append("type: experiment-report")
             lines.append(f"date: {report.get('date', datetime.now().isoformat())}")
 
             # Tags
@@ -509,7 +509,9 @@ class ObsidianExporter:
             metrics = report.get("metrics", {})
             for key, value in metrics.items():
                 if isinstance(value, (int, float)):
-                    lines.append(f"{key}: {value:.4f}" if isinstance(value, float) else f"{key}: {value}")
+                    lines.append(
+                        f"{key}: {value:.4f}" if isinstance(value, float) else f"{key}: {value}"
+                    )
 
             lines.append("---")
             lines.append("")
@@ -557,8 +559,8 @@ class ObsidianExporter:
         # Frontmatter
         if self.config.include_frontmatter:
             lines.append("---")
-            lines.append(f"title: \"{draft.get('title', 'Untitled')}\"")
-            lines.append(f"type: paper-draft")
+            lines.append(f'title: "{draft.get("title", "Untitled")}"')
+            lines.append("type: paper-draft")
             lines.append(f"date: {datetime.now().isoformat()}")
             lines.append(f"tags: [{self.config.tag_prefix}paper, {self.config.tag_prefix}draft]")
 
@@ -589,9 +591,9 @@ class ObsidianExporter:
         # Frontmatter
         if self.config.include_frontmatter:
             lines.append("---")
-            lines.append(f"title: \"{paper.get('title', 'Untitled')}\"")
-            lines.append(f"type: paper")
-            lines.append(f"status: final")
+            lines.append(f'title: "{paper.get("title", "Untitled")}"')
+            lines.append("type: paper")
+            lines.append("status: final")
             lines.append(f"date: {datetime.now().isoformat()}")
 
             # Venue
@@ -663,6 +665,7 @@ class ObsidianExporter:
 
         # URL encode the path
         import urllib.parse
+
         encoded_path = urllib.parse.quote(str(relative_path))
 
         return f"obsidian://open?vault={vault_name}&file={encoded_path}"

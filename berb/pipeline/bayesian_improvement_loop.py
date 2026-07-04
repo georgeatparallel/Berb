@@ -11,24 +11,24 @@ from __future__ import annotations
 
 import logging
 import math
-from dataclasses import dataclass, field
-from typing import Any, Literal
+from dataclasses import dataclass
+from datetime import UTC
 
-from pydantic import BaseModel, Field
+from pydantic import Field
 
 from berb.llm.client import LLMProvider
-from berb.reasoning.bayesian import BayesianMethod, BayesianResult, Hypothesis, Evidence
-from berb.reasoning.research import ResearchMethod, ResearchResult
-from berb.review.cross_model_reviewer import CrossModelReviewer, ReviewResult, Weakness
 from berb.pipeline.improvement_loop import (
     AutonomousImprovementLoop,
-    ImprovementLoopConfig,
-    ImprovementResult,
-    ScoreProgression,
-    RoundResult,
     ClassifiedWeakness,
     FixType,
+    ImprovementLoopConfig,
+    ImprovementResult,
+    RoundResult,
+    ScoreProgression,
 )
+from berb.reasoning.bayesian import BayesianMethod, Evidence, Hypothesis
+from berb.reasoning.research import ResearchMethod, ResearchResult
+from berb.review.cross_model_reviewer import CrossModelReviewer, ReviewResult, Weakness
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +74,7 @@ class QualityBelief:
         new_evidence: float,
         evidence_confidence: float,
         weight: float = 1.0,
-    ) -> "QualityBelief":
+    ) -> QualityBelief:
         """Update belief with new evidence using Bayesian update.
 
         Args:
@@ -181,9 +181,9 @@ class BayesianImprovementLoop(AutonomousImprovementLoop):
             )
 
         import time
-        from datetime import datetime, timezone
+        from datetime import datetime
 
-        start_time = datetime.now(timezone.utc)
+        start_time = datetime.now(UTC)
         score_progression = ScoreProgression()
         all_fixes = []
         claims_killed = []
@@ -234,7 +234,7 @@ class BayesianImprovementLoop(AutonomousImprovementLoop):
 
             # Check score threshold
             if prior_review.overall_score >= self.config.score_threshold:
-                logger.info(f"Score threshold met")
+                logger.info("Score threshold met")
                 score_progression.stopped_early = True
                 score_progression.stop_reason = "score_threshold_met"
                 break
@@ -329,7 +329,7 @@ class BayesianImprovementLoop(AutonomousImprovementLoop):
             prior_review = new_review
 
         # Calculate final metrics
-        end_time = datetime.now(timezone.utc)
+        end_time = datetime.now(UTC)
         total_time = (end_time - start_time).total_seconds() / 60
 
         score_progression.final_score = prior_review.overall_score
@@ -419,7 +419,7 @@ class BayesianImprovementLoop(AutonomousImprovementLoop):
 Weaknesses:
 """
         for i, w in enumerate(weaknesses[:10]):
-            problem += f"{i+1}. [{w.weakness.severity.value}] {w.weakness.category}: {w.weakness.description[:100]}\n"
+            problem += f"{i + 1}. [{w.weakness.severity.value}] {w.weakness.category}: {w.weakness.description[:100]}\n"
 
         problem += """
 Prioritize by:
@@ -440,7 +440,7 @@ Output a prioritized list with reasoning."""
         )
 
         try:
-            result = await self.iterative_method.execute(context)
+            await self.iterative_method.execute(context)
 
             # Parse result to adjust priorities
             # For now, use default prioritization
@@ -520,7 +520,7 @@ Output a prioritized list with reasoning."""
 
             # Extract posteriors
             if isinstance(result.output, dict) and "posteriors" in result.output:
-                posteriors = result.output["posteriors"]
+                result.output["posteriors"]
                 # Update belief based on posterior probabilities
                 # (Simplified - would use full posterior distribution)
 
@@ -572,9 +572,7 @@ class IterativeFixPlanner:
             Prioritized list of classified weaknesses
         """
         # Build planning problem
-        problem = self._build_planning_problem(
-            weaknesses, remaining_rounds, budget_remaining
-        )
+        problem = self._build_planning_problem(weaknesses, remaining_rounds, budget_remaining)
 
         # Execute iterative reasoning
         from berb.reasoning.base import ReasoningContext
@@ -615,7 +613,7 @@ Constraints:
 Weaknesses to address:
 """
         for i, w in enumerate(weaknesses[:15]):
-            problem += f"{i+1}. [{w.severity.value}] {w.category}: {w.description[:80]}\n"
+            problem += f"{i + 1}. [{w.severity.value}] {w.category}: {w.description[:80]}\n"
 
         problem += """
 Output a prioritized plan with:

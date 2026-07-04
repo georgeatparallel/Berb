@@ -30,6 +30,7 @@ from berb.reasoning.registry import (
 # BUG-R001: Thread-safe Singleton Creation Tests
 # =============================================================================
 
+
 class TestSingletonThreadSafety:
     """Test BUG-R001 fix: Thread-safe singleton creation."""
 
@@ -39,13 +40,14 @@ class TestSingletonThreadSafety:
         ReasonerRegistry.clear_singletons()
         # Reset locks
         ReasonerRegistry._init_lock = None
-        if hasattr(ReasonerRegistry, '_sync_init_lock'):
+        if hasattr(ReasonerRegistry, "_sync_init_lock"):
             ReasonerRegistry._sync_init_lock = None
         yield
         ReasonerRegistry.clear_singletons()
 
     def test_singleton_returns_same_instance_sync(self):
         """BUG-R001: Sync get() returns same instance on repeated calls."""
+
         # Register a mock reasoner
         class MockReasoner:
             def __init__(self, **kwargs):
@@ -63,6 +65,7 @@ class TestSingletonThreadSafety:
     @pytest.mark.asyncio
     async def test_singleton_returns_same_instance_async(self):
         """BUG-R001: Async get_async() returns same instance on repeated calls."""
+
         # Register a mock reasoner
         class MockReasoner:
             def __init__(self, **kwargs):
@@ -80,6 +83,7 @@ class TestSingletonThreadSafety:
     @pytest.mark.asyncio
     async def test_concurrent_async_access(self):
         """BUG-R001: Concurrent async calls return same instance."""
+
         # Register a mock reasoner
         class MockReasoner:
             def __init__(self, **kwargs):
@@ -100,10 +104,13 @@ class TestSingletonThreadSafety:
         await asyncio.gather(*tasks)
 
         # All should have same instance ID
-        assert len(set(created_instances)) == 1, "Multiple instances created under concurrent access!"
+        assert len(set(created_instances)) == 1, (
+            "Multiple instances created under concurrent access!"
+        )
 
     def test_concurrent_sync_access(self):
         """BUG-R001: Concurrent sync calls return same instance."""
+
         # Register a mock reasoner
         class MockReasoner:
             def __init__(self, **kwargs):
@@ -128,11 +135,14 @@ class TestSingletonThreadSafety:
             t.join()
 
         # All should have same instance ID
-        assert len(set(created_instances)) == 1, "Multiple instances created under concurrent access!"
+        assert len(set(created_instances)) == 1, (
+            "Multiple instances created under concurrent access!"
+        )
 
     @pytest.mark.asyncio
     async def test_mixed_sync_async_access(self):
         """BUG-R001: Mixed sync and async access returns same instance."""
+
         # Register a mock reasoner
         class MockReasoner:
             def __init__(self, **kwargs):
@@ -155,6 +165,7 @@ class TestSingletonThreadSafety:
 
     def test_clear_singletons_works(self):
         """Verify clear_singletons() allows new instance creation."""
+
         # Register a mock reasoner
         class MockReasoner:
             def __init__(self, **kwargs):
@@ -179,7 +190,7 @@ class TestSingletonThreadSafety:
         """BUG-R001: initialize() pre-creates locks."""
         # Ensure locks are None
         ReasonerRegistry._init_lock = None
-        if hasattr(ReasonerRegistry, '_sync_init_lock'):
+        if hasattr(ReasonerRegistry, "_sync_init_lock"):
             ReasonerRegistry._sync_init_lock = None
 
         # Initialize
@@ -187,13 +198,14 @@ class TestSingletonThreadSafety:
 
         # Locks should exist
         assert ReasonerRegistry._init_lock is not None
-        assert hasattr(ReasonerRegistry, '_sync_init_lock')
+        assert hasattr(ReasonerRegistry, "_sync_init_lock")
         assert ReasonerRegistry._sync_init_lock is not None
 
 
 # =============================================================================
 # BUG-R002: Error Handling in auto_register_all() Tests
 # =============================================================================
+
 
 class TestAutoRegisterErrorHandling:
     """Test BUG-R002 fix: Error handling in auto_register_all()."""
@@ -209,8 +221,8 @@ class TestAutoRegisterErrorHandling:
     def test_auto_register_handles_import_errors(self, caplog):
         """BUG-R002: auto_register_all() handles import errors gracefully."""
         # Mock one module to fail
-        with patch.dict('sys.modules', {'berb.reasoning.bayesian': None}):
-            with patch('builtins.__import__', side_effect=ImportError("Simulated import error")):
+        with patch.dict("sys.modules", {"berb.reasoning.bayesian": None}):
+            with patch("builtins.__import__", side_effect=ImportError("Simulated import error")):
                 # Should not raise
                 auto_register_all()
 
@@ -235,7 +247,7 @@ class TestAutoRegisterErrorHandling:
                 raise ImportError("Bayesian module unavailable")
             return original_import(name, *args, **kwargs)
 
-        with patch.object(builtins, '__import__', side_effect=mock_import):
+        with patch.object(builtins, "__import__", side_effect=mock_import):
             auto_register_all()
 
         # Should log which module failed
@@ -259,7 +271,8 @@ class TestAutoRegisterErrorHandling:
                 raise ImportError(f"Import failed for {name}")
 
         import builtins
-        with patch.object(builtins, '__import__', side_effect=selective_import):
+
+        with patch.object(builtins, "__import__", side_effect=selective_import):
             auto_register_all()
 
         # Should have warning about partial failure
@@ -269,6 +282,7 @@ class TestAutoRegisterErrorHandling:
 # =============================================================================
 # BUG-R003: Timezone Normalization Tests
 # =============================================================================
+
 
 class TestTimezoneNormalization:
     """Test BUG-R003 fix: Timezone normalization in ReasoningContext.from_dict()."""
@@ -388,6 +402,7 @@ class TestTimezoneNormalization:
 # Integration Tests
 # =============================================================================
 
+
 class TestIntegration:
     """Integration tests for all bug fixes."""
 
@@ -397,7 +412,7 @@ class TestIntegration:
         ReasonerRegistry._registry.clear()
         ReasonerRegistry.clear_singletons()
         ReasonerRegistry._init_lock = None
-        if hasattr(ReasonerRegistry, '_sync_init_lock'):
+        if hasattr(ReasonerRegistry, "_sync_init_lock"):
             ReasonerRegistry._sync_init_lock = None
         yield
         ReasonerRegistry._registry.clear()
@@ -456,6 +471,7 @@ class TestIntegration:
 # BUG-NEW-001: Sync/Async Mixing Warning Tests
 # =============================================================================
 
+
 class TestSyncAsyncMixingWarning:
     """Test BUG-NEW-001 fix: Runtime warning for sync/async mixing."""
 
@@ -464,7 +480,7 @@ class TestSyncAsyncMixingWarning:
         """Clear singletons before and after each test."""
         ReasonerRegistry.clear_singletons()
         ReasonerRegistry._init_lock = None
-        if hasattr(ReasonerRegistry, '_sync_init_lock'):
+        if hasattr(ReasonerRegistry, "_sync_init_lock"):
             ReasonerRegistry._sync_init_lock = None
         yield
         ReasonerRegistry.clear_singletons()
@@ -472,6 +488,7 @@ class TestSyncAsyncMixingWarning:
     @pytest.mark.asyncio
     async def test_warning_when_sync_call_from_async_context(self, caplog):
         """BUG-NEW-001: Warning logged when get() called from async context."""
+
         # Register a mock reasoner
         class MockReasoner:
             def __init__(self, **kwargs):
@@ -481,6 +498,7 @@ class TestSyncAsyncMixingWarning:
 
         # Call sync get() from async context - should warn
         import logging
+
         with caplog.at_level(logging.WARNING):
             result = get_reasoner("bayesian", llm_client=None)
 
@@ -490,6 +508,7 @@ class TestSyncAsyncMixingWarning:
     @pytest.mark.asyncio
     async def test_no_warning_for_async_call(self, caplog):
         """BUG-NEW-001: No warning when get_async() called from async context."""
+
         # Register a mock reasoner
         class MockReasoner:
             def __init__(self, **kwargs):
@@ -499,6 +518,7 @@ class TestSyncAsyncMixingWarning:
 
         # Call async get_async() - should NOT warn
         import logging
+
         with caplog.at_level(logging.WARNING):
             result = await ReasonerRegistry.get_async("bayesian", llm_client=None)
 
@@ -510,6 +530,7 @@ class TestSyncAsyncMixingWarning:
 # BUG-NEW-002: Idempotency Tests
 # =============================================================================
 
+
 class TestAutoRegisterIdempotency:
     """Test BUG-NEW-002 fix: Idempotency of auto_register_all()."""
 
@@ -519,12 +540,12 @@ class TestAutoRegisterIdempotency:
         ReasonerRegistry._registry.clear()
         ReasonerRegistry.clear_singletons()
         # Remove idempotency flag if exists
-        if hasattr(auto_register_all, '_called'):
-            delattr(auto_register_all, '_called')
+        if hasattr(auto_register_all, "_called"):
+            delattr(auto_register_all, "_called")
         yield
         ReasonerRegistry._registry.clear()
-        if hasattr(auto_register_all, '_called'):
-            delattr(auto_register_all, '_called')
+        if hasattr(auto_register_all, "_called"):
+            delattr(auto_register_all, "_called")
 
     def test_auto_register_idempotent(self, caplog):
         """BUG-NEW-002: Second call to auto_register_all() is skipped."""
@@ -566,6 +587,7 @@ class TestAutoRegisterIdempotency:
 # =============================================================================
 # BUG-NEW-003: Fallback Datetime Parsing Tests
 # =============================================================================
+
 
 class TestFallbackDatetimeParsing:
     """Test BUG-NEW-003 fix: Fallback datetime format parsing."""

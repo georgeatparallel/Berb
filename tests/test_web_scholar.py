@@ -86,12 +86,17 @@ class TestGoogleScholarClient:
         assert paper.authors == []
 
     def test_rate_limiting(self):
-        client = GoogleScholarClient(inter_request_delay=0.01)
+        # Windows' time.sleep() consistently under-sleeps by a few ms relative
+        # to the requested duration (timer resolution ~15.6ms), so assert
+        # against a tolerance rather than the exact requested delay.
+        delay = 0.05
+        tolerance = 0.01
+        client = GoogleScholarClient(inter_request_delay=delay)
         t0 = time.monotonic()
         client._rate_limit()
         client._rate_limit()
         elapsed = time.monotonic() - t0
-        assert elapsed >= 0.01
+        assert elapsed >= delay - tolerance
 
     def test_search_with_mocked_api(self):
         """Test search using a mocked HTTP response."""

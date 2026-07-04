@@ -12,19 +12,19 @@ from __future__ import annotations
 
 import logging
 import math
-from dataclasses import dataclass, field
-from enum import Enum
-from typing import Any
+from datetime import UTC
+from enum import StrEnum
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from berb.reasoning.bayesian import BayesianMethod, BayesianResult, Hypothesis, Evidence
 from berb.llm.client import LLMProvider
+from berb.reasoning.bayesian import BayesianMethod, Evidence, Hypothesis
 
 logger = logging.getLogger(__name__)
 
 
-class ConsensusLevel(str, Enum):
+class ConsensusLevel(StrEnum):
     """Level of scientific consensus.
 
     Attributes:
@@ -46,7 +46,7 @@ class ConsensusLevel(str, Enum):
     STRONG_CONTRAST = "strong_contrast"
 
 
-class StudyType(str, Enum):
+class StudyType(StrEnum):
     """Type of study evidence.
 
     Attributes:
@@ -172,9 +172,7 @@ class EvidenceMap(BaseModel):
             evidence: ClaimEvidence object
         """
         self.claims[claim] = evidence
-        self.total_studies_analyzed += (
-            evidence.supporting_count + evidence.contrasting_count
-        )
+        self.total_studies_analyzed += evidence.supporting_count + evidence.contrasting_count
 
     def get_consensus_summary(self) -> dict[str, int]:
         """Get summary of consensus levels.
@@ -267,10 +265,10 @@ class EvidenceConsensusMapper:
         Returns:
             EvidenceMap with consensus for each claim
         """
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         evidence_map = EvidenceMap(
-            generated_at=datetime.now(timezone.utc).isoformat(),
+            generated_at=datetime.now(UTC).isoformat(),
             domain=domain,
         )
 
@@ -366,12 +364,8 @@ class EvidenceConsensusMapper:
         hedging = self._recommend_hedging(consensus, posterior)
 
         # Get top studies
-        key_supporters = sorted(
-            supporting_studies, key=lambda s: s.weight(), reverse=True
-        )[:3]
-        key_challengers = sorted(
-            contrasting_studies, key=lambda s: s.weight(), reverse=True
-        )[:3]
+        key_supporters = sorted(supporting_studies, key=lambda s: s.weight(), reverse=True)[:3]
+        key_challengers = sorted(contrasting_studies, key=lambda s: s.weight(), reverse=True)[:3]
 
         return ClaimEvidence(
             claim=claim,
@@ -411,7 +405,8 @@ class EvidenceConsensusMapper:
 
             # Extract key terms from claim
             claim_terms = [
-                t for t in claim_lower.split()
+                t
+                for t in claim_lower.split()
                 if len(t) > 4 and t not in {"that", "this", "which", "there", "their"}
             ]
 
@@ -460,14 +455,24 @@ class EvidenceConsensusMapper:
 
         # Keywords indicating support
         support_keywords = [
-            "supports", "confirms", "validates", "demonstrates",
-            "consistent with", "in agreement", "corroborates",
+            "supports",
+            "confirms",
+            "validates",
+            "demonstrates",
+            "consistent with",
+            "in agreement",
+            "corroborates",
         ]
 
         # Keywords indicating contrast
         contrast_keywords = [
-            "contradicts", "challenges", "refutes", "disagrees",
-            "inconsistent with", "fails to support", "no evidence",
+            "contradicts",
+            "challenges",
+            "refutes",
+            "disagrees",
+            "inconsistent with",
+            "fails to support",
+            "no evidence",
         ]
 
         text = findings + " " + conclusion
@@ -632,14 +637,10 @@ class EvidenceConsensusMapper:
         # Split by recency (last 5 years vs older)
         recent_cutoff = current_year - 5
 
-        recent_support = sum(
-            1 for s in supporting if s.year and s.year >= recent_cutoff
-        )
+        recent_support = sum(1 for s in supporting if s.year and s.year >= recent_cutoff)
         old_support = len(supporting) - recent_support
 
-        recent_contrast = sum(
-            1 for s in contrasting if s.year and s.year >= recent_cutoff
-        )
+        recent_contrast = sum(1 for s in contrasting if s.year and s.year >= recent_cutoff)
         old_contrast = len(contrasting) - recent_contrast
 
         # Calculate recent ratio

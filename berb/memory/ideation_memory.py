@@ -48,11 +48,7 @@ class IdeationMemory:
         Returns:
             The generated memory entry ID.
         """
-        content = (
-            f"Topic: {topic}\n"
-            f"Outcome: {outcome}\n"
-            f"Quality: {quality_score:.1f}/10"
-        )
+        content = f"Topic: {topic}\nOutcome: {outcome}\nQuality: {quality_score:.1f}/10"
         metadata = {
             "type": "topic_outcome",
             "outcome": outcome,
@@ -66,9 +62,7 @@ class IdeationMemory:
             confidence = max(0.5, confidence)  # failures are valuable too
 
         embedding = self._embed_fn(content) if self._embed_fn else []
-        return self._store.add(
-            CATEGORY, content, metadata, embedding, confidence
-        )
+        return self._store.add(CATEGORY, content, metadata, embedding, confidence)
 
     def record_hypothesis(
         self,
@@ -89,11 +83,7 @@ class IdeationMemory:
             The generated memory entry ID.
         """
         outcome = "feasible" if feasible else "infeasible"
-        content = (
-            f"Hypothesis: {hypothesis}\n"
-            f"Assessment: {outcome}\n"
-            f"Reason: {reason}"
-        )
+        content = f"Hypothesis: {hypothesis}\nAssessment: {outcome}\nReason: {reason}"
         metadata = {
             "type": "hypothesis",
             "feasible": feasible,
@@ -102,9 +92,7 @@ class IdeationMemory:
 
         confidence = 0.6 if feasible else 0.7  # infeasible is more informative
         embedding = self._embed_fn(content) if self._embed_fn else []
-        return self._store.add(
-            CATEGORY, content, metadata, embedding, confidence
-        )
+        return self._store.add(CATEGORY, content, metadata, embedding, confidence)
 
     def recall_similar_topics(
         self,
@@ -130,9 +118,7 @@ class IdeationMemory:
         for i, (entry, score) in enumerate(results, 1):
             outcome = entry.metadata.get("outcome", "unknown")
             quality = entry.metadata.get("quality_score", "?")
-            icon = {"success": "+", "failure": "-", "abandoned": "~"}.get(
-                outcome, "?"
-            )
+            icon = {"success": "+", "failure": "-", "abandoned": "~"}.get(outcome, "?")
             parts.append(
                 f"{i}. [{icon}] {entry.content.splitlines()[0]} "
                 f"(score: {quality}, relevance: {score:.2f})"

@@ -6,19 +6,17 @@ import json
 import logging
 import math
 import re
-import time as _time
 from pathlib import Path
 from typing import Any
 
 from berb.adapters import AdapterBundle
 from berb.config import RCConfig
 from berb.experiment.validator import (
-    CodeValidation,
     format_issues_for_llm,
     validate_code,
 )
+from berb.adapters import LLMProvider
 from berb.llm.client import LLMClient
-from berb.pipeline._domain import _detect_domain
 from berb.pipeline._helpers import (
     StageResult,
     _chat_with_prompt,
@@ -27,20 +25,31 @@ from berb.pipeline._helpers import (
     _extract_code_block,
     _extract_multi_file_blocks,
     _get_evolution_overlay,
-    _load_hardware_profile,
     _parse_metrics_from_stdout,
     _read_prior_artifact,
     _safe_filename,
     _safe_json_loads,
     _utcnow_iso,
-    _write_stage_meta,
 )
+from berb.pipeline.contracts import StageContract
+from berb.pipeline.registry import register_stage
 from berb.pipeline.stages import Stage, StageStatus
 from berb.prompts import PromptManager
 
 logger = logging.getLogger(__name__)
 
 
+@register_stage(
+    stage=Stage.RESOURCE_PLANNING,
+    depends_on=frozenset({Stage.EXPERIMENT_DESIGN}),
+    contract=StageContract(
+        stage=Stage.RESOURCE_PLANNING,
+        input_files=("exp_plan.yaml",),
+        output_files=("schedule.json",),
+        dod="Resource schedule with GPU/time estimates",
+        error_code="E11_SCHED_CONFLICT",
+    ),
+)
 def _execute_resource_planning(
     stage_dir: Path,
     run_dir: Path,
@@ -90,9 +99,7 @@ def _execute_resource_planning(
             "generated": _utcnow_iso(),
         }
     schedule.setdefault("generated", _utcnow_iso())
-    (stage_dir / "schedule.json").write_text(
-        json.dumps(schedule, indent=2), encoding="utf-8"
-    )
+    (stage_dir / "schedule.json").write_text(json.dumps(schedule, indent=2), encoding="utf-8")
     return StageResult(
         stage=Stage.RESOURCE_PLANNING,
         status=StageStatus.DONE,
@@ -101,6 +108,18 @@ def _execute_resource_planning(
     )
 
 
+@register_stage(
+    stage=Stage.EXPERIMENT_RUN,
+    depends_on=frozenset({Stage.CODE_GENERATION, Stage.RESOURCE_PLANNING}),
+    contract=StageContract(
+        stage=Stage.EXPERIMENT_RUN,
+        input_files=("schedule.json", "experiment/"),
+        output_files=("runs/",),
+        dod="All scheduled experiment runs completed with artifacts",
+        error_code="E12_RUN_FAIL",
+        max_retries=2,
+    ),
+)
 def _execute_experiment_run(
     stage_dir: Path,
     run_dir: Path,
@@ -149,18 +168,14 @@ def _execute_experiment_run(
                 Path(exp_dir_path), timeout_sec=config.experiment.time_budget_sec
             )
         else:
-            result = sandbox.run(
-                code_text, timeout_sec=config.experiment.time_budget_sec
-            )
+            result = sandbox.run(code_text, timeout_sec=config.experiment.time_budget_sec)
         # Try to read structured results.json from sandbox working dir
         structured_results: dict[str, Any] | None = None
         sandbox_project = runs_dir / "sandbox" / "_project"
         results_json_path = sandbox_project / "results.json"
         if results_json_path.exists():
             try:
-                structured_results = json.loads(
-                    results_json_path.read_text(encoding="utf-8")
-                )
+                structured_results = json.loads(results_json_path.read_text(encoding="utf-8"))
                 # Copy results.json to runs dir for easy access
                 (runs_dir / "results.json").write_text(
                     results_json_path.read_text(encoding="utf-8"),
@@ -195,9 +210,7 @@ def _execute_experiment_run(
         else:
             run_status = "failed"
             if _stdout_has_failure:
-                logger.warning(
-                    "Experiment exited cleanly but stdout contains failure signals"
-                )
+                logger.warning("Experiment exited cleanly but stdout contains failure signals")
 
         # P1: Warn if experiment completed suspiciously fast (trivially easy benchmark)
         if run_status == "completed" and result.elapsed_sec and result.elapsed_sec < 5.0:
@@ -226,13 +239,16 @@ def _execute_experiment_run(
             (runs_dir / "results.json").write_text(
                 json.dumps(auto_results, indent=2), encoding="utf-8"
             )
-            logger.info("Stage 12: Auto-generated results.json from stdout metrics (%d keys)", len(effective_metrics))
-        (runs_dir / "run-1.json").write_text(
-            json.dumps(run_payload, indent=2), encoding="utf-8"
-        )
+            logger.info(
+                "Stage 12: Auto-generated results.json from stdout metrics (%d keys)",
+                len(effective_metrics),
+            )
+        (runs_dir / "run-1.json").write_text(json.dumps(run_payload, indent=2), encoding="utf-8")
 
         # R11-6: Time budget adequacy check
-        if result.timed_out or (result.elapsed_sec and result.elapsed_sec > config.experiment.time_budget_sec * 0.9):
+        if result.timed_out or (
+            result.elapsed_sec and result.elapsed_sec > config.experiment.time_budget_sec * 0.9
+        ):
             # Parse stdout to estimate how many conditions/seeds completed
             _stdout = result.stdout or ""
             _completed_conditions = set()
@@ -257,16 +273,16 @@ def _execute_experiment_run(
                     f"time_budget_sec for more complete results."
                 ),
             }
-            logger.warning(
-                "Stage 12: %s", _time_budget_warning["warning"]
-            )
+            logger.warning("Stage 12: %s", _time_budget_warning["warning"])
             (stage_dir / "time_budget_warning.json").write_text(
                 json.dumps(_time_budget_warning, indent=2), encoding="utf-8"
             )
 
         # FIX-8: Validate seed count from structured results
         if structured_results and isinstance(structured_results, dict):
-            _sr_conditions = structured_results.get("conditions", structured_results.get("per_condition", {}))
+            _sr_conditions = structured_results.get(
+                "conditions", structured_results.get("per_condition", {})
+            )
             if isinstance(_sr_conditions, dict):
                 for _cname, _cdata in _sr_conditions.items():
                     if isinstance(_cdata, dict):
@@ -275,7 +291,8 @@ def _execute_experiment_run(
                             logger.warning(
                                 "Stage 12: Condition '%s' ran only %d seed(s) — "
                                 "minimum 3 required for statistical validity",
-                                _cname, int(_seeds_run),
+                                _cname,
+                                int(_seeds_run),
                             )
 
     elif mode == "simulated":
@@ -333,6 +350,18 @@ def _execute_experiment_run(
     )
 
 
+@register_stage(
+    stage=Stage.ITERATIVE_REFINE,
+    depends_on=frozenset({Stage.EXPERIMENT_RUN}),
+    contract=StageContract(
+        stage=Stage.ITERATIVE_REFINE,
+        input_files=("runs/",),
+        output_files=("refinement_log.json", "experiment_final/"),
+        dod="Edit-run-eval loop converged or max iterations reached",
+        error_code="E13_REFINE_FAIL",
+        max_retries=2,
+    ),
+)
 def _execute_iterative_refine(
     stage_dir: Path,
     run_dir: Path,
@@ -343,7 +372,6 @@ def _execute_iterative_refine(
     prompts: PromptManager | None = None,
 ) -> StageResult:
     from berb.experiment.factory import create_sandbox
-    from berb.experiment.validator import format_issues_for_llm, validate_code
 
     def _to_float(value: Any) -> float | None:
         try:
@@ -367,14 +395,12 @@ def _execute_iterative_refine(
 
         final_dir = stage_dir / "experiment_final"
         # Copy latest experiment code as final (directory or single file)
-        copied = False
         for stage_num in (12, 10):
             src_dir = run_dir / f"stage-{stage_num:02d}" / "experiment"
             if src_dir.is_dir():
                 if final_dir.exists():
                     shutil.rmtree(final_dir)
                 shutil.copytree(src_dir, final_dir)
-                copied = True
                 break
             # Also check for single experiment.py
             src_file = run_dir / f"stage-{stage_num:02d}" / "experiment.py"
@@ -382,7 +408,6 @@ def _execute_iterative_refine(
                 (stage_dir / "experiment_final.py").write_text(
                     src_file.read_text(encoding="utf-8"), encoding="utf-8"
                 )
-                copied = True
                 break
 
         log: dict[str, Any] = {
@@ -392,9 +417,7 @@ def _execute_iterative_refine(
             "skip_reason": "Iterative refinement not meaningful in simulated mode",
             "metric_key": config.experiment.metric_key,
         }
-        (stage_dir / "refinement_log.json").write_text(
-            json.dumps(log, indent=2), encoding="utf-8"
-        )
+        (stage_dir / "refinement_log.json").write_text(json.dumps(log, indent=2), encoding="utf-8")
         return StageResult(
             stage=Stage.ITERATIVE_REFINE,
             status=StageStatus.DONE,
@@ -419,9 +442,7 @@ def _execute_iterative_refine(
             try:
                 _rp = _safe_json_loads(_rf.read_text(encoding="utf-8"), {})
                 _stdout = _rp.get("stdout", "") if isinstance(_rp, dict) else ""
-                _match = _re_detect.search(
-                    r"METRIC_DEF:.*direction\s*=\s*(higher|lower)", _stdout
-                )
+                _match = _re_detect.search(r"METRIC_DEF:.*direction\s*=\s*(higher|lower)", _stdout)
                 if _match:
                     _detected = _match.group(1)
                     _detected_dir = "maximize" if _detected == "higher" else "minimize"
@@ -490,6 +511,7 @@ def _execute_iterative_refine(
     # BUG-57: Wall-clock time cap for the entire refinement stage.
     # Default: 3× the per-iteration time budget (e.g., 2400s → 7200s = 2h).
     import time as _time_bug57
+
     _refine_start_time = _time_bug57.monotonic()
     _per_iter_budget = int(getattr(config.experiment, "time_budget_sec", 2400) or 2400)
     _max_refine_wall_sec = int(
@@ -514,9 +536,8 @@ def _execute_iterative_refine(
             if "stdout" in summary and isinstance(summary["stdout"], str):
                 lines = summary["stdout"].splitlines()
                 if len(lines) > 30:
-                    summary["stdout"] = (
-                        f"[...truncated {len(lines) - 30} lines...]\n"
-                        + "\n".join(lines[-30:])
+                    summary["stdout"] = f"[...truncated {len(lines) - 30} lines...]\n" + "\n".join(
+                        lines[-30:]
                     )
                 if len(summary["stdout"]) > 2000:
                     summary["stdout"] = summary["stdout"][-2000:]
@@ -534,11 +555,7 @@ def _execute_iterative_refine(
                     if isinstance(payload.get("key_metrics"), dict)
                     else {}
                 )
-            metric_val = (
-                _find_metric(metrics, metric_key)
-                if isinstance(metrics, dict)
-                else None
-            )
+            metric_val = _find_metric(metrics, metric_key) if isinstance(metrics, dict) else None
             if metric_val is None:
                 metric_val = _to_float(payload.get("primary_metric"))
             if _is_better(metric_val, baseline_metric):
@@ -563,9 +580,7 @@ def _execute_iterative_refine(
             continue
         _prd_log = _prd.parent / "refinement_log.json"
         if _prd_log.is_file():
-            _prd_data = _safe_json_loads(
-                _prd_log.read_text(encoding="utf-8"), {}
-            )
+            _prd_data = _safe_json_loads(_prd_log.read_text(encoding="utf-8"), {})
             _prd_metric = _prd_data.get("best_metric") if isinstance(_prd_data, dict) else None
             if isinstance(_prd_metric, (int, float)) and _is_better(_prd_metric, _best_prev_metric):
                 _best_prev_metric = _prd_metric
@@ -588,7 +603,14 @@ def _execute_iterative_refine(
         # setup.py, config files are needed for Docker sandbox phases.
         for src_file in sorted(Path(exp_dir_text).iterdir()):
             if src_file.is_file() and src_file.suffix in (
-                ".py", ".txt", ".yaml", ".yml", ".json", ".cfg", ".ini", ".sh",
+                ".py",
+                ".txt",
+                ".yaml",
+                ".yml",
+                ".json",
+                ".cfg",
+                ".ini",
+                ".sh",
             ):
                 try:
                     best_files[src_file.name] = src_file.read_text(encoding="utf-8")
@@ -658,9 +680,7 @@ def _execute_iterative_refine(
         _write_project(final_dir, best_files)
         # Backward compat
         if "main.py" in best_files:
-            (stage_dir / "experiment_final.py").write_text(
-                best_files["main.py"], encoding="utf-8"
-            )
+            (stage_dir / "experiment_final.py").write_text(best_files["main.py"], encoding="utf-8")
         log.update(
             {
                 "converged": True,
@@ -677,9 +697,7 @@ def _execute_iterative_refine(
                 ],
             }
         )
-        (stage_dir / "refinement_log.json").write_text(
-            json.dumps(log, indent=2), encoding="utf-8"
-        )
+        (stage_dir / "refinement_log.json").write_text(json.dumps(log, indent=2), encoding="utf-8")
         artifacts = ("refinement_log.json", "experiment_final/")
         return StageResult(
             stage=Stage.ITERATIVE_REFINE,
@@ -710,9 +728,7 @@ def _execute_iterative_refine(
                 "This is the MOST IMPORTANT improvement — a single unlabeled metric stream "
                 "cannot support any comparative conclusions.\n\n"
             )
-            logger.info(
-                "Stage 13: condition coverage gap detected, injecting multi-condition hint"
-            )
+            logger.info("Stage 13: condition coverage gap detected, injecting multi-condition hint")
 
     # P1: Track metrics history for saturation detection
     _metrics_history: list[float | None] = [baseline_metric]
@@ -724,12 +740,19 @@ def _execute_iterative_refine(
             logger.warning(
                 "Stage 13: Wall-clock time cap reached (%.0fs > %ds). "
                 "Stopping refinement after %d iterations.",
-                _elapsed, _max_refine_wall_sec, iteration - 1,
+                _elapsed,
+                _max_refine_wall_sec,
+                iteration - 1,
             )
             log["stop_reason"] = "wall_clock_time_cap"
             break
-        logger.info("Stage 13: refinement iteration %d/%d (%.0fs elapsed, cap %ds)",
-                    iteration, max_iterations, _elapsed, _max_refine_wall_sec)
+        logger.info(
+            "Stage 13: refinement iteration %d/%d (%.0fs elapsed, cap %ds)",
+            iteration,
+            max_iterations,
+            _elapsed,
+            _max_refine_wall_sec,
+        )
 
         # P1: Detect metric saturation and inject difficulty upgrade hint
         _saturation_hint = ""
@@ -761,7 +784,9 @@ def _execute_iterative_refine(
                     "6. Ensure random search achieves < 50% success rate\n"
                     "Without this change, the experiment produces meaningless results.\n"
                 )
-                logger.warning("Stage 13: metric saturation detected, injecting difficulty upgrade hint")
+                logger.warning(
+                    "Stage 13: metric saturation detected, injecting difficulty upgrade hint"
+                )
 
         files_context = _files_to_context(best_files)
         # BUG-10 fix: anchor refinement to original experiment plan
@@ -918,6 +943,7 @@ def _execute_iterative_refine(
             # BUG-110: Parse ABLATION_CHECK lines from stdout
             if rerun.stdout:
                 import re as _re_ablation
+
                 _ablation_checks = _re_ablation.findall(
                     r"ABLATION_CHECK:\s*(\S+)\s+vs\s+(\S+)\s+outputs_differ=(True|False)",
                     rerun.stdout,
@@ -951,6 +977,7 @@ def _execute_iterative_refine(
                 # If still no metrics after timeout, use partial stdout metrics
                 if not rerun.metrics and rerun.stdout:
                     from berb.experiment.sandbox import parse_metrics as _parse_sb_metrics
+
                     partial = _parse_sb_metrics(rerun.stdout)
                     if partial:
                         iter_record["sandbox"]["metrics"] = partial
@@ -1034,7 +1061,10 @@ def _execute_iterative_refine(
 
         if consecutive_no_metrics >= 3:
             log["stop_reason"] = "consecutive_no_metrics"
-            logger.warning("Stage 13: Aborting after %d consecutive iterations without metrics", consecutive_no_metrics)
+            logger.warning(
+                "Stage 13: Aborting after %d consecutive iterations without metrics",
+                consecutive_no_metrics,
+            )
             break
 
         if no_improve_streak >= 2:
@@ -1052,9 +1082,7 @@ def _execute_iterative_refine(
     _write_project(final_dir, best_files)
     # Backward compat: also write experiment_final.py (copy of main.py)
     if "main.py" in best_files:
-        (stage_dir / "experiment_final.py").write_text(
-            best_files["main.py"], encoding="utf-8"
-        )
+        (stage_dir / "experiment_final.py").write_text(best_files["main.py"], encoding="utf-8")
 
     log["best_metric"] = best_metric
     log["best_version"] = best_version
@@ -1067,9 +1095,7 @@ def _execute_iterative_refine(
     )
     if _all_ablation_identical:
         log["ablation_identical_warning"] = True
-    (stage_dir / "refinement_log.json").write_text(
-        json.dumps(log, indent=2), encoding="utf-8"
-    )
+    (stage_dir / "refinement_log.json").write_text(json.dumps(log, indent=2), encoding="utf-8")
 
     artifacts = ["refinement_log.json", "experiment_final/"]
     artifacts.extend(

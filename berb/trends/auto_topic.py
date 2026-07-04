@@ -35,24 +35,24 @@ class AutoTopicGenerator:
         trend_analysis = self.trend_analyzer.analyze(papers or [])
 
         # 2. Find opportunities
-        opportunities = await self.opportunity_finder.find_opportunities(
-            trend_analysis, domains
-        )
+        opportunities = await self.opportunity_finder.find_opportunities(trend_analysis, domains)
 
         # 3. Score and rank candidates
         candidates = []
         for opp in opportunities[:count]:
             score = self._score_candidate(opp, trend_analysis)
-            candidates.append({
-                "topic": opp["topic"],
-                "rationale": opp.get("rationale", ""),
-                "feasibility": opp.get("feasibility", "medium"),
-                "novelty_score": score["novelty"],
-                "feasibility_score": score["feasibility"],
-                "impact_score": score["impact"],
-                "overall_score": score["overall"],
-                "source": opp.get("source", "unknown"),
-            })
+            candidates.append(
+                {
+                    "topic": opp["topic"],
+                    "rationale": opp.get("rationale", ""),
+                    "feasibility": opp.get("feasibility", "medium"),
+                    "novelty_score": score["novelty"],
+                    "feasibility_score": score["feasibility"],
+                    "impact_score": score["impact"],
+                    "overall_score": score["overall"],
+                    "source": opp.get("source", "unknown"),
+                }
+            )
 
         candidates.sort(key=lambda c: -c["overall_score"])
         return candidates[:count]
@@ -80,9 +80,7 @@ class AutoTopicGenerator:
     ) -> dict[str, float]:
         """Score a candidate topic on novelty, feasibility, and impact."""
         feasibility_map = {"high": 0.9, "medium": 0.6, "low": 0.3}
-        feasibility = feasibility_map.get(
-            opportunity.get("feasibility", "medium"), 0.6
-        )
+        feasibility = feasibility_map.get(opportunity.get("feasibility", "medium"), 0.6)
 
         # Novelty: inverse of how much it's already been studied
         topic_words = set(opportunity.get("topic", "").lower().split())
@@ -98,9 +96,7 @@ class AutoTopicGenerator:
         paper_count = trend_analysis.get("paper_count", 0)
         impact = min(1.0, paper_count / 50) if paper_count > 0 else 0.5
 
-        overall = round(
-            0.4 * novelty + 0.3 * feasibility + 0.3 * impact, 3
-        )
+        overall = round(0.4 * novelty + 0.3 * feasibility + 0.3 * impact, 3)
 
         return {
             "novelty": round(novelty, 3),
@@ -119,13 +115,15 @@ class AutoTopicGenerator:
 
         lines = ["Candidate Research Topics:", "=" * 40, ""]
         for i, c in enumerate(candidates, 1):
-            lines.extend([
-                f"{i}. {c['topic']}",
-                f"   Score: {c['overall_score']:.2f} "
-                f"(novelty={c['novelty_score']:.2f}, "
-                f"feasibility={c['feasibility_score']:.2f}, "
-                f"impact={c['impact_score']:.2f})",
-                f"   Rationale: {c.get('rationale', 'N/A')}",
-                "",
-            ])
+            lines.extend(
+                [
+                    f"{i}. {c['topic']}",
+                    f"   Score: {c['overall_score']:.2f} "
+                    f"(novelty={c['novelty_score']:.2f}, "
+                    f"feasibility={c['feasibility_score']:.2f}, "
+                    f"impact={c['impact_score']:.2f})",
+                    f"   Rationale: {c.get('rationale', 'N/A')}",
+                    "",
+                ]
+            )
         return "\n".join(lines)

@@ -19,7 +19,7 @@ Usage:
     cpl = CrossProjectLearning(data_dir=".berb/runs")
     await cpl.load_runs()
     insights = await cpl.extract_patterns()
-    
+
     # Use insights for model routing
     best_model = insights.get_model_affinity(Stage.HYPOTHESIS_GEN, domain="biology")
 """
@@ -29,7 +29,7 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -144,7 +144,7 @@ class CrossProjectLearning:
                 break
 
             try:
-                with open(run_file, "r", encoding="utf-8") as f:
+                with open(run_file, encoding="utf-8") as f:
                     data = json.load(f)
 
                 run = self._parse_run_trace(data)
@@ -189,8 +189,12 @@ class CrossProjectLearning:
                 run_id=data.get("run_id", "unknown"),
                 topic=data.get("topic", ""),
                 domain=data.get("domain", "unknown"),
-                start_time=datetime.fromisoformat(data["start_time"]) if data.get("start_time") else datetime.now(timezone.utc),
-                end_time=datetime.fromisoformat(data["end_time"]) if data.get("end_time") else datetime.now(timezone.utc),
+                start_time=datetime.fromisoformat(data["start_time"])
+                if data.get("start_time")
+                else datetime.now(UTC),
+                end_time=datetime.fromisoformat(data["end_time"])
+                if data.get("end_time")
+                else datetime.now(UTC),
                 status=data.get("status", "unknown"),
                 total_cost=data.get("total_cost", 0.0),
                 total_tokens=data.get("total_tokens", 0),
@@ -308,12 +312,18 @@ class CrossProjectLearning:
             error_counts: dict[str, int] = {}
             for s in failures:
                 if s.error_message:
-                    error_counts[s.error_message[:100]] = error_counts.get(s.error_message[:100], 0) + 1
+                    error_counts[s.error_message[:100]] = (
+                        error_counts.get(s.error_message[:100], 0) + 1
+                    )
 
-            common_errors = sorted(error_counts.keys(), key=lambda x: error_counts[x], reverse=True)[:5]
+            common_errors = sorted(
+                error_counts.keys(), key=lambda x: error_counts[x], reverse=True
+            )[:5]
 
             # Generate risk factors and mitigations
-            risk_factors = self._generate_risk_factors(domain, stage_name, failure_rate, common_errors)
+            risk_factors = self._generate_risk_factors(
+                domain, stage_name, failure_rate, common_errors
+            )
             mitigation_strategies = self._generate_mitigations(domain, stage_name, common_errors)
 
             predictor = FailurePredictor(
@@ -483,7 +493,7 @@ class CrossProjectLearning:
         output_path = Path(output_path)
 
         data = {
-            "exported_at": datetime.now(timezone.utc).isoformat(),
+            "exported_at": datetime.now(UTC).isoformat(),
             "total_runs": len(self._runs),
             "model_affinities": {},
             "failure_predictors": {},

@@ -9,10 +9,11 @@ quality metrics, and ETA using the rich library.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
+from rich.panel import Panel
 
 logger = logging.getLogger(__name__)
 
@@ -131,7 +132,7 @@ class PipelineDashboard:
             self.console = Console()
             self.live = Live(self._generate_table(), console=self.console, refresh_per_second=4)
             self.live.start()
-            self.start_time = datetime.now(timezone.utc)
+            self.start_time = datetime.now(UTC)
 
             self.console.print("[bold green]🚀 Berb Pipeline Started[/bold green]\n")
 
@@ -166,7 +167,7 @@ class PipelineDashboard:
             stage_number=stage_number,
             stage_name=name,
             status="running",
-            started_at=datetime.now(timezone.utc).isoformat(),
+            started_at=datetime.now(UTC).isoformat(),
         )
         self.stages[stage_number] = self.current_stage
 
@@ -201,7 +202,7 @@ class PipelineDashboard:
         if stage_number in self.stages:
             self.stages[stage_number].status = "completed"
             self.stages[stage_number].progress = 100.0
-            self.stages[stage_number].completed_at = datetime.now(timezone.utc).isoformat()
+            self.stages[stage_number].completed_at = datetime.now(UTC).isoformat()
             self.stages[stage_number].cost_usd = cost_usd
             self.total_cost_usd += cost_usd
 
@@ -277,19 +278,20 @@ class PipelineDashboard:
         Returns:
             Rich table object
         """
-        from rich.table import Table
-        from rich.panel import Panel
-        from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn
-
         # Main layout
         from rich.layout import Layout
+        from rich.panel import Panel
+        from rich.table import Table
+
         layout = Layout()
 
         # Header
         header = Table(show_header=False, box=None, padding=(0, 1))
         header.add_column("Header", style="bold white")
         header.add_row("🧪 Berb Research Pipeline")
-        header.add_row(f"Started: {self.start_time.strftime('%Y-%m-%d %H:%M:%S') if self.start_time else 'N/A'}")
+        header.add_row(
+            f"Started: {self.start_time.strftime('%Y-%m-%d %H:%M:%S') if self.start_time else 'N/A'}"
+        )
 
         # Current stage panel
         if self.current_stage:
@@ -320,7 +322,7 @@ class PipelineDashboard:
             Rich panel
         """
         from rich.panel import Panel
-        from rich.progress import Progress, BarColumn, TextColumn
+        from rich.progress import BarColumn, Progress, TextColumn
 
         if not self.current_stage:
             return Panel("Waiting...", title="Current Stage")
@@ -334,7 +336,7 @@ class PipelineDashboard:
             TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
         )
 
-        task_id = progress.add_task(
+        progress.add_task(
             f"{stage.stage_name}",
             completed=stage.progress,
             total=100,
@@ -363,7 +365,7 @@ class PipelineDashboard:
   Total: [green]${self.total_cost_usd:.3f}[/green]
 
 [bold]⏱️ ETA:[/bold]
-  {f'{self.eta_minutes:.0f} min' if self.eta_minutes else 'Calculating...'}
+  {f"{self.eta_minutes:.0f} min" if self.eta_minutes else "Calculating..."}
 """
 
         return Panel(content, title="Statistics", border_style="green")
@@ -440,7 +442,7 @@ class PipelineDashboard:
         # Calculate totals
         total_time = ""
         if self.start_time:
-            end_time = datetime.now(timezone.utc)
+            end_time = datetime.now(UTC)
             duration = (end_time - self.start_time).total_seconds() / 60
             total_time = f"{duration:.1f} minutes"
 

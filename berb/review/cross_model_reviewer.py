@@ -16,8 +16,8 @@ from __future__ import annotations
 
 import json
 import logging
-from enum import Enum
-from typing import Any, Literal
+from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -26,7 +26,7 @@ from berb.llm.client import LLMProvider, LLMResponse
 logger = logging.getLogger(__name__)
 
 
-class ReviewVerdict(str, Enum):
+class ReviewVerdict(StrEnum):
     """Review verdict for a paper.
 
     Attributes:
@@ -42,7 +42,7 @@ class ReviewVerdict(str, Enum):
     REJECT = "reject"
 
 
-class WeaknessSeverity(str, Enum):
+class WeaknessSeverity(StrEnum):
     """Severity of identified weaknesses.
 
     Attributes:
@@ -340,9 +340,7 @@ Be conservative with high scores. Most papers score 5-7."""
             return self._review_cache[cache_key]
 
         # Get criteria
-        criteria = review_criteria or self.VENUE_CRITERIA.get(
-            venue, self.VENUE_CRITERIA["default"]
-        )
+        criteria = review_criteria or self.VENUE_CRITERIA.get(venue, self.VENUE_CRITERIA["default"])
         criteria_text = "\n".join(f"- {c}" for c in criteria)
 
         # Build prompt
@@ -429,9 +427,7 @@ Be conservative with high scores. Most papers score 5-7."""
                     overall_score=float(data.get("overall_score", 5.0)),
                     verdict=ReviewVerdict(data.get("verdict", "borderline")),
                     strengths=data.get("strengths", []),
-                    weaknesses=[
-                        Weakness(**w) for w in data.get("weaknesses", [])
-                    ],
+                    weaknesses=[Weakness(**w) for w in data.get("weaknesses", [])],
                     missing_experiments=data.get("missing_experiments", []),
                     writing_issues=data.get("writing_issues", []),
                     actionable_improvements=data.get("actionable_improvements", []),
@@ -486,18 +482,19 @@ Be conservative with high scores. Most papers score 5-7."""
 
         for desc, weakness in prior_weaknesses.items():
             if desc in current_weaknesses:
-                unchanged_weaknesses.append(desc)
+                unchanged_weaknesses.append(weakness.description[:50])
             else:
-                improvements_made.append(f"Fixed: {weakness.category} - {desc[:50]}")
+                # desc is lowercased for matching only; use original-cased
+                # weakness.description for the human-readable message.
+                improvements_made.append(f"Fixed: {weakness.category} - {weakness.description[:50]}")
 
         for desc, weakness in current_weaknesses.items():
             if desc not in prior_weaknesses:
-                new_weaknesses.append(f"New: {weakness.category} - {desc[:50]}")
+                new_weaknesses.append(f"New: {weakness.category} - {weakness.description[:50]}")
 
         # Identify regressions (new critical/major weaknesses)
         regressions = [
-            w for w in new_weaknesses
-            if any(sev in w.lower() for sev in ["critical", "major"])
+            w for w in new_weaknesses if any(sev in w.lower() for sev in ["critical", "major"])
         ]
 
         net_improvement = score_change > 0 and len(improvements_made) >= len(new_weaknesses)

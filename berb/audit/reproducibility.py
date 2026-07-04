@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -49,7 +49,7 @@ class ReproducibilityPackage(BaseModel):
     def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
         if not self.created_at:
-            self.created_at = datetime.now(timezone.utc).isoformat()
+            self.created_at = datetime.now(UTC).isoformat()
 
 
 class ReproducibilityGenerator:
@@ -153,13 +153,26 @@ dependencies:
             f.write(env_content)
         self.artifacts.append(str(env_path))
 
-        # Dockerfile
+        # requirements.txt (pip-compatible; parallel to environment.yml)
+        req_content = (
+            "pyyaml>=6.0\n"
+            "rich>=13.0\n"
+            "pydantic>=2.0\n"
+            "numpy>=1.24\n"
+            "httpx>=0.24\n"
+        )
+        req_path = output_dir / "requirements.txt"
+        with open(req_path, "w", encoding="utf-8") as f:
+            f.write(req_content)
+        self.artifacts.append(str(req_path))
+
+        # Dockerfile — references requirements.txt (pip format), not environment.yml (conda)
         dockerfile_content = """FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY environment.yml .
-RUN pip install --no-cache-dir -r environment.yml
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
@@ -248,6 +261,7 @@ CMD ["bash", "run_all.sh"]
 
         if figures:
             import shutil
+
             for fig_path in figures:
                 fig_path = Path(fig_path)
                 if fig_path.exists():
@@ -286,11 +300,11 @@ CMD ["bash", "run_all.sh"]
         log_content = f"""# Research Decision Log
 
 **Run ID:** {self.run_id}
-**Generated:** {datetime.now(timezone.utc).isoformat()}
+**Generated:** {datetime.now(UTC).isoformat()}
 
 ## Topic
 
-{paper.get('title', 'Untitled')}
+{paper.get("title", "Untitled")}
 
 ## Key Decisions
 
@@ -305,9 +319,9 @@ CMD ["bash", "run_all.sh"]
 
 ## Quality Metrics
 
-- Literature coverage: {len(paper.get('references', []))} papers
-- Experiment iterations: {paper.get('experiment_iterations', 'N/A')}
-- Review score: {paper.get('review_score', 'N/A')}
+- Literature coverage: {len(paper.get("references", []))} papers
+- Experiment iterations: {paper.get("experiment_iterations", "N/A")}
+- Review score: {paper.get("review_score", "N/A")}
 
 ## Notes
 
@@ -364,7 +378,9 @@ This log documents the key research decisions made during the automated pipeline
         trace_path = output_dir / "trace.jsonl"
         with open(trace_path, "w", encoding="utf-8") as f:
             # Placeholder traces
-            f.write('{"span_id": "1", "name": "pipeline_start", "timestamp": "2024-01-01T00:00:00Z"}\n')
+            f.write(
+                '{"span_id": "1", "name": "pipeline_start", "timestamp": "2024-01-01T00:00:00Z"}\n'
+            )
         self.artifacts.append(str(trace_path))
 
     async def _generate_metadata(
@@ -382,7 +398,7 @@ This log documents the key research decisions made during the automated pipeline
         """
         metadata = {
             "run_id": self.run_id,
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
             "config": config,
             "paper": {
                 "title": paper.get("title", ""),

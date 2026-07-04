@@ -8,55 +8,55 @@ Enhanced with optimization upgrades (v3.0).
 """
 
 from .bayesian_improvement_loop import (
-    BayesianImprovementLoop,
     BayesianImprovementConfig,
-    QualityBelief,
+    BayesianImprovementLoop,
     IterativeFixPlanner,
+    QualityBelief,
 )
 from .hallucination_detector import (
-    HallucinationDetector,
-    HallucinationReport,
     CitationVerification,
     ClaimVerification,
+    HallucinationDetector,
+    HallucinationReport,
     verify_paper_for_hallucinations,
 )
 from .improvement_loop import (
     AutonomousImprovementLoop,
-    ImprovementLoopConfig,
-    ImprovementResult,
-    ScoreProgression,
-    RoundResult,
-    ClaimTracker,
     ClaimRecord,
+    ClaimTracker,
     ClaimVerdict,
-    FixType,
     ClassifiedWeakness,
     ComputeGuard,
+    FixType,
+    ImprovementLoopConfig,
+    ImprovementResult,
+    RoundResult,
+    ScoreProgression,
     improve_paper,
 )
 from .optimization_integration import (
-    # Literature Integration (Upgrade 4)
-    LiteratureFSIntegration,
-    organize_literature_stage,
-    # Council Integration (Upgrade 3)
-    CouncilIntegration,
-    run_council_stage,
-    CouncilStageResult,
-    # Experiment Integration (Upgrades 1, 5, 7, 10)
-    ExperimentPoolIntegration,
-    execute_experiment_parallel,
-    ExperimentExecutionResult,
-    # Writing Integration (Upgrade 9)
-    WritingIntegration,
-    write_paper_parallel,
-    # Validation Integration (Upgrade 2)
-    ValidationIntegration,
-    evaluate_with_hce,
-    HCEStageResult,
     # Benchmark Integration (Upgrade 12)
     BenchmarkIntegration,
-    run_benchmark_evaluation,
     BenchmarkReport,
+    # Council Integration (Upgrade 3)
+    CouncilIntegration,
+    CouncilStageResult,
+    ExperimentExecutionResult,
+    # Experiment Integration (Upgrades 1, 5, 7, 10)
+    ExperimentPoolIntegration,
+    HCEStageResult,
+    # Literature Integration (Upgrade 4)
+    LiteratureFSIntegration,
+    # Validation Integration (Upgrade 2)
+    ValidationIntegration,
+    # Writing Integration (Upgrade 9)
+    WritingIntegration,
+    evaluate_with_hce,
+    execute_experiment_parallel,
+    organize_literature_stage,
+    run_benchmark_evaluation,
+    run_council_stage,
+    write_paper_parallel,
 )
 
 __all__ = [

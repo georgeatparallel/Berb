@@ -9,7 +9,7 @@ Usage::
     # With Tavily
     client = WebSearchClient(api_key="tvly-...")
     results = client.search("knowledge distillation survey 2024")
-    
+
     # With SearXNG (self-hosted)
     client = WebSearchClient(searxng_url="http://localhost:8080")
     results = client.search("CRISPR gene editing", engine="searxng")
@@ -23,8 +23,8 @@ import re
 import time
 from dataclasses import dataclass, field
 from typing import Any
-from urllib.request import Request, urlopen
 from urllib.parse import quote_plus
+from urllib.request import Request, urlopen
 
 logger = logging.getLogger(__name__)
 
@@ -104,14 +104,14 @@ class WebSearchClient:
         self.max_results = max_results
         self.search_depth = search_depth
         self.include_answer = include_answer
-        
+
         # SearXNG integration
         self.searxng_url = searxng_url or os.environ.get("SEARXNG_BASE_URL")
         if use_searxng_primary is None:
             self.use_searxng_primary = bool(self.searxng_url)
         else:
             self.use_searxng_primary = use_searxng_primary
-        
+
         # Lazy import SearXNG client
         self._searxng_client = None
 
@@ -126,7 +126,7 @@ class WebSearchClient:
         **searxng_kwargs: Any,  # NEW: passed to SearXNG client
     ) -> WebSearchResponse:
         """Search the web for a query.
-        
+
         Args:
             query: Search query string
             max_results: Maximum results to return
@@ -134,17 +134,17 @@ class WebSearchClient:
             exclude_domains: Domains to exclude (Tavily only)
             engine: Explicit engine selection ("searxng", "tavily", "duckduckgo")
             **searxng_kwargs: Additional args for SearXNG (engines, categories, etc.)
-        
+
         Returns:
             WebSearchResponse with search results
-        
+
         Examples:
             # Auto-select engine (SearXNG primary if configured)
             >>> results = client.search("machine learning")
-            
+
             # Force SearXNG
             >>> results = client.search("CRISPR", engine="searxng")
-            
+
             # SearXNG with specific engines
             >>> results = client.search(
             ...     "quantum computing",
@@ -198,7 +198,7 @@ class WebSearchClient:
         # Lazy import to avoid circular dependency
         if self._searxng_client is None:
             from .searxng_client import SearXNGClient, SearXNGConfig
-            
+
             self._searxng_client = SearXNGClient(
                 SearXNGConfig(
                     base_url=self.searxng_url,
@@ -207,9 +207,9 @@ class WebSearchClient:
                     language=language or "en",
                 )
             )
-        
+
         import asyncio
-        
+
         # Run async search in sync context
         async def _async_search():
             return await self._searxng_client.search(
@@ -220,22 +220,24 @@ class WebSearchClient:
                 language=language,
                 **kwargs,
             )
-        
+
         searxng_response = asyncio.run(_async_search())
         elapsed = time.monotonic() - t0
-        
+
         # Convert SearXNG results to our format
         results = []
         for item in searxng_response.results:
-            results.append(SearchResult(
-                title=item.title,
-                url=item.url,
-                snippet=item.snippet,
-                content=item.content,
-                score=item.score,
-                source=item.source or "searxng",
-            ))
-        
+            results.append(
+                SearchResult(
+                    title=item.title,
+                    url=item.url,
+                    snippet=item.snippet,
+                    content=item.content,
+                    score=item.score,
+                    source=item.source or "searxng",
+                )
+            )
+
         return WebSearchResponse(
             query=query,
             results=results,
@@ -272,6 +274,7 @@ class WebSearchClient:
         # 1. Try Google Scholar (scholarly library)
         try:
             from .scholar import GoogleScholarClient
+
             client = GoogleScholarClient(proxy_api_key=scholar_proxy_api_key)
             if client.available:
                 papers = client.search(query, limit=limit)
@@ -301,9 +304,7 @@ class WebSearchClient:
         # 2. SearXNG fallback with google_scholar engine
         if self.searxng_url:
             try:
-                return self._search_searxng(
-                    query, limit, t0, engines=["google_scholar", "arxiv"]
-                )
+                return self._search_searxng(query, limit, t0, engines=["google_scholar", "arxiv"])
             except Exception as exc:  # noqa: BLE001
                 logger.warning("SearXNG scholar fallback failed: %s", exc)
 
@@ -366,14 +367,16 @@ class WebSearchClient:
 
         results = []
         for item in response.get("results", []):
-            results.append(SearchResult(
-                title=item.get("title", ""),
-                url=item.get("url", ""),
-                snippet=item.get("content", "")[:500],
-                content=item.get("content", ""),
-                score=item.get("score", 0.0),
-                source="tavily",
-            ))
+            results.append(
+                SearchResult(
+                    title=item.get("title", ""),
+                    url=item.get("url", ""),
+                    snippet=item.get("content", "")[:500],
+                    content=item.get("content", ""),
+                    score=item.get("score", 0.0),
+                    source="tavily",
+                )
+            )
 
         return WebSearchResponse(
             query=query,
@@ -387,17 +390,18 @@ class WebSearchClient:
     # DuckDuckGo fallback (no API key needed)
     # ------------------------------------------------------------------
 
-    def _search_duckduckgo(
-        self, query: str, limit: int, t0: float
-    ) -> WebSearchResponse:
+    def _search_duckduckgo(self, query: str, limit: int, t0: float) -> WebSearchResponse:
         """Fallback: scrape DuckDuckGo HTML search results."""
         encoded = quote_plus(query)
         url = f"https://html.duckduckgo.com/html/?q={encoded}"
-        req = Request(url, headers={
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                          "AppleWebKit/537.36 (KHTML, like Gecko) "
-                          "Chrome/120.0.0.0 Safari/537.36",
-        })
+        req = Request(
+            url,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/120.0.0.0 Safari/537.36",
+            },
+        )
 
         try:
             resp = urlopen(req, timeout=15)  # noqa: S310
@@ -409,7 +413,9 @@ class WebSearchClient:
 
         results = self._parse_ddg_html(html, limit)
         elapsed = time.monotonic() - t0
-        return WebSearchResponse(query=query, results=results, elapsed_seconds=elapsed, source="duckduckgo")
+        return WebSearchResponse(
+            query=query, results=results, elapsed_seconds=elapsed, source="duckduckgo"
+        )
 
     @staticmethod
     def _parse_ddg_html(html: str, limit: int) -> list[SearchResult]:

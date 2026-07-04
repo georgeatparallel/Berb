@@ -4,14 +4,13 @@ from __future__ import annotations
 
 import json
 import logging
-import re
 from pathlib import Path
 from typing import Any
 
 from berb.adapters import AdapterBundle
 from berb.config import RCConfig
+from berb.adapters import LLMProvider
 from berb.llm.client import LLMClient
-from berb.pipeline._domain import _detect_domain, _is_ml_domain
 from berb.pipeline._helpers import (
     StageResult,
     _build_context_preamble,
@@ -21,16 +20,28 @@ from berb.pipeline._helpers import (
     _get_evolution_overlay,
     _multi_perspective_generate,
     _read_prior_artifact,
-    _safe_json_loads,
     _synthesize_perspectives,
     _utcnow_iso,
 )
+from berb.pipeline.contracts import StageContract
+from berb.pipeline.registry import register_stage
 from berb.pipeline.stages import Stage, StageStatus
 from berb.prompts import PromptManager
 
 logger = logging.getLogger(__name__)
 
 
+@register_stage(
+    stage=Stage.RESULT_ANALYSIS,
+    depends_on=frozenset({Stage.EXPERIMENT_RUN}),
+    contract=StageContract(
+        stage=Stage.RESULT_ANALYSIS,
+        input_files=("runs/",),
+        output_files=("analysis.md",),
+        dod="Metrics analyzed with statistical tests and conclusions",
+        error_code="E14_ANALYSIS_ERR",
+    ),
+)
 def _execute_result_analysis(
     stage_dir: Path,
     run_dir: Path,
@@ -49,7 +60,7 @@ def _execute_result_analysis(
     runs_dir = _read_prior_artifact(run_dir, "runs/") or ""
     context = ""
     if runs_dir:
-        context = _collect_json_context(Path(runs_dir), max_files=30)
+        context = json.dumps(_collect_json_context(run_dir, Stage.RESULT_ANALYSIS.value))
 
     # --- R13-1: Merge Stage 13 (ITERATIVE_REFINE) results if available ---
     # Stage 13 stores richer per-condition metrics in refinement_log.json
@@ -142,7 +153,10 @@ def _execute_result_analysis(
                     logger.info(
                         "Stage 14: Refine metric comparison: existing=%s, refine=%s, "
                         "direction=%s → refine_is_better=%s",
-                        _existing_pm, _refine_pm, _mdir, _refine_is_better,
+                        _existing_pm,
+                        _refine_pm,
+                        _mdir,
+                        _refine_is_better,
                     )
                 if _refine_metrics and _refine_is_better:
                     # Refinement has richer data — rebuild metrics_summary from it
@@ -165,9 +179,7 @@ def _execute_result_analysis(
                             "run_id": "iterative-refine-best",
                             "task_id": "sandbox-main",
                             "status": "completed",
-                            "metrics": {
-                                k: v for k, v in _refine_metrics.items()
-                            },
+                            "metrics": dict(_refine_metrics.items()),
                             "elapsed_sec": _sbx.get("elapsed_sec", 0),
                             "stdout": "",  # omit for brevity
                             "stderr": _sbx.get("stderr", ""),
@@ -175,10 +187,13 @@ def _execute_result_analysis(
                         }
                         # Rebuild latex table
                         _ltx = [
-                            r"\begin{table}[h]", r"\centering",
+                            r"\begin{table}[h]",
+                            r"\centering",
                             r"\caption{Experiment Results (Best Refinement Iteration)}",
-                            r"\begin{tabular}{lrrrr}", r"\hline",
-                            r"Metric & Min & Max & Mean & N \\", r"\hline",
+                            r"\begin{tabular}{lrrrr}",
+                            r"\hline",
+                            r"Metric & Min & Max & Mean & N \\",
+                            r"\hline",
                         ]
                         for _col in sorted(_new_summary.keys()):
                             _s = _new_summary[_col]
@@ -190,8 +205,7 @@ def _execute_result_analysis(
                         exp_data["latex_table"] = "\n".join(_ltx)
                         # Count unique conditions (keys without 'seed' and not ending in _mean/_std)
                         _conditions = {
-                            k for k in _refine_metrics
-                            if "seed" not in k and not k.endswith("_std")
+                            k for k in _refine_metrics if "seed" not in k and not k.endswith("_std")
                         }
                         exp_data["runs"] = [exp_data["best_run"]]
                         # Store condition count for accurate reporting
@@ -199,7 +213,8 @@ def _execute_result_analysis(
                         if not context:
                             context = json.dumps(
                                 {"refinement_best_metrics": _refine_metrics},
-                                indent=2, default=str,
+                                indent=2,
+                                default=str,
                             )
                         _bm_val = _refine_data.get("best_metric")
                         logger.info(
@@ -320,6 +335,7 @@ def _execute_result_analysis(
         if _ck in _seed_data and len(_seed_data[_ck]) >= 3:
             _vals = list(_seed_data[_ck].values())
             import statistics as _stats_mod
+
             _mean = _stats_mod.mean(_vals)
             _std = _stats_mod.stdev(_vals)
             _cv["metrics"][f"{config.experiment.metric_key}_mean"] = round(_mean, 6)
@@ -327,6 +343,7 @@ def _execute_result_analysis(
             _cv["n_seeds"] = len(_vals)
             # Bootstrap 95% CI (use local RNG to avoid corrupting global state)
             import random as _rng_mod
+
             _rng_local = _rng_mod.Random(42)
             _boot_means = []
             for _ in range(1000):
@@ -340,7 +357,10 @@ def _execute_result_analysis(
                 logger.warning(
                     "Bootstrap CI [%.4f, %.4f] does not contain mean %.4f "
                     "for condition %s — replacing CI with mean ± 1.96*SE",
-                    _ci_low, _ci_high, _mean, _ck,
+                    _ci_low,
+                    _ci_high,
+                    _mean,
+                    _ck,
                 )
                 _se = _std / (len(_vals) ** 0.5)
                 _ci_low = round(_mean - 1.96 * _se, 6)
@@ -369,35 +389,38 @@ def _execute_result_analysis(
             for _other_cond in _cond_names_sorted[1:]:
                 _diffs = []
                 for _sid in sorted(_common_seeds):
-                    _diffs.append(
-                        _seed_data[_other_cond][_sid] - _seed_data[_baseline_cond][_sid]
-                    )
+                    _diffs.append(_seed_data[_other_cond][_sid] - _seed_data[_baseline_cond][_sid])
                 if _diffs:
                     import statistics
+
                     _n = len(_diffs)
                     _mean_d = statistics.mean(_diffs)
                     _std_d = statistics.stdev(_diffs) if _n > 1 else 0.0
-                    _t = (_mean_d / (_std_d / (_n ** 0.5))) if _std_d > 0 else 0.0
+                    _t = (_mean_d / (_std_d / (_n**0.5))) if _std_d > 0 else 0.0
                     _df = _n - 1
                     # Two-tailed p-value using t-distribution
                     import math
+
                     try:
                         from scipy.stats import t as _t_dist
+
                         _p = float(2 * _t_dist.sf(abs(_t), _df))
                     except ImportError:
-                        _p = 2 * (1 - 0.5 * (1 + math.erf(abs(_t) / (2 ** 0.5))))
+                        _p = 2 * (1 - 0.5 * (1 + math.erf(abs(_t) / (2**0.5))))
                         if _df < 30:
                             _p = min(1.0, _p * (1 + 2.5 / max(_df, 1)))
-                    _pipeline_paired.append({
-                        "method": _other_cond,
-                        "baseline": _baseline_cond,
-                        "mean_diff": round(_mean_d, 6),
-                        "std_diff": round(_std_d, 6),
-                        "t_stat": round(_t, 4),
-                        "p_value": round(_p, 6),
-                        "n_seeds": _n,
-                        "source": "pipeline_computed",
-                    })
+                    _pipeline_paired.append(
+                        {
+                            "method": _other_cond,
+                            "baseline": _baseline_cond,
+                            "mean_diff": round(_mean_d, 6),
+                            "std_diff": round(_std_d, 6),
+                            "t_stat": round(_t, 4),
+                            "p_value": round(_p, 6),
+                            "n_seeds": _n,
+                            "source": "pipeline_computed",
+                        }
+                    )
 
             # Use pipeline-computed if experiment code's are suspicious
             _exp_t_stats = {round(p.get("t_stat", 0), 4) for p in _all_paired}
@@ -405,7 +428,9 @@ def _execute_result_analysis(
             if _pipeline_paired and (_all_identical or len(_all_paired) < len(_pipeline_paired)):
                 logger.info(
                     "R33: Using %d pipeline-computed paired tests (experiment code had %d, identical=%s)",
-                    len(_pipeline_paired), len(_all_paired), _all_identical,
+                    len(_pipeline_paired),
+                    len(_all_paired),
+                    _all_identical,
                 )
                 _all_paired = _pipeline_paired
 
@@ -531,14 +556,10 @@ def _execute_result_analysis(
         json.dumps(summary_payload, indent=2, default=str), encoding="utf-8"
     )
     if exp_data["latex_table"]:
-        (stage_dir / "results_table.tex").write_text(
-            exp_data["latex_table"], encoding="utf-8"
-        )
+        (stage_dir / "results_table.tex").write_text(exp_data["latex_table"], encoding="utf-8")
 
     # --- Build data-augmented prompt ---
-    preamble = _build_context_preamble(
-        config, run_dir, include_goal=True, include_hypotheses=True
-    )
+    preamble = _build_context_preamble(config, run_dir, include_goal=True, include_hypotheses=True)
     data_context = ""
     if exp_data["metrics_summary"]:
         lines = ["\n## Quantitative Results"]
@@ -552,9 +573,7 @@ def _execute_result_analysis(
 
     # Append structured results if available
     if exp_data.get("structured_results"):
-        structured_text = json.dumps(
-            exp_data["structured_results"], indent=2, default=str
-        )
+        structured_text = json.dumps(exp_data["structured_results"], indent=2, default=str)
         # Truncate to avoid blowing up context
         if len(structured_text) > 6000:
             structured_text = structured_text[:6000] + "\n... (truncated)"
@@ -588,9 +607,7 @@ def _execute_result_analysis(
             llm, DEBATE_ROLES_ANALYSIS, variables, perspectives_dir
         )
         # --- Synthesize into unified analysis ---
-        analysis = _synthesize_perspectives(
-            llm, perspectives, "analysis_synthesize", _pm
-        )
+        analysis = _synthesize_perspectives(llm, perspectives, "analysis_synthesize", _pm)
     else:
         # Template with real data if available
         ms = exp_data["metrics_summary"]
@@ -670,17 +687,19 @@ Generated: {_utcnow_iso()}
                 or ""
             )
 
-            _fa_plan = _fa.orchestrate({
-                "experiment_results": _fa_exp_results,
-                "condition_summaries": _condition_summaries,
-                "metrics_summary": exp_data.get("metrics_summary", {}),
-                "metric_key": config.experiment.metric_key,
-                "conditions": _fa_conditions,
-                "topic": _read_prior_artifact(run_dir, "topic.md") or config.research.topic,
-                "hypothesis": _read_prior_artifact(run_dir, "hypotheses.md") or "",
-                "paper_draft": _paper_draft,
-                "output_dir": str(stage_dir / "charts"),
-            })
+            _fa_plan = _fa.orchestrate(
+                {
+                    "experiment_results": _fa_exp_results,
+                    "condition_summaries": _condition_summaries,
+                    "metrics_summary": exp_data.get("metrics_summary", {}),
+                    "metric_key": config.experiment.metric_key,
+                    "conditions": _fa_conditions,
+                    "topic": _read_prior_artifact(run_dir, "topic.md") or config.research.topic,
+                    "hypothesis": _read_prior_artifact(run_dir, "hypotheses.md") or "",
+                    "paper_draft": _paper_draft,
+                    "output_dir": str(stage_dir / "charts"),
+                }
+            )
 
             if _fa_plan.figure_count > 0:
                 # Save figure plan for Stage 17 to read
@@ -700,7 +719,9 @@ Generated: {_utcnow_iso()}
             else:
                 logger.warning("Stage 14: FigureAgent produced no charts, falling back")
         except Exception as _fa_exc:
-            logger.warning("Stage 14: FigureAgent failed (%s), falling back to visualize.py", _fa_exc)
+            logger.warning(
+                "Stage 14: FigureAgent failed (%s), falling back to visualize.py", _fa_exc
+            )
 
     # Fallback: legacy visualize.py chart generation
     if not _figure_plan_saved:
@@ -767,9 +788,7 @@ def _parse_decision(text: str) -> str:
     for kw in ("PIVOT", "REFINE", "PROCEED"):
         # Only match if the keyword appears as the FIRST keyword-class token
         # on its own (not embedded in a sentence saying "not PIVOT").
-        pattern = _re.compile(
-            r"(?:^|##\s*Decision\s*\n\s*)" + kw, _re.IGNORECASE | _re.MULTILINE
-        )
+        pattern = _re.compile(r"(?:^|##\s*Decision\s*\n\s*)" + kw, _re.IGNORECASE | _re.MULTILINE)
         if pattern.search(search_text):
             return kw.lower()
 
@@ -786,6 +805,17 @@ def _parse_decision(text: str) -> str:
     return "proceed"
 
 
+@register_stage(
+    stage=Stage.RESEARCH_DECISION,
+    depends_on=frozenset({Stage.RESULT_ANALYSIS}),
+    contract=StageContract(
+        stage=Stage.RESEARCH_DECISION,
+        input_files=("analysis.md",),
+        output_files=("decision.md",),
+        dod="PROCEED/PIVOT decision with evidence-based justification",
+        error_code="E15_DECISION_FAIL",
+    ),
+)
 def _execute_research_decision(
     stage_dir: Path,
     run_dir: Path,
@@ -845,7 +875,8 @@ def _execute_research_decision(
                 )
                 logger.info(
                     "Stage 15: Injected experiment diagnosis — mode=%s, issues=%s",
-                    _mode, _deficiency_types,
+                    _mode,
+                    _deficiency_types,
                 )
         except (json.JSONDecodeError, OSError):
             pass
@@ -863,10 +894,13 @@ def _execute_research_decision(
     if _exp_sum_path and _exp_sum_path.is_file():
         try:
             from berb.pipeline.stage_impls._paper_writing import _check_ablation_effectiveness
+
             _abl_exp = json.loads(_exp_sum_path.read_text(encoding="utf-8"))
             _abl_warnings = _check_ablation_effectiveness(_abl_exp, threshold=0.02)
             if _abl_warnings:
-                _trivial_count = sum(1 for w in _abl_warnings if "ineffective" in w.lower() or "trivial" in w.lower())
+                _trivial_count = sum(
+                    1 for w in _abl_warnings if "ineffective" in w.lower() or "trivial" in w.lower()
+                )
                 _total_abl = max(1, len(_abl_warnings))
                 if _trivial_count / _total_abl > 0.5:
                     _ablation_refine_hint = (
@@ -876,7 +910,11 @@ def _execute_research_decision(
                         f"(trivially similar). This means the ablation design is broken.\n"
                         "Warnings:\n" + "\n".join(f"- {w}" for w in _abl_warnings) + "\n"
                     )
-                    logger.warning("C: %d/%d ablations trivial → recommending REFINE", _trivial_count, _total_abl)
+                    logger.warning(
+                        "C: %d/%d ablations trivial → recommending REFINE",
+                        _trivial_count,
+                        _total_abl,
+                    )
         except Exception:  # noqa: BLE001
             pass
 

@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Protocol
 
 import httpx
@@ -29,7 +29,7 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger(__name__)
 
 
-class SciteCitationType(str, Enum):
+class SciteCitationType(StrEnum):
     """Scite citation classification.
 
     Attributes:
@@ -218,7 +218,9 @@ class SciteClient:
             headers={
                 "Authorization": f"Bearer {self.config.api_key}",
                 "Content-Type": "application/json",
-            } if self.config.api_key else {},
+            }
+            if self.config.api_key
+            else {},
         )
 
     async def search_with_smart_citations(
@@ -356,14 +358,10 @@ class SciteClient:
 
                 issues = []
                 if data.get("retracted_count", 0) > 0:
-                    issues.append(
-                        f"{data['retracted_count']} retracted references found"
-                    )
+                    issues.append(f"{data['retracted_count']} retracted references found")
 
                 if data.get("contradicted_count", 0) > 0:
-                    issues.append(
-                        f"{data['contradicted_count']} contradicted references found"
-                    )
+                    issues.append(f"{data['contradicted_count']} contradicted references found")
 
                 # Calculate overall score
                 total = data.get("total_references", 1)

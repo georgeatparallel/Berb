@@ -14,13 +14,15 @@ class ChemistryPromptAdapter(PromptAdapter):
         domain = self.domain
 
         return PromptBlocks(
-            compute_budget=domain.compute_budget_guidance or (
+            compute_budget=domain.compute_budget_guidance
+            or (
                 "Quantum chemistry calculations can be slow:\n"
                 "- Use small basis sets for testing (STO-3G)\n"
                 "- Limit molecule size (< 20 atoms)\n"
                 "- DFT is faster than post-HF methods"
             ),
-            dataset_guidance=domain.dataset_guidance or (
+            dataset_guidance=domain.dataset_guidance
+            or (
                 "Define molecular systems in code:\n"
                 "- Atomic coordinates and basis sets\n"
                 "- Standard test molecules (H2, H2O, CH4)\n"

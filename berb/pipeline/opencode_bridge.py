@@ -91,6 +91,57 @@ _DOMAIN_COMPLEX_KEYWORDS: tuple[str, ...] = (
     "image-to-text",
 )
 
+# Model mapping: OpenRouter identifiers → OpenCode CLI compatible models
+# OpenCode uses openrouter/provider/model format with dots in version numbers
+OPENCODE_MODEL_ADAPTER: dict[str, str] = {
+    # DeepSeek models → Claude via OpenRouter
+    "deepseek/deepseek-v3.2": "openrouter/anthropic/claude-sonnet-4.6",
+    "deepseek/deepseek-chat": "openrouter/anthropic/claude-sonnet-4.6",
+    "deepseek/deepseek-v3": "openrouter/anthropic/claude-sonnet-4.6",
+    "deepseek/deepseek-coder": "openrouter/anthropic/claude-sonnet-4.6",
+    
+    # Meta models → Claude via OpenRouter
+    "meta-llama/llama-3.3-70b-instruct:free": "openrouter/anthropic/claude-sonnet-4.6",
+    "meta-llama/llama-3.3-70b-instruct": "openrouter/anthropic/claude-sonnet-4.6",
+    "meta-llama/llama-3.1-70b-instruct": "openrouter/anthropic/claude-sonnet-4.6",
+    "meta-llama/llama-3.1-405b-instruct": "openrouter/anthropic/claude-opus-4.6",
+    
+    # Google models → Claude via OpenRouter
+    "google/gemma-3-4b-it:free": "openrouter/anthropic/claude-sonnet-4.6",
+    "google/gemma-3-27b-it": "openrouter/anthropic/claude-sonnet-4.6",
+    "google/gemini-2.5-flash-lite": "openrouter/anthropic/claude-sonnet-4.6",
+    
+    # Qwen models → Claude via OpenRouter
+    "qwen/qwen3.5-flash": "openrouter/anthropic/claude-sonnet-4.6",
+    "qwen/qwen3.6-plus": "openrouter/anthropic/claude-sonnet-4.6",
+    "qwen/qwen3.6-max": "openrouter/anthropic/claude-opus-4.6",
+    "qwen/qwen3.6-plus:free": "openrouter/anthropic/claude-sonnet-4.6",
+    
+    # GLM models → Claude via OpenRouter
+    "glm/glm-4.5": "openrouter/anthropic/claude-sonnet-4.6",
+    "glm/glm-4": "openrouter/anthropic/claude-sonnet-4.6",
+    
+    # Anthropic models via OpenRouter
+    "anthropic/claude-opus-4.6": "openrouter/anthropic/claude-opus-4.6",
+    "anthropic/claude-opus-4.5": "openrouter/anthropic/claude-opus-4.5",
+    "anthropic/claude-opus-4": "openrouter/anthropic/claude-opus-4",
+    "anthropic/claude-sonnet-4.6": "openrouter/anthropic/claude-sonnet-4.6",
+    "anthropic/claude-sonnet-4.5": "openrouter/anthropic/claude-sonnet-4.5",
+    "anthropic/claude-sonnet-4": "openrouter/anthropic/claude-sonnet-4",
+    "anthropic/claude-haiku-4.5": "openrouter/anthropic/claude-haiku-4.5",
+    
+    # OpenAI models via OpenRouter
+    "openai/gpt-5": "openrouter/openai/gpt-5",
+    "openai/gpt-5.4": "openrouter/openai/gpt-5.4",
+    "openai/gpt-4o": "openrouter/openai/gpt-4o",
+    "openai/gpt-4o-mini": "openrouter/openai/gpt-4o-mini",
+    "openai/gpt-4.1": "openrouter/openai/gpt-4.1",
+    "openai/gpt-4.1-mini": "openrouter/openai/gpt-4.1-mini",
+}
+
+# Default fallback for unmapped models
+OPENCODE_DEFAULT_MODEL = "openrouter/anthropic/claude-sonnet-4.6"
+
 # Patterns suggesting deep dependency chains
 _DEPENDENCY_KEYWORDS: tuple[str, ...] = (
     "custom layer",
@@ -198,10 +249,7 @@ def score_complexity(
         reason = (
             f"Complexity {final_score:.2f} >= threshold {threshold:.2f}: "
             f"top signals: "
-            + ", ".join(
-                f"{k}={v:.2f}"
-                for k, v in sorted(signals.items(), key=lambda x: -x[1])[:3]
-            )
+            + ", ".join(f"{k}={v:.2f}" for k, v in sorted(signals.items(), key=lambda x: -x[1])[:3])
         )
     else:
         recommendation = "code_agent"
@@ -218,6 +266,7 @@ def score_complexity(
 # ---------------------------------------------------------------------------
 # OpenCode bridge
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class OpenCodeResult:
@@ -287,7 +336,7 @@ class OpenCodeBridge:
         opencode_cmd = shutil.which("opencode")
         if not opencode_cmd:
             return False
-            
+
         try:
             result = subprocess.run(
                 [opencode_cmd, "--version"],
@@ -328,7 +377,7 @@ class OpenCodeBridge:
 
         # Write guidance document
         guidance_parts = [
-            f"# Experiment Guidance\n",
+            "# Experiment Guidance\n",
             f"## Topic\n{topic}\n",
             f"## Primary Metric\n{metric}\n",
             f"## Time Budget\n{time_budget_sec} seconds\n",
@@ -338,13 +387,15 @@ class OpenCodeBridge:
         if extra_guidance:
             guidance_parts.append(f"## Additional Guidance\n{extra_guidance}\n")
         (ws / "GUIDANCE.md").write_text(
-            "\n".join(guidance_parts), encoding="utf-8",
+            "\n".join(guidance_parts),
+            encoding="utf-8",
         )
 
         # Write opencode.json config
         opencode_cfg = self._build_opencode_config()
         (ws / "opencode.json").write_text(
-            json.dumps(opencode_cfg, indent=2), encoding="utf-8",
+            json.dumps(opencode_cfg, indent=2),
+            encoding="utf-8",
         )
 
         # OpenCode requires a git repository — initialise one with
@@ -353,21 +404,34 @@ class OpenCodeBridge:
         try:
             r = subprocess.run(
                 ["git", "init"],
-                cwd=str(ws), capture_output=True, timeout=10,
+                cwd=str(ws),
+                capture_output=True,
+                timeout=10,
             )
             if r.returncode != 0:
                 raise OSError(f"git init failed: {r.stderr}")
             r = subprocess.run(
                 ["git", "add", "-A"],
-                cwd=str(ws), capture_output=True, timeout=10,
+                cwd=str(ws),
+                capture_output=True,
+                timeout=10,
             )
             if r.returncode != 0:
                 raise OSError(f"git add failed: {r.stderr}")
             r = subprocess.run(
-                ["git", "-c", "user.email=beast@berb",
-                 "-c", "user.name=BeastMode",
-                 "commit", "-m", "init workspace"],
-                cwd=str(ws), capture_output=True, timeout=10,
+                [
+                    "git",
+                    "-c",
+                    "user.email=beast@berb",
+                    "-c",
+                    "user.name=BeastMode",
+                    "commit",
+                    "-m",
+                    "init workspace",
+                ],
+                cwd=str(ws),
+                capture_output=True,
+                timeout=10,
             )
             if r.returncode != 0:
                 raise OSError(f"git commit failed: {r.stderr}")
@@ -385,69 +449,80 @@ class OpenCodeBridge:
 
     def _build_opencode_config(self) -> dict[str, Any]:
         """Build the opencode.json configuration.
-
-        Always uses the "openai" provider — this works for both standard
-        OpenAI endpoints and Azure OpenAI (which accepts Bearer token auth
-        on the ``/openai/v1`` path and now supports the Responses API).
+        
+        P0 2026-04-06: Updated to use OpenRouter-compatible configuration.
+        OpenRouter provides an OpenAI-compatible endpoint that works with
+        any model, so we always use the "openai" provider configuration.
         """
         cfg: dict[str, Any] = {
             "$schema": "https://opencode.ai/config.json",
         }
+        
+        # Resolve model (maps to OpenCode-compatible identifier)
+        resolved_model = self._resolve_opencode_model()
+        model_name = resolved_model.split("/")[-1]
+        
+        cfg["model"] = resolved_model
 
         if self._llm_base_url:
-            if self._model:
-                cfg["model"] = (
-                    self._model if "/" in self._model
-                    else f"openai/{self._model}"
-                )
+            # Always use "openai" provider - OpenRouter is OpenAI-compatible
             cfg["provider"] = {
                 "openai": {
                     "options": {
                         "baseURL": self._llm_base_url,
-                        "apiKey": f"{{env:{self._api_key_env}}}"
-                        if self._api_key_env
-                        else "",
+                        "apiKey": f"{{env:{self._api_key_env}}}" if self._api_key_env else "",
                     },
                     "models": {},
                 }
             }
             # Register the model so OpenCode knows it exists
-            if self._model:
-                model_name = self._model.split("/")[-1]
-                cfg["provider"]["openai"]["models"] = {
-                    model_name: {
-                        "name": model_name,
-                        "modalities": {
-                            "input": ["text"],
-                            "output": ["text"],
-                        },
-                    }
+            cfg["provider"]["openai"]["models"] = {
+                model_name: {
+                    "name": model_name,
+                    "modalities": {
+                        "input": ["text"],
+                        "output": ["text"],
+                    },
                 }
-        elif self._model:
-            cfg["model"] = (
-                self._model if "/" in self._model
-                else f"openai/{self._model}"
-            )
+            }
 
         return cfg
 
     # -- model resolution -------------------------------------------------------
 
     def _resolve_opencode_model(self) -> str:
-        """Resolve the model identifier for OpenCode CLI's ``-m`` flag.
-
+        """Resolve model identifier for OpenCode CLI compatibility.
+        
+        Uses Adapter Pattern to map OpenRouter model identifiers to 
+        OpenCode CLI-compatible models.
+        
         Resolution order:
-        1. If model already contains "/" (e.g. "anthropic/claude-sonnet-4-6") → use as-is
-        2. Otherwise → "openai/{model}" (works for both Azure and standard OpenAI)
-
+        1. Check adapter registry for mapped model
+        2. If model contains "/", use as-is (may work with newer OpenCode)
+        3. Otherwise prefix with "openai/"
+        
         Note: Azure AI Services now supports the Responses API with Bearer
         token auth via the OpenAI-compatible endpoint, so we use the "openai"
         provider universally — no Anthropic fallback needed.
+        
+        Returns:
+            OpenCode-compatible model identifier
         """
         if not self._model:
-            return "anthropic/claude-sonnet-4-6"
+            return OPENCODE_DEFAULT_MODEL
+        
+        # Check adapter registry first
+        if self._model in OPENCODE_MODEL_ADAPTER:
+            mapped = OPENCODE_MODEL_ADAPTER[self._model]
+            logger.debug("OpenCode adapter: %s → %s", self._model, mapped)
+            return mapped
+        
+        # If contains "/", try using as-is (for newer OpenCode versions)
         if "/" in self._model:
+            logger.debug("OpenCode using model as-is: %s", self._model)
             return self._model
+        
+        # Default: prefix with openai/
         return f"openai/{self._model}"
 
     # -- invocation ------------------------------------------------------------
@@ -459,17 +534,20 @@ class OpenCodeBridge:
     ) -> tuple[bool, str, float]:
         """Run ``opencode run`` in the workspace. Returns (success, log, elapsed)."""
         env = os.environ.copy()
-        # Pass API key via environment if configured
+        
+        # Resolve model (maps to OpenCode-compatible identifier)
+        resolved_model = self._resolve_opencode_model()
+        
+        # Pass API key via environment
+        # OpenRouter uses OPENROUTER_API_KEY, but OpenCode expects OPENAI_API_KEY
+        # for its OpenAI-compatible provider
         if self._api_key_env:
             api_key = os.environ.get(self._api_key_env, "")
             if api_key:
-                # We always use the "openai" provider for OpenCode now,
-                # which reads OPENAI_API_KEY (works for Azure too via
-                # Bearer token auth on the OpenAI-compatible endpoint).
                 env["OPENAI_API_KEY"] = api_key
+                logger.debug("OpenCode using API key from %s", self._api_key_env)
 
         # Use -m flag to specify model (more reliable than opencode.json)
-        resolved_model = self._resolve_opencode_model()
         opencode_cmd = shutil.which("opencode") or "opencode"
         cmd = [opencode_cmd, "run", "-m", resolved_model, "--format", "json", prompt]
 
@@ -587,8 +665,7 @@ class OpenCodeBridge:
                 continue
             if OpenCodeBridge._has_main_guard(code):
                 logger.info(
-                    "Beast mode: main.py lacks __main__ guard; swapping "
-                    "entry point with %s",
+                    "Beast mode: main.py lacks __main__ guard; swapping entry point with %s",
                     fname,
                 )
                 new_files = dict(files)
@@ -607,8 +684,16 @@ class OpenCodeBridge:
                 n.name
                 for n in ast.walk(tree)
                 if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
-                and n.name in ("main", "run", "run_experiment", "train",
-                               "run_experiments", "experiment", "run_all")
+                and n.name
+                in (
+                    "main",
+                    "run",
+                    "run_experiment",
+                    "train",
+                    "run_experiments",
+                    "experiment",
+                    "run_all",
+                )
             ]
             if candidates:
                 entry_func = candidates[0]
@@ -617,15 +702,12 @@ class OpenCodeBridge:
 
         if entry_func:
             logger.info(
-                "Beast mode: main.py lacks __main__ guard; injecting call "
-                "to %s()",
+                "Beast mode: main.py lacks __main__ guard; injecting call to %s()",
                 entry_func,
             )
             new_files = dict(files)
             new_files["main.py"] = (
-                main_code.rstrip()
-                + "\n\n\nif __name__ == \"__main__\":\n"
-                + f"    {entry_func}()\n"
+                main_code.rstrip() + '\n\n\nif __name__ == "__main__":\n' + f"    {entry_func}()\n"
             )
             return new_files
 
@@ -680,9 +762,7 @@ class OpenCodeBridge:
 
             # Build the mega-prompt (use replace instead of .format() to
             # avoid KeyError when metric contains curly braces like "F{1}")
-            prompt = _MEGA_PROMPT_TEMPLATE.replace(
-                "{metric}", metric
-            ).replace(
+            prompt = _MEGA_PROMPT_TEMPLATE.replace("{metric}", metric).replace(
                 "{time_budget_sec}", str(time_budget_sec)
             )
 
@@ -699,8 +779,8 @@ class OpenCodeBridge:
                 files = self._collect_files(workspace)
                 if "main.py" not in files:
                     logger.warning(
-                        "Beast mode: OpenCode succeeded but no main.py found "
-                        "(files: %s)", list(files.keys()),
+                        "Beast mode: OpenCode succeeded but no main.py found (files: %s)",
+                        list(files.keys()),
                     )
                     last_error = "No main.py in OpenCode output"
                     # Cleanup failed workspace
@@ -714,7 +794,8 @@ class OpenCodeBridge:
                 # Write log
                 try:
                     (stage_dir / "opencode_log.txt").write_text(
-                        log or "", encoding="utf-8",
+                        log or "",
+                        encoding="utf-8",
                     )
                 except OSError as _wexc:
                     logger.warning("Beast mode: failed to write log: %s", _wexc)
@@ -752,6 +833,7 @@ class OpenCodeBridge:
 # ---------------------------------------------------------------------------
 # Helper: count historical failures
 # ---------------------------------------------------------------------------
+
 
 def count_historical_failures(run_dir: Path, stage_name: str = "stage-10") -> int:
     """Count past Stage 10 failures from stage directories and logs.

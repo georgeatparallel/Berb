@@ -1,27 +1,8 @@
-# Berb Generic sandbox — lightweight Python scientific stack.
-# Build: docker build -f Dockerfile.generic -t berb/sandbox-generic:latest berb/docker/
-FROM python:3.11-slim
+# Berb Generic sandbox — no domain-specific packages.
+# Build: docker build -f Dockerfile.generic -t berb/sandbox-generic:latest berb/docker
+FROM berb/experiment:base
 
 ENV PYTHONUNBUFFERED=1
 ENV PIP_NO_CACHE_DIR=1
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        gcc g++ \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
-
-RUN pip install --upgrade pip setuptools wheel && \
-    pip install \
-        numpy scipy matplotlib pandas \
-        scikit-learn tqdm PyYAML seaborn
-
-# Non-root user
-RUN groupadd -r researcher && useradd -r -g researcher -m -s /bin/bash researcher
-WORKDIR /workspace
-RUN chown researcher:researcher /workspace
-
-COPY entrypoint.sh /usr/local/bin/rc-entrypoint.sh
-RUN chmod +x /usr/local/bin/rc-entrypoint.sh
-
-USER researcher
-ENTRYPOINT ["/usr/local/bin/rc-entrypoint.sh"]
-CMD ["main.py"]
+CMD ["python3"]

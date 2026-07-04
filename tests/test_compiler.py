@@ -25,6 +25,7 @@ from berb.templates.compiler import (
 # _is_fatal_error
 # ---------------------------------------------------------------------------
 
+
 class TestIsFatalError:
     """Test that _is_fatal_error correctly classifies errors."""
 
@@ -76,6 +77,7 @@ class TestIsFatalError:
 # ---------------------------------------------------------------------------
 # _sanitize_tex_unicode
 # ---------------------------------------------------------------------------
+
 
 class TestSanitizeTexUnicode:
     """Test that _sanitize_tex_unicode strips problematic Unicode."""
@@ -149,6 +151,7 @@ class TestSanitizeTexUnicode:
 # _sanitize_bib_file — Cyrillic transliteration
 # ---------------------------------------------------------------------------
 
+
 class TestSanitizeBibFile:
     """Test _sanitize_bib_file fixes."""
 
@@ -158,10 +161,10 @@ class TestSanitizeBibFile:
 
         bib = tmp_path / "references.bib"
         bib.write_text(
-            '@article{dehghani2023scaling,\n'
-            '  author = {А. И. Колесников and J. Doe},\n'
-            '  title = {Scaling Vision},\n'
-            '}\n',
+            "@article{dehghani2023scaling,\n"
+            "  author = {А. И. Колесников and J. Doe},\n"
+            "  title = {Scaling Vision},\n"
+            "}\n",
             encoding="utf-8",
         )
         _sanitize_bib_file(bib)
@@ -175,15 +178,14 @@ class TestSanitizeBibFile:
 # fix_common_latex_errors — Unicode handler
 # ---------------------------------------------------------------------------
 
+
 class TestFixUnicodeErrors:
     """Test fix_common_latex_errors for Unicode character issues."""
 
     def test_unicode_u202f_replaced_with_space(self):
         """BUG-197: U+202F in text should be replaced with space."""
         tex = "Hello\u202fWorld"
-        errors = [
-            "! LaTeX Error: Unicode character \u202f (U+202F)"
-        ]
+        errors = ["! LaTeX Error: Unicode character \u202f (U+202F)"]
         fixed, fixes = fix_common_latex_errors(tex, errors)
         assert "\u202f" not in fixed
         assert "Hello World" in fixed
@@ -192,9 +194,7 @@ class TestFixUnicodeErrors:
     def test_unicode_u200b_removed(self):
         """U+200B (zero-width space, category Cf) should be removed."""
         tex = "Hello\u200bWorld"
-        errors = [
-            "! LaTeX Error: Unicode character \u200b (U+200B)"
-        ]
+        errors = ["! LaTeX Error: Unicode character \u200b (U+200B)"]
         fixed, fixes = fix_common_latex_errors(tex, errors)
         assert "\u200b" not in fixed
         assert "HelloWorld" in fixed
@@ -202,9 +202,7 @@ class TestFixUnicodeErrors:
     def test_no_unicode_error_no_change(self):
         """Text without the offending char should not be modified."""
         tex = "Hello World"
-        errors = [
-            "! LaTeX Error: Unicode character \u202f (U+202F)"
-        ]
+        errors = ["! LaTeX Error: Unicode character \u202f (U+202F)"]
         fixed, fixes = fix_common_latex_errors(tex, errors)
         assert fixed == tex
         # No fix should be applied since the char isn't in the text
@@ -214,6 +212,7 @@ class TestFixUnicodeErrors:
 # ---------------------------------------------------------------------------
 # _run_pdflatex — bytes mode decoding
 # ---------------------------------------------------------------------------
+
 
 class TestRunPdflatexByteMode:
     """Test that _run_pdflatex handles broken UTF-8 in stdout."""
@@ -257,6 +256,7 @@ class TestRunPdflatexByteMode:
 # ---------------------------------------------------------------------------
 # _run_bibtex — bytes mode decoding + logging
 # ---------------------------------------------------------------------------
+
 
 class TestRunBibtex:
     """Test that _run_bibtex handles errors and logs properly."""

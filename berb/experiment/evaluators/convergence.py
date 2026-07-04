@@ -9,7 +9,6 @@ from __future__ import annotations
 import logging
 import math
 from dataclasses import dataclass, field
-from typing import Any
 
 import numpy as np
 
@@ -19,6 +18,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ConvergenceResult:
     """Result of convergence analysis for one method."""
+
     method: str
     convergence_order: float = 0.0
     r_squared: float = 0.0
@@ -31,6 +31,7 @@ class ConvergenceResult:
 @dataclass
 class ConvergenceReport:
     """Full convergence analysis report."""
+
     methods: list[ConvergenceResult] = field(default_factory=list)
     best_method: str = ""
     summary: str = ""
@@ -61,13 +62,14 @@ def compute_convergence_order(
 
     # Filter out non-positive values
     valid = [
-        (h, e) for h, e in zip(h_values, errors)
+        (h, e)
+        for h, e in zip(h_values, errors, strict=False)
         if h > 0 and e > 0 and math.isfinite(h) and math.isfinite(e)
     ]
     if len(valid) < 2:
         return 0.0, 0.0
 
-    hs, es = zip(*valid)
+    hs, es = zip(*valid, strict=False)
     log_h = np.log(np.array(hs, dtype=np.float64))
     log_e = np.log(np.array(es, dtype=np.float64))
 
@@ -76,9 +78,9 @@ def compute_convergence_order(
     sum_x = np.sum(log_h)
     sum_y = np.sum(log_e)
     sum_xy = np.sum(log_h * log_e)
-    sum_x2 = np.sum(log_h ** 2)
+    sum_x2 = np.sum(log_h**2)
 
-    denom = n * sum_x2 - sum_x ** 2
+    denom = n * sum_x2 - sum_x**2
     if abs(denom) < 1e-15:
         return 0.0, 0.0
 
@@ -140,15 +142,17 @@ def analyze_convergence(
 
         is_converging = order > 0.5 and r2 > 0.8
 
-        results.append(ConvergenceResult(
-            method=method,
-            convergence_order=order,
-            r_squared=r2,
-            points=sorted_pts,
-            is_converging=is_converging,
-            expected_order=expected,
-            order_matches_expected=matches,
-        ))
+        results.append(
+            ConvergenceResult(
+                method=method,
+                convergence_order=order,
+                r_squared=r2,
+                points=sorted_pts,
+                is_converging=is_converging,
+                expected_order=expected,
+                order_matches_expected=matches,
+            )
+        )
 
     # Find best method (highest convergence order)
     best = ""

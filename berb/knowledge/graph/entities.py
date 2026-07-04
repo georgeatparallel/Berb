@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
-class EntityType(str, Enum):
+class EntityType(StrEnum):
     """Types of entities in the knowledge graph."""
 
     PAPER = "paper"

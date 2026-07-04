@@ -117,24 +117,24 @@ class AcquirerAgent(BaseAgent):
 
         lines = [
             '"""Setup script for dataset downloading and environment preparation.',
-            '',
-            'This script runs during Phase 1 (setup) of the Docker sandbox,',
-            'when network access is available. It downloads datasets and installs',
-            'any additional dependencies.',
+            "",
+            "This script runs during Phase 1 (setup) of the Docker sandbox,",
+            "when network access is available. It downloads datasets and installs",
+            "any additional dependencies.",
             '"""',
-            '',
-            'import os',
-            'import sys',
-            '',
+            "",
+            "import os",
+            "import sys",
+            "",
             'DATA_ROOT = "/workspace/data"',
             'HF_CACHE = os.path.join(DATA_ROOT, "hf")',
-            '',
-            '',
-            'def download_datasets():',
+            "",
+            "",
+            "def download_datasets():",
             '    """Download all required datasets."""',
-            '    os.makedirs(DATA_ROOT, exist_ok=True)',
-            '    os.makedirs(HF_CACHE, exist_ok=True)',
-            '',
+            "    os.makedirs(DATA_ROOT, exist_ok=True)",
+            "    os.makedirs(HF_CACHE, exist_ok=True)",
+            "",
         ]
 
         for b in tier2:
@@ -143,49 +143,58 @@ class AcquirerAgent(BaseAgent):
             if "torchvision" in api:
                 # Convert download=False to download=True for setup
                 dl_api = api.replace("download=False", "download=True")
-                lines.extend([
-                    f'    # Download {name}',
-                    '    try:',
-                    f'        import torchvision',
-                    f'        {dl_api}',
-                    f'        print(f"Downloaded {name}")',
-                    f'    except Exception as e:',
-                    f'        print(f"Warning: Failed to download {name}: {{e}}")',
-                    '',
-                ])
+                lines.extend(
+                    [
+                        f"    # Download {name}",
+                        "    try:",
+                        "        import torchvision",
+                        f"        {dl_api}",
+                        f'        print(f"Downloaded {name}")',
+                        "    except Exception as e:",
+                        f'        print(f"Warning: Failed to download {name}: {{e}}")',
+                        "",
+                    ]
+                )
             elif "datasets.load_dataset" in api or "load_dataset" in api:
                 # Rewrite qualified `datasets.load_dataset(...)` to
                 # `load_dataset(...)` so it matches the `from datasets import`
                 _dl_api = api.replace("datasets.load_dataset", "load_dataset")
-                lines.extend([
-                    f'    # Download {name}',
-                    '    try:',
-                    f'        from datasets import load_dataset',
-                    f'        {_dl_api}',
-                    f'        print(f"Downloaded {name}")',
-                    f'    except Exception as e:',
-                    f'        print(f"Warning: Failed to download {name}: {{e}}")',
-                    '',
-                ])
+                lines.extend(
+                    [
+                        f"    # Download {name}",
+                        "    try:",
+                        "        from datasets import load_dataset",
+                        f"        {_dl_api}",
+                        f'        print(f"Downloaded {name}")',
+                        "    except Exception as e:",
+                        f'        print(f"Warning: Failed to download {name}: {{e}}")',
+                        "",
+                    ]
+                )
             elif "PygNodePropPredDataset" in api or "PygGraphPropPredDataset" in api:
-                lines.extend([
-                    f'    # Download {name}',
-                    '    try:',
-                    f'        from ogb.nodeproppred import PygNodePropPredDataset' if 'Node' in api
-                    else f'        from ogb.graphproppred import PygGraphPropPredDataset',
-                    f'        {api}',
-                    f'        print(f"Downloaded {name}")',
-                    f'    except Exception as e:',
-                    f'        print(f"Warning: Failed to download {name}: {{e}}")',
-                    '',
-                ])
+                lines.extend(
+                    [
+                        f"    # Download {name}",
+                        "    try:",
+                        "        from ogb.nodeproppred import PygNodePropPredDataset"
+                        if "Node" in api
+                        else "        from ogb.graphproppred import PygGraphPropPredDataset",
+                        f"        {api}",
+                        f'        print(f"Downloaded {name}")',
+                        "    except Exception as e:",
+                        f'        print(f"Warning: Failed to download {name}: {{e}}")',
+                        "",
+                    ]
+                )
 
-        lines.extend([
-            '',
-            'if __name__ == "__main__":',
-            '    download_datasets()',
-            '    print("Setup complete.")',
-        ])
+        lines.extend(
+            [
+                "",
+                'if __name__ == "__main__":',
+                "    download_datasets()",
+                '    print("Setup complete.")',
+            ]
+        )
 
         return "\n".join(lines)
 
@@ -195,12 +204,35 @@ class AcquirerAgent(BaseAgent):
             return ""
         # Filter out packages that are already in the Docker image
         builtin = {
-            "torch", "torchvision", "torchaudio", "numpy", "scipy",
-            "sklearn", "scikit-learn", "pandas", "matplotlib", "seaborn",
-            "tqdm", "gymnasium", "networkx", "timm", "einops",
-            "torchmetrics", "transformers", "datasets", "accelerate",
-            "peft", "trl", "bitsandbytes", "tokenizers", "safetensors",
-            "h5py", "tensorboard", "pillow", "pyyaml", "kornia",
+            "torch",
+            "torchvision",
+            "torchaudio",
+            "numpy",
+            "scipy",
+            "sklearn",
+            "scikit-learn",
+            "pandas",
+            "matplotlib",
+            "seaborn",
+            "tqdm",
+            "gymnasium",
+            "networkx",
+            "timm",
+            "einops",
+            "torchmetrics",
+            "transformers",
+            "datasets",
+            "accelerate",
+            "peft",
+            "trl",
+            "bitsandbytes",
+            "tokenizers",
+            "safetensors",
+            "h5py",
+            "tensorboard",
+            "pillow",
+            "pyyaml",
+            "kornia",
             "albumentations",
         }
         extra = [p for p in required_pip if p.lower() not in builtin]
@@ -215,7 +247,7 @@ class AcquirerAgent(BaseAgent):
         if code.startswith("```"):
             # Remove opening fence
             first_nl = code.index("\n") if "\n" in code else len(code)
-            code = code[first_nl + 1:]
+            code = code[first_nl + 1 :]
         if code.endswith("```"):
             code = code[:-3].rstrip()
         return code
@@ -241,9 +273,7 @@ class AcquirerAgent(BaseAgent):
 
         # 1. Generate data loading code
         self.logger.info("Generating data loading code for %d datasets", len(benchmarks))
-        data_loader_code = self._strip_fences(
-            self._generate_data_loader(benchmarks, topic)
-        )
+        data_loader_code = self._strip_fences(self._generate_data_loader(benchmarks, topic))
 
         # 2. Generate baseline code
         baseline_code = ""
@@ -268,7 +298,8 @@ class AcquirerAgent(BaseAgent):
             "baseline_names": [bl.get("name", "Unknown") for bl in baselines],
         }
 
-        self.logger.info("Acquirer complete: %d code artifacts generated",
-                         sum(1 for v in result.values() if v))
+        self.logger.info(
+            "Acquirer complete: %d code artifacts generated", sum(1 for v in result.values() if v)
+        )
 
         return self._make_result(True, data=result)

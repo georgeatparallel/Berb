@@ -70,6 +70,7 @@ def skill_yaml_dir(tmp_path: Path) -> Path:
         "priority": 3,
     }
     import yaml
+
     (d / "test_skill.yaml").write_text(yaml.dump(skill_data), encoding="utf-8")
     return d
 
@@ -89,9 +90,7 @@ def skill_json_dir(tmp_path: Path) -> Path:
         "version": "1.0",
         "priority": 4,
     }
-    (d / "test_skill.json").write_text(
-        json.dumps(skill_data), encoding="utf-8"
-    )
+    (d / "test_skill.json").write_text(json.dumps(skill_data), encoding="utf-8")
     return d
 
 
@@ -109,9 +108,9 @@ def skillmd_dir(tmp_path: Path) -> Path:
         "description: A test skill from SKILL.md\n"
         "metadata:\n"
         "  category: domain\n"
-        "  trigger-keywords: \"nlp,transformer,bert\"\n"
-        "  applicable-stages: \"9,10\"\n"
-        "  priority: \"2\"\n"
+        '  trigger-keywords: "nlp,transformer,bert"\n'
+        '  applicable-stages: "9,10"\n'
+        '  priority: "2"\n'
         "---\n\n"
         "## NLP Skill\nDo NLP things.\n",
         encoding="utf-8",
@@ -143,7 +142,7 @@ def external_skillmd_dir(tmp_path: Path) -> Path:
         "description: Generate FeynRules model files for BSM physics\n"
         "metadata:\n"
         "  category: domain\n"
-        "  applicable-stages: \"10\"\n"
+        '  applicable-stages: "10"\n'
         "---\n\n"
         "## FeynRules Model Generation\n"
         "Build BSM model files for MadGraph.\n",
@@ -293,16 +292,19 @@ class TestSkillMdLoader:
         d.mkdir()
         # YAML file
         import yaml
+
         (d / "test-skill-md.yaml").write_text(
-            yaml.dump({
-                "id": "test-skill-md",
-                "name": "test-skill-md",
-                "category": "tooling",
-                "description": "From YAML",
-                "trigger_keywords": ["x"],
-                "applicable_stages": [1],
-                "prompt_template": "yaml body",
-            }),
+            yaml.dump(
+                {
+                    "id": "test-skill-md",
+                    "name": "test-skill-md",
+                    "category": "tooling",
+                    "description": "From YAML",
+                    "trigger_keywords": ["x"],
+                    "applicable_stages": [1],
+                    "prompt_template": "yaml body",
+                }
+            ),
             encoding="utf-8",
         )
         # SKILL.md file
@@ -378,7 +380,9 @@ class TestMatcher:
 
     def test_match_priority_ordering(self) -> None:
         high = Skill(
-            name="high", description="t", body="t",
+            name="high",
+            description="t",
+            body="t",
             metadata={
                 "trigger-keywords": "training",
                 "applicable-stages": "10",
@@ -386,7 +390,9 @@ class TestMatcher:
             },
         )
         low = Skill(
-            name="low", description="t", body="t",
+            name="low",
+            description="t",
+            body="t",
             metadata={
                 "trigger-keywords": "training",
                 "applicable-stages": "10",
@@ -472,7 +478,9 @@ class TestFormatSkills:
     def test_format_respects_max_chars(self) -> None:
         skills = [
             Skill(
-                name=f"s{i}", description="t", body="x" * 500,
+                name=f"s{i}",
+                description="t",
+                body="x" * 500,
                 metadata={
                     "category": "tooling",
                     "trigger-keywords": "t",
@@ -566,9 +574,7 @@ class TestSkillRegistry:
         assert skill is not None
         assert skill.category == "domain"
 
-    def test_registry_external_match_fallback(
-        self, external_skillmd_dir: Path
-    ) -> None:
+    def test_registry_external_match_fallback(self, external_skillmd_dir: Path) -> None:
         """External skills without trigger_keywords should match via description."""
         registry = SkillRegistry(
             external_dirs=[str(external_skillmd_dir)],

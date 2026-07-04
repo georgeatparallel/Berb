@@ -125,9 +125,7 @@ class TestDegradationChain:
                 "source": "semantic_scholar",
             }
         ]
-        put_cache(
-            "test degradation", "semantic_scholar", 20, cached, cache_base=tmp_path
-        )
+        put_cache("test degradation", "semantic_scholar", 20, cached, cache_base=tmp_path)
 
         with patch(
             "berb.literature.search.search_semantic_scholar",
@@ -137,9 +135,7 @@ class TestDegradationChain:
                 "berb.literature.search.search_arxiv",
                 side_effect=RuntimeError("API down"),
             ):
-                with patch(
-                    "berb.literature.cache._DEFAULT_CACHE_DIR", tmp_path
-                ):
+                with patch("berb.literature.cache._DEFAULT_CACHE_DIR", tmp_path):
                     papers = search_papers("test degradation", limit=20)
 
         assert len(papers) >= 1
@@ -241,16 +237,18 @@ class TestNoncriticalStageSkip:
                 "provider": "openai-compatible",
                 "base_url": "http://localhost:1234/v1",
                 "api_key_env": "RC_TEST_KEY",
-                "api_key": "inline",
             },
         }
         return RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
 
     def test_noncritical_stage_failure_is_skipped(self, tmp_path: Path) -> None:
+        import asyncio
+
         from berb.adapters import AdapterBundle
         from berb.pipeline import runner as rc_runner
         from berb.pipeline.executor import StageResult
-        from berb.pipeline.stages import STAGE_SEQUENCE, Stage, StageStatus
+        from berb.pipeline.resolution import resolve_stage_order
+        from berb.pipeline.stages import Stage, StageStatus
 
         run_dir = tmp_path / "run"
         run_dir.mkdir()
@@ -266,27 +264,28 @@ class TestNoncriticalStageSkip:
                     artifacts=(),
                     error="archive error",
                 )
-            return StageResult(
-                stage=stage, status=StageStatus.DONE, artifacts=("ok.md",)
-            )
+            return StageResult(stage=stage, status=StageStatus.DONE, artifacts=("ok.md",))
 
         with patch.object(rc_runner, "execute_stage", side_effect=mock_execute_stage):
-            results = rc_runner.execute_pipeline(
-                run_dir=run_dir,
-                run_id="run-skip-noncritical",
-                config=config,
-                adapters=adapters,
-                skip_noncritical=True,
+            results = asyncio.run(
+                rc_runner.execute_pipeline(
+                    run_dir=run_dir,
+                    run_id="run-skip-noncritical",
+                    config=config,
+                    adapters=adapters,
+                    skip_noncritical=True,
+                )
             )
 
-        assert len(results) == len(STAGE_SEQUENCE)
+        assert len(results) == len(resolve_stage_order())
         assert results[-1].stage is Stage.CITATION_VERIFY
         assert any(
-            r.stage is Stage.KNOWLEDGE_ARCHIVE and r.status is StageStatus.FAILED
-            for r in results
+            r.stage is Stage.KNOWLEDGE_ARCHIVE and r.status is StageStatus.FAILED for r in results
         )
 
     def test_critical_stage_failure_still_aborts(self, tmp_path: Path) -> None:
+        import asyncio
+
         from berb.adapters import AdapterBundle
         from berb.pipeline import runner as rc_runner
         from berb.pipeline.executor import StageResult
@@ -306,17 +305,17 @@ class TestNoncriticalStageSkip:
                     artifacts=(),
                     error="draft error",
                 )
-            return StageResult(
-                stage=stage, status=StageStatus.DONE, artifacts=("ok.md",)
-            )
+            return StageResult(stage=stage, status=StageStatus.DONE, artifacts=("ok.md",))
 
         with patch.object(rc_runner, "execute_stage", side_effect=mock_execute_stage):
-            results = rc_runner.execute_pipeline(
-                run_dir=run_dir,
-                run_id="run-fail-critical",
-                config=config,
-                adapters=adapters,
-                skip_noncritical=True,
+            results = asyncio.run(
+                rc_runner.execute_pipeline(
+                    run_dir=run_dir,
+                    run_id="run-fail-critical",
+                    config=config,
+                    adapters=adapters,
+                    skip_noncritical=True,
+                )
             )
 
         assert results[-1].stage is Stage.PAPER_DRAFT

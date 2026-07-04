@@ -147,6 +147,7 @@ class TestFileWatcher:
         watcher = FileWatcher(tmp_path)
         # Modify
         import time
+
         time.sleep(0.05)
         f.write_text("v2")
         changes = watcher.check_changes()
@@ -178,7 +179,9 @@ class TestFileWatcher:
 
 class TestLatexFormatter:
     def test_normalize_paths(self) -> None:
-        content = r"\includegraphics[width=0.5\textwidth]{/home/user/artifacts/rc-123/figures/plot.png}"
+        content = (
+            r"\includegraphics[width=0.5\textwidth]{/home/user/artifacts/rc-123/figures/plot.png}"
+        )
         result = LatexFormatter.normalize_paths(content)
         assert "figures/plot.png" in result
         assert "/home/user" not in result
@@ -212,7 +215,9 @@ class TestLatexFormatter:
 
     def test_format_for_overleaf(self, tmp_path: Path) -> None:
         tex = tmp_path / "paper.tex"
-        tex.write_text("\\documentclass{article}\n% BERB: test\n\\begin{document}\nHello\n\\end{document}\n")
+        tex.write_text(
+            "\\documentclass{article}\n% BERB: test\n\\begin{document}\nHello\n\\end{document}\n"
+        )
         formatter = LatexFormatter()
         result = formatter.format_for_overleaf(tex)
         assert "BERB" not in result

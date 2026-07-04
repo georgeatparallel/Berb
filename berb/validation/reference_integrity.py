@@ -13,9 +13,9 @@ This module validates all references before paper output, checking for:
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from enum import Enum
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from enum import StrEnum
 from typing import Any
 
 import httpx
@@ -24,7 +24,7 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger(__name__)
 
 
-class RetractionStatus(str, Enum):
+class RetractionStatus(StrEnum):
     """Paper retraction status.
 
     Attributes:
@@ -275,7 +275,9 @@ class ReferenceIntegrityChecker:
                             notices.append(
                                 EditorialNotice(
                                     notice_type=notice_type,
-                                    date=datetime.fromisoformat(update.get("timestamp", "")) if update.get("timestamp") else None,
+                                    date=datetime.fromisoformat(update.get("timestamp", ""))
+                                    if update.get("timestamp")
+                                    else None,
                                     reason=update.get("label", ""),
                                 )
                             )
@@ -366,7 +368,7 @@ class ReferenceIntegrityChecker:
             StalenessReport
         """
         if current_year is None:
-            current_year = datetime.now(timezone.utc).year
+            current_year = datetime.now(UTC).year
 
         if publication_year is None:
             return StalenessReport(
@@ -511,9 +513,7 @@ class ReferenceIntegrityChecker:
 
             # Check staleness
             if pub_year:
-                staleness = await self.check_staleness(
-                    ref.get("id", doi), pub_year
-                )
+                staleness = await self.check_staleness(ref.get("id", doi), pub_year)
                 if staleness.is_stale:
                     stale_count += 1
                     issues.append(

@@ -34,8 +34,9 @@ Usage:
 from __future__ import annotations
 
 import logging
+import time
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 import httpx
@@ -43,7 +44,7 @@ import httpx
 logger = logging.getLogger(__name__)
 
 
-class ScrapeFormat(str, Enum):
+class ScrapeFormat(StrEnum):
     """Output format for scraping."""
 
     MARKDOWN = "markdown"
@@ -462,11 +463,24 @@ class FirecrawlClient:
         job_id: str,
         start_time: float,
         poll_interval: float = 2.0,
+        max_poll_time: float = 600.0,  # BUG-004 fix: 10 minute timeout
     ) -> CrawlResult:
-        """Poll crawl job until completion."""
+        """Poll crawl job until completion.
+        
+        Args:
+            job_id: The crawl job ID to poll
+            start_time: Timestamp when polling started
+            poll_interval: Seconds between poll requests
+            max_poll_time: Maximum seconds to wait for completion (default: 10 min)
+        """
         import asyncio
 
-        while True:
+        poll_start = time.time()
+        max_iterations = int(max_poll_time / poll_interval)
+        iteration = 0
+
+        while iteration < max_iterations:
+            iteration += 1
             await asyncio.sleep(poll_interval)
 
             try:
@@ -512,7 +526,20 @@ class FirecrawlClient:
 
             except Exception as e:
                 logger.warning("Error polling crawl job: %s", e)
-                # Continue polling
+                # Continue polling but check for timeout
+                if time.time() - poll_start > max_poll_time:
+                    return CrawlResult(
+                        success=False,
+                        error=f"Polling timeout after {max_poll_time}s",
+                        elapsed_seconds=time.time() - start_time,
+                    )
+
+        # BUG-004 fix: Exit loop due to max iterations (timeout)
+        return CrawlResult(
+            success=False,
+            error=f"Crawl job did not complete within {max_poll_time}s",
+            elapsed_seconds=time.time() - start_time,
+        )
 
     async def map(
         self,

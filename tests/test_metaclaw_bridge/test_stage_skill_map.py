@@ -10,14 +10,29 @@ from berb.metaclaw_bridge.stage_skill_map import (
 def test_all_23_stages_mapped():
     """All 23 pipeline stages should have a mapping entry."""
     expected_stages = [
-        "topic_init", "problem_decompose", "search_strategy",
-        "literature_collect", "literature_screen", "knowledge_extract",
-        "synthesis", "hypothesis_gen", "experiment_design",
-        "code_generation", "resource_planning", "experiment_run",
-        "iterative_refine", "result_analysis", "research_decision",
-        "paper_outline", "paper_draft", "peer_review",
-        "paper_revision", "quality_gate", "knowledge_archive",
-        "export_publish", "citation_verify",
+        "topic_init",
+        "problem_decompose",
+        "search_strategy",
+        "literature_collect",
+        "literature_screen",
+        "knowledge_extract",
+        "synthesis",
+        "hypothesis_gen",
+        "experiment_design",
+        "code_generation",
+        "resource_planning",
+        "experiment_run",
+        "iterative_refine",
+        "result_analysis",
+        "research_decision",
+        "paper_outline",
+        "paper_draft",
+        "peer_review",
+        "paper_revision",
+        "quality_gate",
+        "knowledge_archive",
+        "export_publish",
+        "citation_verify",
     ]
     for stage in expected_stages:
         assert stage in STAGE_SKILL_MAP, f"Missing mapping for {stage}"

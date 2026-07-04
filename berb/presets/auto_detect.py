@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -61,53 +61,128 @@ class DomainClassifier:
     # Domain keyword mappings
     DOMAIN_KEYWORDS = {
         "ml-conference": [
-            "machine learning", "deep learning", "neural network",
-            "transformer", "attention", "gradient", "backprop",
-            "classification", "regression", "clustering",
-            "reinforcement learning", "RL", "policy gradient",
+            "machine learning",
+            "deep learning",
+            "neural network",
+            "transformer",
+            "attention",
+            "gradient",
+            "backprop",
+            "classification",
+            "regression",
+            "clustering",
+            "reinforcement learning",
+            "RL",
+            "policy gradient",
         ],
         "biomedical": [
-            "clinical", "patient", "disease", "therapy",
-            "drug", "gene", "protein", "cell",
-            "trial", "cohort", "biomarker", "diagnosis",
-            "treatment", "symptom", "pathology",
+            "clinical",
+            "patient",
+            "disease",
+            "therapy",
+            "drug",
+            "gene",
+            "protein",
+            "cell",
+            "trial",
+            "cohort",
+            "biomarker",
+            "diagnosis",
+            "treatment",
+            "symptom",
+            "pathology",
         ],
         "nlp": [
-            "natural language", "text", "language model",
-            "sentiment", "translation", "parsing",
-            "named entity", "coreference", "syntax",
-            "semantic", "pragmatic", "discourse",
-            "LLM", "chatbot", "dialogue",
+            "natural language",
+            "text",
+            "language model",
+            "sentiment",
+            "translation",
+            "parsing",
+            "named entity",
+            "coreference",
+            "syntax",
+            "semantic",
+            "pragmatic",
+            "discourse",
+            "LLM",
+            "chatbot",
+            "dialogue",
         ],
         "computer-vision": [
-            "image", "video", "visual", "pixel",
-            "convolution", "CNN", "detection", "segmentation",
-            "object", "face", "scene", "optical",
-            "rendering", "3D", "point cloud",
+            "image",
+            "video",
+            "visual",
+            "pixel",
+            "convolution",
+            "CNN",
+            "detection",
+            "segmentation",
+            "object",
+            "face",
+            "scene",
+            "optical",
+            "rendering",
+            "3D",
+            "point cloud",
         ],
         "physics": [
-            "quantum", "particle", "field", "force",
-            "hamiltonian", "lagrangian", "thermodynamic",
-            "entropy", "relativity", "spin",
-            "chaos", "dynamical", "nonlinear",
+            "quantum",
+            "particle",
+            "field",
+            "force",
+            "hamiltonian",
+            "lagrangian",
+            "thermodynamic",
+            "entropy",
+            "relativity",
+            "spin",
+            "chaos",
+            "dynamical",
+            "nonlinear",
         ],
         "social-sciences": [
-            "social", "behavior", "psychology", "sociology",
-            "survey", "interview", "qualitative",
-            "attitude", "perception", "intervention",
-            "demographic", "population", "sample",
+            "social",
+            "behavior",
+            "psychology",
+            "sociology",
+            "survey",
+            "interview",
+            "qualitative",
+            "attitude",
+            "perception",
+            "intervention",
+            "demographic",
+            "population",
+            "sample",
         ],
         "engineering": [
-            "system", "architecture", "distributed",
-            "network", "protocol", "scalability",
-            "latency", "throughput", "reliability",
-            "deployment", "infrastructure", "cloud",
+            "system",
+            "architecture",
+            "distributed",
+            "network",
+            "protocol",
+            "scalability",
+            "latency",
+            "throughput",
+            "reliability",
+            "deployment",
+            "infrastructure",
+            "cloud",
         ],
         "humanities": [
-            "philosophy", "history", "literature",
-            "cultural", "interpretation", "hermeneutic",
-            "discourse", "narrative", "rhetoric",
-            "ethical", "aesthetic", "ontological",
+            "philosophy",
+            "history",
+            "literature",
+            "cultural",
+            "interpretation",
+            "hermeneutic",
+            "discourse",
+            "narrative",
+            "rhetoric",
+            "ethical",
+            "aesthetic",
+            "ontological",
         ],
     }
 
@@ -215,7 +290,7 @@ class DomainClassifier:
                 return True
 
         # Check for known ambiguous keywords
-        for domain, keywords in matches.items():
+        for _domain, keywords in matches.items():
             for keyword in keywords:
                 if keyword in self.AMBIGUOUS_TOPICS:
                     return True
@@ -246,7 +321,7 @@ class DomainClassifier:
 
 Research Topic: "{topic}"
 
-Candidate Domains: {', '.join(candidate_domains)}
+Candidate Domains: {", ".join(candidate_domains)}
 
 For each domain, consider:
 1. How well does the topic fit the domain's typical research?

@@ -302,9 +302,7 @@ class TestConvertInline:
 
     def test_pre_escaped_underscore_near_math(self) -> None:
         """BUG-182: Pre-escaped underscore adjacent to math must not break."""
-        result = _convert_inline(
-            r"RawObs\_PPO. Statistics \(\mu_t\) are given"
-        )
+        result = _convert_inline(r"RawObs\_PPO. Statistics \(\mu_t\) are given")
         assert r"\\_" not in result
         assert r"\_" in result
         assert r"\(\mu_t\)" in result
@@ -523,13 +521,7 @@ class TestMarkdownToLatex:
         assert r"\end{verbatim}" in tex
 
     def test_table_in_paper(self) -> None:
-        md = (
-            "# Abstract\nabs\n"
-            "# Results\n"
-            "| Model | Score |\n"
-            "| --- | --- |\n"
-            "| Ours | 95.0 |\n"
-        )
+        md = "# Abstract\nabs\n# Results\n| Model | Score |\n| --- | --- |\n| Ours | 95.0 |\n"
         tex = markdown_to_latex(md, NEURIPS_2024, title="T")
         assert r"\begin{tabular}" in tex
         assert r"\textbf{Model}" in tex
@@ -561,7 +553,7 @@ class TestExportConfig:
     def test_rcconfig_has_export(self) -> None:
         from berb.config import RCConfig
 
-        cfg = RCConfig.load("config.berb.example.yaml", check_paths=False)
+        cfg = RCConfig.load("config.berb.yaml", check_paths=False)
         assert hasattr(cfg, "export")
         assert cfg.export.target_conference == "neurips_2025"
 
@@ -570,7 +562,7 @@ class TestExportConfig:
         import yaml
         from pathlib import Path
 
-        data = yaml.safe_load(Path("config.berb.example.yaml").read_text())
+        data = yaml.safe_load(Path("config.berb.yaml").read_text())
         data["export"] = {
             "target_conference": "icml_2025",
             "authors": "Test Author",
@@ -595,14 +587,21 @@ class TestHitlStageValidation:
         import yaml
         from pathlib import Path
 
-        data = yaml.safe_load(Path("config.berb.example.yaml").read_text())
+        data = yaml.safe_load(Path("config.berb.yaml").read_text())
         data.setdefault("security", {})["hitl_required_stages"] = [1, 22, 23]
         result = validate_config(data, check_paths=False)
         assert result.ok, f"Errors: {result.errors}"
 
     def test_get_style_files_returns_bundled_sty(self) -> None:
         """Each conference template bundles at least one .sty file."""
-        for name in ["neurips_2025", "neurips_2024", "iclr_2026", "iclr_2025", "icml_2026", "icml_2025"]:
+        for name in [
+            "neurips_2025",
+            "neurips_2024",
+            "iclr_2026",
+            "iclr_2025",
+            "icml_2026",
+            "icml_2025",
+        ]:
             tpl = get_template(name)
             files = tpl.get_style_files()
             assert len(files) >= 1, f"No style files for {name}"
@@ -622,7 +621,7 @@ class TestHitlStageValidation:
         import yaml
         from pathlib import Path
 
-        data = yaml.safe_load(Path("config.berb.example.yaml").read_text())
+        data = yaml.safe_load(Path("config.berb.yaml").read_text())
         data.setdefault("security", {})["hitl_required_stages"] = [24]
         result = validate_config(data, check_paths=False)
         assert not result.ok
@@ -648,43 +647,51 @@ class TestCompletenessWordCountAndBullets:
             else:
                 body = " ".join(["word"] * wc)
             results.append(
-                type("_Section", (), {
-                    "level": 1,
-                    "heading": heading,
-                    "heading_lower": heading.lower(),
-                    "body": body,
-                })()
+                type(
+                    "_Section",
+                    (),
+                    {
+                        "level": 1,
+                        "heading": heading,
+                        "heading_lower": heading.lower(),
+                        "body": body,
+                    },
+                )()
             )
         return results
 
     def test_completeness_section_word_count_short(self) -> None:
         """A Method section with only 100 words triggers a warning."""
-        secs = self._make_sections([
-            ("Title", 5, False),
-            ("Abstract", 200, False),
-            ("Introduction", 900, False),
-            ("Related Work", 700, False),
-            ("Method", 100, False),
-            ("Experiments", 1000, False),
-            ("Results", 700, False),
-            ("Conclusion", 250, False),
-        ])
+        secs = self._make_sections(
+            [
+                ("Title", 5, False),
+                ("Abstract", 200, False),
+                ("Introduction", 900, False),
+                ("Related Work", 700, False),
+                ("Method", 100, False),
+                ("Experiments", 1000, False),
+                ("Results", 700, False),
+                ("Conclusion", 250, False),
+            ]
+        )
         warns = check_paper_completeness(secs)
         method_warns = [w for w in warns if "Method" in w and "words" in w]
         assert len(method_warns) >= 1, f"Expected word count warning, got: {warns}"
 
     def test_completeness_bullet_density(self) -> None:
         """A Method section full of bullet points triggers a warning."""
-        secs = self._make_sections([
-            ("Title", 5, False),
-            ("Abstract", 200, False),
-            ("Introduction", 900, False),
-            ("Related Work", 700, False),
-            ("Method", 300, True),
-            ("Experiments", 1000, False),
-            ("Results", 700, False),
-            ("Conclusion", 250, False),
-        ])
+        secs = self._make_sections(
+            [
+                ("Title", 5, False),
+                ("Abstract", 200, False),
+                ("Introduction", 900, False),
+                ("Related Work", 700, False),
+                ("Method", 300, True),
+                ("Experiments", 1000, False),
+                ("Results", 700, False),
+                ("Conclusion", 250, False),
+            ]
+        )
         warns = check_paper_completeness(secs)
         bullet_warns = [w for w in warns if "bullet" in w.lower() and "Method" in w]
         assert len(bullet_warns) >= 1, f"Expected bullet warning, got: {warns}"
@@ -721,11 +728,7 @@ class TestAlgorithmEscaping:
         assert r"$x = \alpha$" in result
 
     def test_render_code_block_algo_escapes(self) -> None:
-        code = (
-            "Initialize theta_1, theta_2\n"
-            "for t = 1 to T do\n"
-            "  Sample batch B  # prioritized\n"
-        )
+        code = "Initialize theta_1, theta_2\nfor t = 1 to T do\n  Sample batch B  # prioritized\n"
         result = _render_code_block("algorithm", code)
         assert r"\begin{algorithm}" in result
         assert r"\begin{algorithmic}" in result

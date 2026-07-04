@@ -10,8 +10,15 @@ import pytest
 from berb.adapters import AdapterBundle
 from berb.config import RCConfig
 from berb.pipeline import runner as rc_runner
+from berb.pipeline.checkpoint import write_checkpoint as _write_checkpoint
+from berb.pipeline.contracts import CONTRACTS
 from berb.pipeline.executor import StageResult
-from berb.pipeline.stages import STAGE_SEQUENCE, Stage, StageStatus
+from berb.pipeline.resolution import resolve_stage_order
+from berb.pipeline.stages import Stage, StageStatus
+
+# STAGE_SEQUENCE was removed from berb.pipeline.stages in Phase 3 — stage
+# order is now computed dynamically via resolve_stage_order().
+STAGE_SEQUENCE = resolve_stage_order()
 
 
 @pytest.fixture()
@@ -61,7 +68,7 @@ def _blocked(stage: Stage) -> StageResult:
     )
 
 
-def test_execute_pipeline_runs_stages_in_sequence(
+async def test_execute_pipeline_runs_stages_in_sequence(
     monkeypatch: pytest.MonkeyPatch,
     run_dir: Path,
     rc_config: RCConfig,
@@ -75,18 +82,31 @@ def test_execute_pipeline_runs_stages_in_sequence(
         return _done(stage)
 
     monkeypatch.setattr(rc_runner, "execute_stage", mock_execute_stage)
-    results = rc_runner.execute_pipeline(
+    results = await rc_runner.execute_pipeline(
         run_dir=run_dir,
         run_id="run-seq",
         config=rc_config,
         adapters=adapters,
     )
-    assert seen == list(STAGE_SEQUENCE)
+    # The DAG scheduler runs independent sibling stages concurrently (e.g.
+    # KNOWLEDGE_ARCHIVE and EXPORT_PUBLISH both only depend on earlier
+    # stages, not on each other), so the *exact* execution order can
+    # legitimately interleave siblings. Assert all 23 stages ran exactly
+    # once, and that dependency ordering was respected (a stage never runs
+    # before something it depends on), rather than exact STAGE_SEQUENCE
+    # equality.
+    assert sorted(seen, key=int) == list(STAGE_SEQUENCE)
+    seen_index = {stage: idx for idx, stage in enumerate(seen)}
+    for stage in seen:
+        for dep in CONTRACTS[stage].depends_on:
+            assert seen_index[dep] < seen_index[stage], (
+                f"{stage.name} ran before its dependency {dep.name}"
+            )
     assert len(results) == 23
     assert all(r.status == StageStatus.DONE for r in results)
 
 
-def test_execute_pipeline_stops_on_failed_stage(
+async def test_execute_pipeline_stops_on_failed_stage(
     monkeypatch: pytest.MonkeyPatch,
     run_dir: Path,
     rc_config: RCConfig,
@@ -101,7 +121,7 @@ def test_execute_pipeline_stops_on_failed_stage(
         return _done(stage)
 
     monkeypatch.setattr(rc_runner, "execute_stage", mock_execute_stage)
-    results = rc_runner.execute_pipeline(
+    results = await rc_runner.execute_pipeline(
         run_dir=run_dir,
         run_id="run-fail",
         config=rc_config,
@@ -112,7 +132,7 @@ def test_execute_pipeline_stops_on_failed_stage(
     assert len(results) == int(fail_stage)
 
 
-def test_execute_pipeline_stops_on_gate_when_stop_on_gate_enabled(
+async def test_execute_pipeline_stops_on_gate_when_stop_on_gate_enabled(
     monkeypatch: pytest.MonkeyPatch,
     run_dir: Path,
     rc_config: RCConfig,
@@ -127,7 +147,7 @@ def test_execute_pipeline_stops_on_gate_when_stop_on_gate_enabled(
         return _done(stage)
 
     monkeypatch.setattr(rc_runner, "execute_stage", mock_execute_stage)
-    results = rc_runner.execute_pipeline(
+    results = await rc_runner.execute_pipeline(
         run_dir=run_dir,
         run_id="run-gate-stop",
         config=rc_config,
@@ -139,7 +159,7 @@ def test_execute_pipeline_stops_on_gate_when_stop_on_gate_enabled(
     assert len(results) == int(gate_stage)
 
 
-def test_execute_pipeline_continues_after_gate_when_stop_on_gate_disabled(
+async def test_execute_pipeline_continues_after_gate_when_stop_on_gate_disabled(
     monkeypatch: pytest.MonkeyPatch,
     run_dir: Path,
     rc_config: RCConfig,
@@ -154,7 +174,7 @@ def test_execute_pipeline_continues_after_gate_when_stop_on_gate_disabled(
         return _done(stage)
 
     monkeypatch.setattr(rc_runner, "execute_stage", mock_execute_stage)
-    results = rc_runner.execute_pipeline(
+    results = await rc_runner.execute_pipeline(
         run_dir=run_dir,
         run_id="run-gate-continue",
         config=rc_config,
@@ -165,7 +185,7 @@ def test_execute_pipeline_continues_after_gate_when_stop_on_gate_disabled(
     assert any(item.status == StageStatus.BLOCKED_APPROVAL for item in results)
 
 
-def test_execute_pipeline_writes_pipeline_summary_json(
+async def test_execute_pipeline_writes_pipeline_summary_json(
     monkeypatch: pytest.MonkeyPatch,
     run_dir: Path,
     rc_config: RCConfig,
@@ -176,7 +196,7 @@ def test_execute_pipeline_writes_pipeline_summary_json(
         return _done(stage)
 
     monkeypatch.setattr(rc_runner, "execute_stage", mock_execute_stage)
-    rc_runner.execute_pipeline(
+    await rc_runner.execute_pipeline(
         run_dir=run_dir,
         run_id="run-summary",
         config=rc_config,
@@ -186,7 +206,7 @@ def test_execute_pipeline_writes_pipeline_summary_json(
     assert summary_path.exists()
 
 
-def test_pipeline_summary_has_expected_fields_and_values(
+async def test_pipeline_summary_has_expected_fields_and_values(
     monkeypatch: pytest.MonkeyPatch,
     run_dir: Path,
     rc_config: RCConfig,
@@ -201,7 +221,7 @@ def test_pipeline_summary_has_expected_fields_and_values(
         return _done(stage)
 
     monkeypatch.setattr(rc_runner, "execute_stage", mock_execute_stage)
-    results = rc_runner.execute_pipeline(
+    results = await rc_runner.execute_pipeline(
         run_dir=run_dir,
         run_id="run-summary-fields",
         config=rc_config,
@@ -222,7 +242,7 @@ def test_pipeline_summary_has_expected_fields_and_values(
     assert "generated" in summary
 
 
-def test_execute_pipeline_from_stage_skips_earlier_stages(
+async def test_execute_pipeline_from_stage_skips_earlier_stages(
     monkeypatch: pytest.MonkeyPatch,
     run_dir: Path,
     rc_config: RCConfig,
@@ -236,7 +256,7 @@ def test_execute_pipeline_from_stage_skips_earlier_stages(
         return _done(stage)
 
     monkeypatch.setattr(rc_runner, "execute_stage", mock_execute_stage)
-    results = rc_runner.execute_pipeline(
+    results = await rc_runner.execute_pipeline(
         run_dir=run_dir,
         run_id="run-from-stage",
         config=rc_config,
@@ -248,7 +268,7 @@ def test_execute_pipeline_from_stage_skips_earlier_stages(
     assert len(results) == len(seen)
 
 
-def test_execute_pipeline_writes_kb_entries_when_kb_root_provided(
+async def test_execute_pipeline_writes_kb_entries_when_kb_root_provided(
     monkeypatch: pytest.MonkeyPatch,
     run_dir: Path,
     rc_config: RCConfig,
@@ -281,7 +301,7 @@ def test_execute_pipeline_writes_kb_entries_when_kb_root_provided(
     monkeypatch.setattr(rc_runner, "write_stage_to_kb", mock_write_stage_to_kb)
 
     kb_root = tmp_path / "kb-out"
-    results = rc_runner.execute_pipeline(
+    results = await rc_runner.execute_pipeline(
         run_dir=run_dir,
         run_id="run-kb",
         config=rc_config,
@@ -293,7 +313,7 @@ def test_execute_pipeline_writes_kb_entries_when_kb_root_provided(
     assert calls[0] == (1, "topic_init", "run-kb")
 
 
-def test_execute_pipeline_passes_auto_approve_flag_to_execute_stage(
+async def test_execute_pipeline_passes_auto_approve_flag_to_execute_stage(
     monkeypatch: pytest.MonkeyPatch,
     run_dir: Path,
     rc_config: RCConfig,
@@ -306,7 +326,7 @@ def test_execute_pipeline_passes_auto_approve_flag_to_execute_stage(
         return _done(stage)
 
     monkeypatch.setattr(rc_runner, "execute_stage", mock_execute_stage)
-    rc_runner.execute_pipeline(
+    await rc_runner.execute_pipeline(
         run_dir=run_dir,
         run_id="run-auto-approve",
         config=rc_config,
@@ -344,7 +364,7 @@ def test_should_start_logic(stage: Stage, started: bool, expected: bool) -> None
 def test_build_pipeline_summary_core_fields(
     results, expected_status: str, expected_final_stage: int
 ) -> None:
-    summary = rc_runner._build_pipeline_summary(
+    summary = rc_runner.build_pipeline_summary(
         run_id="run-core",
         results=results,
         from_stage=Stage.TOPIC_INIT,
@@ -354,7 +374,7 @@ def test_build_pipeline_summary_core_fields(
     assert summary["final_stage"] == expected_final_stage
 
 
-def test_pipeline_prints_stage_progress(
+async def test_pipeline_prints_stage_progress(
     monkeypatch: pytest.MonkeyPatch,
     run_dir: Path,
     rc_config: RCConfig,
@@ -388,7 +408,7 @@ def test_pipeline_prints_stage_progress(
     monkeypatch.setattr(rc_runner, "execute_stage", mock_execute_stage)
     monkeypatch.setattr(rc_runner, "write_stage_to_kb", lambda *args, **kwargs: [])
 
-    _ = rc_runner.execute_pipeline(
+    _ = await rc_runner.execute_pipeline(
         run_dir=run_dir,
         run_id="rc-test-001",
         config=rc_config,
@@ -402,7 +422,7 @@ def test_pipeline_prints_stage_progress(
     assert "LLM timeout" in captured.out
 
 
-def test_pipeline_prints_elapsed_time(
+async def test_pipeline_prints_elapsed_time(
     monkeypatch: pytest.MonkeyPatch,
     run_dir: Path,
     rc_config: RCConfig,
@@ -425,7 +445,7 @@ def test_pipeline_prints_elapsed_time(
     monkeypatch.setattr(rc_runner, "execute_stage", lambda *args, **kwargs: next(results_iter))
     monkeypatch.setattr(rc_runner, "write_stage_to_kb", lambda *args, **kwargs: [])
 
-    _ = rc_runner.execute_pipeline(
+    _ = await rc_runner.execute_pipeline(
         run_dir=run_dir,
         run_id="rc-test-002",
         config=rc_config,
@@ -453,7 +473,7 @@ def _refine_result(stage: Stage) -> StageResult:
     )
 
 
-def test_pivot_decision_triggers_rollback_to_hypothesis_gen(
+async def test_pivot_decision_triggers_rollback_to_hypothesis_gen(
     monkeypatch: pytest.MonkeyPatch,
     run_dir: Path,
     rc_config: RCConfig,
@@ -472,7 +492,7 @@ def test_pivot_decision_triggers_rollback_to_hypothesis_gen(
         return _done(stage)
 
     monkeypatch.setattr(rc_runner, "execute_stage", mock_execute_stage)
-    results = rc_runner.execute_pipeline(
+    results = await rc_runner.execute_pipeline(
         run_dir=run_dir,
         run_id="run-pivot",
         config=rc_config,
@@ -489,7 +509,7 @@ def test_pivot_decision_triggers_rollback_to_hypothesis_gen(
     assert history[0]["decision"] == "pivot"
 
 
-def test_refine_decision_triggers_rollback_to_iterative_refine(
+async def test_refine_decision_triggers_rollback_to_iterative_refine(
     monkeypatch: pytest.MonkeyPatch,
     run_dir: Path,
     rc_config: RCConfig,
@@ -508,7 +528,7 @@ def test_refine_decision_triggers_rollback_to_iterative_refine(
         return _done(stage)
 
     monkeypatch.setattr(rc_runner, "execute_stage", mock_execute_stage)
-    results = rc_runner.execute_pipeline(
+    results = await rc_runner.execute_pipeline(
         run_dir=run_dir,
         run_id="run-refine",
         config=rc_config,
@@ -519,7 +539,7 @@ def test_refine_decision_triggers_rollback_to_iterative_refine(
     assert refine_stage_count >= 2
 
 
-def test_max_pivot_count_prevents_infinite_loop(
+async def test_max_pivot_count_prevents_infinite_loop(
     monkeypatch: pytest.MonkeyPatch,
     run_dir: Path,
     rc_config: RCConfig,
@@ -536,7 +556,7 @@ def test_max_pivot_count_prevents_infinite_loop(
         return _done(stage)
 
     monkeypatch.setattr(rc_runner, "execute_stage", mock_execute_stage)
-    results = rc_runner.execute_pipeline(
+    results = await rc_runner.execute_pipeline(
         run_dir=run_dir,
         run_id="run-max-pivot",
         config=rc_config,
@@ -549,7 +569,7 @@ def test_max_pivot_count_prevents_infinite_loop(
     assert decision_count <= MAX_DECISION_PIVOTS + 1
 
 
-def test_proceed_decision_does_not_trigger_rollback(
+async def test_proceed_decision_does_not_trigger_rollback(
     monkeypatch: pytest.MonkeyPatch,
     run_dir: Path,
     rc_config: RCConfig,
@@ -563,7 +583,7 @@ def test_proceed_decision_does_not_trigger_rollback(
         return _done(stage)
 
     monkeypatch.setattr(rc_runner, "execute_stage", mock_execute_stage)
-    results = rc_runner.execute_pipeline(
+    results = await rc_runner.execute_pipeline(
         run_dir=run_dir,
         run_id="run-proceed",
         config=rc_config,
@@ -575,12 +595,12 @@ def test_proceed_decision_does_not_trigger_rollback(
 
 
 def test_read_pivot_count_returns_zero_for_no_history(run_dir: Path) -> None:
-    assert rc_runner._read_pivot_count(run_dir) == 0
+    assert rc_runner.read_pivot_count(run_dir) == 0
 
 
 def test_record_decision_history_appends(run_dir: Path) -> None:
-    rc_runner._record_decision_history(run_dir, "pivot", Stage.HYPOTHESIS_GEN, 1)
-    rc_runner._record_decision_history(run_dir, "refine", Stage.ITERATIVE_REFINE, 2)
+    rc_runner.record_decision_history(run_dir, "pivot", Stage.HYPOTHESIS_GEN, 1)
+    rc_runner.record_decision_history(run_dir, "refine", Stage.ITERATIVE_REFINE, 2)
     history = json.loads((run_dir / "decision_history.json").read_text())
     assert len(history) == 2
     assert history[0]["decision"] == "pivot"
@@ -620,7 +640,7 @@ def _setup_stage_artifacts(run_dir: Path) -> None:
 
 def test_package_deliverables_collects_all_artifacts(run_dir: Path, rc_config: RCConfig) -> None:
     _setup_stage_artifacts(run_dir)
-    dest = rc_runner._package_deliverables(run_dir, "run-pkg-test", rc_config)
+    dest = rc_runner.package_deliverables(run_dir, "run-pkg-test", rc_config)
     assert dest is not None
     assert dest == run_dir / "deliverables"
     assert (dest / "paper_final.md").exists()
@@ -636,7 +656,7 @@ def test_package_deliverables_collects_all_artifacts(run_dir: Path, rc_config: R
 
 def test_package_deliverables_prefers_verified_versions(run_dir: Path, rc_config: RCConfig) -> None:
     _setup_stage_artifacts(run_dir)
-    rc_runner._package_deliverables(run_dir, "run-verified", rc_config)
+    rc_runner.package_deliverables(run_dir, "run-verified", rc_config)
     dest = run_dir / "deliverables"
     # Should contain verified content (from stage 23), not base (from stage 22)
     paper = (dest / "paper_final.md").read_text(encoding="utf-8")
@@ -652,7 +672,7 @@ def test_package_deliverables_falls_back_to_stage22(run_dir: Path, rc_config: RC
     (s22 / "paper_final.md").write_text("# Base Paper", encoding="utf-8")
     (s22 / "references.bib").write_text("@article{a,title={A}}", encoding="utf-8")
 
-    dest = rc_runner._package_deliverables(run_dir, "run-fallback", rc_config)
+    dest = rc_runner.package_deliverables(run_dir, "run-fallback", rc_config)
     assert dest is not None
     paper = (dest / "paper_final.md").read_text(encoding="utf-8")
     assert "Base Paper" in paper
@@ -675,12 +695,11 @@ def test_package_deliverables_returns_none_when_no_stage_artifacts(
             "provider": "openai-compatible",
             "base_url": "http://localhost:1234/v1",
             "api_key_env": "RC_TEST_KEY",
-            "api_key": "inline",
         },
         "export": {"target_conference": "unknown_conf_9999"},
     }
-    cfg = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
-    result = rc_runner._package_deliverables(run_dir, "run-empty", cfg)
+    cfg = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False)
+    result = rc_runner.package_deliverables(run_dir, "run-empty", cfg)
     assert result is None
     assert not (run_dir / "deliverables").exists()
 
@@ -688,7 +707,7 @@ def test_package_deliverables_returns_none_when_no_stage_artifacts(
 def test_package_deliverables_includes_style_files(run_dir: Path, rc_config: RCConfig) -> None:
     """Style files (.sty, .bst) for the target conference are bundled."""
     _setup_stage_artifacts(run_dir)
-    dest = rc_runner._package_deliverables(run_dir, "run-styles", rc_config)
+    dest = rc_runner.package_deliverables(run_dir, "run-styles", rc_config)
     assert dest is not None
     # Default config uses neurips_2025 → should have neurips_2025.sty
     assert (dest / "neurips_2025.sty").exists()
@@ -701,7 +720,7 @@ def test_package_deliverables_includes_style_files(run_dir: Path, rc_config: RCC
 
 def test_write_checkpoint_uses_atomic_rename(run_dir: Path) -> None:
     """Checkpoint must be written via temp file + rename, not direct write"""
-    rc_runner._write_checkpoint(run_dir, Stage.TOPIC_INIT, "run-atomic")
+    _write_checkpoint(run_dir, Stage.TOPIC_INIT, "run-atomic")
     cp = run_dir / "checkpoint.json"
     assert cp.exists()
     data = json.loads(cp.read_text(encoding="utf-8"))
@@ -711,7 +730,7 @@ def test_write_checkpoint_uses_atomic_rename(run_dir: Path) -> None:
 
 def test_write_checkpoint_leaves_no_temp_files(run_dir: Path) -> None:
     """Atomic write must clean up temp files on success"""
-    rc_runner._write_checkpoint(run_dir, Stage.TOPIC_INIT, "run-clean")
+    _write_checkpoint(run_dir, Stage.TOPIC_INIT, "run-clean")
     temps = list(run_dir.glob("*.tmp"))
     assert temps == [], f"Leftover temp files: {temps}"
 
@@ -722,7 +741,7 @@ def test_write_checkpoint_preserves_old_on_write_failure(
     """If the temp-file write fails, the existing checkpoint must survive"""
     import builtins
 
-    rc_runner._write_checkpoint(run_dir, Stage.TOPIC_INIT, "run-ok")
+    _write_checkpoint(run_dir, Stage.TOPIC_INIT, "run-ok")
 
     original_open = builtins.open
 
@@ -737,7 +756,7 @@ def test_write_checkpoint_preserves_old_on_write_failure(
 
     monkeypatch.setattr(builtins, "open", _exploding_open)
     with pytest.raises(OSError):
-        rc_runner._write_checkpoint(run_dir, Stage.PROBLEM_DECOMPOSE, "run-ok")
+        _write_checkpoint(run_dir, Stage.PROBLEM_DECOMPOSE, "run-ok")
 
     # Original checkpoint must be intact
     data = json.loads((run_dir / "checkpoint.json").read_text(encoding="utf-8"))
@@ -748,8 +767,8 @@ def test_write_checkpoint_preserves_old_on_write_failure(
 
 def test_write_checkpoint_overwrites_previous(run_dir: Path) -> None:
     """A second checkpoint call must fully replace the first"""
-    rc_runner._write_checkpoint(run_dir, Stage.TOPIC_INIT, "run-1")
-    rc_runner._write_checkpoint(run_dir, Stage.PROBLEM_DECOMPOSE, "run-1")
+    _write_checkpoint(run_dir, Stage.TOPIC_INIT, "run-1")
+    _write_checkpoint(run_dir, Stage.PROBLEM_DECOMPOSE, "run-1")
     data = json.loads((run_dir / "checkpoint.json").read_text(encoding="utf-8"))
     assert data["last_completed_stage"] == int(Stage.PROBLEM_DECOMPOSE)
     assert data["last_completed_name"] == Stage.PROBLEM_DECOMPOSE.name
@@ -764,7 +783,7 @@ def _degraded(stage: Stage) -> StageResult:
     )
 
 
-def test_degraded_quality_gate_continues_pipeline(
+async def test_degraded_quality_gate_continues_pipeline(
     monkeypatch: pytest.MonkeyPatch,
     run_dir: Path,
     rc_config: RCConfig,
@@ -782,15 +801,18 @@ def test_degraded_quality_gate_continues_pipeline(
         return _done(stage)
 
     monkeypatch.setattr(rc_runner, "execute_stage", mock_execute_stage)
-    results = rc_runner.execute_pipeline(
+    results = await rc_runner.execute_pipeline(
         run_dir=run_dir,
         run_id="run-degraded",
         config=rc_config,
         adapters=adapters,
     )
-    # All 23 stages should execute (not stopped at quality gate)
+    # All 23 stages should execute (not stopped at quality gate). Sibling
+    # stages with no mutual dependency (e.g. KNOWLEDGE_ARCHIVE and
+    # EXPORT_PUBLISH) may run concurrently and interleave — compare as sets
+    # rather than requiring exact STAGE_SEQUENCE order.
     assert len(results) == 23
-    assert seen == list(STAGE_SEQUENCE)
+    assert sorted(seen, key=int) == list(STAGE_SEQUENCE)
     # Quality gate result should have decision="degraded"
     qg_result = [r for r in results if r.stage == Stage.QUALITY_GATE][0]
     assert qg_result.decision == "degraded"
@@ -803,7 +825,7 @@ def test_degraded_quality_gate_continues_pipeline(
     assert "DEGRADED" in captured.out
 
 
-def test_package_deliverables_called_after_pipeline(
+async def test_package_deliverables_called_after_pipeline(
     monkeypatch: pytest.MonkeyPatch,
     run_dir: Path,
     rc_config: RCConfig,
@@ -817,7 +839,7 @@ def test_package_deliverables_called_after_pipeline(
         return _done(stage)
 
     monkeypatch.setattr(rc_runner, "execute_stage", mock_execute_stage)
-    rc_runner.execute_pipeline(
+    await rc_runner.execute_pipeline(
         run_dir=run_dir,
         run_id="run-with-deliverables",
         config=rc_config,

@@ -1,0 +1,256 @@
+"""Deliverables packaging — collect final user-facing artifacts into a single folder.
+
+Extracted from pipeline/runner.py as part of the Phase 2 runner split.
+
+# Author: Georgios-Chrysovalantis Chatzivantsidis
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import re
+import shutil
+from datetime import UTC, datetime
+from pathlib import Path
+
+from berb.config import RCConfig
+
+logger = logging.getLogger(__name__)
+
+
+def _utcnow_iso() -> str:
+    return datetime.now(UTC).isoformat(timespec="seconds")
+
+
+def package_deliverables(
+    run_dir: Path,
+    run_id: str,
+    config: RCConfig,
+) -> Path | None:
+    """Collect all final user-facing deliverables into a single ``deliverables/`` folder.
+
+    Returns the deliverables directory path, or None if nothing was packaged.
+    """
+    dest = run_dir / "deliverables"
+    dest.mkdir(parents=True, exist_ok=True)
+
+    packaged: list[str] = []
+
+    # --- 1. Final paper (Markdown) ---
+    paper_md = None
+    for candidate in [
+        run_dir / "stage-23" / "paper_final_verified.md",
+        run_dir / "stage-22" / "paper_final.md",
+    ]:
+        if candidate.exists() and candidate.stat().st_size > 0:
+            paper_md = candidate
+            break
+    if paper_md is not None:
+        shutil.copy2(paper_md, dest / "paper_final.md")
+        packaged.append("paper_final.md")
+
+    # --- 2. LaTeX paper ---
+    tex_regenerated = False
+    _sanitization_report = run_dir / "stage-22" / "sanitization_report.json"
+    _was_sanitized = _sanitization_report.exists()
+    verified_md = run_dir / "stage-23" / "paper_final_verified.md"
+    if (
+        not _was_sanitized
+        and paper_md is not None
+        and paper_md == verified_md
+        and verified_md.exists()
+        and verified_md.stat().st_size > 0
+    ):
+        try:
+            from berb.pipeline.executor import _extract_paper_title
+            from berb.templates import get_template, markdown_to_latex
+
+            tpl = get_template(config.export.target_conference)
+            v_text = verified_md.read_text(encoding="utf-8")
+            tex_content = markdown_to_latex(
+                v_text,
+                tpl,
+                title=_extract_paper_title(v_text),
+                authors=config.export.authors,
+                bib_file=config.export.bib_file,
+            )
+            _has_abstract = (
+                "\\begin{abstract}" in tex_content
+                and tex_content.split("\\begin{abstract}")[1].split("\\end{abstract}")[0].strip()
+            )
+            _section_count = tex_content.count("\\section{")
+            if _has_abstract and _section_count >= 3:
+                (dest / "paper.tex").write_text(tex_content, encoding="utf-8")
+                packaged.append("paper.tex")
+                tex_regenerated = True
+            else:
+                logger.warning(
+                    "Regenerated paper.tex has poor structure "
+                    "(abstract=%s, sections=%d) — using Stage 22 version",
+                    bool(_has_abstract),
+                    _section_count,
+                )
+        except Exception:
+            logger.debug("paper.tex regeneration from verified md failed")
+    elif _was_sanitized:
+        logger.info(
+            "Deliverables: using Stage 22 paper.tex (sanitized) — "
+            "skipping markdown regeneration to preserve sanitization"
+        )
+
+    if not tex_regenerated:
+        tex_src = run_dir / "stage-22" / "paper.tex"
+        if tex_src.exists() and tex_src.stat().st_size > 0:
+            shutil.copy2(tex_src, dest / "paper.tex")
+            packaged.append("paper.tex")
+
+    # --- 3. References (BibTeX) ---
+    bib_src = None
+    for candidate in [
+        run_dir / "stage-23" / "references_verified.bib",
+        run_dir / "stage-22" / "references.bib",
+    ]:
+        if candidate.exists() and candidate.stat().st_size > 0:
+            bib_src = candidate
+            break
+    if bib_src is not None:
+        shutil.copy2(bib_src, dest / "references.bib")
+        packaged.append("references.bib")
+
+    # --- 4. Experiment code package ---
+    code_src = run_dir / "stage-22" / "code"
+    if code_src.is_dir():
+        code_dest = dest / "code"
+        if code_dest.exists():
+            shutil.rmtree(code_dest)
+        shutil.copytree(code_src, code_dest)
+        packaged.append("code/")
+
+    # --- 5. Verification report ---
+    verify_src = run_dir / "stage-23" / "verification_report.json"
+    if verify_src.exists() and verify_src.stat().st_size > 0:
+        shutil.copy2(verify_src, dest / "verification_report.json")
+        packaged.append("verification_report.json")
+
+    # --- 5b. Sanitization report (degraded mode) ---
+    san_src = run_dir / "stage-22" / "sanitization_report.json"
+    if san_src.exists() and san_src.stat().st_size > 0:
+        shutil.copy2(san_src, dest / "sanitization_report.json")
+        packaged.append("sanitization_report.json")
+
+    # --- 6. Charts ---
+    charts_src = run_dir / "stage-22" / "charts"
+    if charts_src.is_dir() and any(charts_src.iterdir()):
+        charts_dest = dest / "charts"
+        if charts_dest.exists():
+            shutil.rmtree(charts_dest)
+        shutil.copytree(charts_src, charts_dest)
+        packaged.append("charts/")
+
+    # --- 7. Conference style files ---
+    try:
+        from berb.templates import get_template
+
+        tpl = get_template(config.export.target_conference)
+        style_files = tpl.get_style_files()
+        for sf in style_files:
+            shutil.copy2(sf, dest / sf.name)
+            packaged.append(sf.name)
+    except Exception:
+        logger.debug("Style file bundling skipped (template lookup failed)")
+
+    # --- 8. Verify & repair cite key coverage ---
+    tex_path = dest / "paper.tex"
+    bib_path = dest / "references.bib"
+    if tex_path.exists() and bib_path.exists():
+        try:
+            tex_text = tex_path.read_text(encoding="utf-8")
+            bib_text = bib_path.read_text(encoding="utf-8")
+
+            # Deduplicate .bib entries
+            _seen_bib_keys: set[str] = set()
+            _deduped_entries: list[str] = []
+            for _bm in re.finditer(r"(@\w+\{([^,]+),.*?\n\})", bib_text, re.DOTALL):
+                _bkey = _bm.group(2).strip()
+                if _bkey not in _seen_bib_keys:
+                    _seen_bib_keys.add(_bkey)
+                    _deduped_entries.append(_bm.group(1))
+            if len(_deduped_entries) < len(list(re.finditer(r"@\w+\{", bib_text))):
+                bib_text = "\n\n".join(_deduped_entries) + "\n"
+                bib_path.write_text(bib_text, encoding="utf-8")
+                logger.info(
+                    "Deliverables: deduplicated .bib -> %d entries",
+                    len(_deduped_entries),
+                )
+
+            # Collect all cite keys from \cite{key1, key2}
+            all_cite_keys: set[str] = set()
+            for cm in re.finditer(r"\\cite\{([^}]+)\}", tex_text):
+                all_cite_keys.update(k.strip() for k in cm.group(1).split(","))
+            bib_keys = set(re.findall(r"@\w+\{([^,]+),", bib_text))
+            missing = all_cite_keys - bib_keys
+
+            if missing:
+                logger.warning(
+                    "Deliverables: stripping %d orphaned cite keys from paper.tex: %s",
+                    len(missing),
+                    sorted(missing)[:10],
+                )
+
+                _filter_cite._missing = missing  # type: ignore[attr-defined]
+
+                def _do_filter(m: re.Match[str]) -> str:
+                    keys = [k.strip() for k in m.group(1).split(",")]
+                    kept = [k for k in keys if k not in missing]
+                    if not kept:
+                        return ""
+                    return "\\cite{" + ", ".join(kept) + "}"
+
+                tex_text = re.sub(r"\\cite\{([^}]+)\}", _do_filter, tex_text)
+                tex_text = re.sub(r"  +", " ", tex_text)
+                tex_text = re.sub(r" ([.,;:)])", r"\1", tex_text)
+                tex_path.write_text(tex_text, encoding="utf-8")
+            else:
+                logger.info(
+                    "Deliverables: all %d cite keys verified in references.bib",
+                    len(all_cite_keys),
+                )
+        except Exception:
+            logger.debug("Cite key verification/repair skipped")
+
+    # --- 9. Compile LaTeX ---
+    if tex_path.exists() and bib_path.exists():
+        try:
+            from berb.templates.compiler import compile_latex
+
+            compile_result = compile_latex(tex_path, max_attempts=3, timeout=120)
+            if compile_result.success:
+                logger.info("IMP-18: paper.tex compiles successfully")
+                pdf_file = dest / (tex_path.stem + ".pdf")
+                if pdf_file.exists():
+                    packaged.append(f"{tex_path.stem}.pdf")
+            else:
+                logger.warning(
+                    "IMP-18: paper.tex compilation failed after %d attempts: %s",
+                    compile_result.attempts,
+                    compile_result.errors[:3],
+                )
+        except Exception:
+            logger.debug("IMP-18: LaTeX compilation skipped (non-blocking)")
+
+    if not packaged:
+        dest.rmdir()
+        return None
+
+    # --- Write manifest ---
+    manifest = {
+        "run_id": run_id,
+        "target_conference": config.export.target_conference,
+        "files": packaged,
+        "generated": _utcnow_iso(),
+    }
+    (dest / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+
+    logger.info("Deliverables packaged: %s (%d items)", dest, len(packaged))
+    return dest

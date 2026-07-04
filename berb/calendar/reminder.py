@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
-from typing import Any
 
 from berb.calendar.deadlines import Conference
 
@@ -50,13 +49,15 @@ class ReminderCalculator:
                     continue
                 if days_until in self.reminder_days:
                     urgency = self._classify_urgency(days_until)
-                    reminders.append(Reminder(
-                        conference_name=conf.name,
-                        deadline_type=dl_type,
-                        deadline_date=dl_date,
-                        days_until=days_until,
-                        urgency=urgency,
-                    ))
+                    reminders.append(
+                        Reminder(
+                            conference_name=conf.name,
+                            deadline_type=dl_type,
+                            deadline_date=dl_date,
+                            days_until=days_until,
+                            urgency=urgency,
+                        )
+                    )
 
         reminders.sort(key=lambda r: r.days_until)
         return reminders
@@ -81,13 +82,15 @@ class ReminderCalculator:
                 days_until = (dl_date - today).days
                 if 0 <= days_until <= max_days:
                     urgency = self._classify_urgency(days_until)
-                    reminders.append(Reminder(
-                        conference_name=conf.name,
-                        deadline_type=dl_type,
-                        deadline_date=dl_date,
-                        days_until=days_until,
-                        urgency=urgency,
-                    ))
+                    reminders.append(
+                        Reminder(
+                            conference_name=conf.name,
+                            deadline_type=dl_type,
+                            deadline_date=dl_date,
+                            days_until=days_until,
+                            urgency=urgency,
+                        )
+                    )
 
         reminders.sort(key=lambda r: r.days_until)
         return reminders

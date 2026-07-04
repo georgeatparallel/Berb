@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class MetricValue:
     """A single metric value with timestamp."""
+
     value: float
     timestamp: float = field(default_factory=time.time)
 

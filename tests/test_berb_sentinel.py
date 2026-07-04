@@ -20,12 +20,12 @@ from berb.pipeline.stages import Stage
 
 class TestHeartbeatWriting:
     def test_write_heartbeat_creates_file(self, tmp_path: Path) -> None:
-        rc_runner._write_heartbeat(tmp_path, Stage.TOPIC_INIT, "run-hb-1")
+        rc_runner.write_heartbeat(tmp_path, Stage.TOPIC_INIT, "run-hb-1")
         hb_path = tmp_path / "heartbeat.json"
         assert hb_path.exists()
 
     def test_heartbeat_contains_required_fields(self, tmp_path: Path) -> None:
-        rc_runner._write_heartbeat(tmp_path, Stage.HYPOTHESIS_GEN, "run-hb-2")
+        rc_runner.write_heartbeat(tmp_path, Stage.HYPOTHESIS_GEN, "run-hb-2")
         data = json.loads((tmp_path / "heartbeat.json").read_text())
         assert data["pid"] == os.getpid()
         assert data["last_stage"] == 8
@@ -34,16 +34,16 @@ class TestHeartbeatWriting:
         assert "timestamp" in data
 
     def test_heartbeat_updates_on_each_stage(self, tmp_path: Path) -> None:
-        rc_runner._write_heartbeat(tmp_path, Stage.TOPIC_INIT, "run-1")
+        rc_runner.write_heartbeat(tmp_path, Stage.TOPIC_INIT, "run-1")
         data1 = json.loads((tmp_path / "heartbeat.json").read_text())
-        rc_runner._write_heartbeat(tmp_path, Stage.PAPER_DRAFT, "run-1")
+        rc_runner.write_heartbeat(tmp_path, Stage.PAPER_DRAFT, "run-1")
         data2 = json.loads((tmp_path / "heartbeat.json").read_text())
         assert data2["last_stage"] == 17
         assert data1["last_stage"] == 1
 
 
 class TestHeartbeatInPipeline:
-    def test_pipeline_writes_heartbeat_after_each_stage(
+    async def test_pipeline_writes_heartbeat_after_each_stage(
         self,
         monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path,
@@ -64,7 +64,6 @@ class TestHeartbeatInPipeline:
                 "provider": "openai-compatible",
                 "base_url": "http://localhost/v1",
                 "api_key_env": "K",
-                "api_key": "k",
             },
         }
         config = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
@@ -83,7 +82,7 @@ class TestHeartbeatInPipeline:
             return StageResult(stage=stage, status=StageStatus.DONE, artifacts=("x.md",))
 
         monkeypatch.setattr(rc_runner, "execute_stage", mock_execute_stage)
-        rc_runner.execute_pipeline(
+        await rc_runner.execute_pipeline(
             run_dir=run_dir,
             run_id="hb-test",
             config=config,
@@ -106,11 +105,16 @@ class TestSentinelScript:
     @pytest.mark.skipif(sys.platform == "win32", reason="bash not available on Windows")
     def test_sentinel_script_is_valid_bash(self) -> None:
         script = Path(__file__).parent.parent / "sentinel.sh"
-        result = subprocess.run(
-            ["bash", "-n", str(script)],
-            capture_output=True,
-            text=True,
-        )
+        try:
+            result = subprocess.run(
+                ["bash", "-n", str(script)],
+                capture_output=True,
+                text=True,
+            )
+        except FileNotFoundError:
+            pytest.skip("bash not available on this system")
+        if result.returncode != 0 and "execvpe" in result.stderr:
+            pytest.skip(f"bash unavailable in this environment: {result.stderr.strip()}")
         assert result.returncode == 0, f"Bash syntax error: {result.stderr}"
 
     @pytest.mark.skipif(sys.platform == "win32", reason="Unix file permissions not applicable on Windows")

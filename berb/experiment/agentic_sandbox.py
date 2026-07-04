@@ -169,7 +169,7 @@ class AgenticSandbox:
             stdout=result.stdout,
             stderr=result.stderr,
             elapsed_sec=result.elapsed_sec,
-            metrics={k: v for k, v in result.metrics.items()},
+            metrics=dict(result.metrics.items()),
             timed_out=(result.returncode == -1 and "timed out" in result.stderr),
         )
 
@@ -178,10 +178,15 @@ class AgenticSandbox:
     def _start_container(self, container: str, workspace: Path) -> None:
         """Start a long-lived Docker container with workspace mounted."""
         cmd = [
-            "docker", "run", "-d",
-            "--name", container,
-            "-v", f"{workspace}:/workspace",
-            "-w", "/workspace",
+            "docker",
+            "run",
+            "-d",
+            "--name",
+            container,
+            "-v",
+            f"{workspace}:/workspace",
+            "-w",
+            "/workspace",
             f"--memory={self.config.memory_limit_mb}m",
         ]
 
@@ -200,7 +205,9 @@ class AgenticSandbox:
         cmd.extend([self.config.image, "tail", "-f", "/dev/null"])
 
         logger.info("Starting agentic container: %s", container)
-        subprocess.run(cmd, check=True, capture_output=True, text=True, encoding="utf-8", errors="replace")
+        subprocess.run(
+            cmd, check=True, capture_output=True, text=True, encoding="utf-8", errors="replace"
+        )
 
     def _docker_exec(
         self,
@@ -227,6 +234,7 @@ class AgenticSandbox:
         max_turns = self.config.max_turns
 
         import shlex as _shlex
+
         escaped = _shlex.quote(prompt)
 
         if cli == "claude":
@@ -281,9 +289,7 @@ class AgenticSandbox:
         return output_files, output_dirs
 
     @staticmethod
-    def _parse_result_metrics(
-        workspace: Path, stdout: str
-    ) -> dict[str, float]:
+    def _parse_result_metrics(workspace: Path, stdout: str) -> dict[str, float]:
         """Parse metrics from results.json (preferred) or stdout."""
         metrics: dict[str, float] = {}
 

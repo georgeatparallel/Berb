@@ -55,11 +55,13 @@ class SubmissionPlanner:
             offset = int(total_days * proportion)
             milestone_date = start + timedelta(days=offset)
             days_left = (deadline - milestone_date).days
-            milestones.append({
-                "stage": stage_name,
-                "date": milestone_date.isoformat(),
-                "days_left": days_left,
-            })
+            milestones.append(
+                {
+                    "stage": stage_name,
+                    "date": milestone_date.isoformat(),
+                    "days_left": days_left,
+                }
+            )
 
         return {
             "venue": conf.name,
@@ -88,7 +90,5 @@ class SubmissionPlanner:
             "Milestones:",
         ]
         for ms in plan["milestones"]:
-            lines.append(
-                f"  [{ms['date']}] {ms['stage']} ({ms['days_left']} days left)"
-            )
+            lines.append(f"  [{ms['date']}] {ms['stage']} ({ms['days_left']} days left)")
         return "\n".join(lines)

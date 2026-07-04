@@ -204,12 +204,11 @@ class TestSemanticScholar:
         assert p.source == "semantic_scholar"
         assert p.citation_count == 42
 
-    def test_search_semantic_scholar_mock(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_search_semantic_scholar_mock(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Mock urllib to return sample S2 response."""
         # Reset S2 circuit breaker (may be tripped from prior test API calls)
         from berb.literature.semantic_scholar import _reset_circuit_breaker
+
         _reset_circuit_breaker()
 
         response_bytes = json.dumps(SAMPLE_S2_RESPONSE).encode("utf-8")
@@ -228,11 +227,10 @@ class TestSemanticScholar:
         assert len(papers) == 1
         assert papers[0].title == "Test Paper on Transformers"
 
-    def test_search_semantic_scholar_network_error(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_search_semantic_scholar_network_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Should return empty list on network error."""
         from berb.literature.semantic_scholar import _reset_circuit_breaker
+
         _reset_circuit_breaker()
 
         import urllib.error
@@ -242,9 +240,7 @@ class TestSemanticScholar:
             lambda *a, **kw: (_ for _ in ()).throw(urllib.error.URLError("timeout")),
         )
         # Patch sleep to speed up test
-        monkeypatch.setattr(
-            "berb.literature.semantic_scholar.time.sleep", lambda _: None
-        )
+        monkeypatch.setattr("berb.literature.semantic_scholar.time.sleep", lambda _: None)
         papers = search_semantic_scholar("test", limit=5)
         assert papers == []
 
@@ -309,13 +305,15 @@ class TestArxiv:
         # Use MagicMock so all attributes (Search, SortOrder, etc.) auto-resolve.
         _fake_arxiv = MagicMock()
         monkeypatch.setattr(
-            "berb.literature.arxiv_client.arxiv", _fake_arxiv,
+            "berb.literature.arxiv_client.arxiv",
+            _fake_arxiv,
         )
         monkeypatch.setattr(
             "berb.literature.arxiv_client._get_client",
             lambda: mock_client,
         )
         from berb.literature.arxiv_client import _reset_circuit_breaker
+
         _reset_circuit_breaker()
 
         papers = search_arxiv("test", limit=10)
@@ -344,7 +342,8 @@ class TestArxiv:
         _fake_arxiv.SortOrder = MagicMock()
         _fake_arxiv.Search = MagicMock()
         monkeypatch.setattr(
-            "berb.literature.arxiv_client.arxiv", _fake_arxiv,
+            "berb.literature.arxiv_client.arxiv",
+            _fake_arxiv,
         )
 
         mock_client = MagicMock()
@@ -355,6 +354,7 @@ class TestArxiv:
             lambda: mock_client,
         )
         from berb.literature.arxiv_client import _reset_circuit_breaker
+
         _reset_circuit_breaker()
 
         papers = search_arxiv("test", limit=10)
@@ -369,17 +369,13 @@ class TestArxiv:
 class TestDeduplication:
     def test_dedup_by_doi(self) -> None:
         p1 = _make_paper(paper_id="s2-1", doi="10.1234/a", citation_count=100)
-        p2 = _make_paper(
-            paper_id="arxiv-1", doi="10.1234/a", citation_count=50, source="arxiv"
-        )
+        p2 = _make_paper(paper_id="arxiv-1", doi="10.1234/a", citation_count=50, source="arxiv")
         result = _deduplicate([p1, p2])
         assert len(result) == 1
         assert result[0].citation_count == 100  # keeps higher
 
     def test_dedup_by_arxiv_id(self) -> None:
-        p1 = _make_paper(
-            paper_id="s2-1", doi="", arxiv_id="2401.00001", citation_count=10
-        )
+        p1 = _make_paper(paper_id="s2-1", doi="", arxiv_id="2401.00001", citation_count=10)
         p2 = _make_paper(
             paper_id="arxiv-1",
             doi="",
@@ -432,13 +428,9 @@ class TestPapersToBibtex:
 
 
 class TestSearchPapers:
-    def test_search_papers_combines_sources(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_search_papers_combines_sources(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Mock both S2 and arXiv to verify combined search."""
-        s2_paper = _make_paper(
-            paper_id="s2-1", source="semantic_scholar", citation_count=100
-        )
+        s2_paper = _make_paper(paper_id="s2-1", source="semantic_scholar", citation_count=100)
         arxiv_paper = _make_paper(
             paper_id="arxiv-1",
             title="Different Paper",
@@ -465,17 +457,19 @@ class TestSearchPapers:
     def test_default_sources_openalex_first(self) -> None:
         """OpenAlex should be the primary (first) source — least restrictive limits."""
         from berb.literature.search import _DEFAULT_SOURCES
+
         assert _DEFAULT_SOURCES[0] == "openalex"
         assert "semantic_scholar" in _DEFAULT_SOURCES
         assert "arxiv" in _DEFAULT_SOURCES
 
-    def test_s2_failure_does_not_block_others(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_s2_failure_does_not_block_others(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """When S2 fails, other sources should still return results."""
         arxiv_paper = _make_paper(
-            paper_id="arxiv-ok", title="ArXiv Paper", source="arxiv",
-            doi="10.1/ax", arxiv_id="2401.99991",
+            paper_id="arxiv-ok",
+            title="ArXiv Paper",
+            source="arxiv",
+            doi="10.1/ax",
+            arxiv_id="2401.99991",
         )
         monkeypatch.setattr(
             "berb.literature.search.search_openalex",
@@ -495,9 +489,7 @@ class TestSearchPapers:
         assert len(papers) >= 1
         assert papers[0].source == "arxiv"
 
-    def test_search_papers_unknown_source(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_search_papers_unknown_source(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr("berb.literature.search.time.sleep", lambda _: None)
         papers = search_papers("test", sources=["unknown_source"])
         assert papers == []
@@ -523,10 +515,179 @@ class TestSearchPapers:
         )
         monkeypatch.setattr("berb.literature.search.time.sleep", lambda _: None)
 
-        papers = search_papers_multi_query(["q1", "q2", "q3"])
+        # Not testing the Perplexity top-up here — disable it explicitly so
+        # this test's 3-paper result (below the default top-up threshold)
+        # doesn't depend on PERPLEXITY_API_KEY being absent from the env.
+        papers = search_papers_multi_query(["q1", "q2", "q3"], perplexity_top_up=False)
         assert call_count == 3
         # All unique titles so no dedup
         assert len(papers) == 3
+
+
+class TestPerplexityTopUp:
+    """Perplexity is a paid backstop, only called when the free academic
+    cascade (OpenAlex/S2/arXiv) under-delivers — never a 4th parallel
+    source in the default per-query loop."""
+
+    def test_not_triggered_when_cascade_sufficient(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        papers = [
+            _make_paper(paper_id=f"p{i}", title=f"Paper {i}", doi=f"10.{i}/unique", arxiv_id="")
+            for i in range(15)
+        ]
+        monkeypatch.setattr(
+            "berb.literature.search.search_papers",
+            lambda *a, **kw: papers,
+        )
+        monkeypatch.setattr("berb.literature.search.time.sleep", lambda _: None)
+        top_up_called = False
+
+        def _fake_top_up(*a: Any, **kw: Any) -> list[Paper]:
+            nonlocal top_up_called
+            top_up_called = True
+            return []
+
+        monkeypatch.setattr("berb.literature.search._perplexity_top_up", _fake_top_up)
+
+        result = search_papers_multi_query(["q1"], perplexity_min_candidates=10)
+        assert not top_up_called
+        assert len(result) == 15
+
+    def test_triggered_on_low_candidate_count(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(
+            "berb.literature.search.search_papers",
+            lambda *a, **kw: [_make_paper(paper_id="only-one", doi="10.1/only", arxiv_id="")],
+        )
+        monkeypatch.setattr("berb.literature.search.time.sleep", lambda _: None)
+
+        top_up_paper = _make_paper(
+            paper_id="pplx-1",
+            title="Perplexity Paper",
+            source="perplexity",
+            doi="10.2/pplx",
+            arxiv_id="",
+        )
+        monkeypatch.setattr(
+            "berb.literature.search._perplexity_top_up",
+            lambda *a, **kw: [top_up_paper],
+        )
+
+        result = search_papers_multi_query(["q1"], perplexity_min_candidates=10)
+        sources = {p.source for p in result}
+        assert "perplexity" in sources
+        assert len(result) == 2
+
+    def test_triggered_on_multiple_source_failures(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Even with enough raw candidates, 2+ failed sources should trigger
+        top-up — a simultaneous-outage signal, not just a count threshold."""
+
+        def _mock_search_papers(query, **kw):  # noqa: ANN001, ANN003
+            failure_counter = kw.get("failure_counter")
+            if failure_counter is not None:
+                failure_counter["openalex"] = failure_counter.get("openalex", 0) + 1
+                failure_counter["semantic_scholar"] = (
+                    failure_counter.get("semantic_scholar", 0) + 1
+                )
+            return [
+                _make_paper(paper_id=f"p{i}", title=f"Paper {i}", doi=f"10.{i}/unique", arxiv_id="")
+                for i in range(15)
+            ]
+
+        monkeypatch.setattr("berb.literature.search.search_papers", _mock_search_papers)
+        monkeypatch.setattr("berb.literature.search.time.sleep", lambda _: None)
+
+        top_up_called = False
+
+        def _fake_top_up(*a: Any, **kw: Any) -> list[Paper]:
+            nonlocal top_up_called
+            top_up_called = True
+            return []
+
+        monkeypatch.setattr("berb.literature.search._perplexity_top_up", _fake_top_up)
+
+        search_papers_multi_query(
+            ["q1"], perplexity_min_candidates=10, perplexity_min_failed_sources=2
+        )
+        assert top_up_called
+
+    def test_disabled_via_flag(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(
+            "berb.literature.search.search_papers",
+            lambda *a, **kw: [_make_paper(paper_id="only-one")],
+        )
+        monkeypatch.setattr("berb.literature.search.time.sleep", lambda _: None)
+
+        top_up_called = False
+
+        def _fake_top_up(*a: Any, **kw: Any) -> list[Paper]:
+            nonlocal top_up_called
+            top_up_called = True
+            return []
+
+        monkeypatch.setattr("berb.literature.search._perplexity_top_up", _fake_top_up)
+
+        search_papers_multi_query(["q1"], perplexity_top_up=False)
+        assert not top_up_called
+
+    def test_search_perplexity_no_api_key_returns_empty(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """search_perplexity must degrade gracefully — no key, no crash, no call."""
+        from berb.literature.perplexity_search import search_perplexity
+
+        monkeypatch.delenv("PERPLEXITY_API_KEY", raising=False)
+        assert search_perplexity("test query") == []
+
+    def test_search_perplexity_parses_papers(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from berb.literature.perplexity_search import search_perplexity
+        from berb.llm.deep_query_client import DeepQueryResult
+
+        fake_result = DeepQueryResult(
+            title="test",
+            content=(
+                '{"papers": [{"title": "Real Paper", "authors": ["Smith, J."], '
+                '"year": 2024, "venue": "NeurIPS", "url": "https://arxiv.org/abs/1", '
+                '"abstract": "A summary."}]}'
+            ),
+            url="",
+            source="DeepQuery",
+        )
+
+        class _FakeClient:
+            def __init__(self, api_key: str) -> None:
+                pass
+
+            def search(self, *a: Any, **kw: Any) -> DeepQueryResult:
+                return fake_result
+
+        monkeypatch.setattr(
+            "berb.llm.deep_query_client.DeepQueryClient", _FakeClient
+        )
+
+        papers = search_perplexity("test query", api_key="fake-key")
+        assert len(papers) == 1
+        assert papers[0].title == "Real Paper"
+        assert papers[0].year == 2024
+        assert papers[0].source == "perplexity"
+        assert papers[0].authors[0].name == "Smith, J."
+
+    def test_search_perplexity_unparseable_response(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from berb.literature.perplexity_search import search_perplexity
+        from berb.llm.deep_query_client import DeepQueryResult
+
+        class _FakeClient:
+            def __init__(self, api_key: str) -> None:
+                pass
+
+            def search(self, *a: Any, **kw: Any) -> DeepQueryResult:
+                return DeepQueryResult(
+                    title="test", content="not json at all", url="", source="DeepQuery"
+                )
+
+        monkeypatch.setattr(
+            "berb.llm.deep_query_client.DeepQueryClient", _FakeClient
+        )
+
+        assert search_perplexity("test query", api_key="fake-key") == []
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -569,6 +730,7 @@ class TestEdgeCases:
 class TestArxivCircuitBreaker:
     def setup_method(self) -> None:
         from berb.literature.arxiv_client import _reset_circuit_breaker
+
         _reset_circuit_breaker()
 
     def test_failure_triggers_circuit_breaker(self) -> None:
@@ -633,7 +795,8 @@ class TestArxivCircuitBreaker:
         _fake_arxiv.SortOrder = MagicMock()
         _fake_arxiv.Search = MagicMock()
         monkeypatch.setattr(
-            "berb.literature.arxiv_client.arxiv", _fake_arxiv,
+            "berb.literature.arxiv_client.arxiv",
+            _fake_arxiv,
         )
 
         mock_client = MagicMock()
@@ -644,6 +807,7 @@ class TestArxivCircuitBreaker:
             lambda: mock_client,
         )
         from berb.literature.arxiv_client import _reset_circuit_breaker
+
         _reset_circuit_breaker()
 
         papers = search_arxiv("test", limit=5)
@@ -667,9 +831,7 @@ SAMPLE_OPENALEX_RESPONSE = {
                 }
             ],
             "publication_year": 2017,
-            "primary_location": {
-                "source": {"display_name": "NeurIPS"}
-            },
+            "primary_location": {"source": {"display_name": "NeurIPS"}},
             "cited_by_count": 85000,
             "doi": "https://doi.org/10.5555/3295222.3295349",
             "ids": {
@@ -725,6 +887,7 @@ class TestOpenAlex:
 
     def test_abstract_empty(self) -> None:
         from berb.literature.openalex_client import _reconstruct_abstract
+
         assert _reconstruct_abstract(None) == ""
         assert _reconstruct_abstract({}) == ""
 
@@ -737,7 +900,8 @@ class TestOpenAlex:
             lambda *a, **kw: (_ for _ in ()).throw(urllib.error.URLError("timeout")),
         )
         monkeypatch.setattr(
-            "berb.literature.openalex_client.time.sleep", lambda _: None,
+            "berb.literature.openalex_client.time.sleep",
+            lambda _: None,
         )
 
         papers = search_openalex("test", limit=5)
@@ -755,12 +919,18 @@ class TestMultiSourceFallback:
     ) -> None:
         """When OpenAlex fails, S2 and arXiv should still return results."""
         arxiv_paper = _make_paper(
-            paper_id="arxiv-ok", title="ArXiv Paper", source="arxiv",
-            doi="10.1/ax", arxiv_id="2401.99999",
+            paper_id="arxiv-ok",
+            title="ArXiv Paper",
+            source="arxiv",
+            doi="10.1/ax",
+            arxiv_id="2401.99999",
         )
         s2_paper = _make_paper(
-            paper_id="s2-ok", title="S2 Paper", source="semantic_scholar",
-            doi="10.1/s2", arxiv_id="2402.99999",
+            paper_id="s2-ok",
+            title="S2 Paper",
+            source="semantic_scholar",
+            doi="10.1/s2",
+            arxiv_id="2402.99999",
         )
 
         monkeypatch.setattr(
@@ -804,6 +974,7 @@ class TestCacheTTL:
 
     def test_citation_verify_ttl_is_permanent(self) -> None:
         from berb.literature.cache import _SOURCE_TTL
+
         assert _SOURCE_TTL["citation_verify"] >= 86400 * 365
 
 

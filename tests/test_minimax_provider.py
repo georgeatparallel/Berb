@@ -22,6 +22,7 @@ from berb.llm.client import LLMClient, LLMConfig, LLMResponse
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 class _DummyHTTPResponse:
     """Minimal stub for ``urllib.request.urlopen`` results."""
 
@@ -326,6 +327,7 @@ class TestMiniMaxFactory:
                 api_key_env="",
                 primary_model="MiniMax-M2.5",
                 fallback_models=(),
+                fallback_providers=(),
             ),
         )
         client = create_llm_client(rc_config)
@@ -370,6 +372,7 @@ class TestMiniMaxChatFallback:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.llm
 @pytest.mark.skipif(
     not os.environ.get("MINIMAX_API_KEY"),
     reason="MINIMAX_API_KEY not set",
@@ -413,6 +416,7 @@ class TestMiniMaxLiveAPI:
         )
         # MiniMax M2.5 may wrap JSON in markdown code fences
         import re
+
         text = resp.content.strip()
         fence_match = re.search(r"```(?:json)?\s*\n(.*?)```", text, re.DOTALL)
         if fence_match:

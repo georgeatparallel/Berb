@@ -9,10 +9,9 @@ Includes specialized modules for:
 - Physics domain (including chaos detection)
 """
 
-from berb.domains.detector import DomainProfile, detect_domain
-
 # Chaos detection tools (physics domain)
 from berb.domains import chaos
+from berb.domains.detector import DomainProfile, detect_domain
 
 __all__ = [
     "DomainProfile",

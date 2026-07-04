@@ -15,7 +15,7 @@ Area Chair aggregates reviews and provides acceptance recommendation.
 
 Usage:
     from berb.review import AutomatedReviewerEnsemble
-    
+
     ensemble = AutomatedReviewerEnsemble()
     reviews = await ensemble.review_paper(paper_path="paper.pdf")
     meta_review = ensemble.area_chair_decision(reviews)
@@ -24,16 +24,17 @@ Usage:
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
-from enum import Enum
+from dataclasses import dataclass
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-class ReviewDimension(str, Enum):
+class ReviewDimension(StrEnum):
     """Review dimensions based on NeurIPS guidelines."""
+
     NOVELTY = "novelty"  # 1-10
     SIGNIFICANCE = "significance"  # 1-10
     TECHNICAL_QUALITY = "technical_quality"  # 1-10
@@ -42,8 +43,9 @@ class ReviewDimension(str, Enum):
     REPRODUCIBILITY = "reproducibility"  # 1-10
 
 
-class Decision(str, Enum):
+class Decision(StrEnum):
     """Paper decisions."""
+
     STRONG_ACCEPT = "strong_accept"  # 9-10
     ACCEPT = "accept"  # 7-8
     WEAK_ACCEPT = "weak_accept"  # 6
@@ -55,7 +57,7 @@ class Decision(str, Enum):
 @dataclass
 class ReviewerPersona:
     """Defines a reviewer's focus and evaluation criteria."""
-    
+
     id: str
     name: str
     focus_areas: list[ReviewDimension]
@@ -66,7 +68,7 @@ class ReviewerPersona:
 @dataclass
 class Review:
     """Single reviewer's evaluation."""
-    
+
     reviewer_id: str
     reviewer_name: str
     scores: dict[ReviewDimension, int]
@@ -82,7 +84,7 @@ class Review:
 @dataclass
 class MetaReview:
     """Area Chair meta-review aggregating all reviews."""
-    
+
     reviews: list[Review]
     average_score: float
     score_std: float
@@ -116,9 +118,8 @@ Be critical but fair. Distinguish between:
 - Obvious variations (score 3-4)
 - Already published ideas (score 1-2)
 
-Provide specific examples from the paper to justify your scores."""
+Provide specific examples from the paper to justify your scores.""",
     ),
-    
     ReviewerPersona(
         id="reviewer_2",
         name="Technical Correctness Expert",
@@ -136,9 +137,8 @@ Check for:
 - Flawed logic or reasoning
 - Missing baselines or unfair comparisons
 
-Be meticulous. A single critical error should significantly lower your score."""
+Be meticulous. A single critical error should significantly lower your score.""",
     ),
-    
     ReviewerPersona(
         id="reviewer_3",
         name="Experimental Rigor Expert",
@@ -159,9 +159,8 @@ Check for:
 - Compute budget reporting
 - Potential data leakage
 
-Be skeptical of claims without proper experimental support."""
+Be skeptical of claims without proper experimental support.""",
     ),
-    
     ReviewerPersona(
         id="reviewer_4",
         name="Clarity & Presentation Expert",
@@ -180,9 +179,8 @@ Check for:
 - Grammar and spelling
 - Appropriate length (no padding)
 
-A well-written paper should be accessible to a knowledgeable ML researcher who is not an expert in this specific subfield."""
+A well-written paper should be accessible to a knowledgeable ML researcher who is not an expert in this specific subfield.""",
     ),
-    
     ReviewerPersona(
         id="reviewer_5",
         name="Reproducibility Expert",
@@ -203,69 +201,68 @@ Check for:
 - Environment specifications (Docker, conda, etc.)
 
 A paper with code and detailed instructions should score 8-10.
-A paper with no code and vague details should score 3-5."""
+A paper with no code and vague details should score 3-5.""",
     ),
 ]
 
 
 class AutomatedReviewerEnsemble:
     """5-reviewer ensemble + Area Chair meta-review."""
-    
+
     def __init__(self, llm_client: Any | None = None) -> None:
         """Initialize reviewer ensemble.
-        
+
         Args:
             llm_client: LLM client for generating reviews (optional, uses default if None)
         """
         self._personas = REVIEWER_PERSONAS
         self._llm_client = llm_client
-    
+
     async def review_paper(
         self,
         paper_path: str | Path,
         paper_text: str | None = None,
     ) -> list[Review]:
         """Generate 5 independent reviews.
-        
+
         Args:
             paper_path: Path to paper (PDF or LaTeX)
             paper_text: Optional pre-extracted paper text
-            
+
         Returns:
             List of 5 reviews
         """
         paper_path = Path(paper_path)
-        
+
         # Extract paper text if not provided
         if paper_text is None:
             paper_text = self._extract_paper_text(paper_path)
-        
+
         # Generate reviews in parallel
         import asyncio
-        review_tasks = [
-            self._generate_review(persona, paper_text)
-            for persona in self._personas
-        ]
-        
+
+        review_tasks = [self._generate_review(persona, paper_text) for persona in self._personas]
+
         reviews = await asyncio.gather(*review_tasks)
-        
+
         logger.info(f"Generated {len(reviews)} reviews for {paper_path.name}")
         return list(reviews)
-    
+
     def _extract_paper_text(self, paper_path: Path) -> str:
         """Extract text from paper (PDF or LaTeX)."""
         if paper_path.suffix == ".pdf":
             # Use existing PDF extractor
             from berb.web.pdf_extractor import PDFExtractor
+
             extractor = PDFExtractor()
             return extractor.extract_text(str(paper_path))
-        
+
         elif paper_path.suffix in (".tex", ".md"):
             return paper_path.read_text(encoding="utf-8")
-        
+
         else:
             raise ValueError(f"Unsupported paper format: {paper_path.suffix}")
-    
+
     async def _generate_review(
         self,
         persona: ReviewerPersona,
@@ -276,9 +273,9 @@ class AutomatedReviewerEnsemble:
         max_length = 50000  # Adjust based on model
         if len(paper_text) > max_length:
             paper_text = paper_text[:max_length] + "\n\n[... truncated ...]"
-        
+
         # Build review prompt
-        prompt = f"""{persona.system_prompt}
+        f"""{persona.system_prompt}
 
 PAPER TEXT:
 {paper_text}
@@ -302,9 +299,9 @@ OUTPUT FORMAT (JSON):
     "detailed_feedback": "<2-3 paragraphs of detailed review>"
 }}
 
-Focus on your assigned areas: {', '.join(persona.focus_areas)}
+Focus on your assigned areas: {", ".join(persona.focus_areas)}
 """
-        
+
         # Call LLM (placeholder - integrate with actual LLM client)
         # In production:
         # response = await self._llm_client.chat(
@@ -312,10 +309,10 @@ Focus on your assigned areas: {', '.join(persona.focus_areas)}
         #     json_mode=True
         # )
         # review_data = json.loads(response.content)
-        
+
         # Placeholder for now
         review_data = self._generate_placeholder_review(persona)
-        
+
         return Review(
             reviewer_id=persona.id,
             reviewer_name=persona.name,
@@ -328,14 +325,14 @@ Focus on your assigned areas: {', '.join(persona.focus_areas)}
             confidence=review_data["confidence"],
             detailed_feedback=review_data["detailed_feedback"],
         )
-    
+
     def _generate_placeholder_review(self, persona: ReviewerPersona) -> dict:
         """Generate placeholder review (replace with actual LLM call)."""
         import random
-        
+
         # Simulate reviewer scores based on persona focus
-        base_score = random.uniform(5.5, 7.5)
-        
+        random.uniform(5.5, 7.5)
+
         scores = {}
         for dim in ReviewDimension:
             if dim in persona.focus_areas:
@@ -344,9 +341,9 @@ Focus on your assigned areas: {', '.join(persona.focus_areas)}
             else:
                 # Lower variance in non-focus areas
                 scores[dim.value] = int(random.uniform(5, 7))
-        
+
         overall = sum(scores.values()) / len(scores)
-        
+
         if overall >= 9:
             decision = "strong_accept"
         elif overall >= 7:
@@ -359,7 +356,7 @@ Focus on your assigned areas: {', '.join(persona.focus_areas)}
             decision = "reject"
         else:
             decision = "strong_reject"
-        
+
         return {
             "scores": scores,
             "overall_score": round(overall, 2),
@@ -379,37 +376,36 @@ Focus on your assigned areas: {', '.join(persona.focus_areas)}
             "confidence": random.randint(3, 5),
             "detailed_feedback": f"As a {persona.name}, I find this paper ... [detailed review]",
         }
-    
+
     def area_chair_decision(self, reviews: list[Review]) -> MetaReview:
         """Area Chair meta-review aggregating all reviews.
-        
+
         Args:
             reviews: List of 5 reviews
-            
+
         Returns:
             MetaReview with aggregated decision
         """
         if len(reviews) != 5:
             logger.warning(f"Expected 5 reviews, got {len(reviews)}")
-        
+
         # Calculate score statistics
         overall_scores = [r.overall_score for r in reviews]
         avg_score = sum(overall_scores) / len(overall_scores)
-        
+
         # Weighted average (some reviewers have higher weight)
         weighted_scores = [
-            r.overall_score * self._personas[i].weight
-            for i, r in enumerate(reviews)
+            r.overall_score * self._personas[i].weight for i, r in enumerate(reviews)
         ]
-        weighted_avg = sum(weighted_scores) / sum(p.weight for p in self._personas)
-        
+        sum(weighted_scores) / sum(p.weight for p in self._personas)
+
         # Score distribution
         score_distribution = {}
         for decision in Decision:
             count = sum(1 for r in reviews if r.decision == decision)
             if count > 0:
                 score_distribution[decision.value] = count
-        
+
         # Determine consensus decision
         if avg_score >= 8.5:
             consensus = Decision.STRONG_ACCEPT
@@ -423,29 +419,28 @@ Focus on your assigned areas: {', '.join(persona.focus_areas)}
             consensus = Decision.REJECT
         else:
             consensus = Decision.STRONG_REJECT
-        
+
         # Calculate confidence (inverse of score std dev)
         import statistics
+
         score_std = statistics.stdev(overall_scores) if len(overall_scores) > 1 else 0
         confidence = max(0, 1 - (score_std / 5))  # Normalize to 0-1
-        
+
         # Identify conflicts (high disagreement)
         conflicts = []
         max_diff = max(overall_scores) - min(overall_scores)
         if max_diff > 3:
             conflicts.append(f"High score variance: {max_diff:.1f} point spread")
-        
+
         # Check for specific dimension disagreements
         for dim in ReviewDimension:
             dim_scores = [r.scores.get(dim, 5) for r in reviews]
             if max(dim_scores) - min(dim_scores) > 4:
                 conflicts.append(f"Disagreement on {dim.value}")
-        
+
         # Generate meta-review text
-        meta_review_text = self._generate_meta_review_text(
-            reviews, avg_score, consensus, conflicts
-        )
-        
+        meta_review_text = self._generate_meta_review_text(reviews, avg_score, consensus, conflicts)
+
         # Acceptance recommendation
         if consensus in (Decision.STRONG_ACCEPT, Decision.ACCEPT):
             recommendation = "ACCEPT"
@@ -455,7 +450,7 @@ Focus on your assigned areas: {', '.join(persona.focus_areas)}
             recommendation = "BORDERLINE REJECT - Discuss at AC meeting"
         else:
             recommendation = "REJECT"
-        
+
         return MetaReview(
             reviews=reviews,
             average_score=round(avg_score, 2),
@@ -469,7 +464,7 @@ Focus on your assigned areas: {', '.join(persona.focus_areas)}
             acceptance_recommendation=recommendation,
             reviewer_conflicts=conflicts,
         )
-    
+
     def _generate_meta_review_text(
         self,
         reviews: list[Review],
@@ -487,31 +482,38 @@ Focus on your assigned areas: {', '.join(persona.focus_areas)}
             "## Review Summary",
             "",
         ]
-        
+
         for i, review in enumerate(reviews, 1):
-            lines.append(f"**Reviewer {i} ({review.reviewer_name}):** {review.overall_score:.1f}/10 - {review.decision.value.replace('_', ' ').title()}")
-        
+            lines.append(
+                f"**Reviewer {i} ({review.reviewer_name}):** {review.overall_score:.1f}/10 - {review.decision.value.replace('_', ' ').title()}"
+            )
+
         if conflicts:
-            lines.extend([
-                "",
-                "## Areas of Disagreement",
-                "",
-            ])
+            lines.extend(
+                [
+                    "",
+                    "## Areas of Disagreement",
+                    "",
+                ]
+            )
             for conflict in conflicts:
                 lines.append(f"- {conflict}")
-        
-        lines.extend([
-            "",
-            "## Area Chair Recommendation",
-            "",
-            f"This paper receives an average score of {avg_score:.2f}/10 from 5 reviewers. ",
-            f"The reviews show {'strong agreement' if len(conflicts) == 0 else 'notable disagreement'}.",
-            "",
-            "**Recommendation:** " + self.area_chair_decision(reviews).acceptance_recommendation,
-        ])
-        
+
+        lines.extend(
+            [
+                "",
+                "## Area Chair Recommendation",
+                "",
+                f"This paper receives an average score of {avg_score:.2f}/10 from 5 reviewers. ",
+                f"The reviews show {'strong agreement' if len(conflicts) == 0 else 'notable disagreement'}.",
+                "",
+                "**Recommendation:** "
+                + self.area_chair_decision(reviews).acceptance_recommendation,
+            ]
+        )
+
         return "\n".join(lines)
-    
+
     def generate_review_report(
         self,
         reviews: list[Review],
@@ -519,12 +521,12 @@ Focus on your assigned areas: {', '.join(persona.focus_areas)}
         output_path: str | Path | None = None,
     ) -> str:
         """Generate comprehensive review report.
-        
+
         Args:
             reviews: List of reviews
             meta_review: Meta-review
             output_path: Optional path to save report
-            
+
         Returns:
             Report text
         """
@@ -540,71 +542,81 @@ Focus on your assigned areas: {', '.join(persona.focus_areas)}
             "## Individual Reviews",
             "",
         ]
-        
+
         for i, review in enumerate(reviews, 1):
-            lines.extend([
-                f"### Review {i}: {review.reviewer_name}",
-                "",
-                f"**Overall Score:** {review.overall_score:.2f}/10",
-                f"**Decision:** {review.decision.value.replace('_', ' ').title()}",
-                f"**Confidence:** {review.confidence}/5",
-                "",
-                "**Scores by Dimension:**",
-            ])
-            
+            lines.extend(
+                [
+                    f"### Review {i}: {review.reviewer_name}",
+                    "",
+                    f"**Overall Score:** {review.overall_score:.2f}/10",
+                    f"**Decision:** {review.decision.value.replace('_', ' ').title()}",
+                    f"**Confidence:** {review.confidence}/5",
+                    "",
+                    "**Scores by Dimension:**",
+                ]
+            )
+
             for dim, score in review.scores.items():
                 lines.append(f"- {dim.value.replace('_', ' ').title()}: {score}/10")
-            
-            lines.extend([
-                "",
-                "**Strengths:**",
-            ])
+
+            lines.extend(
+                [
+                    "",
+                    "**Strengths:**",
+                ]
+            )
             for strength in review.strengths:
                 lines.append(f"- {strength}")
-            
-            lines.extend([
-                "",
-                "**Weaknesses:**",
-            ])
+
+            lines.extend(
+                [
+                    "",
+                    "**Weaknesses:**",
+                ]
+            )
             for weakness in review.weaknesses:
                 lines.append(f"- {weakness}")
-            
-            lines.extend([
-                "",
-                "**Questions for Authors:**",
-            ])
+
+            lines.extend(
+                [
+                    "",
+                    "**Questions for Authors:**",
+                ]
+            )
             for question in review.questions_for_authors:
                 lines.append(f"- {question}")
-            
-            lines.extend([
-                "",
-                "**Detailed Feedback:**",
-                "",
-                review.detailed_feedback,
-                "",
-                "---",
-                "",
-            ])
-        
+
+            lines.extend(
+                [
+                    "",
+                    "**Detailed Feedback:**",
+                    "",
+                    review.detailed_feedback,
+                    "",
+                    "---",
+                    "",
+                ]
+            )
+
         report = "\n".join(lines)
-        
+
         if output_path:
             output_path = Path(output_path)
             output_path.parent.mkdir(parents=True, exist_ok=True)
             with open(output_path, "w", encoding="utf-8") as f:
                 f.write(report)
             logger.info(f"Review report saved to {output_path}")
-        
+
         return report
 
 
 # Convenience function
 async def review_paper(paper_path: str | Path) -> tuple[list[Review], MetaReview]:
     """Quick function to review a paper.
-    
+
     Args:
         paper_path: Path to paper
-        
+
     Returns:
         Tuple of (reviews, meta_review)
     """

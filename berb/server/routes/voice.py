@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, UploadFile, File
+from fastapi import APIRouter, File, HTTPException, UploadFile
 
 logger = logging.getLogger(__name__)
 
@@ -20,11 +20,11 @@ async def transcribe_audio(
     """Transcribe uploaded audio using Whisper API."""
     try:
         from berb.voice.transcriber import VoiceTranscriber
-    except ImportError:
+    except ImportError as e:
         raise HTTPException(
             status_code=501,
             detail="Voice dependencies not installed. Run: pip install berb[voice]",
-        )
+        ) from e
 
     from berb.server.app import _app_state
 

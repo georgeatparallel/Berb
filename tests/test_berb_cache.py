@@ -134,12 +134,8 @@ class TestSearchDegradation:
                     "berb.literature.search.search_arxiv",
                     side_effect=RuntimeError("API down"),
                 ):
-                    with patch(
-                        "berb.literature.cache._DEFAULT_CACHE_DIR", tmp_path
-                    ):
-                        with patch(
-                            "berb.literature.search.time.sleep", lambda _: None
-                        ):
+                    with patch("berb.literature.cache._DEFAULT_CACHE_DIR", tmp_path):
+                        with patch("berb.literature.search.time.sleep", lambda _: None):
                             results = search_papers("test query", limit=20)
 
         assert len(results) >= 1
@@ -160,12 +156,8 @@ class TestSearchDegradation:
             return_value=[mock_paper],
         ):
             with patch("berb.literature.search.search_arxiv", return_value=[]):
-                with patch(
-                    "berb.literature.cache._DEFAULT_CACHE_DIR", tmp_path
-                ):
-                    with patch(
-                        "berb.literature.search.time.sleep", lambda _: None
-                    ):
+                with patch("berb.literature.cache._DEFAULT_CACHE_DIR", tmp_path):
+                    with patch("berb.literature.search.time.sleep", lambda _: None):
                         _ = search_papers("test", limit=20)
 
         cached = get_cached("test", "semantic_scholar", 20, cache_base=tmp_path)

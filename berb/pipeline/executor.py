@@ -13,7 +13,6 @@ from pathlib import Path
 # ============================================================================
 # Third-Party
 # ============================================================================
-
 # ============================================================================
 # Internal - Core Modules
 # ============================================================================
@@ -21,7 +20,6 @@ from berb.adapters import AdapterBundle
 from berb.config import RCConfig
 from berb.llm import create_llm_client
 from berb.llm.client import LLMClient
-from berb.prompts import PromptManager
 
 # ============================================================================
 # Internal - Pipeline Core
@@ -34,6 +32,13 @@ from berb.pipeline.stages import (
     advance,
     gate_required,
 )
+from berb.pipeline.registry import get_registration
+from berb.prompts import PromptManager
+
+# Re-exported for backward compatibility: callers (e.g. packaging.py) import
+# _extract_paper_title from here rather than the _figure_helpers module it
+# actually lives in.
+from berb.pipeline._figure_helpers import _extract_paper_title  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
@@ -43,29 +48,33 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 
 # Stages 1-2: Topic Scoping
-from berb.pipeline.stage_impls._topic import (  # noqa: E402
-    _execute_problem_decompose,
-    _execute_topic_init,
+# ============================================================================
+# Internal - Shared Helpers (must load after stage implementations)
+# ============================================================================
+from berb.pipeline._helpers import (  # noqa: E402
+    StageResult,
+    _build_context_preamble,
+    _detect_runtime_issues,
+    _extract_multi_file_blocks,
+    _extract_topic_keywords,
+    _extract_yaml_block,
+    _load_hardware_profile,
+    _multi_perspective_generate,
+    _parse_metrics_from_stdout,
+    _read_prior_artifact,
+    _safe_filename,
+    _safe_json_loads,
+    _synthesize_perspectives,
+    _topic_constraint_block,
+    _utcnow_iso,
+    _write_stage_meta,
 )
 
-# Stages 3-6: Literature Search
-from berb.pipeline.stage_impls._literature import (  # noqa: E402
-    _execute_knowledge_extract,
-    _execute_literature_collect,
-    _execute_literature_screen,
-    _execute_search_strategy,
-    _expand_search_queries,
-)
-
-# Stages 7-8: Synthesis & Hypothesis
-from berb.pipeline.stage_impls._synthesis import (  # noqa: E402
-    _execute_hypothesis_gen,
-    _execute_synthesis,
-)
-
-# Stage 9: Experiment Design
-from berb.pipeline.stage_impls._experiment_design import (  # noqa: E402
-    _execute_experiment_design,
+# Stages 14-15: Analysis & Decision
+from berb.pipeline.stage_impls._analysis import (  # noqa: E402
+    _execute_research_decision,
+    _execute_result_analysis,
+    _parse_decision,
 )
 
 # Stage 10: Code Generation
@@ -80,66 +89,54 @@ from berb.pipeline.stage_impls._execution import (  # noqa: E402
     _execute_resource_planning,
 )
 
-# Stages 14-15: Analysis & Decision
-from berb.pipeline.stage_impls._analysis import (  # noqa: E402
-    _execute_research_decision,
-    _execute_result_analysis,
+# Stage 9: Experiment Design
+from berb.pipeline.stage_impls._experiment_design import (  # noqa: E402
+    _execute_experiment_design,
+)
+
+# Stages 3-6: Literature Search
+from berb.pipeline.stage_impls._literature import (  # noqa: E402
+    _execute_knowledge_extract,
+    _execute_literature_collect,
+    _execute_literature_screen,
+    _execute_search_strategy,
+    _expand_search_queries,
 )
 
 # Stages 16-17: Paper Writing
 from berb.pipeline.stage_impls._paper_writing import (  # noqa: E402
+    _collect_raw_experiment_metrics,
     _execute_paper_draft,
     _execute_paper_outline,
+    _validate_draft_quality,
+    _write_paper_sections,
 )
 
 # Stages 18-23: Review & Publishing
 from berb.pipeline.stage_impls._review_publish import (  # noqa: E402
+    _collect_experiment_evidence,
     _execute_citation_verify,
     _execute_export_publish,
     _execute_knowledge_archive,
     _execute_paper_revision,
     _execute_peer_review,
     _execute_quality_gate,
+    _remove_bibtex_entries,
+    _remove_citations_from_text,
 )
 
-# ============================================================================
-# Internal - Shared Helpers (must load after stage implementations)
-# ============================================================================
-from berb.pipeline._helpers import (  # noqa: E402
-    StageResult,
-    _build_context_preamble,
-    _build_fallback_queries,
-    _read_prior_artifact,
-    _utcnow_iso,
-    _write_stage_meta,
+# Stages 7-8: Synthesis & Hypothesis
+from berb.pipeline.stage_impls._synthesis import (  # noqa: E402
+    _execute_hypothesis_gen,
+    _execute_synthesis,
+)
+from berb.pipeline.stage_impls._topic import (  # noqa: E402
+    _execute_problem_decompose,
+    _execute_topic_init,
 )
 
-_STAGE_EXECUTORS: dict[Stage, Callable[..., StageResult]] = {
-    Stage.TOPIC_INIT: _execute_topic_init,
-    Stage.PROBLEM_DECOMPOSE: _execute_problem_decompose,
-    Stage.SEARCH_STRATEGY: _execute_search_strategy,
-    Stage.LITERATURE_COLLECT: _execute_literature_collect,
-    Stage.LITERATURE_SCREEN: _execute_literature_screen,
-    Stage.KNOWLEDGE_EXTRACT: _execute_knowledge_extract,
-    Stage.SYNTHESIS: _execute_synthesis,
-    Stage.HYPOTHESIS_GEN: _execute_hypothesis_gen,
-    Stage.EXPERIMENT_DESIGN: _execute_experiment_design,
-    Stage.CODE_GENERATION: _execute_code_generation,
-    Stage.RESOURCE_PLANNING: _execute_resource_planning,
-    Stage.EXPERIMENT_RUN: _execute_experiment_run,
-    Stage.ITERATIVE_REFINE: _execute_iterative_refine,
-    Stage.RESULT_ANALYSIS: _execute_result_analysis,
-    Stage.RESEARCH_DECISION: _execute_research_decision,
-    Stage.PAPER_OUTLINE: _execute_paper_outline,
-    Stage.PAPER_DRAFT: _execute_paper_draft,
-    Stage.PEER_REVIEW: _execute_peer_review,
-    Stage.PAPER_REVISION: _execute_paper_revision,
-    Stage.QUALITY_GATE: _execute_quality_gate,
-    Stage.KNOWLEDGE_ARCHIVE: _execute_knowledge_archive,
-    Stage.EXPORT_PUBLISH: _execute_export_publish,
-    Stage.CITATION_VERIFY: _execute_citation_verify,
-}
-
+# _STAGE_EXECUTORS removed in cleanup — registry is the sole source.
+# Stage _execute_* imports above trigger @register_stage decorators.
 
 def execute_stage(
     stage: Stage,
@@ -195,7 +192,16 @@ def execute_stage(
 
     try:
         _ = advance(stage, StageStatus.PENDING, TransitionEvent.START)
-        executor = _STAGE_EXECUTORS[stage]
+        # Wire port to concrete llm so stage impls can use adapters.llm
+        adapters.llm = llm  # type: ignore[assignment]
+        # Lookup stage implementation from plugin registry
+        reg = get_registration(stage)
+        if reg is None:
+            raise KeyError(
+                f"No stage implementation registered for {stage.name} ({int(stage)}). "
+                f"Ensure the stage_impls module is imported."
+            )
+        executor = reg.fn
         prompts = PromptManager(config.prompts.custom_file or None)  # type: ignore[attr-defined]
         # Detect at call-time whether this executor accepts a 'prompts' kwarg by
         # inspecting its signature.  The previous approach caught TypeError and
@@ -208,6 +214,10 @@ def execute_stage(
         except (ValueError, TypeError):
             # inspect.signature can fail for C extensions; assume no prompts.
             _accepts_prompts = False
+        # Phase 2: Port adapters are available via adapters.llm, adapters.lit,
+        # adapters.sandbox, adapters.store. Stage implementations that want to
+        # use port interfaces can access them through the AdapterBundle directly.
+        # This avoids signature changes to every stage function.
         if _accepts_prompts:
             result = executor(stage_dir, run_dir, config, adapters, llm=llm, prompts=prompts)
         else:
@@ -352,27 +362,6 @@ def execute_stage(
     return result
 
 
-def _sanitize_fabricated_data(
-    paper_text: str,
-    run_dir: Path,
-) -> tuple[str, dict]:
-    """Sanitize potentially fabricated numerical data from paper.
-
-    P5 TODO: Implement full sanitization with experiment data verification.
-    For now, this is a stub that passes tests but doesn't modify content.
-
-    Args:
-        paper_text: Paper text to sanitize
-        run_dir: Run directory with experiment results
-
-    Returns:
-        Tuple of (sanitized text, sanitization report)
-    """
-    # Stub implementation - P5 TODO
-    report = {
-        "sanitized": False,
-        "numbers_replaced": 0,
-        "numbers_kept": 0,
-        "note": "Sanitization not yet implemented",
-    }
-    return paper_text, report
+from berb.pipeline.stage_impls._review_publish import (  # noqa: E402,F401
+    _sanitize_fabricated_data,
+)

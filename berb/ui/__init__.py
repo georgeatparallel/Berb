@@ -11,9 +11,9 @@ from berb.ui.dashboard import (
     get_dashboard,
     start_dashboard,
     stop_dashboard,
-    update_progress,
     update_cost,
     update_papers,
+    update_progress,
 )
 
 __all__ = [

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -46,7 +46,7 @@ class HistoryComparator:
             "topic": topic,
             "overall": scores.get("overall", 0.0),
             "scores": scores.get("scores", {}),
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         }
         self._entries.append(entry)
         self._save_history()
@@ -57,9 +57,7 @@ class HistoryComparator:
             return
         self._history_dir.mkdir(parents=True, exist_ok=True)
         history_file = self._history_dir / "quality_history.json"
-        history_file.write_text(
-            json.dumps(self._entries, indent=2), encoding="utf-8"
-        )
+        history_file.write_text(json.dumps(self._entries, indent=2), encoding="utf-8")
 
     def compare(
         self,

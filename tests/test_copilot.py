@@ -190,6 +190,7 @@ class TestFeedbackHandler:
             resp_path.write_text(json.dumps(response), encoding="utf-8")
 
         import threading
+
         t = threading.Thread(target=write_response)
         t.start()
         fb = handler.wait_for_feedback(stage=5, timeout_sec=2, poll_interval_sec=0.02)
@@ -219,9 +220,7 @@ class TestBranchManager:
         assert (Path(branch_path) / "stage-02" / "result.txt").exists()
         assert (Path(branch_path) / "branch_meta.json").exists()
 
-        meta = json.loads(
-            (Path(branch_path) / "branch_meta.json").read_text(encoding="utf-8")
-        )
+        meta = json.loads((Path(branch_path) / "branch_meta.json").read_text(encoding="utf-8"))
         assert meta["name"] == "exp_alt"
         assert meta["from_stage"] == 2
 

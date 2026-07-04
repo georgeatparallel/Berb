@@ -18,19 +18,22 @@ class EconomicsPromptAdapter(PromptAdapter):
         domain = self.domain
 
         return PromptBlocks(
-            compute_budget=domain.compute_budget_guidance or (
+            compute_budget=domain.compute_budget_guidance
+            or (
                 "Economics regressions are fast. Focus on:\n"
                 "- Multiple specifications (4-6 columns)\n"
                 "- Bootstrap SE if needed (100-500 reps)\n"
                 "- Cluster-robust SE for panel data"
             ),
-            dataset_guidance=domain.dataset_guidance or (
+            dataset_guidance=domain.dataset_guidance
+            or (
                 "Generate synthetic data with known treatment effect (DGP):\n"
                 "- Include treatment, outcome, controls, fixed effects\n"
                 "- Simulate realistic correlations and confounders\n"
                 "- Do NOT download external datasets"
             ),
-            hp_reporting=domain.hp_reporting_guidance or (
+            hp_reporting=domain.hp_reporting_guidance
+            or (
                 "Report specification details:\n"
                 "HYPERPARAMETERS: {'n_obs': ..., 'n_controls': ..., "
                 "'true_effect': ..., 'fe_groups': ..., 'cluster_var': ...}"
@@ -97,6 +100,6 @@ class EconomicsPromptAdapter(PromptAdapter):
             '{"regression_table": {\n'
             '    "spec_1_ols": {"coeff": 0.15, "se": 0.03, "p": 0.001, "n": 5000, "r2": 0.12},\n'
             '    "spec_2_controls": {"coeff": 0.12, "se": 0.02, "p": 0.001, "n": 5000, "r2": 0.25}\n'
-            '},\n'
+            "},\n"
             ' "metadata": {"domain": "economics_empirical", "total_runtime_sec": ...}}'
         )

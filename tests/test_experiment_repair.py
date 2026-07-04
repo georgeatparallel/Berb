@@ -308,18 +308,26 @@ class TestSelectBestResults:
         # Original (1 condition)
         s14 = tmp_path / "stage-14"
         s14.mkdir()
-        (s14 / "experiment_summary.json").write_text(json.dumps({
-            "condition_summaries": {"A": {}},
-            "best_run": {"metrics": {}},
-        }))
+        (s14 / "experiment_summary.json").write_text(
+            json.dumps(
+                {
+                    "condition_summaries": {"A": {}},
+                    "best_run": {"metrics": {}},
+                }
+            )
+        )
 
         # Repair v1 (3 conditions — better)
         r1 = tmp_path / "stage-14_repair_v1"
         r1.mkdir()
-        (r1 / "experiment_summary.json").write_text(json.dumps({
-            "condition_summaries": {"A": {}, "B": {}, "C": {}},
-            "best_run": {"metrics": {"primary_metric": 90.0}},
-        }))
+        (r1 / "experiment_summary.json").write_text(
+            json.dumps(
+                {
+                    "condition_summaries": {"A": {}, "B": {}, "C": {}},
+                    "best_run": {"metrics": {"primary_metric": 90.0}},
+                }
+            )
+        )
 
         best = select_best_results(tmp_path, [])
         assert best is not None
@@ -352,7 +360,9 @@ class TestRunRepairLoop:
         (s14 / "experiment_summary.json").write_text(json.dumps(summary))
 
         run_data = {
-            "stdout": "\n".join(f"condition=Cond{i} metric={70.0 + i}" for i in range(n_conditions)),
+            "stdout": "\n".join(
+                f"condition=Cond{i} metric={70.0 + i}" for i in range(n_conditions)
+            ),
             "stderr": "",
         }
         (s14 / "runs" / "run_0.json").write_text(json.dumps(run_data))
@@ -379,9 +389,12 @@ class TestRunRepairLoop:
             },
             "best_run": {
                 "metrics": {
-                    "A/0/m": 80.0, "A/1/m": 81.0,
-                    "B/0/m": 85.0, "B/1/m": 86.0,
-                    "C/0/m": 90.0, "C/1/m": 91.0,
+                    "A/0/m": 80.0,
+                    "A/1/m": 81.0,
+                    "B/0/m": 85.0,
+                    "B/1/m": 86.0,
+                    "C/0/m": 90.0,
+                    "C/1/m": 91.0,
                 },
             },
         }
@@ -406,10 +419,14 @@ class TestRunRepairLoop:
         """If no experiment code found, return failure."""
         s14 = tmp_path / "stage-14"
         s14.mkdir()
-        (s14 / "experiment_summary.json").write_text(json.dumps({
-            "condition_summaries": {"A": {"metrics": {"m": 80.0}}},
-            "best_run": {"metrics": {}},
-        }))
+        (s14 / "experiment_summary.json").write_text(
+            json.dumps(
+                {
+                    "condition_summaries": {"A": {"metrics": {"m": 80.0}}},
+                    "best_run": {"metrics": {}},
+                }
+            )
+        )
 
         from berb.config import ExperimentRepairConfig
 
@@ -470,9 +487,12 @@ print("condition=Ablation metric=85.0")
         mock_sandbox_result.stderr = ""
         mock_sandbox_result.returncode = 0
         mock_sandbox_result.metrics = {
-            "Baseline/0/accuracy": 80.0, "Baseline/1/accuracy": 82.0,
-            "Proposed/0/accuracy": 90.0, "Proposed/1/accuracy": 92.0,
-            "Ablation/0/accuracy": 85.0, "Ablation/1/accuracy": 87.0,
+            "Baseline/0/accuracy": 80.0,
+            "Baseline/1/accuracy": 82.0,
+            "Proposed/0/accuracy": 90.0,
+            "Proposed/1/accuracy": 92.0,
+            "Ablation/0/accuracy": 85.0,
+            "Ablation/1/accuracy": 87.0,
         }
         mock_sandbox_result.elapsed_sec = 120.0
         mock_sandbox_result.timed_out = False
@@ -480,8 +500,10 @@ print("condition=Ablation metric=85.0")
         mock_sandbox = MagicMock()
         mock_sandbox.run_project.return_value = mock_sandbox_result
 
-        with patch("berb.llm.create_llm_client") as mock_create_llm, \
-             patch("berb.experiment.factory.create_sandbox") as mock_create_sb:
+        with (
+            patch("berb.llm.create_llm_client") as mock_create_llm,
+            patch("berb.experiment.factory.create_sandbox") as mock_create_sb,
+        ):
             mock_create_llm.return_value = mock_llm
             mock_create_sb.return_value = mock_sandbox
 
@@ -640,18 +662,14 @@ class TestRepairSummaryPromotion:
         assert rich_score > empty_score
 
         # Verify that the existing file is preserved (simulate what runner does)
-        existing = json.loads(
-            (s14 / "experiment_summary.json").read_text(encoding="utf-8")
-        )
+        existing = json.loads((s14 / "experiment_summary.json").read_text(encoding="utf-8"))
         existing_score = _summary_quality_score(existing)
         repair_score = _summary_quality_score(empty_summary)
 
         # runner.py should NOT overwrite because repair_score <= existing_score
         assert repair_score <= existing_score
         # The file should still contain the rich data
-        after = json.loads(
-            (s14 / "experiment_summary.json").read_text(encoding="utf-8")
-        )
+        after = json.loads((s14 / "experiment_summary.json").read_text(encoding="utf-8"))
         assert len(after["condition_summaries"]) == 3
 
     def test_richer_repair_does_overwrite(self, tmp_path):

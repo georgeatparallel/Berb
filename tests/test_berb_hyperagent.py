@@ -1,4 +1,5 @@
 """Tests for berb/hyperagent/ — base, memory, task_agent, meta_agent."""
+
 from __future__ import annotations
 
 import asyncio
@@ -24,6 +25,7 @@ from berb.hyperagent.meta_agent import MetaAgent, MetaAgentState, ModificationRe
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _tmp_path() -> Path:
     td = tempfile.mkdtemp()
@@ -106,7 +108,10 @@ class TestHyperagentState:
     def test_record_improvement_updates_counters(self):
         state = HyperagentState()
         imp = Improvement(
-            improvement_id="i1", description="d", code_diff="", affected_component="ta",
+            improvement_id="i1",
+            description="d",
+            code_diff="",
+            affected_component="ta",
             expected_benefit="e",
         )
         result = ImprovementResult(iteration=1, improvements_made=[imp], performance_delta=0.1)
@@ -210,8 +215,12 @@ class TestPersistentMemory:
     async def test_store_improvement(self, tmp_path):
         mem = PersistentMemory(tmp_path / "mem")
         imp = Improvement(
-            improvement_id="i1", description="desc", code_diff="",
-            affected_component="task_agent", expected_benefit="better", confidence=0.7,
+            improvement_id="i1",
+            description="desc",
+            code_diff="",
+            affected_component="task_agent",
+            expected_benefit="better",
+            confidence=0.7,
         )
         await mem.store_improvement(imp)
         history = mem.get_all_improvements()
@@ -234,8 +243,11 @@ class TestPersistentMemory:
         storage = tmp_path / "mem"
         mem1 = PersistentMemory(storage)
         imp = Improvement(
-            improvement_id="persist-1", description="test", code_diff="diff",
-            affected_component="meta_agent", expected_benefit="better",
+            improvement_id="persist-1",
+            description="test",
+            code_diff="diff",
+            affected_component="meta_agent",
+            expected_benefit="better",
         )
         await mem1.store_improvement(imp)
 
@@ -246,12 +258,22 @@ class TestPersistentMemory:
     def test_transfer_improvements_filters_by_transferable_flag(self, tmp_path):
         mem = PersistentMemory(tmp_path / "mem")
         imp_transferable = Improvement(
-            improvement_id="t1", description="d", code_diff="", affected_component="ta",
-            expected_benefit="e", transferable=True, source_domain="ml",
+            improvement_id="t1",
+            description="d",
+            code_diff="",
+            affected_component="ta",
+            expected_benefit="e",
+            transferable=True,
+            source_domain="ml",
         )
         imp_non_transferable = Improvement(
-            improvement_id="t2", description="d", code_diff="", affected_component="ta",
-            expected_benefit="e", transferable=False, source_domain="ml",
+            improvement_id="t2",
+            description="d",
+            code_diff="",
+            affected_component="ta",
+            expected_benefit="e",
+            transferable=False,
+            source_domain="ml",
         )
         mem.improvements = [imp_transferable, imp_non_transferable]
         transferred = mem.transfer_improvements(source_domain="ml", target_domain="biology")
@@ -299,7 +321,13 @@ class TestTaskAgent:
         assert agent.state.variant_id == "v0"
 
     @pytest.mark.asyncio
-    async def test_execute_raises_not_implemented(self, tmp_path):
+    async def test_execute_raises_not_implemented(self, tmp_path, monkeypatch):
+        # DOCKER_AVAILABLE reflects whether `docker` is on this machine's PATH;
+        # force it False so the NotImplementedError fallback path is exercised
+        # deterministically regardless of host environment.
+        import berb.hyperagent.task_agent as task_agent_module
+
+        monkeypatch.setattr(task_agent_module, "DOCKER_AVAILABLE", False)
         ta_cfg = TaskAgentConfig()
         cfg = MagicMock()
         agent = TaskAgent(config=cfg, task_agent_config=ta_cfg)
@@ -353,23 +381,27 @@ class TestMetaAgent:
         agent = MetaAgent(config=cfg)
         assert agent.state.variant_id == "v0"
 
-    def test_generate_error_handling_improvement_raises(self, tmp_path):
+    def test_generate_error_handling_improvement_falls_back_on_llm_failure(self, tmp_path):
+        # With a MagicMock config, the real LLM call inside _get_llm() /
+        # llm.chat() fails to produce compilable Python, so the method
+        # falls back to returning the original code unchanged rather than
+        # raising (see berb/hyperagent/meta_agent.py).
         cfg = MagicMock()
         agent = MetaAgent(config=cfg)
-        with pytest.raises(NotImplementedError):
-            agent._generate_error_handling_improvement("some code")
+        result = agent._generate_error_handling_improvement("some code")
+        assert result == "some code"
 
-    def test_generate_performance_optimization_raises(self, tmp_path):
+    def test_generate_performance_optimization_falls_back_on_llm_failure(self, tmp_path):
         cfg = MagicMock()
         agent = MetaAgent(config=cfg)
-        with pytest.raises(NotImplementedError):
-            agent._generate_performance_optimization("some code")
+        result = agent._generate_performance_optimization("some code")
+        assert result == "some code"
 
-    def test_generate_meta_improvement_raises(self, tmp_path):
+    def test_generate_meta_improvement_falls_back_on_llm_failure(self, tmp_path):
         cfg = MagicMock()
         agent = MetaAgent(config=cfg)
-        with pytest.raises(NotImplementedError):
-            agent._generate_meta_improvement()
+        result = agent._generate_meta_improvement()
+        assert result == agent.modification_code
 
 
 # ---------------------------------------------------------------------------
@@ -379,12 +411,14 @@ class TestMetaAgent:
 
 def test_tracing_new_trace_returns_id():
     from berb.pipeline import tracing
+
     trace_id = tracing.new_trace("run-123")
     assert trace_id == "run-123"
 
 
 def test_tracing_span_records_duration(tmp_path):
     from berb.pipeline import tracing
+
     tracing.configure(tmp_path)
     trace_id = tracing.new_trace()
     with tracing.span(trace_id, "test.op", component="test") as s:
@@ -401,6 +435,7 @@ def test_tracing_span_records_duration(tmp_path):
 
 def test_tracing_span_captures_error(tmp_path):
     from berb.pipeline import tracing
+
     tracing.configure(tmp_path)
     trace_id = tracing.new_trace()
     try:
@@ -416,6 +451,7 @@ def test_tracing_span_captures_error(tmp_path):
 def test_tracing_writes_jsonl(tmp_path):
     import json
     from berb.pipeline import tracing
+
     tracing.configure(tmp_path)
     trace_id = tracing.new_trace("file-test")
     with tracing.span(trace_id, "write.op"):
@@ -430,5 +466,6 @@ def test_tracing_writes_jsonl(tmp_path):
 
 def test_tracing_get_trace_empty():
     from berb.pipeline import tracing
+
     records = tracing.get_trace("nonexistent-trace-xyz")
     assert records == []

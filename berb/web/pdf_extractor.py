@@ -24,6 +24,7 @@ from berb.web._ssrf import check_url_ssrf
 
 try:
     import fitz  # PyMuPDF
+
     HAS_FITZ = True
 except ImportError:
     fitz = None  # type: ignore[assignment]
@@ -138,9 +139,7 @@ class PDFExtractor:
 
         tmp_path = None
         try:
-            req = Request(url, headers={
-                "User-Agent": "Berb/0.5 (Academic Research Bot)"
-            })
+            req = Request(url, headers={"User-Agent": "Berb/0.5 (Academic Research Bot)"})
             resp = urlopen(req, timeout=30)  # noqa: S310
             data = resp.read()
 
@@ -167,13 +166,15 @@ class PDFExtractor:
         """Extract abstract from paper text."""
         match = re.search(
             r"(?:^|\n)\s*Abstract\s*\n(.*?)(?=\n\s*(?:\d+\.?\s+)?(?:Introduction|1\s))",
-            text, re.DOTALL | re.IGNORECASE,
+            text,
+            re.DOTALL | re.IGNORECASE,
         )
         if match:
             return match.group(1).strip()
         match = re.search(
             r"(?:^|\n)\s*Abstract[:\s]*\n?(.*?)(?:\n\n|\n\s*\n)",
-            text, re.DOTALL | re.IGNORECASE,
+            text,
+            re.DOTALL | re.IGNORECASE,
         )
         if match:
             return match.group(1).strip()

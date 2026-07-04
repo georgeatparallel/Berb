@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 import math
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from berb.memory.decay import time_decay_weight
@@ -30,7 +30,7 @@ def cosine_similarity(a: list[float], b: list[float]) -> float:
     if len(a) != len(b) or not a:
         return 0.0
 
-    dot = sum(x * y for x, y in zip(a, b))
+    dot = sum(x * y for x, y in zip(a, b, strict=False))
     norm_a = math.sqrt(sum(x * x for x in a))
     norm_b = math.sqrt(sum(x * x for x in b))
 
@@ -94,7 +94,7 @@ class MemoryRetriever:
             max_access = 1
 
         scored: list[tuple[MemoryEntry, float]] = []
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         for entry in entries:
             # Cosine similarity
@@ -105,9 +105,7 @@ class MemoryRetriever:
                 created = datetime.fromisoformat(entry.created_at)
             except (ValueError, TypeError):
                 created = now
-            decay = time_decay_weight(
-                created, half_life_days=self._half_life_days, now=now
-            )
+            decay = time_decay_weight(created, half_life_days=self._half_life_days, now=now)
 
             # Normalized access frequency
             norm_access = entry.access_count / max_access

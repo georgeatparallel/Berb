@@ -34,13 +34,14 @@ class _FakeLLM:
         self._response = response
         self.calls: list[dict[str, Any]] = []
 
-    def chat(self, messages, *, system=None, max_tokens=None,
-             temperature=None, json_mode=False):
-        self.calls.append({
-            "messages": messages,
-            "system": system,
-            "json_mode": json_mode,
-        })
+    def chat(self, messages, *, system=None, max_tokens=None, temperature=None, json_mode=False):
+        self.calls.append(
+            {
+                "messages": messages,
+                "system": system,
+                "json_mode": json_mode,
+            }
+        )
         return _FakeLLMResponse(content=self._response)
 
 
@@ -91,12 +92,17 @@ _SAMPLE_METRICS_SUMMARY = {
 # Style Config tests
 # =========================================================================
 
+
 class TestStyleConfig:
     def test_constants_exist(self):
         from berb.agents.figure_agent.style_config import (
-            COLORS_BRIGHT, DPI_PUBLICATION, FIGURE_WIDTH,
-            MATPLOTLIB_STYLES, OUTPUT_FORMAT_PRIMARY,
+            COLORS_BRIGHT,
+            DPI_PUBLICATION,
+            FIGURE_WIDTH,
+            MATPLOTLIB_STYLES,
+            OUTPUT_FORMAT_PRIMARY,
         )
+
         assert len(COLORS_BRIGHT) >= 7
         assert DPI_PUBLICATION >= 300
         assert "single_column" in FIGURE_WIDTH
@@ -106,6 +112,7 @@ class TestStyleConfig:
 
     def test_get_style_preamble(self):
         from berb.agents.figure_agent.style_config import get_style_preamble
+
         preamble = get_style_preamble()
         assert "matplotlib" in preamble
         assert "plt" in preamble
@@ -114,6 +121,7 @@ class TestStyleConfig:
 
     def test_custom_dpi(self):
         from berb.agents.figure_agent.style_config import get_style_preamble
+
         preamble = get_style_preamble(dpi=150)
         assert "150" in preamble
 
@@ -122,24 +130,32 @@ class TestStyleConfig:
 # Planner Agent tests
 # =========================================================================
 
+
 class TestPlannerAgent:
     def test_domain_detection_classification(self):
         from berb.agents.figure_agent.planner import PlannerAgent
+
         agent = PlannerAgent(_FakeLLM())
         assert agent._detect_domain("Image classification with CIFAR-10") == "classification"
 
     def test_domain_detection_rl(self):
         from berb.agents.figure_agent.planner import PlannerAgent
+
         agent = PlannerAgent(_FakeLLM())
-        assert agent._detect_domain("Reinforcement learning with reward shaping") == "reinforcement_learning"
+        assert (
+            agent._detect_domain("Reinforcement learning with reward shaping")
+            == "reinforcement_learning"
+        )
 
     def test_domain_detection_default(self):
         from berb.agents.figure_agent.planner import PlannerAgent
+
         agent = PlannerAgent(_FakeLLM())
         assert agent._detect_domain("Quantum computing analysis") == "default"
 
     def test_analyze_data_basic(self):
         from berb.agents.figure_agent.planner import PlannerAgent
+
         agent = PlannerAgent(_FakeLLM())
         analysis = agent._analyze_data(
             results={},
@@ -155,6 +171,7 @@ class TestPlannerAgent:
 
     def test_analyze_data_training_history(self):
         from berb.agents.figure_agent.planner import PlannerAgent
+
         agent = PlannerAgent(_FakeLLM())
         analysis = agent._analyze_data(
             results={"training_history": [1.0, 0.5, 0.3]},
@@ -167,6 +184,7 @@ class TestPlannerAgent:
 
     def test_fallback_plan(self):
         from berb.agents.figure_agent.planner import PlannerAgent
+
         agent = PlannerAgent(_FakeLLM())
         analysis = {
             "num_conditions": 3,
@@ -178,7 +196,9 @@ class TestPlannerAgent:
             "has_per_condition_data": True,
             "condition_values": {"proposed": 0.85, "baseline": 0.78},
         }
-        figures = agent._fallback_plan("classification", analysis, "primary_metric", ["proposed", "baseline"])
+        figures = agent._fallback_plan(
+            "classification", analysis, "primary_metric", ["proposed", "baseline"]
+        )
         assert len(figures) >= 2
         types = {f["chart_type"] for f in figures}
         assert "bar_comparison" in types
@@ -186,70 +206,86 @@ class TestPlannerAgent:
 
     def test_execute_with_llm_response(self):
         from berb.agents.figure_agent.planner import PlannerAgent
-        llm = _FakeLLM(json.dumps({
-            "figures": [
+
+        llm = _FakeLLM(
+            json.dumps(
                 {
-                    "figure_id": "fig_main",
-                    "chart_type": "bar_comparison",
-                    "title": "Main Results",
-                    "caption": "Comparison of methods.",
-                    "data_source": {"type": "condition_comparison", "metric": "primary_metric"},
-                    "x_label": "Method",
-                    "y_label": "Accuracy",
-                    "width": "single_column",
-                    "priority": 1,
-                    "section": "results",
-                },
-                {
-                    "figure_id": "fig_ablation",
-                    "chart_type": "ablation_grouped",
-                    "title": "Ablation",
-                    "caption": "Component analysis.",
-                    "data_source": {"type": "ablation_comparison", "metric": "primary_metric"},
-                    "x_label": "Variant",
-                    "y_label": "Accuracy",
-                    "width": "single_column",
-                    "priority": 1,
-                    "section": "results",
-                },
-                {
-                    "figure_id": "fig_heatmap",
-                    "chart_type": "heatmap",
-                    "title": "Metric Heatmap",
-                    "caption": "Cross-metric analysis.",
-                    "data_source": {"type": "multi_metric"},
-                    "x_label": "Metric",
-                    "y_label": "Method",
-                    "width": "double_column",
-                    "priority": 2,
-                    "section": "analysis",
-                },
-            ]
-        }))
+                    "figures": [
+                        {
+                            "figure_id": "fig_main",
+                            "chart_type": "bar_comparison",
+                            "title": "Main Results",
+                            "caption": "Comparison of methods.",
+                            "data_source": {
+                                "type": "condition_comparison",
+                                "metric": "primary_metric",
+                            },
+                            "x_label": "Method",
+                            "y_label": "Accuracy",
+                            "width": "single_column",
+                            "priority": 1,
+                            "section": "results",
+                        },
+                        {
+                            "figure_id": "fig_ablation",
+                            "chart_type": "ablation_grouped",
+                            "title": "Ablation",
+                            "caption": "Component analysis.",
+                            "data_source": {
+                                "type": "ablation_comparison",
+                                "metric": "primary_metric",
+                            },
+                            "x_label": "Variant",
+                            "y_label": "Accuracy",
+                            "width": "single_column",
+                            "priority": 1,
+                            "section": "results",
+                        },
+                        {
+                            "figure_id": "fig_heatmap",
+                            "chart_type": "heatmap",
+                            "title": "Metric Heatmap",
+                            "caption": "Cross-metric analysis.",
+                            "data_source": {"type": "multi_metric"},
+                            "x_label": "Metric",
+                            "y_label": "Method",
+                            "width": "double_column",
+                            "priority": 2,
+                            "section": "analysis",
+                        },
+                    ]
+                }
+            )
+        )
         agent = PlannerAgent(llm, min_figures=3)
-        result = agent.execute({
-            "experiment_results": {},
-            "topic": "Image classification with knowledge distillation",
-            "metric_key": "primary_metric",
-            "conditions": list(_SAMPLE_CONDITIONS.keys()),
-            "metrics_summary": _SAMPLE_METRICS_SUMMARY,
-            "condition_summaries": _SAMPLE_CONDITIONS,
-        })
+        result = agent.execute(
+            {
+                "experiment_results": {},
+                "topic": "Image classification with knowledge distillation",
+                "metric_key": "primary_metric",
+                "conditions": list(_SAMPLE_CONDITIONS.keys()),
+                "metrics_summary": _SAMPLE_METRICS_SUMMARY,
+                "condition_summaries": _SAMPLE_CONDITIONS,
+            }
+        )
         assert result.success
         assert len(result.data["figures"]) == 3
 
     def test_execute_fallback_on_empty_llm(self):
         from berb.agents.figure_agent.planner import PlannerAgent
+
         llm = _FakeLLM("{}")  # Empty response
         agent = PlannerAgent(llm, min_figures=2)
-        result = agent.execute({
-            "experiment_results": {},
-            "topic": "Image classification",
-            "metric_key": "primary_metric",
-            "conditions": list(_SAMPLE_CONDITIONS.keys()),
-            "metrics_summary": _SAMPLE_METRICS_SUMMARY,
-            "condition_summaries": _SAMPLE_CONDITIONS,
-        })
+        result = agent.execute(
+            {
+                "experiment_results": {},
+                "topic": "Image classification",
+                "metric_key": "primary_metric",
+                "conditions": list(_SAMPLE_CONDITIONS.keys()),
+                "metrics_summary": _SAMPLE_METRICS_SUMMARY,
+                "condition_summaries": _SAMPLE_CONDITIONS,
+            }
+        )
         assert result.success
         assert len(result.data["figures"]) >= 2
 
@@ -258,27 +294,33 @@ class TestPlannerAgent:
 # CodeGen Agent tests
 # =========================================================================
 
+
 class TestCodeGenAgent:
     def test_template_bar_comparison(self):
         from berb.agents.figure_agent.codegen import CodeGenAgent
+
         agent = CodeGenAgent(_FakeLLM())
-        result = agent.execute({
-            "figures": [{
-                "figure_id": "fig_main",
-                "chart_type": "bar_comparison",
-                "title": "Results",
-                "caption": "Main results.",
-                "data_source": {"type": "condition_comparison", "metric": "primary_metric"},
-                "x_label": "Method",
-                "y_label": "Accuracy",
-                "width": "single_column",
-                "section": "results",
-            }],
-            "condition_summaries": _SAMPLE_CONDITIONS,
-            "metrics_summary": _SAMPLE_METRICS_SUMMARY,
-            "metric_key": "primary_metric",
-            "output_dir": "charts",
-        })
+        result = agent.execute(
+            {
+                "figures": [
+                    {
+                        "figure_id": "fig_main",
+                        "chart_type": "bar_comparison",
+                        "title": "Results",
+                        "caption": "Main results.",
+                        "data_source": {"type": "condition_comparison", "metric": "primary_metric"},
+                        "x_label": "Method",
+                        "y_label": "Accuracy",
+                        "width": "single_column",
+                        "section": "results",
+                    }
+                ],
+                "condition_summaries": _SAMPLE_CONDITIONS,
+                "metrics_summary": _SAMPLE_METRICS_SUMMARY,
+                "metric_key": "primary_metric",
+                "output_dir": "charts",
+            }
+        )
         assert result.success
         scripts = result.data["scripts"]
         assert len(scripts) == 1
@@ -289,27 +331,32 @@ class TestCodeGenAgent:
 
     def test_template_grouped_bar(self):
         from berb.agents.figure_agent.codegen import CodeGenAgent
+
         agent = CodeGenAgent(_FakeLLM())
-        result = agent.execute({
-            "figures": [{
-                "figure_id": "fig_multi",
-                "chart_type": "grouped_bar",
-                "title": "Multi-metric",
-                "caption": "Multi-metric comparison.",
-                "data_source": {
-                    "type": "multi_metric",
-                    "metrics": ["primary_metric", "secondary_metric"],
-                },
-                "x_label": "Method",
-                "y_label": "Score",
-                "width": "double_column",
-                "section": "analysis",
-            }],
-            "condition_summaries": _SAMPLE_CONDITIONS,
-            "metrics_summary": _SAMPLE_METRICS_SUMMARY,
-            "metric_key": "primary_metric",
-            "output_dir": "charts",
-        })
+        result = agent.execute(
+            {
+                "figures": [
+                    {
+                        "figure_id": "fig_multi",
+                        "chart_type": "grouped_bar",
+                        "title": "Multi-metric",
+                        "caption": "Multi-metric comparison.",
+                        "data_source": {
+                            "type": "multi_metric",
+                            "metrics": ["primary_metric", "secondary_metric"],
+                        },
+                        "x_label": "Method",
+                        "y_label": "Score",
+                        "width": "double_column",
+                        "section": "analysis",
+                    }
+                ],
+                "condition_summaries": _SAMPLE_CONDITIONS,
+                "metrics_summary": _SAMPLE_METRICS_SUMMARY,
+                "metric_key": "primary_metric",
+                "output_dir": "charts",
+            }
+        )
         assert result.success
         scripts = result.data["scripts"]
         assert len(scripts) == 1
@@ -317,24 +364,29 @@ class TestCodeGenAgent:
 
     def test_template_heatmap(self):
         from berb.agents.figure_agent.codegen import CodeGenAgent
+
         agent = CodeGenAgent(_FakeLLM())
-        result = agent.execute({
-            "figures": [{
-                "figure_id": "fig_heat",
-                "chart_type": "heatmap",
-                "title": "Heatmap",
-                "caption": "Analysis.",
-                "data_source": {"type": "heatmap"},
-                "x_label": "Metric",
-                "y_label": "Method",
-                "width": "double_column",
-                "section": "analysis",
-            }],
-            "condition_summaries": _SAMPLE_CONDITIONS,
-            "metrics_summary": _SAMPLE_METRICS_SUMMARY,
-            "metric_key": "primary_metric",
-            "output_dir": "charts",
-        })
+        result = agent.execute(
+            {
+                "figures": [
+                    {
+                        "figure_id": "fig_heat",
+                        "chart_type": "heatmap",
+                        "title": "Heatmap",
+                        "caption": "Analysis.",
+                        "data_source": {"type": "heatmap"},
+                        "x_label": "Metric",
+                        "y_label": "Method",
+                        "width": "double_column",
+                        "section": "analysis",
+                    }
+                ],
+                "condition_summaries": _SAMPLE_CONDITIONS,
+                "metrics_summary": _SAMPLE_METRICS_SUMMARY,
+                "metric_key": "primary_metric",
+                "output_dir": "charts",
+            }
+        )
         assert result.success
         scripts = result.data["scripts"]
         assert len(scripts) == 1
@@ -342,40 +394,50 @@ class TestCodeGenAgent:
 
     def test_llm_fallback_for_unknown_type(self):
         from berb.agents.figure_agent.codegen import CodeGenAgent
-        llm = _FakeLLM("```python\nimport matplotlib\nmatplotlib.use('Agg')\nimport matplotlib.pyplot as plt\nfig, ax = plt.subplots()\nax.plot([1,2,3])\nfig.savefig('charts/fig_custom.png')\nplt.close(fig)\n```")
+
+        llm = _FakeLLM(
+            "```python\nimport matplotlib\nmatplotlib.use('Agg')\nimport matplotlib.pyplot as plt\nfig, ax = plt.subplots()\nax.plot([1,2,3])\nfig.savefig('charts/fig_custom.png')\nplt.close(fig)\n```"
+        )
         agent = CodeGenAgent(llm)
-        result = agent.execute({
-            "figures": [{
-                "figure_id": "fig_custom",
-                "chart_type": "radar_chart",
-                "title": "Radar",
-                "caption": "Custom chart.",
-                "data_source": {},
-                "x_label": "X",
-                "y_label": "Y",
-                "width": "single_column",
-                "section": "analysis",
-            }],
-            "condition_summaries": _SAMPLE_CONDITIONS,
-            "metrics_summary": _SAMPLE_METRICS_SUMMARY,
-            "metric_key": "primary_metric",
-            "output_dir": "charts",
-        })
+        result = agent.execute(
+            {
+                "figures": [
+                    {
+                        "figure_id": "fig_custom",
+                        "chart_type": "radar_chart",
+                        "title": "Radar",
+                        "caption": "Custom chart.",
+                        "data_source": {},
+                        "x_label": "X",
+                        "y_label": "Y",
+                        "width": "single_column",
+                        "section": "analysis",
+                    }
+                ],
+                "condition_summaries": _SAMPLE_CONDITIONS,
+                "metrics_summary": _SAMPLE_METRICS_SUMMARY,
+                "metric_key": "primary_metric",
+                "output_dir": "charts",
+            }
+        )
         assert result.success
         assert "matplotlib" in result.data["scripts"][0]["script"]
 
     def test_strip_fences(self):
         from berb.agents.figure_agent.codegen import CodeGenAgent
+
         code = "```python\nprint('hello')\n```"
         assert CodeGenAgent._strip_fences(code) == "print('hello')"
 
     def test_strip_fences_no_fences(self):
         from berb.agents.figure_agent.codegen import CodeGenAgent
+
         code = "print('hello')"
         assert CodeGenAgent._strip_fences(code) == "print('hello')"
 
     def test_multiple_figures(self):
         from berb.agents.figure_agent.codegen import CodeGenAgent
+
         agent = CodeGenAgent(_FakeLLM())
         figures = [
             {
@@ -391,13 +453,15 @@ class TestCodeGenAgent:
             }
             for i in range(3)
         ]
-        result = agent.execute({
-            "figures": figures,
-            "condition_summaries": _SAMPLE_CONDITIONS,
-            "metrics_summary": _SAMPLE_METRICS_SUMMARY,
-            "metric_key": "primary_metric",
-            "output_dir": "charts",
-        })
+        result = agent.execute(
+            {
+                "figures": figures,
+                "condition_summaries": _SAMPLE_CONDITIONS,
+                "metrics_summary": _SAMPLE_METRICS_SUMMARY,
+                "metric_key": "primary_metric",
+                "output_dir": "charts",
+            }
+        )
         assert result.success
         assert len(result.data["scripts"]) == 3
 
@@ -406,14 +470,23 @@ class TestCodeGenAgent:
 # Renderer Agent tests
 # =========================================================================
 
+
 class TestRendererAgent:
     def test_render_simple_script(self, tmp_path):
         from berb.agents.figure_agent.renderer import RendererAgent
+
         agent = RendererAgent(_FakeLLM(), timeout_sec=10, use_docker=False)
         output_dir = tmp_path / "charts"
 
         # Use a script that creates a valid PNG without matplotlib
         # (creates a minimal 1x1 PNG file directly)
+        # NOTE: output_dir must be embedded as forward slashes — on Windows
+        # tmp_path yields backslash paths (e.g. "C:\\Users\\...") and
+        # interpolating that raw into a double-quoted Python string literal
+        # produces invalid escape sequences (e.g. "\\U..." is parsed as the
+        # start of a \\UXXXXXXXX unicode escape), causing a SyntaxError in
+        # the *generated* script rather than exercising the renderer.
+        output_dir_posix = output_dir.as_posix()
         script = textwrap.dedent("""\
             import struct, zlib
             output_path = "{output_dir}/fig_test.png"
@@ -435,19 +508,23 @@ class TestRendererAgent:
             with open(output_path, 'ab') as f:
                 f.write(b'\\x00' * 2048)
             print(f"Saved: {{output_path}}")
-        """).format(output_dir=output_dir)
+        """).format(output_dir=output_dir_posix)
 
-        result = agent.execute({
-            "scripts": [{
-                "figure_id": "fig_test",
-                "script": script,
-                "output_filename": "fig_test.png",
-                "title": "Test",
-                "caption": "Test chart",
-                "section": "results",
-            }],
-            "output_dir": str(output_dir),
-        })
+        result = agent.execute(
+            {
+                "scripts": [
+                    {
+                        "figure_id": "fig_test",
+                        "script": script,
+                        "output_filename": "fig_test.png",
+                        "title": "Test",
+                        "caption": "Test chart",
+                        "section": "results",
+                    }
+                ],
+                "output_dir": str(output_dir),
+            }
+        )
         assert result.success
         rendered = result.data["rendered"]
         assert len(rendered) == 1
@@ -456,15 +533,20 @@ class TestRendererAgent:
 
     def test_render_syntax_error(self, tmp_path):
         from berb.agents.figure_agent.renderer import RendererAgent
+
         agent = RendererAgent(_FakeLLM(), timeout_sec=5)
-        result = agent.execute({
-            "scripts": [{
-                "figure_id": "fig_bad",
-                "script": "this is not valid python!!!",
-                "output_filename": "fig_bad.png",
-            }],
-            "output_dir": str(tmp_path / "charts"),
-        })
+        result = agent.execute(
+            {
+                "scripts": [
+                    {
+                        "figure_id": "fig_bad",
+                        "script": "this is not valid python!!!",
+                        "output_filename": "fig_bad.png",
+                    }
+                ],
+                "output_dir": str(tmp_path / "charts"),
+            }
+        )
         # The renderer itself succeeds (returns results), but individual
         # figures have success=False
         rendered = result.data["rendered"]
@@ -474,31 +556,41 @@ class TestRendererAgent:
 
     def test_render_empty_script(self, tmp_path):
         from berb.agents.figure_agent.renderer import RendererAgent
+
         agent = RendererAgent(_FakeLLM(), timeout_sec=5)
-        result = agent.execute({
-            "scripts": [{
-                "figure_id": "fig_empty",
-                "script": "",
-                "output_filename": "fig_empty.png",
-            }],
-            "output_dir": str(tmp_path / "charts"),
-        })
+        result = agent.execute(
+            {
+                "scripts": [
+                    {
+                        "figure_id": "fig_empty",
+                        "script": "",
+                        "output_filename": "fig_empty.png",
+                    }
+                ],
+                "output_dir": str(tmp_path / "charts"),
+            }
+        )
         rendered = result.data["rendered"]
         assert rendered[0]["success"] is False
         assert "Empty" in rendered[0]["error"]
 
     def test_script_saved_for_reproducibility(self, tmp_path):
         from berb.agents.figure_agent.renderer import RendererAgent
+
         agent = RendererAgent(_FakeLLM(), timeout_sec=5)
         output_dir = tmp_path / "charts"
-        result = agent.execute({
-            "scripts": [{
-                "figure_id": "fig_save",
-                "script": "print('hello')",
-                "output_filename": "fig_save.png",
-            }],
-            "output_dir": str(output_dir),
-        })
+        result = agent.execute(
+            {
+                "scripts": [
+                    {
+                        "figure_id": "fig_save",
+                        "script": "print('hello')",
+                        "output_filename": "fig_save.png",
+                    }
+                ],
+                "output_dir": str(output_dir),
+            }
+        )
         # Script should be saved even if rendering fails
         script_path = output_dir / "scripts" / "fig_save.py"
         assert script_path.exists()
@@ -509,21 +601,30 @@ class TestRendererAgent:
 # Critic Agent tests
 # =========================================================================
 
+
 class TestCriticAgent:
     def test_numerical_accuracy_pass(self):
         from berb.agents.figure_agent.critic import CriticAgent
-        llm = _FakeLLM(json.dumps({
-            "quality_score": 8,
-            "issues": [],
-        }))
+
+        llm = _FakeLLM(
+            json.dumps(
+                {
+                    "quality_score": 8,
+                    "issues": [],
+                }
+            )
+        )
         agent = CriticAgent(llm)
-        script = "values = [0.85, 0.78, 0.80]\nax.bar(x, values)\nfig.savefig('out.png')\nplt.close(fig)"
+        script = (
+            "values = [0.85, 0.78, 0.80]\nax.bar(x, values)\nfig.savefig('out.png')\nplt.close(fig)"
+        )
         issues = agent._check_numerical_accuracy(script, _SAMPLE_CONDITIONS, "primary_metric")
         # Values 0.85 and 0.78 are in script → should pass
         assert not any(i["severity"] == "critical" for i in issues)
 
     def test_numerical_accuracy_fail(self):
         from berb.agents.figure_agent.critic import CriticAgent
+
         agent = CriticAgent(_FakeLLM())
         script = "values = [0.99, 0.98, 0.97]"  # Wrong values
         issues = agent._check_numerical_accuracy(script, _SAMPLE_CONDITIONS, "primary_metric")
@@ -531,6 +632,7 @@ class TestCriticAgent:
 
     def test_text_correctness_missing_labels(self):
         from berb.agents.figure_agent.critic import CriticAgent
+
         agent = CriticAgent(_FakeLLM())
         script = "fig, ax = plt.subplots()\nax.bar([0], [1])"  # Missing labels + savefig
         issues = agent._check_text_correctness(script, {})
@@ -540,6 +642,7 @@ class TestCriticAgent:
 
     def test_text_correctness_all_present(self):
         from berb.agents.figure_agent.critic import CriticAgent
+
         agent = CriticAgent(_FakeLLM())
         script = (
             "ax.set_xlabel('X')\n"
@@ -553,10 +656,15 @@ class TestCriticAgent:
 
     def test_visual_quality_llm_review(self):
         from berb.agents.figure_agent.critic import CriticAgent
-        llm = _FakeLLM(json.dumps({
-            "quality_score": 9,
-            "issues": [],
-        }))
+
+        llm = _FakeLLM(
+            json.dumps(
+                {
+                    "quality_score": 9,
+                    "issues": [],
+                }
+            )
+        )
         agent = CriticAgent(llm)
         issues = agent._check_visual_quality(
             "import matplotlib\nplt.figure()\nplt.savefig('x.png')",
@@ -566,60 +674,75 @@ class TestCriticAgent:
 
     def test_visual_quality_low_score(self):
         from berb.agents.figure_agent.critic import CriticAgent
-        llm = _FakeLLM(json.dumps({
-            "quality_score": 3,
-            "issues": [{"severity": "critical", "message": "Bad colors"}],
-        }))
+
+        llm = _FakeLLM(
+            json.dumps(
+                {
+                    "quality_score": 3,
+                    "issues": [{"severity": "critical", "message": "Bad colors"}],
+                }
+            )
+        )
         agent = CriticAgent(llm)
         issues = agent._check_visual_quality("plt.plot([1,2])", {"title": "Bad"})
         assert any(i["severity"] == "critical" for i in issues)
 
     def test_execute_full_review(self):
         from berb.agents.figure_agent.critic import CriticAgent
-        llm = _FakeLLM(json.dumps({
-            "quality_score": 8,
-            "issues": [],
-        }))
+
+        llm = _FakeLLM(
+            json.dumps(
+                {
+                    "quality_score": 8,
+                    "issues": [],
+                }
+            )
+        )
         agent = CriticAgent(llm)
-        result = agent.execute({
-            "rendered": [
-                {
-                    "figure_id": "fig_1",
-                    "success": True,
-                    "output_path": "/tmp/fig.png",
-                    "title": "Test",
-                    "caption": "Test fig",
-                },
-            ],
-            "scripts": [
-                {
-                    "figure_id": "fig_1",
-                    "script": (
-                        "values = [0.85, 0.78]\n"
-                        "ax.set_xlabel('X')\nax.set_ylabel('Y')\n"
-                        "ax.set_title('T')\nfig.savefig('x.png')\nplt.close(fig)"
-                    ),
-                },
-            ],
-            "condition_summaries": _SAMPLE_CONDITIONS,
-            "metrics_summary": _SAMPLE_METRICS_SUMMARY,
-            "metric_key": "primary_metric",
-        })
+        result = agent.execute(
+            {
+                "rendered": [
+                    {
+                        "figure_id": "fig_1",
+                        "success": True,
+                        "output_path": "/tmp/fig.png",
+                        "title": "Test",
+                        "caption": "Test fig",
+                    },
+                ],
+                "scripts": [
+                    {
+                        "figure_id": "fig_1",
+                        "script": (
+                            "values = [0.85, 0.78]\n"
+                            "ax.set_xlabel('X')\nax.set_ylabel('Y')\n"
+                            "ax.set_title('T')\nfig.savefig('x.png')\nplt.close(fig)"
+                        ),
+                    },
+                ],
+                "condition_summaries": _SAMPLE_CONDITIONS,
+                "metrics_summary": _SAMPLE_METRICS_SUMMARY,
+                "metric_key": "primary_metric",
+            }
+        )
         assert result.success
         assert result.data["passed_count"] >= 0
 
     def test_review_failed_render(self):
         from berb.agents.figure_agent.critic import CriticAgent
+
         agent = CriticAgent(_FakeLLM())
-        result = agent.execute({
-            "rendered": [
-                {"figure_id": "fig_1", "success": False, "error": "Crash"},
-            ],
-            "scripts": [],
-            "condition_summaries": {},
-            "metrics_summary": {},
-            "metric_key": "primary_metric",
-        })
+        result = agent.execute(
+            {
+                "rendered": [
+                    {"figure_id": "fig_1", "success": False, "error": "Crash"},
+                ],
+                "scripts": [],
+                "condition_summaries": {},
+                "metrics_summary": {},
+                "metric_key": "primary_metric",
+            }
+        )
         assert result.success
         assert result.data["reviews"][0]["passed"] is False
 
@@ -628,9 +751,11 @@ class TestCriticAgent:
 # Integrator Agent tests
 # =========================================================================
 
+
 class TestIntegratorAgent:
     def test_build_manifest(self):
         from berb.agents.figure_agent.integrator import IntegratorAgent
+
         agent = IntegratorAgent(_FakeLLM())
         rendered = [
             {
@@ -660,6 +785,7 @@ class TestIntegratorAgent:
 
     def test_generate_markdown_refs(self):
         from berb.agents.figure_agent.integrator import IntegratorAgent
+
         agent = IntegratorAgent(_FakeLLM())
         manifest = [
             {
@@ -674,6 +800,7 @@ class TestIntegratorAgent:
 
     def test_generate_descriptions(self):
         from berb.agents.figure_agent.integrator import IntegratorAgent
+
         agent = IntegratorAgent(_FakeLLM())
         manifest = [
             {
@@ -691,102 +818,128 @@ class TestIntegratorAgent:
 
     def test_execute_empty(self):
         from berb.agents.figure_agent.integrator import IntegratorAgent
+
         agent = IntegratorAgent(_FakeLLM())
-        result = agent.execute({
-            "rendered": [],
-            "topic": "Test",
-            "output_dir": "/tmp/charts",
-        })
+        result = agent.execute(
+            {
+                "rendered": [],
+                "topic": "Test",
+                "output_dir": "/tmp/charts",
+            }
+        )
         assert result.success
         assert result.data["figure_count"] == 0
 
     def test_execute_with_figures(self, tmp_path):
         from berb.agents.figure_agent.integrator import IntegratorAgent
+
         agent = IntegratorAgent(_FakeLLM())
         output_dir = tmp_path / "charts"
         output_dir.mkdir()
 
-        result = agent.execute({
-            "rendered": [
-                {
-                    "figure_id": "fig_main",
-                    "success": True,
-                    "output_path": str(output_dir / "fig_main.png"),
-                    "title": "Main",
-                    "caption": "Main comparison.",
-                    "section": "results",
-                },
-            ],
-            "topic": "Test",
-            "output_dir": str(output_dir),
-        })
+        result = agent.execute(
+            {
+                "rendered": [
+                    {
+                        "figure_id": "fig_main",
+                        "success": True,
+                        "output_path": str(output_dir / "fig_main.png"),
+                        "title": "Main",
+                        "caption": "Main comparison.",
+                        "section": "results",
+                    },
+                ],
+                "topic": "Test",
+                "output_dir": str(output_dir),
+            }
+        )
         assert result.success
         assert result.data["figure_count"] == 1
         assert (output_dir / "figure_manifest.json").exists()
 
     def test_section_ordering(self):
         from berb.agents.figure_agent.integrator import IntegratorAgent
+
         assert IntegratorAgent._section_order("method") < IntegratorAgent._section_order("results")
-        assert IntegratorAgent._section_order("results") < IntegratorAgent._section_order("analysis")
+        assert IntegratorAgent._section_order("results") < IntegratorAgent._section_order(
+            "analysis"
+        )
 
 
 # =========================================================================
 # Orchestrator tests
 # =========================================================================
 
+
 class TestOrchestrator:
     def test_orchestrate_basic(self, tmp_path):
         from berb.agents.figure_agent.orchestrator import (
-            FigureAgentConfig, FigureOrchestrator,
+            FigureAgentConfig,
+            FigureOrchestrator,
         )
 
         # LLM returns plan, then quality review
-        responses = iter([
-            json.dumps({
-                "figures": [{
-                    "figure_id": "fig_main",
-                    "chart_type": "bar_comparison",
-                    "title": "Main",
-                    "caption": "Main comparison.",
-                    "data_source": {"type": "condition_comparison", "metric": "primary_metric"},
-                    "x_label": "Method",
-                    "y_label": "Accuracy",
-                    "width": "single_column",
-                    "priority": 1,
-                    "section": "results",
-                }, {
-                    "figure_id": "fig_ablation",
-                    "chart_type": "ablation_grouped",
-                    "title": "Ablation",
-                    "caption": "Ablation study.",
-                    "data_source": {"type": "ablation_comparison", "metric": "primary_metric"},
-                    "x_label": "Variant",
-                    "y_label": "Accuracy",
-                    "width": "single_column",
-                    "priority": 1,
-                    "section": "results",
-                }, {
-                    "figure_id": "fig_heatmap",
-                    "chart_type": "heatmap",
-                    "title": "Heatmap",
-                    "caption": "Metric heatmap.",
-                    "data_source": {"type": "heatmap"},
-                    "x_label": "Metric",
-                    "y_label": "Method",
-                    "width": "double_column",
-                    "priority": 2,
-                    "section": "analysis",
-                }],
-            }),
-            # Critic review (called multiple times)
-            json.dumps({"quality_score": 8, "issues": []}),
-            json.dumps({"quality_score": 8, "issues": []}),
-            json.dumps({"quality_score": 8, "issues": []}),
-        ])
+        responses = iter(
+            [
+                json.dumps(
+                    {
+                        "figures": [
+                            {
+                                "figure_id": "fig_main",
+                                "chart_type": "bar_comparison",
+                                "title": "Main",
+                                "caption": "Main comparison.",
+                                "data_source": {
+                                    "type": "condition_comparison",
+                                    "metric": "primary_metric",
+                                },
+                                "x_label": "Method",
+                                "y_label": "Accuracy",
+                                "width": "single_column",
+                                "priority": 1,
+                                "section": "results",
+                            },
+                            {
+                                "figure_id": "fig_ablation",
+                                "chart_type": "ablation_grouped",
+                                "title": "Ablation",
+                                "caption": "Ablation study.",
+                                "data_source": {
+                                    "type": "ablation_comparison",
+                                    "metric": "primary_metric",
+                                },
+                                "x_label": "Variant",
+                                "y_label": "Accuracy",
+                                "width": "single_column",
+                                "priority": 1,
+                                "section": "results",
+                            },
+                            {
+                                "figure_id": "fig_heatmap",
+                                "chart_type": "heatmap",
+                                "title": "Heatmap",
+                                "caption": "Metric heatmap.",
+                                "data_source": {"type": "heatmap"},
+                                "x_label": "Metric",
+                                "y_label": "Method",
+                                "width": "double_column",
+                                "priority": 2,
+                                "section": "analysis",
+                            },
+                        ],
+                    }
+                ),
+                # Critic review (called multiple times)
+                json.dumps({"quality_score": 8, "issues": []}),
+                json.dumps({"quality_score": 8, "issues": []}),
+                json.dumps({"quality_score": 8, "issues": []}),
+            ]
+        )
 
         class _MultiLLM:
             def __init__(self):
                 self.calls = []
+
             def chat(self, messages, **kwargs):
                 self.calls.append(messages)
                 try:
@@ -800,17 +953,20 @@ class TestOrchestrator:
             max_figures=5,
             max_iterations=1,
             render_timeout_sec=10,
+            nano_banana_enabled=False,
         )
         orch = FigureOrchestrator(_MultiLLM(), cfg, stage_dir=tmp_path)
-        plan = orch.orchestrate({
-            "experiment_results": {},
-            "condition_summaries": _SAMPLE_CONDITIONS,
-            "metrics_summary": _SAMPLE_METRICS_SUMMARY,
-            "metric_key": "primary_metric",
-            "conditions": list(_SAMPLE_CONDITIONS.keys()),
-            "topic": "Image classification",
-            "output_dir": str(tmp_path / "charts"),
-        })
+        plan = orch.orchestrate(
+            {
+                "experiment_results": {},
+                "condition_summaries": _SAMPLE_CONDITIONS,
+                "metrics_summary": _SAMPLE_METRICS_SUMMARY,
+                "metric_key": "primary_metric",
+                "conditions": list(_SAMPLE_CONDITIONS.keys()),
+                "topic": "Image classification",
+                "output_dir": str(tmp_path / "charts"),
+            }
+        )
 
         assert plan.total_llm_calls > 0
         assert plan.elapsed_sec > 0
@@ -819,6 +975,7 @@ class TestOrchestrator:
 
     def test_figure_plan_serialization(self):
         from berb.agents.figure_agent.orchestrator import FigurePlan
+
         plan = FigurePlan(
             manifest=[{"figure_number": 1, "file_path": "charts/fig.png"}],
             figure_count=1,
@@ -830,6 +987,7 @@ class TestOrchestrator:
 
     def test_get_chart_files(self):
         from berb.agents.figure_agent.orchestrator import FigurePlan
+
         plan = FigurePlan(
             manifest=[
                 {"figure_number": 1, "file_path": "charts/fig_main.png"},
@@ -844,9 +1002,11 @@ class TestOrchestrator:
 # Config tests
 # =========================================================================
 
+
 class TestFigureAgentConfig:
     def test_default_config(self):
         from berb.config import FigureAgentConfig
+
         cfg = FigureAgentConfig()
         assert cfg.enabled is True
         assert cfg.min_figures == 3
@@ -857,12 +1017,15 @@ class TestFigureAgentConfig:
 
     def test_parse_from_dict(self):
         from berb.config import _parse_figure_agent_config
-        cfg = _parse_figure_agent_config({
-            "enabled": False,
-            "min_figures": 2,
-            "max_figures": 6,
-            "dpi": 150,
-        })
+
+        cfg = _parse_figure_agent_config(
+            {
+                "enabled": False,
+                "min_figures": 2,
+                "max_figures": 6,
+                "dpi": 150,
+            }
+        )
         assert cfg.enabled is False
         assert cfg.min_figures == 2
         assert cfg.max_figures == 6
@@ -870,14 +1033,17 @@ class TestFigureAgentConfig:
 
     def test_parse_from_dict_extended_fields(self):
         from berb.config import _parse_figure_agent_config
-        cfg = _parse_figure_agent_config({
-            "use_docker": False,
-            "docker_image": "custom/figure:latest",
-            "output_format": "latex",
-            "gemini_api_key": "test-key",
-            "gemini_model": "gemini-test",
-            "nano_banana_enabled": False,
-        })
+
+        cfg = _parse_figure_agent_config(
+            {
+                "use_docker": False,
+                "docker_image": "custom/figure:latest",
+                "output_format": "latex",
+                "gemini_api_key": "test-key",
+                "gemini_model": "gemini-test",
+                "nano_banana_enabled": False,
+            }
+        )
         assert cfg.use_docker is False
         assert cfg.docker_image == "custom/figure:latest"
         assert cfg.output_format == "latex"
@@ -887,12 +1053,14 @@ class TestFigureAgentConfig:
 
     def test_parse_empty(self):
         from berb.config import _parse_figure_agent_config
+
         cfg = _parse_figure_agent_config({})
         assert cfg.enabled is True
         assert cfg.min_figures == 3
 
     def test_experiment_config_has_figure_agent(self):
         from berb.config import ExperimentConfig
+
         ec = ExperimentConfig()
         assert hasattr(ec, "figure_agent")
         assert ec.figure_agent.enabled is True
@@ -901,6 +1069,7 @@ class TestFigureAgentConfig:
 # =========================================================================
 # Backward compatibility test
 # =========================================================================
+
 
 class TestBackwardCompatibility:
     def test_visualize_still_importable(self):
@@ -911,6 +1080,7 @@ class TestBackwardCompatibility:
             plot_experiment_comparison,
             plot_metric_trajectory,
         )
+
         assert callable(generate_all_charts)
         assert callable(plot_condition_comparison)
         assert callable(plot_experiment_comparison)
@@ -918,5 +1088,6 @@ class TestBackwardCompatibility:
 
     def test_figure_agent_importable(self):
         from berb.agents.figure_agent import FigureOrchestrator, FigurePlan
+
         assert FigureOrchestrator is not None
         assert FigurePlan is not None

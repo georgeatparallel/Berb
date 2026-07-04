@@ -9,7 +9,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Protocol, cast
 
-from berb.config import ExperimentConfig, SandboxConfig, SshRemoteConfig
+from berb.config import ExperimentConfig, SshRemoteConfig
 from berb.experiment.factory import create_sandbox
 from berb.experiment.sandbox import SandboxProtocol
 
@@ -66,23 +66,16 @@ class ExperimentHistory:
         best_raw = data.get("best_result")
         best_result = (
             _result_from_dict(
-                {
-                    str(key): value
-                    for key, value in cast(dict[object, object], best_raw).items()
-                }
+                {str(key): value for key, value in cast(dict[object, object], best_raw).items()}
             )
             if isinstance(best_raw, dict)
             else None
         )
         baseline_metric_raw = data.get("baseline_metric")
         baseline_metric = (
-            float(baseline_metric_raw)
-            if isinstance(baseline_metric_raw, (int, float))
-            else None
+            float(baseline_metric_raw) if isinstance(baseline_metric_raw, (int, float)) else None
         )
-        return cls(
-            results=results, best_result=best_result, baseline_metric=baseline_metric
-        )
+        return cls(results=results, best_result=best_result, baseline_metric=baseline_metric)
 
 
 class _ChatResponse(Protocol):
@@ -94,12 +87,16 @@ class _ChatClient(Protocol):
         self, messages: list[dict[str, str]], *, system: str | None = None
     ) -> _ChatResponse: ...
 
+
 class _GitManager(Protocol):
     def is_git_repo(self) -> bool: ...
     def create_experiment_branch(self, tag: str) -> str: ...
-    def commit_experiment(self, run_id: str, metrics: dict[str, object], description: str) -> str: ...
+    def commit_experiment(
+        self, run_id: str, metrics: dict[str, object], description: str
+    ) -> str: ...
     def discard_experiment(self, run_id: str, reason: str) -> bool: ...
     def return_to_original_branch(self) -> bool: ...
+
 
 class ExperimentRunner:
     def __init__(
@@ -119,24 +116,19 @@ class ExperimentRunner:
         self._git: _GitManager | None = None
         if git_repo_dir is not None:
             from berb.experiment.git_manager import ExperimentGitManager
+
             mgr = ExperimentGitManager(git_repo_dir)
             if mgr.is_git_repo():
                 self._git = mgr
             else:
-                logger.warning("git_repo_dir %s is not a git repo; git integration disabled", git_repo_dir)
+                logger.warning(
+                    "git_repo_dir %s is not a git repo; git integration disabled", git_repo_dir
+                )
 
-    def run_experiment(
-        self, code: str, *, run_id: str, iteration: int = 0
-    ) -> ExperimentResult:
+    def run_experiment(self, code: str, *, run_id: str, iteration: int = 0) -> ExperimentResult:
         sandbox_result = self.sandbox.run(code, timeout_sec=self.config.time_budget_sec)
-        primary_metric = self._to_float(
-            sandbox_result.metrics.get(self.config.metric_key)
-        )
-        current_best = (
-            self.history.best_result.primary_metric
-            if self.history.best_result
-            else None
-        )
+        primary_metric = self._to_float(sandbox_result.metrics.get(self.config.metric_key))
+        current_best = self.history.best_result.primary_metric if self.history.best_result else None
 
         improved = False
         kept = False
@@ -154,8 +146,7 @@ class ExperimentRunner:
             error = f"Timed out after {self.config.time_budget_sec}s"
         elif sandbox_result.returncode != 0:
             error = (
-                sandbox_result.stderr.strip()
-                or f"Process exited with {sandbox_result.returncode}"
+                sandbox_result.stderr.strip() or f"Process exited with {sandbox_result.returncode}"
             )
 
         result = ExperimentResult(
@@ -236,17 +227,13 @@ class ExperimentRunner:
 
         return self.history
 
-    def _improve_code(
-        self, llm: _ChatClient, current_code: str, history: ExperimentHistory
-    ) -> str:
+    def _improve_code(self, llm: _ChatClient, current_code: str, history: ExperimentHistory) -> str:
         direction = self.config.metric_direction
         last_result = history.results[-1] if history.results else None
         last_metrics = last_result.metrics if last_result else {}
         best_metrics = history.best_result.metrics if history.best_result else {}
         last_metric = last_result.primary_metric if last_result else None
-        best_metric = (
-            history.best_result.primary_metric if history.best_result else None
-        )
+        best_metric = history.best_result.primary_metric if history.best_result else None
 
         prompt = (
             "Improve the experiment code to optimize the primary metric.\n\n"
@@ -282,9 +269,7 @@ class ExperimentRunner:
 
     def save_history(self, path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
-        _ = path.write_text(
-            json.dumps(self.history.to_dict(), indent=2), encoding="utf-8"
-        )
+        _ = path.write_text(json.dumps(self.history.to_dict(), indent=2), encoding="utf-8")
 
     def _is_improvement(self, new_value: float, best_value: float) -> bool:
         if self.config.metric_direction == "maximize":
@@ -348,9 +333,7 @@ def _result_from_dict(data: dict[str, object]) -> ExperimentResult | None:
         iteration=iteration,
         code=code,
         metrics=typed_metrics,
-        primary_metric=float(primary_metric)
-        if isinstance(primary_metric, (int, float))
-        else None,
+        primary_metric=float(primary_metric) if isinstance(primary_metric, (int, float)) else None,
         improved=improved,
         kept=kept,
         elapsed_sec=float(elapsed_sec),

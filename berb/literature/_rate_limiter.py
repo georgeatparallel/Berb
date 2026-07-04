@@ -43,7 +43,13 @@ class RateLimiter:
     ) -> None:
         self._interval = min_interval_sec
         self._jitter = max_jitter_sec if max_jitter_sec is not None else min_interval_sec * 0.1
-        self._last_call: float = 0.0
+        # None (not 0.0) sentinels "never called yet". time.monotonic() is
+        # anchored to an arbitrary reference point (often system boot), not
+        # epoch 0 — on a freshly booted machine with a low monotonic clock
+        # value, `time.monotonic() - 0.0` could be smaller than _interval,
+        # making the very first call sleep for nearly the full interval
+        # instead of returning immediately.
+        self._last_call: float | None = None
         # BUG-002 FIX: Use a regular threading.Lock for async lock initialization
         # to avoid the race condition. The _async_lock is protected by _init_lock.
         self._async_lock: asyncio.Lock | None = None
@@ -59,19 +65,19 @@ class RateLimiter:
 
     async def _get_async_lock(self) -> asyncio.Lock:
         """Get or create the async lock with proper synchronization.
-        
+
         BUG-002 FIX: Uses double-checked locking with a dedicated init lock
         to prevent the race condition where multiple tasks create separate locks.
         """
         # Fast path: lock already created
         if self._async_lock is not None:
             return self._async_lock
-        
+
         # Create init lock lazily (safe because asyncio.Lock() just allocates,
         # doesn't interact with event loop until first use)
         if self._init_lock is None:
             self._init_lock = asyncio.Lock()
-        
+
         # Slow path: acquire init lock and create async lock
         async with self._init_lock:
             # Double-check after acquiring lock
@@ -81,16 +87,17 @@ class RateLimiter:
 
     async def wait(self) -> None:
         """Async-safe wait — yields control to the event loop during sleep.
-        
+
         BUG-002 FIX: Uses _get_async_lock() to prevent race condition.
         """
         lock = await self._get_async_lock()
         async with lock:
-            elapsed = time.monotonic() - self._last_call
-            delay = self._interval + random.uniform(0.0, self._jitter) - elapsed
-            if delay > 0:
-                logger.debug("RateLimiter: async sleep %.3fs", delay)
-                await asyncio.sleep(delay)
+            if self._last_call is not None:
+                elapsed = time.monotonic() - self._last_call
+                delay = self._interval + random.uniform(0.0, self._jitter) - elapsed
+                if delay > 0:
+                    logger.debug("RateLimiter: async sleep %.3fs", delay)
+                    await asyncio.sleep(delay)
             self._last_call = time.monotonic()
 
     # ------------------------------------------------------------------
@@ -104,11 +111,12 @@ class RateLimiter:
         asyncio event loop.  Prefer ``await wait()`` from coroutines.
         """
         with self._sync_lock:
-            elapsed = time.monotonic() - self._last_call
-            delay = self._interval + random.uniform(0.0, self._jitter) - elapsed
-            if delay > 0:
-                logger.debug("RateLimiter: sync sleep %.3fs", delay)
-                time.sleep(delay)
+            if self._last_call is not None:
+                elapsed = time.monotonic() - self._last_call
+                delay = self._interval + random.uniform(0.0, self._jitter) - elapsed
+                if delay > 0:
+                    logger.debug("RateLimiter: sync sleep %.3fs", delay)
+                    time.sleep(delay)
             self._last_call = time.monotonic()
 
     # ------------------------------------------------------------------
@@ -118,5 +126,5 @@ class RateLimiter:
     @staticmethod
     def backoff_delay(attempt: int, base: float = 2.0, max_delay: float = 60.0) -> float:
         """Return exponential backoff delay with ±20 % jitter."""
-        delay = min(base ** attempt, max_delay)
+        delay = min(base**attempt, max_delay)
         return delay + random.uniform(0.0, delay * 0.2)

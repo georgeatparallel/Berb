@@ -13,18 +13,17 @@ This module provides:
 from __future__ import annotations
 
 import logging
-import time
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from enum import Enum
-from typing import Any, Protocol
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from enum import StrEnum
+from typing import Any
 
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
 
-class ExperimentStatus(str, Enum):
+class ExperimentStatus(StrEnum):
     """Experiment execution status.
 
     Attributes:
@@ -211,9 +210,7 @@ class ComputeGuard:
         api_calls = experiment_design.get("api_calls", 0)
 
         # Estimate GPU hours
-        base_hours = self._estimate_gpu_hours(
-            dataset_size, num_configurations, epochs, model_size
-        )
+        base_hours = self._estimate_gpu_hours(dataset_size, num_configurations, epochs, model_size)
         gpu_hours = base_hours * (2.0 if gpu_required else 1.0)
 
         # Estimate API cost
@@ -296,12 +293,13 @@ class ComputeGuard:
 
         # Pre-mortem risk assessment if enabled
         if use_pre_mortem and experiment_design and llm_client:
-            risk_assessment = await self._pre_mortem_risk_assessment(
-                experiment_design, llm_client
-            )
+            risk_assessment = await self._pre_mortem_risk_assessment(experiment_design, llm_client)
 
             if risk_assessment.get("high_risk", False):
-                return False, f"High risk experiment: {risk_assessment.get('primary_risk', 'Unknown risk')}"
+                return (
+                    False,
+                    f"High risk experiment: {risk_assessment.get('primary_risk', 'Unknown risk')}",
+                )
 
         return True, reason
 
@@ -328,14 +326,14 @@ class ComputeGuard:
         from berb.reasoning.pre_mortem import PreMortemMethod
 
         # Build pre-mortem problem statement
-        problem = f"""Imagine this experiment has failed after consuming 80% of the allocated budget.
+        f"""Imagine this experiment has failed after consuming 80% of the allocated budget.
 
 Experiment Design:
-- Dataset size: {experiment_design.get('dataset_size', 'N/A')}
-- Model: {experiment_design.get('model_size', 'N/A')}
-- Epochs: {experiment_design.get('epochs', 'N/A')}
-- GPU required: {experiment_design.get('gpu_required', False)}
-- API calls: {experiment_design.get('api_calls', 'N/A')}
+- Dataset size: {experiment_design.get("dataset_size", "N/A")}
+- Model: {experiment_design.get("model_size", "N/A")}
+- Epochs: {experiment_design.get("epochs", "N/A")}
+- GPU required: {experiment_design.get("gpu_required", False)}
+- API calls: {experiment_design.get("api_calls", "N/A")}
 
 Write a post-mortem analysis:
 1. What was the primary cause of failure?
@@ -355,7 +353,7 @@ Respond with JSON:
 
         try:
             # Use Pre-Mortem method
-            pm_method = PreMortemMethod(llm_client=llm_client)
+            PreMortemMethod(llm_client=llm_client)
 
             # For now, use simplified analysis (would use full PM framework with LLM)
             risk_assessment = self._analyze_experiment_risks(experiment_design)
@@ -423,7 +421,9 @@ Respond with JSON:
                 "Implement early stopping",
                 "Add intermediate checkpoints",
                 "Start with smaller model",
-            ] if risks else ["Proceed with caution"],
+            ]
+            if risks
+            else ["Proceed with caution"],
         }
 
     async def suggest_cheaper_alternative(
@@ -513,7 +513,7 @@ class ExperimentMonitor:
             "status": ExperimentStatus.RUNNING,
             "total_epochs": total_epochs,
             "current_epoch": 0,
-            "started_at": (start_time or datetime.now(timezone.utc)).isoformat(),
+            "started_at": (start_time or datetime.now(UTC)).isoformat(),
         }
         self._metrics_history[experiment_id] = []
 
@@ -543,7 +543,7 @@ class ExperimentMonitor:
 
         # Calculate ETA
         started = datetime.fromisoformat(exp["started_at"])
-        elapsed = (datetime.now(timezone.utc) - started).total_seconds() / 60
+        elapsed = (datetime.now(UTC) - started).total_seconds() / 60
         eta = None
         if progress > 0:
             total_estimated = elapsed / (progress / 100)
@@ -645,7 +645,7 @@ class ExperimentMonitor:
         duration = 0.0
         if "started_at" in exp:
             started = datetime.fromisoformat(exp["started_at"])
-            duration = (datetime.now(timezone.utc) - started).total_seconds() / 60
+            duration = (datetime.now(UTC) - started).total_seconds() / 60
 
         return ExperimentResults(
             experiment_id=experiment_id,

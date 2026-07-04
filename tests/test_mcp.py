@@ -83,17 +83,23 @@ class TestMCPServer:
 
     def test_handle_get_status_missing_run(self) -> None:
         server = BerbMCPServer()
-        result = asyncio.run(server.handle_tool_call("get_pipeline_status", {"run_id": "nonexistent"}))
+        result = asyncio.run(
+            server.handle_tool_call("get_pipeline_status", {"run_id": "nonexistent"})
+        )
         assert result["success"] is False
 
     def test_handle_search_literature(self) -> None:
         server = BerbMCPServer()
-        result = asyncio.run(server.handle_tool_call("search_literature", {"query": "transformers"}))
+        result = asyncio.run(
+            server.handle_tool_call("search_literature", {"query": "transformers"})
+        )
         assert result["success"] is True
 
     def test_handle_review_paper(self) -> None:
         server = BerbMCPServer()
-        result = asyncio.run(server.handle_tool_call("review_paper", {"paper_path": "/tmp/paper.md"}))
+        result = asyncio.run(
+            server.handle_tool_call("review_paper", {"paper_path": "/tmp/paper.md"})
+        )
         assert result["success"] is True
 
     def test_start_stop(self) -> None:
@@ -110,7 +116,9 @@ class TestMCPServer:
 
     def test_handle_get_results_missing(self) -> None:
         server = BerbMCPServer()
-        result = asyncio.run(server.handle_tool_call("get_experiment_results", {"run_id": "missing"}))
+        result = asyncio.run(
+            server.handle_tool_call("get_experiment_results", {"run_id": "missing"})
+        )
         assert result["success"] is False
 
     def test_handle_get_paper_missing(self) -> None:
@@ -254,7 +262,10 @@ class TestSSETransport:
 
         asyncio.run(_run())
 
-    def test_receive_not_implemented(self) -> None:
+    def test_receive_raises_when_not_running(self) -> None:
+        # receive() blocks on the inbound queue populated by start(); calling
+        # it before start() is a programming error, so it raises immediately
+        # instead of hanging (see berb/mcp/transport.py).
         transport = SSETransport()
-        with pytest.raises(NotImplementedError):
+        with pytest.raises(RuntimeError, match="not running"):
             asyncio.run(transport.receive())

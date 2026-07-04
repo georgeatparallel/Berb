@@ -46,9 +46,9 @@ _rate_limiter = RateLimiter(min_interval_sec=_RATE_LIMIT_SEC)
 # Three-state circuit breaker
 # ---------------------------------------------------------------------------
 
-_CB_THRESHOLD = 3           # consecutive 429s to trip
+_CB_THRESHOLD = 3  # consecutive 429s to trip
 _CB_INITIAL_COOLDOWN = 120  # seconds before first HALF_OPEN probe
-_CB_MAX_COOLDOWN = 600      # cap cooldown at 10 minutes
+_CB_MAX_COOLDOWN = 600  # cap cooldown at 10 minutes
 
 # States
 _CB_CLOSED = "closed"
@@ -59,7 +59,7 @@ _cb_state: str = _CB_CLOSED
 _cb_consecutive_429s: int = 0
 _cb_cooldown_sec: float = _CB_INITIAL_COOLDOWN
 _cb_open_since: float = 0.0  # monotonic timestamp when breaker opened
-_cb_trip_count: int = 0      # total number of trips in this process
+_cb_trip_count: int = 0  # total number of trips in this process
 _cb_lock = threading.Lock()
 
 
@@ -121,8 +121,7 @@ def _cb_on_429() -> bool:
             _cb_open_since = time.monotonic()
             _cb_trip_count += 1
             logger.warning(
-                "S2 circuit breaker → OPEN (probe failed). "
-                "Next cooldown: %.0fs (trip #%d)",
+                "S2 circuit breaker → OPEN (probe failed). Next cooldown: %.0fs (trip #%d)",
                 _cb_cooldown_sec,
                 _cb_trip_count,
             )
@@ -367,9 +366,7 @@ def _parse_s2_paper(item: dict[str, Any]) -> Paper:
     ext_ids = item.get("externalIds") or {}
     authors_raw = item.get("authors") or []
     authors = tuple(
-        Author(name=a.get("name", "Unknown"))
-        for a in authors_raw
-        if isinstance(a, dict)
+        Author(name=a.get("name", "Unknown")) for a in authors_raw if isinstance(a, dict)
     )
     return Paper(
         paper_id=f"s2-{item.get('paperId', '')}",

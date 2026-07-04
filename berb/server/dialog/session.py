@@ -41,15 +41,12 @@ class ChatSession:
         self.history.append(msg)
         # Trim to prevent unbounded growth
         if len(self.history) > self.MAX_HISTORY:
-            self.history = self.history[-self.MAX_HISTORY:]
+            self.history = self.history[-self.MAX_HISTORY :]
         return msg
 
     def get_context(self, last_n: int = 10) -> list[dict[str, str]]:
         """Get recent messages for LLM context."""
-        return [
-            {"role": m.role, "content": m.content}
-            for m in self.history[-last_n:]
-        ]
+        return [{"role": m.role, "content": m.content} for m in self.history[-last_n:]]
 
     def to_dict(self) -> dict[str, Any]:
         return {

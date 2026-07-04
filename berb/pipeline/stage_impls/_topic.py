@@ -5,12 +5,12 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from berb.adapters import AdapterBundle
 from berb.config import RCConfig
 from berb.hardware import detect_hardware, ensure_torch_available
-from berb.llm.client import LLMClient
+from berb.adapters import LLMProvider
+from berb.llm.client import LLMClient  # kept for backward compat
 from berb.pipeline._domain import _detect_domain
 from berb.pipeline._helpers import (
     StageResult,
@@ -19,12 +19,26 @@ from berb.pipeline._helpers import (
     _safe_json_loads,
     _utcnow_iso,
 )
+from berb.pipeline.contracts import StageContract
+from berb.pipeline.registry import register_stage
 from berb.pipeline.stages import Stage, StageStatus
 from berb.prompts import PromptManager
 
 logger = logging.getLogger(__name__)
 
 
+@register_stage(
+    stage=Stage.TOPIC_INIT,
+    depends_on=frozenset(),
+    contract=StageContract(
+        stage=Stage.TOPIC_INIT,
+        input_files=(),
+        output_files=("goal.md", "hardware_profile.json"),
+        dod="SMART goal statement with topic, scope, and constraints",
+        error_code="E01_INVALID_GOAL",
+        max_retries=0,
+    ),
+)
 def _execute_topic_init(
     stage_dir: Path,
     run_dir: Path,
@@ -36,9 +50,7 @@ def _execute_topic_init(
 ) -> StageResult:
     topic = config.research.topic
     _original_topic = topic  # Store for auto-refine replacement
-    domains = (
-        ", ".join(config.research.domains) if config.research.domains else "general"
-    )
+    domains = ", ".join(config.research.domains) if config.research.domains else "general"
     if llm is not None:
         _pm = prompts or PromptManager()
         _overlay = _get_evolution_overlay(run_dir, "topic_init")
@@ -113,6 +125,17 @@ Investigate the topic with emphasis on reproducible methods and measurable outco
     )
 
 
+@register_stage(
+    stage=Stage.PROBLEM_DECOMPOSE,
+    depends_on=frozenset({Stage.TOPIC_INIT}),
+    contract=StageContract(
+        stage=Stage.PROBLEM_DECOMPOSE,
+        input_files=("goal.md",),
+        output_files=("problem_tree.md",),
+        dod=">=3 prioritized sub-questions identified",
+        error_code="E02_DECOMP_FAIL",
+    ),
+)
 def _execute_problem_decompose(
     stage_dir: Path,
     run_dir: Path,
@@ -179,8 +202,8 @@ Derived from `goal.md` for topic: {config.research.topic}
                             "Score 1-10 on: (a) novelty, (b) specificity, (c) feasibility. "
                             "If overall score < 5, suggest a refined topic.\n\n"
                             f"Topic: {config.research.topic}\n\n"
-                            "Reply as JSON: {\"novelty\": N, \"specificity\": N, "
-                            "\"feasibility\": N, \"overall\": N, \"suggestion\": \"...\"}"
+                            'Reply as JSON: {"novelty": N, "specificity": N, '
+                            '"feasibility": N, "overall": N, "suggestion": "..."}'
                         ),
                     }
                 ],
@@ -201,14 +224,13 @@ Derived from `goal.md` for topic: {config.research.topic}
                             _suggestion,
                         )
                         # Auto-refine: update config with improved topic
+                        _original_topic = config.research.topic
                         config.research.topic = _suggestion
                         # Re-write goal.md with optimized topic
                         _goal_path = run_dir / "goal.md"
                         if _goal_path.exists():
                             _goal_content = _goal_path.read_text(encoding="utf-8")
-                            _goal_content = _goal_content.replace(
-                                _original_topic, _suggestion
-                            )
+                            _goal_content = _goal_content.replace(_original_topic, _suggestion)
                             _goal_path.write_text(_goal_content, encoding="utf-8")
                 else:
                     logger.info("IMP-35: Topic quality score %s/10", overall)

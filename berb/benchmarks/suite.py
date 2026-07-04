@@ -215,7 +215,7 @@ class BerbBenchmarkSuite:
         total_cost = 0.0
         total_time = 0.0
 
-        for topic in topics:
+        for _topic in topics:
             for i in range(n_runs):
                 # Simulate run
                 # In production, would actually run Berb pipeline
@@ -227,7 +227,9 @@ class BerbBenchmarkSuite:
 
         # Calculate statistics
         avg_score = sum(all_scores) / len(all_scores) if all_scores else 0.0
-        success_rate = sum(1 for s in all_scores if s >= 7.0) / len(all_scores) if all_scores else 0.0
+        success_rate = (
+            sum(1 for s in all_scores if s >= 7.0) / len(all_scores) if all_scores else 0.0
+        )
 
         return QualityReport(
             topics_tested=len(topics),

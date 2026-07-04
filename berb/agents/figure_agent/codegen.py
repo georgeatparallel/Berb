@@ -18,7 +18,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from berb.agents.base import BaseAgent, AgentStepResult
+from berb.agents.base import AgentStepResult, BaseAgent
 from berb.agents.figure_agent.style_config import get_style_preamble
 from berb.utils.sanitize import sanitize_figure_id
 from berb.utils.thinking_tags import strip_thinking_tags
@@ -35,6 +35,7 @@ def _esc(s: str) -> str:
 # Degenerate data detection
 # ---------------------------------------------------------------------------
 
+
 def _is_degenerate_data(values: list[float]) -> bool:
     """Return True if data values are too degenerate to produce a useful chart.
 
@@ -44,7 +45,7 @@ def _is_degenerate_data(values: list[float]) -> bool:
         return True
     if all(v == 0 for v in values):
         return True
-    if len(values) >= 2 and len(set(round(v, 6) for v in values)) <= 1:
+    if len(values) >= 2 and len({round(v, 6) for v in values}) <= 1:
         return True
     return False
 
@@ -87,7 +88,7 @@ def _humanize_label(raw: str) -> str:
 # Built-in chart templates
 # ---------------------------------------------------------------------------
 
-_TEMPLATE_BAR_COMPARISON = '''
+_TEMPLATE_BAR_COMPARISON = """
 {style_preamble}
 
 # Data
@@ -123,9 +124,9 @@ ax.set_axisbelow(True)
 fig.savefig("{output_path}")
 plt.close(fig)
 print(f"Saved: {output_path}")
-'''
+"""
 
-_TEMPLATE_GROUPED_BAR = '''
+_TEMPLATE_GROUPED_BAR = """
 {style_preamble}
 
 # Data: conditions x metrics
@@ -158,9 +159,9 @@ ax.set_axisbelow(True)
 fig.savefig("{output_path}")
 plt.close(fig)
 print(f"Saved: {output_path}")
-'''
+"""
 
-_TEMPLATE_TRAINING_CURVE = '''
+_TEMPLATE_TRAINING_CURVE = """
 {style_preamble}
 
 # Data: each series is (label, epochs, values, [optional std])
@@ -194,9 +195,9 @@ ax.grid(True, alpha=0.3)
 fig.savefig("{output_path}")
 plt.close(fig)
 print(f"Saved: {output_path}")
-'''
+"""
 
-_TEMPLATE_HEATMAP = '''
+_TEMPLATE_HEATMAP = """
 {style_preamble}
 
 # Data
@@ -226,9 +227,9 @@ fig.colorbar(im, ax=ax, shrink=0.8)
 fig.savefig("{output_path}")
 plt.close(fig)
 print(f"Saved: {output_path}")
-'''
+"""
 
-_TEMPLATE_LINE_MULTI = '''
+_TEMPLATE_LINE_MULTI = """
 {style_preamble}
 
 # Data: list of series dicts with label, x, y, [std]
@@ -262,9 +263,9 @@ ax.grid(True, alpha=0.3)
 fig.savefig("{output_path}")
 plt.close(fig)
 print(f"Saved: {output_path}")
-'''
+"""
 
-_TEMPLATE_SCATTER = '''
+_TEMPLATE_SCATTER = """
 {style_preamble}
 
 # Data: list of groups with label, x, y
@@ -288,7 +289,7 @@ ax.grid(True, alpha=0.3)
 fig.savefig("{output_path}")
 plt.close(fig)
 print(f"Saved: {output_path}")
-'''
+"""
 
 _TEMPLATES: dict[str, str] = {
     "bar_comparison": _TEMPLATE_BAR_COMPARISON,
@@ -306,7 +307,7 @@ _TEMPLATES: dict[str, str] = {
 # LaTeX / PGFPlots templates — for direct LaTeX embedding
 # ---------------------------------------------------------------------------
 
-_LATEX_TEMPLATE_BAR_COMPARISON = r'''
+_LATEX_TEMPLATE_BAR_COMPARISON = r"""
 \begin{{figure}}[htbp]
 \centering
 \begin{{tikzpicture}}
@@ -334,9 +335,9 @@ _LATEX_TEMPLATE_BAR_COMPARISON = r'''
 \caption{{{caption}}}
 \label{{fig:{figure_id}}}
 \end{{figure}}
-'''
+"""
 
-_LATEX_TEMPLATE_LINE = r'''
+_LATEX_TEMPLATE_LINE = r"""
 \begin{{figure}}[htbp]
 \centering
 \begin{{tikzpicture}}
@@ -357,9 +358,9 @@ _LATEX_TEMPLATE_LINE = r'''
 \caption{{{caption}}}
 \label{{fig:{figure_id}}}
 \end{{figure}}
-'''
+"""
 
-_LATEX_TEMPLATE_HEATMAP = r'''
+_LATEX_TEMPLATE_HEATMAP = r"""
 \begin{{figure}}[htbp]
 \centering
 \begin{{tikzpicture}}
@@ -388,7 +389,7 @@ _LATEX_TEMPLATE_HEATMAP = r'''
 \caption{{{caption}}}
 \label{{fig:{figure_id}}}
 \end{{figure}}
-'''
+"""
 
 _LATEX_TEMPLATES: dict[str, str] = {
     "bar_comparison": _LATEX_TEMPLATE_BAR_COMPARISON,
@@ -411,7 +412,9 @@ class CodeGenAgent(BaseAgent):
 
     name = "figure_codegen"
 
-    def __init__(self, llm: Any, *, output_format: str = "python", use_docker: bool = False) -> None:
+    def __init__(
+        self, llm: Any, *, output_format: str = "python", use_docker: bool = False
+    ) -> None:
         super().__init__(llm)
         self._output_format = output_format  # "python" or "latex"
         self._use_docker = use_docker  # BUG-60: generate Docker paths when True
@@ -470,16 +473,18 @@ class CodeGenAgent(BaseAgent):
                     critic_feedback=fig_feedback,
                 )
 
-                scripts.append({
-                    "figure_id": figure_id,
-                    "chart_type": chart_type,
-                    "script": script,
-                    "output_filename": f"{figure_id}.png",
-                    "title": fig_spec.get("title", ""),
-                    "caption": fig_spec.get("caption", ""),
-                    "section": fig_spec.get("section", "results"),
-                    "width": fig_spec.get("width", "single_column"),
-                })
+                scripts.append(
+                    {
+                        "figure_id": figure_id,
+                        "chart_type": chart_type,
+                        "script": script,
+                        "output_filename": f"{figure_id}.png",
+                        "title": fig_spec.get("title", ""),
+                        "caption": fig_spec.get("caption", ""),
+                        "section": fig_spec.get("section", "results"),
+                        "width": fig_spec.get("width", "single_column"),
+                    }
+                )
 
             return self._make_result(True, data={"scripts": scripts})
         except Exception as exc:
@@ -525,7 +530,8 @@ class CodeGenAgent(BaseAgent):
         else:
             data_source = {}
 
-        from berb.agents.figure_agent.style_config import FIGURE_WIDTH, DEFAULT_FIGURE_HEIGHT
+        from berb.agents.figure_agent.style_config import DEFAULT_FIGURE_HEIGHT, FIGURE_WIDTH
+
         width = FIGURE_WIDTH.get(width_key, FIGURE_WIDTH["single_column"])
         height = DEFAULT_FIGURE_HEIGHT
 
@@ -606,7 +612,7 @@ class CodeGenAgent(BaseAgent):
             # BUG-37: LLM may return nested lists in metrics — flatten to list[str]
             _raw_metrics = data_source.get("metrics", [])
             _flat_metrics: list[str] = []
-            for _mi in (_raw_metrics if isinstance(_raw_metrics, list) else []):
+            for _mi in _raw_metrics if isinstance(_raw_metrics, list) else []:
                 if isinstance(_mi, str):
                     _flat_metrics.append(_mi)
                 elif isinstance(_mi, list):
@@ -771,7 +777,8 @@ class CodeGenAgent(BaseAgent):
         conditions = list(condition_summaries.keys())
         # Select non-timing metrics
         metric_names = [
-            m for m in metrics_summary
+            m
+            for m in metrics_summary
             if not any(t in m.lower() for t in ["time", "elapsed", "seed", "runtime"])
         ][:8]
 
@@ -883,9 +890,11 @@ class CodeGenAgent(BaseAgent):
         for cond, cdata in list(condition_summaries.items())[:10]:
             if isinstance(cdata, dict):
                 data_context[cond] = {
-                    "metrics": {k: v for k, v in (cdata.get("metrics") or {}).items()
-                                if not any(t in k.lower()
-                                           for t in ["time", "elapsed", "runtime"])},
+                    "metrics": {
+                        k: v
+                        for k, v in (cdata.get("metrics") or {}).items()
+                        if not any(t in k.lower() for t in ["time", "elapsed", "runtime"])
+                    },
                     "ci95_low": cdata.get("ci95_low"),
                     "ci95_high": cdata.get("ci95_high"),
                 }
@@ -960,9 +969,11 @@ class CodeGenAgent(BaseAgent):
         for cond, cdata in list(condition_summaries.items())[:10]:
             if isinstance(cdata, dict):
                 data_context[cond] = {
-                    "metrics": {k: v for k, v in (cdata.get("metrics") or {}).items()
-                                if not any(t in k.lower()
-                                           for t in ["time", "elapsed", "runtime"])},
+                    "metrics": {
+                        k: v
+                        for k, v in (cdata.get("metrics") or {}).items()
+                        if not any(t in k.lower() for t in ["time", "elapsed", "runtime"])
+                    },
                 }
 
         user_prompt = (

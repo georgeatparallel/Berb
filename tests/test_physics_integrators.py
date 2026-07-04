@@ -39,9 +39,10 @@ class TestVerletIntegrator:
 
     def test_harmonic_oscillator_energy_conservation(self):
         """Test energy conservation for harmonic oscillator."""
+
         # Harmonic oscillator: H = p²/2 + q²/2
         def hamiltonian(q, p):
-            return 0.5 * (p[0]**2 + q[0]**2)
+            return 0.5 * (p[0] ** 2 + q[0] ** 2)
 
         def dH_dq(q, p):
             return np.array([q[0]])
@@ -63,8 +64,9 @@ class TestVerletIntegrator:
 
     def test_harmonic_oscillator_trajectory(self):
         """Test harmonic oscillator trajectory."""
+
         def hamiltonian(q, p):
-            return 0.5 * (p[0]**2 + q[0]**2)
+            return 0.5 * (p[0] ** 2 + q[0] ** 2)
 
         def dH_dq(q, p):
             return np.array([q[0]])
@@ -91,8 +93,9 @@ class TestVerletIntegrator:
 
     def test_stats_tracking(self):
         """Test integration statistics tracking."""
+
         def hamiltonian(q, p):
-            return 0.5 * (p[0]**2 + q[0]**2)
+            return 0.5 * (p[0] ** 2 + q[0] ** 2)
 
         def dH_dq(q, p):
             return np.array([q[0]])
@@ -104,9 +107,7 @@ class TestVerletIntegrator:
         q0 = np.array([1.0])
         p0 = np.array([0.0])
 
-        _, _, _, stats = integrator.integrate(
-            hamiltonian, dH_dq, dH_dp, q0, p0, steps=100
-        )
+        _, _, _, stats = integrator.integrate(hamiltonian, dH_dq, dH_dp, q0, p0, steps=100)
 
         assert stats.n_steps == 100
         assert stats.n_energy_evals == 101  # Initial + 100 steps
@@ -119,8 +120,9 @@ class TestYoshidaIntegrator:
 
     def test_higher_accuracy_than_verlet(self):
         """Test Yoshida has better accuracy than Verlet."""
+
         def hamiltonian(q, p):
-            return 0.5 * (p[0]**2 + q[0]**2)
+            return 0.5 * (p[0] ** 2 + q[0] ** 2)
 
         def dH_dq(q, p):
             return np.array([q[0]])
@@ -135,12 +137,8 @@ class TestYoshidaIntegrator:
         q0 = np.array([1.0])
         p0 = np.array([0.0])
 
-        _, _, _, stats_verlet = verlet.integrate(
-            hamiltonian, dH_dq, dH_dp, q0, p0, steps=200
-        )
-        _, _, _, stats_yoshida = yoshida.integrate(
-            hamiltonian, dH_dq, dH_dp, q0, p0, steps=200
-        )
+        _, _, _, stats_verlet = verlet.integrate(hamiltonian, dH_dq, dH_dp, q0, p0, steps=200)
+        _, _, _, stats_yoshida = yoshida.integrate(hamiltonian, dH_dq, dH_dp, q0, p0, steps=200)
 
         # Both should have reasonable energy conservation
         assert stats_verlet.max_energy_error < 1.0
@@ -152,7 +150,7 @@ class TestYoshidaIntegrator:
         """Test Yoshida coefficients are correct."""
         # w1 = w3 = 1/(2-2^(1/3)), w2 = -2^(1/3)/(2-2^(1/3))
         expected_w1 = 1.0 / (2.0 - 2.0 ** (1.0 / 3.0))
-        expected_w2 = -2.0 ** (1.0 / 3.0) / (2.0 - 2.0 ** (1.0 / 3.0))
+        expected_w2 = -(2.0 ** (1.0 / 3.0)) / (2.0 - 2.0 ** (1.0 / 3.0))
 
         assert np.isclose(YoshidaIntegrator.W1, expected_w1)
         assert np.isclose(YoshidaIntegrator.W2, expected_w2)
@@ -164,8 +162,9 @@ class TestAdaptiveVerletIntegrator:
 
     def test_adaptive_step_adjustment(self):
         """Test adaptive step size adjustment."""
+
         def hamiltonian(q, p):
-            return 0.5 * (p[0]**2 + q[0]**2)
+            return 0.5 * (p[0] ** 2 + q[0] ** 2)
 
         def dH_dq(q, p):
             return np.array([q[0]])
@@ -289,7 +288,7 @@ class TestKeplerProblem:
         p = np.array([0.0, 0.0, 0.0])
 
         H = kp.hamiltonian(q, p)
-        assert H == float('inf')
+        assert H == float("inf")
 
 
 class TestCoupledOscillators:

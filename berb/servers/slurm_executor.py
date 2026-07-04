@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import textwrap
 from typing import Any
 
 from berb.servers.registry import ServerEntry
@@ -60,6 +59,7 @@ class SlurmExecutor:
         script = self._generate_sbatch_script(command, job_name, resources)
         # Write script and submit via SSH
         import shlex as _shlex
+
         ssh_cmd = (
             f"cd {_shlex.quote(remote_dir)} && "
             f"cat <<'EOFSCRIPT' > _job.sh\n{script}\nEOFSCRIPT\n"
@@ -67,8 +67,13 @@ class SlurmExecutor:
         )
         # P1 FIX: Use accept-new for host key verification
         proc = await asyncio.create_subprocess_exec(
-            "ssh", "-o", "ConnectTimeout=10", "-o", "StrictHostKeyChecking=accept-new",
-            self.host, ssh_cmd,
+            "ssh",
+            "-o",
+            "ConnectTimeout=10",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            self.host,
+            ssh_cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -89,7 +94,11 @@ class SlurmExecutor:
         """Check job status via squeue/sacct."""
         # P1 FIX: Use accept-new for host key verification
         proc = await asyncio.create_subprocess_exec(
-            "ssh", "-o", "ConnectTimeout=10", "-o", "StrictHostKeyChecking=accept-new",
+            "ssh",
+            "-o",
+            "ConnectTimeout=10",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
             self.host,
             f"squeue -j {job_id} -h -o '%T' 2>/dev/null || sacct -j {job_id} -n -o State -P 2>/dev/null",
             stdout=asyncio.subprocess.PIPE,
@@ -103,8 +112,13 @@ class SlurmExecutor:
         """Cancel a running job."""
         # P1 FIX: Use accept-new for host key verification
         proc = await asyncio.create_subprocess_exec(
-            "ssh", "-o", "ConnectTimeout=10", "-o", "StrictHostKeyChecking=accept-new",
-            self.host, f"scancel {job_id}",
+            "ssh",
+            "-o",
+            "ConnectTimeout=10",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            self.host,
+            f"scancel {job_id}",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )

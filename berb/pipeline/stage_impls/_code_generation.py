@@ -11,25 +11,24 @@ from typing import Any
 from berb.adapters import AdapterBundle
 from berb.config import RCConfig
 from berb.experiment.validator import (
-    CodeValidation,
     format_issues_for_llm,
     validate_code,
 )
+from berb.adapters import LLMProvider
 from berb.llm.client import LLMClient
-from berb.pipeline._domain import _detect_domain
 from berb.pipeline._helpers import (
     StageResult,
     _chat_with_prompt,
-    _ensure_sandbox_deps,
     _extract_code_block,
     _extract_multi_file_blocks,
-    _extract_yaml_block,
     _get_evolution_overlay,
     _load_hardware_profile,
     _read_prior_artifact,
     _safe_json_loads,
     _utcnow_iso,
 )
+from berb.pipeline.contracts import StageContract
+from berb.pipeline.registry import register_stage
 from berb.pipeline.stages import Stage, StageStatus
 from berb.prompts import PromptManager
 
@@ -37,9 +36,18 @@ logger = logging.getLogger(__name__)
 
 # Improvement G: Continuous-action environments that are incompatible with DQN
 _CONTINUOUS_ENVS = {
-    "pendulum", "halfcheetah", "hopper", "walker2d", "ant", "humanoid",
-    "swimmer", "reacher", "invertedpendulum", "inverteddoublependulum",
-    "mountaincarcontinuous", "lunarlander-continuous",
+    "pendulum",
+    "halfcheetah",
+    "hopper",
+    "walker2d",
+    "ant",
+    "humanoid",
+    "swimmer",
+    "reacher",
+    "invertedpendulum",
+    "inverteddoublependulum",
+    "mountaincarcontinuous",
+    "lunarlander-continuous",
 }
 
 
@@ -64,6 +72,18 @@ def _check_rl_compatibility(code: str) -> list[str]:
     return errors
 
 
+@register_stage(
+    stage=Stage.CODE_GENERATION,
+    depends_on=frozenset({Stage.EXPERIMENT_DESIGN}),
+    contract=StageContract(
+        stage=Stage.CODE_GENERATION,
+        input_files=("exp_plan.yaml",),
+        output_files=("experiment/", "experiment_spec.md"),
+        dod="Multi-file experiment project + spec document",
+        error_code="E10_CODEGEN_FAIL",
+        max_retries=2,
+    ),
+)
 def _execute_code_generation(
     stage_dir: Path,
     run_dir: Path,
@@ -95,11 +115,18 @@ def _execute_code_generation(
                 "timm, einops, torchmetrics, h5py"
             )
             if _net_policy == "none":
-                pkg_extras = _base_pkgs + " (ONLY pre-installed packages — NO pip install available)"
+                pkg_extras = (
+                    _base_pkgs + " (ONLY pre-installed packages — NO pip install available)"
+                )
             elif _net_policy in ("setup_only", "pip_only"):
-                pkg_extras = _base_pkgs + ", and additional pip-installable packages via requirements.txt"
+                pkg_extras = (
+                    _base_pkgs + ", and additional pip-installable packages via requirements.txt"
+                )
             else:
-                pkg_extras = _base_pkgs + ", and additional pip-installable packages (auto-detected from imports)"
+                pkg_extras = (
+                    _base_pkgs
+                    + ", and additional pip-installable packages (auto-detected from imports)"
+                )
         else:
             pkg_prefix = "sandbox mode"
             pkg_extras = ""
@@ -196,9 +223,11 @@ def _execute_code_generation(
     if _bp_path is not None:
         try:
             import json as _json_bp
+
             _bp_data = _json_bp.loads(_bp_path.read_text(encoding="utf-8"))
             # Reconstruct the prompt block
             from berb.agents.benchmark_agent.orchestrator import BenchmarkPlan
+
             _bp = BenchmarkPlan(
                 selected_benchmarks=_bp_data.get("selected_benchmarks", []),
                 selected_baselines=_bp_data.get("selected_baselines", []),
@@ -212,33 +241,70 @@ def _execute_code_generation(
                     "\n\n## BenchmarkAgent Selections (USE THESE)\n"
                     "The following datasets, baselines, and code snippets were "
                     "automatically selected and validated by the BenchmarkAgent. "
-                    "You MUST use these selections in your experiment code.\n\n"
-                    + _bp_block
+                    "You MUST use these selections in your experiment code.\n\n" + _bp_block
                 )
                 logger.info(
                     "BA: Injected benchmark plan (%d benchmarks, %d baselines)",
-                    len(_bp.selected_benchmarks), len(_bp.selected_baselines),
+                    len(_bp.selected_benchmarks),
+                    len(_bp.selected_baselines),
                 )
         except Exception as _bp_exc:
             logger.debug("BA: Failed to load benchmark plan: %s", _bp_exc)
 
     # --- P2.2+P2.3: LLM training topic detection and guidance ---
     _llm_keywords = (
-        "language model", "llm", "fine-tun", "lora", "qlora", "peft",
-        "instruction tun", "rlhf", "dpo", "sft", "alignment",
-        "transformer train", "causal lm", "chat model", "qwen", "llama",
-        "mistral", "phi-", "gemma", "pretraining", "tokeniz",
+        "language model",
+        "llm",
+        "fine-tun",
+        "lora",
+        "qlora",
+        "peft",
+        "instruction tun",
+        "rlhf",
+        "dpo",
+        "sft",
+        "alignment",
+        "transformer train",
+        "causal lm",
+        "chat model",
+        "qwen",
+        "llama",
+        "mistral",
+        "phi-",
+        "gemma",
+        "pretraining",
+        "tokeniz",
     )
     topic_lower = config.research.topic.lower()
     is_llm_topic = any(kw in topic_lower for kw in _llm_keywords)
 
     # --- I-08: RL topic detection and step guidance ---
     _rl_keywords = (
-        "reinforcement learning", "policy gradient", "ppo", "sac", "td3",
-        "ddpg", "dqn", "a2c", "a3c", "mujoco", "locomotion", "continuous control",
-        "reward shaping", "exploration", "multi-agent rl", "marl", "curriculum rl",
-        "imitation learning", "inverse rl", "offline rl", "model-based rl",
-        "actor-critic", "reinforce", "gym", "gymnasium",
+        "reinforcement learning",
+        "policy gradient",
+        "ppo",
+        "sac",
+        "td3",
+        "ddpg",
+        "dqn",
+        "a2c",
+        "a3c",
+        "mujoco",
+        "locomotion",
+        "continuous control",
+        "reward shaping",
+        "exploration",
+        "multi-agent rl",
+        "marl",
+        "curriculum rl",
+        "imitation learning",
+        "inverse rl",
+        "offline rl",
+        "model-based rl",
+        "actor-critic",
+        "reinforce",
+        "gym",
+        "gymnasium",
     )
     is_rl_topic = any(kw in topic_lower for kw in _rl_keywords)
     if is_rl_topic:
@@ -250,10 +316,9 @@ def _execute_code_generation(
     # --- F-01: Framework API doc injection (auto-detected) ---
     try:
         from berb.data import detect_frameworks, load_framework_docs
+
         _hypothesis_text = _read_prior_artifact(run_dir, "hypotheses.md") or ""
-        _fw_ids = detect_frameworks(
-            config.research.topic, _hypothesis_text, exp_plan or ""
-        )
+        _fw_ids = detect_frameworks(config.research.topic, _hypothesis_text, exp_plan or "")
         if _fw_ids:
             _fw_docs = load_framework_docs(_fw_ids, max_chars=8000)
             if _fw_docs:
@@ -288,10 +353,13 @@ def _execute_code_generation(
 
     # --- Domain-specific guidance injection for non-ML domains ---
     try:
-        from berb.domains.detector import detect_domain as _dd_s10, is_ml_domain as _is_ml_s10
+        from berb.domains.detector import detect_domain as _dd_s10
+        from berb.domains.detector import is_ml_domain as _is_ml_s10
+
         _dp = _dd_s10(topic=config.research.topic)
         if not _is_ml_s10(_dp):
             from berb.domains.prompt_adapter import get_adapter as _ga
+
             _adapter = _ga(_dp)
             _blocks = _adapter.get_code_generation_blocks({})
             if _blocks.compute_budget:
@@ -455,6 +523,7 @@ def _execute_code_generation(
             from berb.pipeline.code_agent import (
                 CodeAgentConfig as _CAConfig,
             )
+
             _ca_cfg = _CAConfig()
 
         # Sandbox factory (only for sandbox/docker modes)
@@ -463,12 +532,10 @@ def _execute_code_generation(
             from berb.experiment.factory import (
                 create_sandbox as _csb,
             )
+
             _sandbox_factory = _csb
 
-        if any(
-            config.llm.primary_model.startswith(p)
-            for p in ("gpt-5", "o3", "o4")
-        ):
+        if any(config.llm.primary_model.startswith(p) for p in ("gpt-5", "o3", "o4")):
             _code_max_tokens = 16384
 
         # ── Domain detection + Code Search for non-ML domains ──────────
@@ -477,6 +544,7 @@ def _execute_code_generation(
         try:
             from berb.domains.detector import detect_domain as _dd
             from berb.domains.detector import is_ml_domain as _is_ml
+
             _domain_profile = _dd(topic=config.research.topic)
             logger.info(
                 "CodeAgent: domain=%s (%s)",
@@ -487,6 +555,7 @@ def _execute_code_generation(
             if not _is_ml(_domain_profile):
                 try:
                     from berb.agents.code_searcher import CodeSearchAgent
+
                     _cs_agent = CodeSearchAgent(llm=llm)
                     _code_search_result = _cs_agent.search(
                         topic=config.research.topic,
@@ -540,7 +609,8 @@ def _execute_code_generation(
         )
         if _agent_result.architecture_spec:
             (stage_dir / "architecture_spec.yaml").write_text(
-                _agent_result.architecture_spec, encoding="utf-8",
+                _agent_result.architecture_spec,
+                encoding="utf-8",
             )
         logger.info(
             "CodeAgent: %d LLM calls, %d sandbox runs, score=%.2f",
@@ -654,9 +724,7 @@ def _execute_code_generation(
                 issues=[i for i in validation.issues if i.severity == "error"]
             )
             issues_text = format_issues_for_llm(errors_only)
-            validation_log.append(
-                f"File {fname} attempt {repair_attempt}: {validation.summary()}"
-            )
+            validation_log.append(f"File {fname} attempt {repair_attempt}: {validation.summary()}")
             logger.info(
                 "Code validation failed for %s (attempt %d/%d): %s",
                 fname,
@@ -664,9 +732,7 @@ def _execute_code_generation(
                 max_repair,
                 validation.summary(),
             )
-            all_files_ctx = "\n\n".join(
-                f"```filename:{f}\n{c}\n```" for f, c in files.items()
-            )
+            all_files_ctx = "\n\n".join(f"```filename:{f}\n{c}\n```" for f, c in files.items())
             rp = _pm.sub_prompt(
                 "code_repair",
                 fname=fname,
@@ -685,7 +751,9 @@ def _execute_code_generation(
             # BUG-14: Log remaining issues prominently
             logger.warning(
                 "Code validation FAILED for %s after %d repair attempts: %s",
-                fname, max_repair, validation.summary(),
+                fname,
+                max_repair,
+                validation.summary(),
             )
 
     # Improvement G: RL algorithm-environment compatibility check
@@ -702,18 +770,20 @@ def _execute_code_generation(
     # BUG-14: Block on critical validation failures (syntax/import errors)
     if not all_valid:
         _has_critical = False
-        for fname, code in files.items():
+        for _fname, code in files.items():
             _v = validate_code(code)
             if not _v.ok:
                 for issue in _v.issues:
                     if issue.severity == "error" and issue.category in (
-                        "syntax", "import",
+                        "syntax",
+                        "import",
                     ):
                         _has_critical = True
         if _has_critical:
             logger.error(
                 "Stage 10: CRITICAL validation issues remain after %d repair "
-                "attempts. Blocking stage.", max_repair,
+                "attempts. Blocking stage.",
+                max_repair,
             )
             (stage_dir / "validation_report.md").write_text(
                 "# Code Validation Report\n\n"
@@ -732,17 +802,50 @@ def _execute_code_generation(
     # local module that doesn't exist in the files dict.  This catches the
     # case where Beast Mode/CodeAgent produced an intermediate file that
     # got lost during repair iterations.
-    _known_modules = {
-        f.replace(".py", "") for f in files if f.endswith(".py")
-    }
+    _known_modules = {f.replace(".py", "") for f in files if f.endswith(".py")}
     _stdlib_and_common = {
-        "os", "sys", "json", "math", "time", "copy", "re", "random",
-        "pathlib", "argparse", "logging", "collections", "functools",
-        "itertools", "abc", "typing", "dataclasses", "enum", "io",
-        "csv", "pickle", "glob", "shutil", "subprocess", "datetime",
-        "numpy", "np", "torch", "torchvision", "gymnasium", "gym",
-        "sklearn", "scipy", "pandas", "matplotlib", "PIL", "tqdm",
-        "einops", "timm", "transformers", "datasets", "peft",
+        "os",
+        "sys",
+        "json",
+        "math",
+        "time",
+        "copy",
+        "re",
+        "random",
+        "pathlib",
+        "argparse",
+        "logging",
+        "collections",
+        "functools",
+        "itertools",
+        "abc",
+        "typing",
+        "dataclasses",
+        "enum",
+        "io",
+        "csv",
+        "pickle",
+        "glob",
+        "shutil",
+        "subprocess",
+        "datetime",
+        "numpy",
+        "np",
+        "torch",
+        "torchvision",
+        "gymnasium",
+        "gym",
+        "sklearn",
+        "scipy",
+        "pandas",
+        "matplotlib",
+        "PIL",
+        "tqdm",
+        "einops",
+        "timm",
+        "transformers",
+        "datasets",
+        "peft",
         "stable_baselines3",
     }
     for fname, code in list(files.items()):
@@ -750,15 +853,15 @@ def _execute_code_generation(
             continue
         for _m in re.findall(
             r"^(?:from|import)\s+([a-zA-Z_][a-zA-Z0-9_]*)",
-            code, re.MULTILINE,
+            code,
+            re.MULTILINE,
         ):
-            if (_m not in _known_modules
-                    and _m not in _stdlib_and_common
-                    and not _m.startswith("_")):
+            if _m not in _known_modules and _m not in _stdlib_and_common and not _m.startswith("_"):
                 logger.warning(
                     "BUG-184: %s imports '%s' which is not in generated "
                     "files — experiment may crash on import",
-                    fname, _m,
+                    fname,
+                    _m,
                 )
 
     # --- Write experiment directory ---
@@ -773,14 +876,10 @@ def _execute_code_generation(
         if all_valid:
             report_lines.append(f"**Status**: PASSED after {attempt} total repair(s)\n")
         else:
-            report_lines.append(
-                f"**Status**: FAILED after {attempt} total repair attempt(s)\n"
-            )
+            report_lines.append(f"**Status**: FAILED after {attempt} total repair attempt(s)\n")
         for entry in validation_log:
             report_lines.append(f"- {entry}")
-        (stage_dir / "validation_report.md").write_text(
-            "\n".join(report_lines), encoding="utf-8"
-        )
+        (stage_dir / "validation_report.md").write_text("\n".join(report_lines), encoding="utf-8")
 
     # --- R10-Fix6: Code complexity and quality check ---
     from berb.experiment.validator import (
@@ -800,12 +899,11 @@ def _execute_code_generation(
                 _total_ub_fixes += n_fixes
                 logger.info(
                     "Stage 10: auto-fixed %d UnboundLocalError risk(s) in %s",
-                    n_fixes, fname,
+                    n_fixes,
+                    fname,
                 )
     if _total_ub_fixes:
-        logger.info(
-            "Stage 10: auto-fixed %d total UnboundLocalError risks", _total_ub_fixes
-        )
+        logger.info("Stage 10: auto-fixed %d total UnboundLocalError risks", _total_ub_fixes)
 
     complexity_warnings: list[str] = []
     for fname, code in files.items():
@@ -822,24 +920,36 @@ def _execute_code_generation(
     complexity_warnings.extend(deep_warnings)
 
     # --- P1.2: If critical deep issues found, attempt one repair cycle ---
-    critical_deep = [w for w in deep_warnings if any(
-        kw in w for kw in ("UnboundLocalError", "unregistered", "does not exist",
-                           "empty or trivial subclass", "does NOT override",
-                           "Import-usage mismatch", "NameError",
-                           "was removed", "ptp()",
-                           "copy-paste", "identical method signatures",
-                           "identical AST", "NOT a real ablation",
-                           "shadows stdlib/pip")
-    )]
+    critical_deep = [
+        w
+        for w in deep_warnings
+        if any(
+            kw in w
+            for kw in (
+                "UnboundLocalError",
+                "unregistered",
+                "does not exist",
+                "empty or trivial subclass",
+                "does NOT override",
+                "Import-usage mismatch",
+                "NameError",
+                "was removed",
+                "ptp()",
+                "copy-paste",
+                "identical method signatures",
+                "identical AST",
+                "NOT a real ablation",
+                "shadows stdlib/pip",
+            )
+        )
+    ]
     if critical_deep and llm is not None:
         logger.info(
             "Stage 10: %d critical code issues found — triggering repair cycle",
             len(critical_deep),
         )
         repair_issues = "\n".join(f"- {w}" for w in critical_deep)
-        all_code_ctx = "\n\n".join(
-            f"```filename:{f}\n{c}\n```" for f, c in files.items()
-        )
+        all_code_ctx = "\n\n".join(f"```filename:{f}\n{c}\n```" for f, c in files.items())
         repair_prompt = (
             f"CRITICAL CODE QUALITY ISSUES FOUND:\n{repair_issues}\n\n"
             f"Fix ALL these issues in the code below. Return the complete "
@@ -883,25 +993,38 @@ def _execute_code_generation(
                     (exp_dir / fname).write_text(code, encoding="utf-8")
                 # Re-check after repair
                 deep_warnings_after = deep_validate_files(files)
-                fixed = len(critical_deep) - len([
-                    w for w in deep_warnings_after
-                    if any(kw in w for kw in (
-                        "UnboundLocalError", "unregistered", "does not exist",
-                        "empty or trivial subclass", "does NOT override",
-                        "Import-usage mismatch", "NameError",
-                        "was removed", "ptp()",
-                        "copy-paste", "identical method signatures",
-                        "identical AST", "NOT a real ablation",
-                        "shadows stdlib/pip",
-                    ))
-                ])
+                fixed = len(critical_deep) - len(
+                    [
+                        w
+                        for w in deep_warnings_after
+                        if any(
+                            kw in w
+                            for kw in (
+                                "UnboundLocalError",
+                                "unregistered",
+                                "does not exist",
+                                "empty or trivial subclass",
+                                "does NOT override",
+                                "Import-usage mismatch",
+                                "NameError",
+                                "was removed",
+                                "ptp()",
+                                "copy-paste",
+                                "identical method signatures",
+                                "identical AST",
+                                "NOT a real ablation",
+                                "shadows stdlib/pip",
+                            )
+                        )
+                    ]
+                )
                 logger.info(
                     "Stage 10: Deep repair fixed %d/%d critical issues",
-                    fixed, len(critical_deep),
+                    fixed,
+                    len(critical_deep),
                 )
                 complexity_warnings.append(
-                    f"[REPAIR] Deep repair fixed {fixed}/{len(critical_deep)} "
-                    f"critical issues"
+                    f"[REPAIR] Deep repair fixed {fixed}/{len(critical_deep)} critical issues"
                 )
         except Exception as exc:
             logger.debug("Deep repair failed: %s", exc)
@@ -916,9 +1039,7 @@ def _execute_code_generation(
     # --- P1.4: LLM Code Review (Stage 10.5) ---
     # Skip when CodeAgent is active — Phase 4 review already covers this.
     if llm is not None and not _code_agent_active:
-        all_code_review = "\n\n".join(
-            f"# --- {fname} ---\n{code}" for fname, code in files.items()
-        )
+        all_code_review = "\n\n".join(f"# --- {fname} ---\n{code}" for fname, code in files.items())
         if len(all_code_review) > 12000:
             all_code_review = all_code_review[:12000] + "\n... [truncated]"
         review_prompt = (
@@ -953,7 +1074,9 @@ def _execute_code_generation(
                 max_tokens=2048,
             )
             # Extract JSON from LLM response (may be wrapped in markdown fences)
-            _review_text = review_resp.content if hasattr(review_resp, "content") else str(review_resp)
+            _review_text = (
+                review_resp.content if hasattr(review_resp, "content") else str(review_resp)
+            )
             # Strip markdown JSON fences if present
             _review_text = _review_text.strip()
             if _review_text.startswith("```"):
@@ -980,15 +1103,15 @@ def _execute_code_generation(
 
                 # If critical issues found and score low, attempt fix
                 critical_issues = [
-                    i for i in review_issues
-                    if isinstance(i, dict)
-                    and i.get("severity") == "critical"
+                    i
+                    for i in review_issues
+                    if isinstance(i, dict) and i.get("severity") == "critical"
                 ]
                 if critical_issues and review_score <= 4:
                     logger.warning(
-                        "Stage 10 code review: score=%d, %d critical issues — "
-                        "attempting fix",
-                        review_score, len(critical_issues),
+                        "Stage 10 code review: score=%d, %d critical issues — attempting fix",
+                        review_score,
+                        len(critical_issues),
                     )
                     fix_descriptions = "\n".join(
                         f"- [{i.get('severity', '?')}] {i.get('description', '?')}: "
@@ -1001,9 +1124,7 @@ def _execute_code_generation(
                         f"Fix ALL critical issues. Return complete corrected files "
                         f"using ```filename:xxx.py format.\n\n"
                         f"Current code:\n"
-                        + "\n\n".join(
-                            f"```filename:{f}\n{c}\n```" for f, c in files.items()
-                        )
+                        + "\n\n".join(f"```filename:{f}\n{c}\n```" for f, c in files.items())
                     )
                     try:
                         fix_resp = _chat_with_prompt(
@@ -1018,9 +1139,9 @@ def _execute_code_generation(
                             for fname, code in files.items():
                                 (exp_dir / fname).write_text(code, encoding="utf-8")
                             logger.info(
-                                "Stage 10: Code fixed after review "
-                                "(was %d/10, %d critical issues)",
-                                review_score, len(critical_issues),
+                                "Stage 10: Code fixed after review (was %d/10, %d critical issues)",
+                                review_score,
+                                len(critical_issues),
                             )
                     except Exception as exc:
                         logger.debug("Review-fix failed: %s", exc)
@@ -1048,7 +1169,7 @@ def _execute_code_generation(
         _entry_file = "main.py"
         if "main.py" not in files or not files.get("main.py", "").strip():
             for _fn, _cd in files.items():
-                if 'if __name__' in _cd and '__main__' in _cd:
+                if "if __name__" in _cd and "__main__" in _cd:
                     _entry_file = _fn
                     break
         elif files.get("main.py", ""):
@@ -1058,8 +1179,11 @@ def _execute_code_generation(
             for _fn, _cd in files.items():
                 if _fn == "main.py":
                     continue
-                if ('if __name__' in _cd and '__main__' in _cd
-                        and _cd.count("\n") > _main_lines * 1.5):
+                if (
+                    "if __name__" in _cd
+                    and "__main__" in _cd
+                    and _cd.count("\n") > _main_lines * 1.5
+                ):
                     _entry_file = _fn
                     break
 
@@ -1077,17 +1201,19 @@ def _execute_code_generation(
             _sig_lines = []
             for _line in _cd.split("\n"):
                 _stripped = _line.strip()
-                if (_stripped.startswith("def ") or _stripped.startswith("class ")
-                        or _stripped.startswith("async def ")
-                        # BUG-209: Include import lines — they reveal which
-                        # techniques/libraries are used (e.g. CosineAnnealingLR)
-                        or _stripped.startswith("import ")
-                        or _stripped.startswith("from ")):
+                if (
+                    _stripped.startswith("def ")
+                    or _stripped.startswith("class ")
+                    or _stripped.startswith("async def ")
+                    # BUG-209: Include import lines — they reveal which
+                    # techniques/libraries are used (e.g. CosineAnnealingLR)
+                    or _stripped.startswith("import ")
+                    or _stripped.startswith("from ")
+                ):
                     _sig_lines.append(_line)
             if _sig_lines:
                 _other_summaries.append(
-                    f"# --- {_fn} (imports + signatures) ---\n"
-                    + "\n".join(_sig_lines)
+                    f"# --- {_fn} (imports + signatures) ---\n" + "\n".join(_sig_lines)
                 )
             else:
                 # Small file — include first 800 chars
@@ -1100,9 +1226,7 @@ def _execute_code_generation(
         if len(_other_block) > 6000:
             _other_block = _other_block[:6000] + "\n... [other files truncated]"
 
-        all_code_for_check = (
-            f"{_inventory_block}\n\n{_main_block}\n\n{_other_block}"
-        )
+        all_code_for_check = f"{_inventory_block}\n\n{_main_block}\n\n{_other_block}"
         align_prompt = (
             f"Research topic: {config.research.topic}\n\n"
             f"Experiment code:\n```python\n{all_code_for_check}\n```\n\n"
@@ -1141,7 +1265,8 @@ def _execute_code_generation(
                 for _regen_attempt in range(1, _max_regen + 1):
                     logger.info(
                         "Stage 10: Alignment regen attempt %d/%d",
-                        _regen_attempt, _max_regen,
+                        _regen_attempt,
+                        _max_regen,
                     )
                     regen_prompt = (
                         f"The experiment code you previously generated does NOT align "
@@ -1182,7 +1307,7 @@ def _execute_code_generation(
                     # Re-check alignment on regenerated code (BUG-171 fix)
                     _rc_inv = []
                     for _fn, _cd in files.items():
-                        _rc_inv.append(f"  {_fn}: {_cd.count(chr(10))+1} lines")
+                        _rc_inv.append(f"  {_fn}: {_cd.count(chr(10)) + 1} lines")
                     _rc_main = files.get("main.py", "")
                     if len(_rc_main) > 12000:
                         _rc_main = _rc_main[:12000] + "\n... [truncated]"
@@ -1191,34 +1316,48 @@ def _execute_code_generation(
                         if _fn == "main.py":
                             continue
                         # BUG-209: Include imports alongside signatures
-                        _slines = [l for l in _cd.split("\n")
-                                   if l.strip().startswith((
-                                       "def ", "class ", "async def ",
-                                       "import ", "from ",
-                                   ))]
+                        _slines = [
+                            line
+                            for line in _cd.split("\n")
+                            if line.strip().startswith(
+                                (
+                                    "def ",
+                                    "class ",
+                                    "async def ",
+                                    "import ",
+                                    "from ",
+                                )
+                            )
+                        ]
                         if _slines:
                             _rc_sigs.append(f"# {_fn} imports+signatures:\n" + "\n".join(_slines))
                     recheck_code = (
                         "FILES:\n" + "\n".join(_rc_inv) + "\n\n"
-                        f"# main.py (FULL):\n{_rc_main}\n\n"
-                        + "\n".join(_rc_sigs)
+                        f"# main.py (FULL):\n{_rc_main}\n\n" + "\n".join(_rc_sigs)
                     )
                     recheck_resp = llm.chat(
-                        [{"role": "user", "content": (
-                            f"Research topic: {config.research.topic}\n\n"
-                            f"Experiment code:\n```python\n{recheck_code}\n```\n\n"
-                            "TASK: Evaluate whether this experiment code actually tests "
-                            "the stated research topic. Only main.py is shown in full; "
-                            "other files show signatures only. Answer with JSON:\n"
-                            '{"aligned": true/false, "reason": "...", "suggestions": "..."}\n'
-                        )}],
+                        [
+                            {
+                                "role": "user",
+                                "content": (
+                                    f"Research topic: {config.research.topic}\n\n"
+                                    f"Experiment code:\n```python\n{recheck_code}\n```\n\n"
+                                    "TASK: Evaluate whether this experiment code actually tests "
+                                    "the stated research topic. Only main.py is shown in full; "
+                                    "other files show signatures only. Answer with JSON:\n"
+                                    '{"aligned": true/false, "reason": "...", "suggestions": "..."}\n'
+                                ),
+                            }
+                        ],
                         system="You are a scientific code reviewer checking topic-experiment alignment.",
                         max_tokens=1024,
                     )
                     recheck_data = _safe_json_loads(recheck_resp.content, {})
                     if isinstance(recheck_data, dict) and recheck_data.get("aligned", False):
                         alignment_ok = True
-                        alignment_note = f"Regenerated after alignment check (attempt {_regen_attempt})"
+                        alignment_note = (
+                            f"Regenerated after alignment check (attempt {_regen_attempt})"
+                        )
                         logger.info(
                             "Stage 10: Code aligned after regen attempt %d",
                             _regen_attempt,
@@ -1229,7 +1368,8 @@ def _execute_code_generation(
                         suggestions = recheck_data.get("suggestions", suggestions)
                         logger.warning(
                             "Stage 10: Regen attempt %d still misaligned: %s",
-                            _regen_attempt, alignment_note,
+                            _regen_attempt,
+                            alignment_note,
                         )
         except Exception as exc:
             logger.debug("Alignment check failed: %s", exc)
@@ -1260,9 +1400,7 @@ def _execute_code_generation(
                     json.dumps(abl_data, indent=2), encoding="utf-8"
                 )
                 # --- Attempt ablation repair ---
-                all_code_ctx = "\n\n".join(
-                    f"```filename:{f}\n{c}\n```" for f, c in files.items()
-                )
+                all_code_ctx = "\n\n".join(f"```filename:{f}\n{c}\n```" for f, c in files.items())
                 dup_details = abl_data.get("details", "unknown")
                 abl_repair_prompt = (
                     f"ABLATION REPAIR REQUIRED — duplicate conditions detected:\n"
@@ -1286,16 +1424,13 @@ def _execute_code_generation(
                         abl_repair_prompt,
                         max_tokens=_code_max_tokens,
                     )
-                    repaired_files = _extract_multi_file_blocks(
-                        abl_repair_resp.content
-                    )
+                    repaired_files = _extract_multi_file_blocks(abl_repair_resp.content)
                     if repaired_files and "main.py" in repaired_files:
                         files = repaired_files
                         for fname, code in files.items():
                             (exp_dir / fname).write_text(code, encoding="utf-8")
                         logger.info(
-                            "Stage 10: Ablation repair applied — "
-                            "rewrote duplicate conditions"
+                            "Stage 10: Ablation repair applied — rewrote duplicate conditions"
                         )
                 except Exception as exc:
                     logger.debug("Ablation repair failed: %s", exc)
@@ -1361,4 +1496,3 @@ Multi-file experiment project with {len(files)} file(s): {file_list}
         artifacts=tuple(artifacts),
         evidence_refs=tuple(f"stage-10/{a}" for a in artifacts),
     )
-

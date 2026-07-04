@@ -15,12 +15,14 @@ class MathPromptAdapter(PromptAdapter):
         paradigm = domain.experiment_paradigm
 
         return PromptBlocks(
-            compute_budget=domain.compute_budget_guidance or (
+            compute_budget=domain.compute_budget_guidance
+            or (
                 "Numerical methods are typically fast.\n"
                 "Use 5-8 refinement levels for convergence plots.\n"
                 "Step sizes: geometric sequence (h, h/2, h/4, ...)"
             ),
-            dataset_guidance=domain.dataset_guidance or (
+            dataset_guidance=domain.dataset_guidance
+            or (
                 "Use standard test problems with known solutions:\n"
                 "- ODE: Lotka-Volterra, Van der Pol, stiff systems\n"
                 "- Quadrature: smooth, oscillatory, singular integrands\n"

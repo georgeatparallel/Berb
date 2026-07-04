@@ -39,7 +39,9 @@ def populated_graph(graph: KnowledgeGraphBuilder) -> KnowledgeGraphBuilder:
     # Papers
     graph.add_paper("p1", "ResNet: Deep Residual Learning", year=2016, authors=["He"])
     graph.add_paper("p2", "ViT: An Image is Worth 16x16 Words", year=2021, authors=["Dosovitskiy"])
-    graph.add_paper("p3", "DeiT: Training Data-efficient Image Transformers", year=2021, authors=["Touvron"])
+    graph.add_paper(
+        "p3", "DeiT: Training Data-efficient Image Transformers", year=2021, authors=["Touvron"]
+    )
 
     # Methods
     graph.add_method("m1", "ResNet", description="Residual connections for deep networks")

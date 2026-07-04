@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -87,12 +87,15 @@ class TestCrawlUrllibFallback:
     @patch("berb.web.crawler.urlopen")
     def test_crawl_urllib_success(self, mock_urlopen):
         mock_resp = MagicMock()
-        mock_resp.read.return_value = b"<html><title>Test</title><body><p>Content here</p></body></html>"
+        mock_resp.read.return_value = (
+            b"<html><title>Test</title><body><p>Content here</p></body></html>"
+        )
         mock_resp.headers = {"Content-Type": "text/html; charset=utf-8"}
         mock_urlopen.return_value = mock_resp
 
         crawler = WebCrawler()
         import time
+
         t0 = time.monotonic()
         result = crawler._crawl_with_urllib("https://example.com", t0)
         assert result.success
@@ -109,6 +112,7 @@ class TestCrawlUrllibFallback:
 
         crawler = WebCrawler(max_content_length=1000)
         import time
+
         t0 = time.monotonic()
         result = crawler._crawl_with_urllib("https://example.com", t0)
         assert len(result.markdown) <= 1100  # 1000 + truncation notice
@@ -121,10 +125,23 @@ class TestCrawlUrllibFallback:
 
 class TestCrawlSync:
     @patch("berb.web.crawler.urlopen")
+    @patch.object(
+        WebCrawler,
+        "_crawl_with_crawl4ai",
+        new=AsyncMock(side_effect=RuntimeError("no browser in test env")),
+    )
     def test_crawl_sync_falls_back_to_urllib(self, mock_urlopen):
-        """crawl_sync tries crawl4ai, then falls back to urllib."""
+        """crawl_sync tries crawl4ai, then falls back to urllib.
+
+        Crawl4AI's real backend does a live browser fetch with no bounded
+        timeout reachable from here — on Windows, pytest-timeout cannot
+        interrupt that, so it must be force-failed to exercise the urllib
+        fallback path this test actually targets.
+        """
         mock_resp = MagicMock()
-        mock_resp.read.return_value = b"<html><title>Sync</title><body><p>Works via urllib</p></body></html>"
+        mock_resp.read.return_value = (
+            b"<html><title>Sync</title><body><p>Works via urllib</p></body></html>"
+        )
         mock_resp.headers = {"Content-Type": "text/html"}
         mock_urlopen.return_value = mock_resp
 
@@ -142,8 +159,19 @@ class TestCrawlSync:
 
 class TestCrawlAsync:
     @patch("berb.web.crawler.urlopen")
+    @patch.object(
+        WebCrawler,
+        "_crawl_with_crawl4ai",
+        new=AsyncMock(side_effect=RuntimeError("no browser in test env")),
+    )
     def test_crawl_async_urllib_fallback(self, mock_urlopen):
-        """When crawl4ai's browser isn't set up, async crawl falls back to urllib."""
+        """When crawl4ai's browser isn't set up, async crawl falls back to urllib.
+
+        Crawl4AI's real backend does a live browser fetch with no bounded
+        timeout reachable from here — on Windows, pytest-timeout cannot
+        interrupt that, so it must be force-failed to exercise the urllib
+        fallback path this test actually targets.
+        """
         mock_resp = MagicMock()
         mock_resp.read.return_value = b"<html><title>Async</title><body><p>Works</p></body></html>"
         mock_resp.headers = {"Content-Type": "text/html"}

@@ -21,7 +21,7 @@ import json
 import logging
 from typing import Any
 
-from berb.agents.base import BaseAgent, AgentStepResult
+from berb.agents.base import AgentStepResult, BaseAgent
 from berb.utils.thinking_tags import strip_thinking_tags
 
 logger = logging.getLogger(__name__)
@@ -34,11 +34,12 @@ def _safe_priority(val: object, default: int = 2) -> int:
     except (ValueError, TypeError):
         return default
 
+
 # ---------------------------------------------------------------------------
 # Figure categories
 # ---------------------------------------------------------------------------
 
-FIGURE_CATEGORY_DATA = "code"   # data-driven → Matplotlib / TikZ
+FIGURE_CATEGORY_DATA = "code"  # data-driven → Matplotlib / TikZ
 FIGURE_CATEGORY_IMAGE = "image"  # conceptual → Nano Banana (Gemini)
 
 _DECISION_SYSTEM_PROMPT = """\
@@ -156,12 +157,8 @@ class FigureDecisionAgent(BaseAgent):
                     True,
                     data={
                         "decisions": decisions,
-                        "code_figures": [
-                            d for d in decisions if d["backend"] == "code"
-                        ],
-                        "image_figures": [
-                            d for d in decisions if d["backend"] == "image"
-                        ],
+                        "code_figures": [d for d in decisions if d["backend"] == "code"],
+                        "image_figures": [d for d in decisions if d["backend"] == "image"],
                         "total": len(decisions),
                     },
                 )
@@ -179,12 +176,8 @@ class FigureDecisionAgent(BaseAgent):
             True,
             data={
                 "decisions": decisions,
-                "code_figures": [
-                    d for d in decisions if d["backend"] == "code"
-                ],
-                "image_figures": [
-                    d for d in decisions if d["backend"] == "image"
-                ],
+                "code_figures": [d for d in decisions if d["backend"] == "code"],
+                "image_figures": [d for d in decisions if d["backend"] == "image"],
                 "total": len(decisions),
             },
         )
@@ -218,13 +211,11 @@ class FigureDecisionAgent(BaseAgent):
 
         if has_experiments and condition_summaries:
             conditions_preview = json.dumps(
-                {k: v for k, v in list(condition_summaries.items())[:8]},
+                dict(list(condition_summaries.items())[:8]),
                 indent=2,
                 default=str,
             )
-            user_parts.append(
-                f"\nExperiment conditions:\n{conditions_preview}"
-            )
+            user_parts.append(f"\nExperiment conditions:\n{conditions_preview}")
 
         if has_experiments and experiment_results:
             metrics = list(experiment_results.keys())[:20]
@@ -281,9 +272,7 @@ class FigureDecisionAgent(BaseAgent):
             # Validate backend
             if decision["backend"] not in ("code", "image"):
                 # Auto-assign based on figure_type
-                decision["backend"] = self._infer_backend(
-                    decision["figure_type"]
-                )
+                decision["backend"] = self._infer_backend(decision["figure_type"])
             decisions.append(decision)
 
         return decisions
@@ -303,63 +292,73 @@ class FigureDecisionAgent(BaseAgent):
         decisions: list[dict[str, Any]] = []
 
         # Always suggest an architecture/method diagram
-        decisions.append({
-            "section": "Method",
-            "figure_type": "architecture_diagram",
-            "backend": "image",
-            "description": (
-                f"Architecture overview diagram for the proposed method "
-                f"in the paper about: {topic[:100]}"
-            ),
-            "priority": 1,
-        })
+        decisions.append(
+            {
+                "section": "Method",
+                "figure_type": "architecture_diagram",
+                "backend": "image",
+                "description": (
+                    f"Architecture overview diagram for the proposed method "
+                    f"in the paper about: {topic[:100]}"
+                ),
+                "priority": 1,
+            }
+        )
 
         if has_experiments:
             # Main results comparison
             n_conditions = len(condition_summaries)
-            decisions.append({
-                "section": "Results",
-                "figure_type": "bar_comparison",
-                "backend": "code",
-                "description": (
-                    f"Bar chart comparing main metric across "
-                    f"{n_conditions} experimental conditions"
-                ),
-                "priority": 1,
-            })
-
-            # Training/convergence curve
-            decisions.append({
-                "section": "Results",
-                "figure_type": "training_curve",
-                "backend": "code",
-                "description": "Training convergence curves with loss/metric over epochs",
-                "priority": 2,
-            })
-
-            # Ablation study
-            if n_conditions >= 4:
-                decisions.append({
+            decisions.append(
+                {
                     "section": "Results",
                     "figure_type": "bar_comparison",
                     "backend": "code",
-                    "description": "Ablation study showing contribution of each component",
+                    "description": (
+                        f"Bar chart comparing main metric across "
+                        f"{n_conditions} experimental conditions"
+                    ),
+                    "priority": 1,
+                }
+            )
+
+            # Training/convergence curve
+            decisions.append(
+                {
+                    "section": "Results",
+                    "figure_type": "training_curve",
+                    "backend": "code",
+                    "description": "Training convergence curves with loss/metric over epochs",
                     "priority": 2,
-                })
+                }
+            )
+
+            # Ablation study
+            if n_conditions >= 4:
+                decisions.append(
+                    {
+                        "section": "Results",
+                        "figure_type": "bar_comparison",
+                        "backend": "code",
+                        "description": "Ablation study showing contribution of each component",
+                        "priority": 2,
+                    }
+                )
 
         # Pipeline/method flowchart
-        decisions.append({
-            "section": "Method",
-            "figure_type": "pipeline_overview",
-            "backend": "image",
-            "description": (
-                f"Step-by-step pipeline flowchart showing the method's "
-                f"workflow for: {topic[:100]}"
-            ),
-            "priority": 2,
-        })
+        decisions.append(
+            {
+                "section": "Method",
+                "figure_type": "pipeline_overview",
+                "backend": "image",
+                "description": (
+                    f"Step-by-step pipeline flowchart showing the method's "
+                    f"workflow for: {topic[:100]}"
+                ),
+                "priority": 2,
+            }
+        )
 
-        return decisions[:self._max_figures]
+        return decisions[: self._max_figures]
 
     # ------------------------------------------------------------------
     # Helpers
@@ -369,9 +368,16 @@ class FigureDecisionAgent(BaseAgent):
     def _infer_backend(figure_type: str) -> str:
         """Infer generation backend from figure type."""
         code_types = {
-            "bar_comparison", "line_chart", "heatmap", "confusion_matrix",
-            "training_curve", "ablation_chart", "scatter_plot", "line_multi",
-            "grouped_bar", "loss_curve",
+            "bar_comparison",
+            "line_chart",
+            "heatmap",
+            "confusion_matrix",
+            "training_curve",
+            "ablation_chart",
+            "scatter_plot",
+            "line_multi",
+            "grouped_bar",
+            "loss_curve",
         }
         if figure_type in code_types:
             return "code"
@@ -389,36 +395,43 @@ class FigureDecisionAgent(BaseAgent):
         # Ensure at least one architecture figure
         has_image = any(d["backend"] == "image" for d in decisions)
         if not has_image:
-            decisions.insert(0, {
-                "section": "Method",
-                "figure_type": "architecture_diagram",
-                "backend": "image",
-                "description": "Model architecture overview",
-                "priority": 1,
-            })
+            decisions.insert(
+                0,
+                {
+                    "section": "Method",
+                    "figure_type": "architecture_diagram",
+                    "backend": "image",
+                    "description": "Model architecture overview",
+                    "priority": 1,
+                },
+            )
 
         # Ensure at least one data figure if experiments exist
         if has_experiments:
             has_code = any(d["backend"] == "code" for d in decisions)
             if not has_code:
-                decisions.append({
-                    "section": "Results",
-                    "figure_type": "bar_comparison",
-                    "backend": "code",
-                    "description": "Main results comparison",
-                    "priority": 1,
-                })
+                decisions.append(
+                    {
+                        "section": "Results",
+                        "figure_type": "bar_comparison",
+                        "backend": "code",
+                        "description": "Main results comparison",
+                        "priority": 1,
+                    }
+                )
 
         # Enforce bounds
         if len(decisions) < self._min_figures:
             # Pad with lower-priority suggestions
             while len(decisions) < self._min_figures:
-                decisions.append({
-                    "section": "Discussion",
-                    "figure_type": "concept_illustration",
-                    "backend": "image",
-                    "description": "Conceptual illustration of key findings",
-                    "priority": 3,
-                })
+                decisions.append(
+                    {
+                        "section": "Discussion",
+                        "figure_type": "concept_illustration",
+                        "backend": "image",
+                        "description": "Conceptual illustration of key findings",
+                        "priority": 3,
+                    }
+                )
 
-        return decisions[:self._max_figures]
+        return decisions[: self._max_figures]

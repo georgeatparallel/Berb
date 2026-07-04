@@ -34,8 +34,9 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 
 import numpy as np
 
@@ -209,8 +210,9 @@ class VerletIntegrator(SymplecticIntegrator):
             q_minus = q.copy()
             q_plus[i] += epsilon
             q_minus[i] -= epsilon
-            grad[i] = (hamiltonian(q_plus, np.zeros_like(q)) -
-                      hamiltonian(q_minus, np.zeros_like(q))) / (2 * epsilon)
+            grad[i] = (
+                hamiltonian(q_plus, np.zeros_like(q)) - hamiltonian(q_minus, np.zeros_like(q))
+            ) / (2 * epsilon)
         return grad
 
 
@@ -267,6 +269,7 @@ class YoshidaIntegrator(SymplecticIntegrator):
 # =============================================================================
 # Hamiltonian System Templates
 # =============================================================================
+
 
 class HamiltonianSystem(ABC):
     """Abstract base class for Hamiltonian systems."""
@@ -370,7 +373,7 @@ class HenonHeiles(HamiltonianSystem):
         """Compute total energy."""
         kinetic = np.sum(p**2) / 2
         harmonic = np.sum(q**2) / 2
-        nonlinear = q[0]**2 * q[1] - q[1]**3 / 3 if len(q) >= 2 else 0
+        nonlinear = q[0] ** 2 * q[1] - q[1] ** 3 / 3 if len(q) >= 2 else 0
         return kinetic + harmonic + nonlinear
 
     def equations(
@@ -381,10 +384,12 @@ class HenonHeiles(HamiltonianSystem):
         """Compute Hamilton's equations."""
         dqdt = p
         if len(q) >= 2:
-            dpdt = np.array([
-                -q[0] - 2*q[0]*q[1],
-                -q[1] - q[0]**2 + q[1]**2,
-            ])
+            dpdt = np.array(
+                [
+                    -q[0] - 2 * q[0] * q[1],
+                    -q[1] - q[0] ** 2 + q[1] ** 2,
+                ]
+            )
         else:
             dpdt = -q
         return dqdt, dpdt
@@ -449,6 +454,7 @@ class DoublePendulum(HamiltonianSystem):
 # =============================================================================
 # Phase Space Analysis
 # =============================================================================
+
 
 class PhaseSpaceAnalyzer:
     """Phase space analysis tools.
@@ -606,6 +612,7 @@ class PhaseSpaceAnalyzer:
 # Factory Functions
 # =============================================================================
 
+
 def create_integrator(
     method: str = "verlet",
     dt: float = 0.01,
@@ -662,8 +669,6 @@ def create_system(
     }
 
     if system_type not in systems:
-        raise ValueError(
-            f"Unknown system: {system_type}. Available: {list(systems.keys())}"
-        )
+        raise ValueError(f"Unknown system: {system_type}. Available: {list(systems.keys())}")
 
     return systems[system_type](**params)

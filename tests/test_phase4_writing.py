@@ -27,6 +27,7 @@ from berb.pipeline.citation_verification import (  # noqa: E402
 
 # ============== Anti-AI Encoder Tests ==============
 
+
 class TestEncoderConfig:
     """Test EncoderConfig."""
 
@@ -102,10 +103,10 @@ class TestAntiAIEncoder:
     def test_detect_english_ai_phrases(self):
         """Test English AI phrase detection."""
         encoder = AntiAIEncoder(EncoderConfig(language=["en"]))
-        
+
         text = "This is a testament to the power of deep learning."
         result = encoder.detect(text)
-        
+
         assert result.ai_score > 0
         assert len(result.phrases) > 0
         assert any("testament" in p.phrase.lower() for p in result.phrases)
@@ -113,10 +114,10 @@ class TestAntiAIEncoder:
     def test_detect_chinese_ai_phrases(self):
         """Test Chinese AI phrase detection."""
         encoder = AntiAIEncoder(EncoderConfig(language=["zh"]))
-        
+
         text = "值得注意的是，这个发现很重要。"
         result = encoder.detect(text)
-        
+
         assert result.ai_score > 0
         assert len(result.phrases) > 0
         assert any("值得" in p.phrase for p in result.phrases)
@@ -124,35 +125,35 @@ class TestAntiAIEncoder:
     def test_rewrite_english(self):
         """Test English AI phrase rewriting."""
         encoder = AntiAIEncoder(EncoderConfig(language=["en"]))
-        
+
         text = "This is a testament to the power of deep learning."
         rewritten = encoder.rewrite(text)
-        
+
         assert "testament" not in rewritten.lower()
         assert "evidence" in rewritten.lower() or "testament" not in rewritten
 
     def test_rewrite_chinese(self):
         """Test Chinese AI phrase rewriting."""
         encoder = AntiAIEncoder(EncoderConfig(language=["zh"]))
-        
+
         text = "值得注意的是，这个发现很重要。"
         rewritten = encoder.rewrite(text)
-        
+
         assert "值得" not in rewritten
         assert "重要" in rewritten
 
     def test_detect_batch(self):
         """Test batch detection."""
         encoder = AntiAIEncoder()
-        
+
         texts = [
             "This is a testament to...",
             "值得注意的是...",
             "Normal human text.",
         ]
-        
+
         results = encoder.detect_batch(texts)
-        
+
         assert len(results) == 3
         assert results[0].ai_score > 0.5  # AI-like
         assert results[1].ai_score > 0.5  # AI-like
@@ -160,24 +161,24 @@ class TestAntiAIEncoder:
     def test_rewrite_batch(self):
         """Test batch rewriting."""
         encoder = AntiAIEncoder()
-        
+
         texts = [
             "This is a testament to...",
             "值得注意的是...",
         ]
-        
+
         rewritten = encoder.rewrite_batch(texts)
-        
+
         assert len(rewritten) == 2
         assert "testament" not in rewritten[0].lower()
 
     def test_get_statistics(self):
         """Test writing statistics."""
         encoder = AntiAIEncoder()
-        
+
         text = "This is a test. This is only a test. Testing one two three."
         stats = encoder.get_statistics(text)
-        
+
         assert stats["word_count"] > 0
         assert stats["sentence_count"] > 0
         assert stats["avg_sentence_length"] > 0
@@ -185,40 +186,41 @@ class TestAntiAIEncoder:
     def test_categorize_en(self):
         """Test English phrase categorization."""
         encoder = AntiAIEncoder()
-        
+
         category = encoder._categorize_en("delve into")
         assert category == "cliche"
-        
+
         category = encoder._categorize_en("however")
         assert category == "transition"
 
     def test_categorize_zh(self):
         """Test Chinese phrase categorization."""
         encoder = AntiAIEncoder()
-        
+
         category = encoder._categorize_zh("值得注意的是")
         assert category == "filler"
-        
+
         category = encoder._categorize_zh("然而")
         assert category == "transition"
 
     def test_generate_recommendations(self):
         """Test recommendation generation."""
         encoder = AntiAIEncoder()
-        
+
         phrases = [
             AIPhrases(phrase="test1", category="cliche", confidence=0.8),
             AIPhrases(phrase="test2", category="cliche", confidence=0.8),
             AIPhrases(phrase="test3", category="cliche", confidence=0.8),
         ]
-        
+
         recommendations = encoder._generate_recommendations(phrases, 0.7)
-        
+
         assert len(recommendations) > 0
         assert any("cliche" in r.lower() for r in recommendations)
 
 
 # ============== Citation Verification Tests ==============
+
 
 class TestVerifierConfig:
     """Test VerifierConfig."""
@@ -286,17 +288,18 @@ class TestCitationVerifier:
     def test_check_format_valid_doi(self):
         """Test DOI format validation."""
         verifier = CitationVerifier()
-        
+
         citation = {"doi": "10.1038/s41586-021-03819-2"}
         # Note: This is async, but we'll test the pattern directly
         import re
+
         pattern = verifier.DOI_PATTERN
         assert pattern.match("10.1038/s41586-021-03819-2")
 
     def test_check_format_invalid_doi(self):
         """Test invalid DOI format."""
         verifier = CitationVerifier()
-        
+
         pattern = verifier.DOI_PATTERN
         assert not pattern.match("invalid-doi")
         assert not pattern.match("10.100")  # Too short
@@ -304,7 +307,7 @@ class TestCitationVerifier:
     def test_check_format_valid_arxiv(self):
         """Test arXiv ID format validation."""
         verifier = CitationVerifier()
-        
+
         pattern = verifier.ARXIV_PATTERN
         assert pattern.match("2103.12345")
         assert pattern.match("2103.12345v2")
@@ -312,7 +315,7 @@ class TestCitationVerifier:
     def test_check_format_invalid_arxiv(self):
         """Test invalid arXiv ID format."""
         verifier = CitationVerifier()
-        
+
         pattern = verifier.ARXIV_PATTERN
         assert not pattern.match("invalid-arxiv")
         assert not pattern.match("1234")  # Too short
@@ -327,10 +330,10 @@ class TestCitationVerifier:
             enable_content_check=False,
         )
         verifier = CitationVerifier(config)
-        
+
         citation = {"doi": "10.1038/s41586-021-03819-2"}
         result = await verifier.verify(citation)
-        
+
         assert VerificationLayer.FORMAT in result.layers_passed
         assert result.is_valid is True
 
@@ -344,47 +347,47 @@ class TestCitationVerifier:
             enable_content_check=False,
         )
         verifier = CitationVerifier(config)
-        
+
         citation = {"doi": "invalid-doi"}
         result = await verifier.verify(citation)
-        
+
         assert VerificationLayer.FORMAT in result.layers_failed
         assert result.is_valid is False
 
     def test_fuzzy_match(self):
         """Test fuzzy string matching."""
         verifier = CitationVerifier()
-        
+
         # High similarity (same words)
         assert verifier._fuzzy_match("Deep Learning", "deep learning") is True
-        
+
         # Partial similarity (some overlap, but below 0.7 threshold)
         # "Deep Learning" vs "deep neural networks" = 1/4 = 25% overlap
         assert verifier._fuzzy_match("Deep Learning", "deep neural networks") is False
-        
+
         # Good overlap test (2/3 = 67% - still below 0.7)
         assert verifier._fuzzy_match("Deep Learning Methods", "deep learning approaches") is False
-        
+
         # Very high overlap (3/4 = 75% - above 0.7)
         assert verifier._fuzzy_match("Deep Learning Methods", "deep learning methods are") is True
-        
+
         # Low similarity
         assert verifier._fuzzy_match("Deep Learning", "quantum physics") is False
 
     def test_keyword_alignment(self):
         """Test keyword-based alignment."""
         verifier = CitationVerifier()
-        
+
         citation = {"title": "Deep Learning for Natural Language Processing"}
         claim = "This paper presents deep learning methods for NLP tasks."
-        
+
         alignment = verifier._keyword_alignment(citation, claim)
         assert alignment > 0.5  # Should have good overlap
 
     def test_calculate_confidence(self):
         """Test confidence calculation."""
         verifier = CitationVerifier()
-        
+
         # All layers passed
         result = CitationVerificationResult(
             layers_passed=[
@@ -409,25 +412,34 @@ class TestCitationVerifier:
 
 # ============== Environment Configuration Tests ==============
 
+
 class TestEnvironmentConfig:
     """Test environment-based configuration."""
 
     def test_create_encoder_from_env(self):
         """Test creating AntiAIEncoder from environment."""
-        with patch.dict('os.environ', {
-            'ANTI_AI_LANGUAGE': 'en',
-            'ANTI_AI_STRICTNESS': '0.9',
-        }, clear=False):
+        with patch.dict(
+            "os.environ",
+            {
+                "ANTI_AI_LANGUAGE": "en",
+                "ANTI_AI_STRICTNESS": "0.9",
+            },
+            clear=False,
+        ):
             encoder = create_encoder_from_env()
             assert encoder.config.language == ["en"]
             assert encoder.config.strictness == 0.9
 
     def test_create_verifier_from_env(self):
         """Test creating CitationVerifier from environment."""
-        with patch.dict('os.environ', {
-            'CITATION_ENABLE_API': 'false',
-            'CITATION_TIMEOUT': '60',
-        }, clear=False):
+        with patch.dict(
+            "os.environ",
+            {
+                "CITATION_ENABLE_API": "false",
+                "CITATION_TIMEOUT": "60",
+            },
+            clear=False,
+        ):
             verifier = create_verifier_from_env()
             assert verifier.config.enable_api_check is False
             assert verifier.config.timeout == 60
@@ -435,17 +447,20 @@ class TestEnvironmentConfig:
 
 # ============== Integration Tests ==============
 
+
 class TestWritingIntegration:
     """Test writing module integration."""
 
     def test_import_anti_ai_encoder(self):
         """Test AntiAIEncoder can be imported."""
         from berb.writing.anti_ai import AntiAIEncoder
+
         assert AntiAIEncoder is not None
 
     def test_import_citation_verifier(self):
         """Test CitationVerifier can be imported."""
         from berb.pipeline.citation_verification import CitationVerifier
+
         assert CitationVerifier is not None
 
 

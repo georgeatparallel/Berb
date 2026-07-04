@@ -52,8 +52,7 @@ class ExperimentHarness:
             )
             if self._nan_count >= 5:
                 print(
-                    "FAIL: Too many NaN/Inf values detected. "
-                    "Stopping experiment early.",
+                    "FAIL: Too many NaN/Inf values detected. Stopping experiment early.",
                     file=sys.stderr,
                 )
                 self.finalize()

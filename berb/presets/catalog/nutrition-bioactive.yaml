@@ -64,7 +64,6 @@ enabled_stages:
   - 21
   - 22
   - 23
-
 stage_overrides:
   3:  # Literature search — include food chemistry DBs
     extra_sources: ["food_composition_db", "phenol_explorer", "knapsack_db"]

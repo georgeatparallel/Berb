@@ -5,20 +5,20 @@ Includes auto-detection for intelligent preset selection.
 # Author: Georgios-Chrysovalantis Chatzivantsidis
 """
 
+from berb.presets.auto_detect import (
+    DomainClassifier,
+    DomainDetectionResult,
+    DomainDetector,
+    DomainSuggestion,
+    detect_domain,
+)
 from berb.presets.base import PipelinePreset
 from berb.presets.registry import (
     PresetRegistry,
-    load_preset,
-    list_presets,
     get_preset,
     get_registry,
-)
-from berb.presets.auto_detect import (
-    DomainClassifier,
-    DomainDetector,
-    DomainSuggestion,
-    DomainDetectionResult,
-    detect_domain,
+    list_presets,
+    load_preset,
 )
 
 __all__ = [

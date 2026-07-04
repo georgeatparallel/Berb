@@ -72,9 +72,7 @@ def _paper_section(run_dir: Path) -> str:
     if draft_path.exists():
         text = draft_path.read_text(encoding="utf-8")
         word_count = len(text.split())
-        lines.append(
-            f"- Draft: `{draft_path.relative_to(run_dir)}` (~{word_count} words)"
-        )
+        lines.append(f"- Draft: `{draft_path.relative_to(run_dir)}` (~{word_count} words)")
     else:
         lines.append("- Draft: not generated")
 

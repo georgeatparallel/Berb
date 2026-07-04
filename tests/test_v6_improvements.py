@@ -5,6 +5,7 @@ Run with:
 or:
     .venv/bin/python3 tests/test_v6_improvements.py
 """
+
 from __future__ import annotations
 
 import re
@@ -18,6 +19,7 @@ from pathlib import Path
 # IMP-13: Test _extract_paper_title import & behaviour
 # ============================================================
 
+
 class TestIMP13_ExtractPaperTitle:
     """IMP-13: runner.py imports _extract_paper_title from executor.
     Verify the import works and the function produces correct results."""
@@ -26,11 +28,13 @@ class TestIMP13_ExtractPaperTitle:
         """The import `from berb.pipeline.executor import _extract_paper_title`
         must succeed — runner.py line 394 depends on it."""
         from berb.pipeline.executor import _extract_paper_title
+
         assert callable(_extract_paper_title), "_extract_paper_title should be callable"
         print("[IMP-13] PASS: import _extract_paper_title works")
 
     def test_extracts_h1_title(self):
         from berb.pipeline.executor import _extract_paper_title
+
         md = textwrap.dedent("""\
             # A Novel Approach to Deep Reinforcement Learning
 
@@ -39,13 +43,15 @@ class TestIMP13_ExtractPaperTitle:
             This paper presents...
         """)
         title = _extract_paper_title(md)
-        assert title == "A Novel Approach to Deep Reinforcement Learning", \
+        assert title == "A Novel Approach to Deep Reinforcement Learning", (
             f"Expected H1 title, got: {title!r}"
+        )
         print(f"[IMP-13] PASS: extracted title = {title!r}")
 
     def test_skips_abstract_heading(self):
         """Title before Abstract should be found; Abstract heading itself skipped."""
         from berb.pipeline.executor import _extract_paper_title
+
         md = textwrap.dedent("""\
             # A Real Title of at Least Four Words
 
@@ -55,14 +61,16 @@ class TestIMP13_ExtractPaperTitle:
         """)
         title = _extract_paper_title(md)
         # "Abstract" should be skipped; the real title (before Abstract) is found
-        assert title == "A Real Title of at Least Four Words", \
+        assert title == "A Real Title of at Least Four Words", (
             f"Expected real title, got: {title!r}"
+        )
         print(f"[IMP-13] PASS: skipped Abstract, got title = {title!r}")
 
     def test_title_after_abstract_not_found(self):
         """If the only real title is AFTER Abstract, it should not be found
         (function searches only before Abstract heading)."""
         from berb.pipeline.executor import _extract_paper_title
+
         md = textwrap.dedent("""\
             # Abstract
 
@@ -72,12 +80,14 @@ class TestIMP13_ExtractPaperTitle:
         """)
         title = _extract_paper_title(md)
         # Title after Abstract is not in the search region, so fallback
-        assert title == "Untitled Paper", \
+        assert title == "Untitled Paper", (
             f"Expected 'Untitled Paper' since title is after Abstract, got: {title!r}"
+        )
         print(f"[IMP-13] PASS: title after Abstract not found, fallback = {title!r}")
 
     def test_fallback_untitled(self):
         from berb.pipeline.executor import _extract_paper_title
+
         md = "Just some text without any headings."
         title = _extract_paper_title(md)
         assert title == "Untitled Paper", f"Expected 'Untitled Paper', got: {title!r}"
@@ -85,6 +95,7 @@ class TestIMP13_ExtractPaperTitle:
 
     def test_bold_title(self):
         from berb.pipeline.executor import _extract_paper_title
+
         md = textwrap.dedent("""\
             **A Bold Title for This Paper**
 
@@ -101,6 +112,7 @@ class TestIMP13_ExtractPaperTitle:
 # IMP-14: Test orphaned cite-key stripping logic
 # ============================================================
 
+
 class TestIMP14_StripOrphanedCites:
     """IMP-14: After packaging, any \\cite{key} where key is not in
     references.bib should be stripped from paper.tex."""
@@ -115,6 +127,7 @@ class TestIMP14_StripOrphanedCites:
         missing = all_cite_keys - bib_keys
 
         if missing:
+
             def _filter_cite(m: re.Match[str]) -> str:
                 keys = [k.strip() for k in m.group(1).split(",")]
                 kept = [k for k in keys if k not in missing]
@@ -172,9 +185,7 @@ class TestIMP14_StripOrphanedCites:
 
     def test_multiple_cite_commands(self):
         """Multiple \\cite commands, each with different missing keys."""
-        tex = (
-            r"First \cite{a, b} second \cite{b, c} third \cite{d}."
-        )
+        tex = r"First \cite{a, b} second \cite{b, c} third \cite{d}."
         bib = textwrap.dedent("""\
             @article{a,
               author = {X},
@@ -194,8 +205,9 @@ class TestIMP14_StripOrphanedCites:
         assert r"\cite{c}" in result, f"Expected \\cite{{c}}, got: {result!r}"
         # b should not appear as a cite key
         assert r"\cite{b}" not in result, f"\\cite{{b}} should be gone: {result!r}"
-        assert r", b}" not in result and r"{b," not in result, \
+        assert r", b}" not in result and r"{b," not in result, (
             f"b key should be stripped: {result!r}"
+        )
         # \cite{d} should be entirely removed (d was the only key)
         assert r"\cite{d}" not in result, f"\\cite{{d}} should be gone: {result!r}"
         print(f"[IMP-14] PASS: multiple cites → {result!r}")
@@ -215,6 +227,7 @@ class TestIMP14_StripOrphanedCites:
 # IMP-15: Test BibTeX deduplication
 # ============================================================
 
+
 class TestIMP15_BibDedup:
     """IMP-15: Deduplicate .bib entries sharing the same cite key."""
 
@@ -223,16 +236,12 @@ class TestIMP15_BibDedup:
         """Reproduce IMP-15 logic from runner.py lines 486-503."""
         _seen_bib_keys: set[str] = set()
         _deduped_entries: list[str] = []
-        for _bm in re.finditer(
-            r"(@\w+\{([^,]+),.*?\n\})", bib_text, re.DOTALL
-        ):
+        for _bm in re.finditer(r"(@\w+\{([^,]+),.*?\n\})", bib_text, re.DOTALL):
             _bkey = _bm.group(2).strip()
             if _bkey not in _seen_bib_keys:
                 _seen_bib_keys.add(_bkey)
                 _deduped_entries.append(_bm.group(1))
-        if len(_deduped_entries) < len(
-            list(re.finditer(r"@\w+\{", bib_text))
-        ):
+        if len(_deduped_entries) < len(list(re.finditer(r"@\w+\{", bib_text))):
             bib_text = "\n\n".join(_deduped_entries) + "\n"
         return bib_text
 
@@ -329,6 +338,7 @@ class TestIMP15_BibDedup:
 # IMP-16: Test bootstrap CI fallback
 # ============================================================
 
+
 class TestIMP16_BootstrapCIFallback:
     """IMP-16: If bootstrap CI does not contain the mean,
     fall back to normal approximation (mean +/- 1.96*SE)."""
@@ -365,10 +375,11 @@ class TestIMP16_BootstrapCIFallback:
         vals = [0.8, 0.82, 0.79, 0.81, 0.83]
         ci_low, ci_high, used_fallback = self._compute_ci_with_fallback(vals)
         mean = statistics.mean(vals)
-        assert ci_low <= mean <= ci_high, \
-            f"CI [{ci_low}, {ci_high}] should contain mean {mean}"
+        assert ci_low <= mean <= ci_high, f"CI [{ci_low}, {ci_high}] should contain mean {mean}"
         assert not used_fallback, "Should NOT have used fallback for normal data"
-        print(f"[IMP-16] PASS: normal data → CI=[{ci_low}, {ci_high}], mean={mean:.4f}, no fallback")
+        print(
+            f"[IMP-16] PASS: normal data → CI=[{ci_low}, {ci_high}], mean={mean:.4f}, no fallback"
+        )
 
     def test_fallback_triggers_for_pathological_data(self):
         """Construct data where bootstrap CI might not contain the mean.
@@ -392,8 +403,9 @@ class TestIMP16_BootstrapCIFallback:
         fallback_low = round(mean - 1.96 * se, 6)
         fallback_high = round(mean + 1.96 * se, 6)
 
-        assert fallback_low <= mean <= fallback_high, \
+        assert fallback_low <= mean <= fallback_high, (
             f"Fallback CI [{fallback_low}, {fallback_high}] must contain mean {mean}"
+        )
         print(f"[IMP-16] PASS: fallback CI=[{fallback_low}, {fallback_high}], mean={mean:.4f}")
 
     def test_fallback_ci_always_contains_mean(self):
@@ -410,8 +422,9 @@ class TestIMP16_BootstrapCIFallback:
             se = std / (len(vals) ** 0.5)
             ci_low = round(mean - 1.96 * se, 6)
             ci_high = round(mean + 1.96 * se, 6)
-            assert ci_low <= mean <= ci_high, \
+            assert ci_low <= mean <= ci_high, (
                 f"Fallback CI [{ci_low}, {ci_high}] must contain mean {mean} for vals={vals}"
+            )
         print(f"[IMP-16] PASS: fallback always contains mean for {len(test_cases)} test cases")
 
     def test_condition_check_logic(self):
@@ -435,8 +448,9 @@ class TestIMP16_BootstrapCIFallback:
         vals = [1.0, 2.0, 3.0]
         ci_low, ci_high, _ = self._compute_ci_with_fallback(vals)
         mean = statistics.mean(vals)
-        assert ci_low <= mean <= ci_high, \
+        assert ci_low <= mean <= ci_high, (
             f"CI [{ci_low}, {ci_high}] should contain mean {mean} for n=3"
+        )
         print(f"[IMP-16] PASS: n=3 works → CI=[{ci_low}, {ci_high}], mean={mean:.4f}")
 
 
@@ -444,6 +458,7 @@ class TestIMP16_BootstrapCIFallback:
 # Integration-style: Test the runner.py _package_deliverables
 # cite-stripping + dedup pipeline end-to-end
 # ============================================================
+
 
 class TestIMP14_15_Integration:
     """End-to-end test: dedup + cite stripping on a realistic scenario."""
@@ -505,16 +520,17 @@ class TestIMP14_15_Integration:
         tex_text = re.sub(r"  +", " ", tex_text)
         tex_text = re.sub(r" ([.,;:)])", r"\1", tex_text)
 
-        assert r"\cite{smith2024, jones2023}" in tex_text, \
+        assert r"\cite{smith2024, jones2023}" in tex_text, (
             f"Expected valid keys kept, got: {tex_text!r}"
-        assert "ghost2024" not in tex_text, \
-            f"ghost2024 should be stripped: {tex_text!r}"
+        )
+        assert "ghost2024" not in tex_text, f"ghost2024 should be stripped: {tex_text!r}"
         print(f"[Integration] PASS: dedup + cite strip → {tex_text!r}")
 
 
 # ============================================================
 # Runner
 # ============================================================
+
 
 def run_all_tests():
     """Run all tests manually (fallback if pytest not available)."""
@@ -545,13 +561,13 @@ def run_all_tests():
                 errors.append(err_msg)
                 print(f"  FAIL: {err_msg}")
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Results: {passed}/{total} passed, {failed} failed")
     if errors:
         print("Failures:")
         for e in errors:
             print(f"  - {e}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     return failed == 0
 
 

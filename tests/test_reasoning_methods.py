@@ -37,6 +37,7 @@ from berb.reasoning.jury import JuryMethod
 
 # ============== Fixtures ==============
 
+
 @pytest.fixture
 def mock_llm_client():
     """Create a mock LLM client for testing."""
@@ -69,6 +70,7 @@ def sample_context():
 
 
 # ============== Base Class Tests ==============
+
 
 class TestReasoningContext:
     """Test ReasoningContext class."""
@@ -155,6 +157,7 @@ class TestReasoningResult:
 
 # ============== Method Tests ==============
 
+
 class TestMultiPerspectiveMethod:
     """Test Multi-Perspective reasoning method."""
 
@@ -208,9 +211,7 @@ class TestBayesianMethod:
             {"name": "H1", "prior": 0.5, "description": "Test hypothesis 1"},
             {"name": "H2", "prior": 0.3, "description": "Test hypothesis 2"},
         ]
-        sample_context.input_data["evidence"] = [
-            {"name": "E1", "description": "Test evidence"}
-        ]
+        sample_context.input_data["evidence"] = [{"name": "E1", "description": "Test evidence"}]
         method = BayesianMethod()
         result = await method.execute(sample_context)
         assert isinstance(result, ReasoningResult)
@@ -365,8 +366,12 @@ class TestJuryMethod:
         """Test verdict determination logic."""
         # Test vote counting logic manually
         votes = ["approve", "approve", "approve"]
-        vote_count = {"approve": votes.count("approve"), "reject": votes.count("reject"), "abstain": votes.count("abstain")}
-        
+        vote_count = {
+            "approve": votes.count("approve"),
+            "reject": votes.count("reject"),
+            "abstain": votes.count("abstain"),
+        }
+
         if vote_count["approve"] == len(votes):
             verdict = "unanimous_approve"
         elif vote_count["reject"] == len(votes):
@@ -375,18 +380,23 @@ class TestJuryMethod:
             verdict = "majority_approve"
         else:
             verdict = "hung"
-            
+
         assert verdict == "unanimous_approve"
-        
+
         # Test majority
         votes = ["approve", "approve", "reject"]
-        vote_count = {"approve": votes.count("approve"), "reject": votes.count("reject"), "abstain": votes.count("abstain")}
+        vote_count = {
+            "approve": votes.count("approve"),
+            "reject": votes.count("reject"),
+            "abstain": votes.count("abstain"),
+        }
         if vote_count["approve"] > vote_count["reject"]:
             verdict = "majority_approve"
         assert verdict == "majority_approve"
 
 
 # ============== Integration Tests ==============
+
 
 class TestReasoningIntegration:
     """Integration tests for reasoning methods."""
@@ -432,6 +442,7 @@ class TestReasoningIntegration:
 
 # ============== Error Handling Tests ==============
 
+
 class TestErrorHandling:
     """Test error handling in reasoning methods."""
 
@@ -463,6 +474,7 @@ class TestErrorHandling:
 
 
 # ============== Performance Tests ==============
+
 
 class TestPerformance:
     """Performance tests for reasoning methods."""

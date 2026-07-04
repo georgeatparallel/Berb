@@ -133,10 +133,12 @@ class EmbeddingProvider:
         import urllib.request
 
         url = f"{self._api_base_url.rstrip('/')}/embeddings"
-        payload = json.dumps({
-            "input": text[:8000],
-            "model": self._model,
-        }).encode()
+        payload = json.dumps(
+            {
+                "input": text[:8000],
+                "model": self._model,
+            }
+        ).encode()
 
         req = urllib.request.Request(
             url,

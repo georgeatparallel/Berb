@@ -16,13 +16,12 @@ from __future__ import annotations
 
 import logging
 import os
-import shutil
 import subprocess
 import sys
 from pathlib import Path
 from typing import Any
 
-from berb.agents.base import BaseAgent, AgentStepResult
+from berb.agents.base import AgentStepResult, BaseAgent
 from berb.utils.sanitize import sanitize_figure_id
 
 logger = logging.getLogger(__name__)
@@ -30,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 def _get_docker_user_id() -> str:
     """Get user ID for Docker --user flag (cross-platform)."""
-    if hasattr(os, 'getuid'):
+    if hasattr(os, "getuid"):
         return f"{os.getuid()}:{os.getgid()}"
     else:
         # Windows: use default container user
@@ -148,7 +147,8 @@ class RendererAgent(BaseAgent):
             success_count = sum(1 for r in results if r["success"])
             self.logger.info(
                 "Rendered %d/%d figures successfully",
-                success_count, len(scripts),
+                success_count,
+                len(scripts),
             )
 
             return self._make_result(
@@ -175,9 +175,9 @@ class RendererAgent(BaseAgent):
     ) -> dict[str, Any]:
         """Render a single figure script."""
         figure_id = sanitize_figure_id(figure_id)
-        output_filename = sanitize_figure_id(
-            output_filename.replace(".png", ""), fallback="figure"
-        ) + ".png"
+        output_filename = (
+            sanitize_figure_id(output_filename.replace(".png", ""), fallback="figure") + ".png"
+        )
         result: dict[str, Any] = {
             "figure_id": figure_id,
             "success": False,
@@ -199,6 +199,7 @@ class RendererAgent(BaseAgent):
         # the output dir is mounted at /workspace/output.
         if self._use_docker:
             import re as _re_path
+
             _host_out = str(output_dir.resolve())
             # Replace host output dir with Docker-mapped path
             script_code = script_code.replace(_host_out, "/workspace/output")
@@ -227,9 +228,7 @@ class RendererAgent(BaseAgent):
 
         if proc_result["error"]:
             result["error"] = proc_result["error"]
-            self.logger.warning(
-                "Render failed for %s: %s", figure_id, result["error"][:200]
-            )
+            self.logger.warning("Render failed for %s: %s", figure_id, result["error"][:200])
             return result
 
         # Verify output file exists
@@ -248,9 +247,7 @@ class RendererAgent(BaseAgent):
         file_size = output_path.stat().st_size
         if file_size < _MIN_FILE_SIZE:
             result["error"] = f"Output file too small ({file_size} bytes)"
-            self.logger.warning(
-                "Output too small for %s: %d bytes", figure_id, file_size
-            )
+            self.logger.warning("Output too small for %s: %d bytes", figure_id, file_size)
             return result
 
         result["success"] = True
@@ -314,23 +311,35 @@ class RendererAgent(BaseAgent):
         This prevents RCE from LLM-generated visualization code.
         """
         import uuid as _uuid_renderer
+
         container_name = f"rc-viz-{figure_id}-{os.getpid()}-{_uuid_renderer.uuid4().hex[:8]}"
 
         cmd = [
-            "docker", "run",
-            "--name", container_name,
+            "docker",
+            "run",
+            "--name",
+            container_name,
             "--rm",
-            "--network", "none",
+            "--network",
+            "none",
             "--read-only",
-            "--tmpfs", "/tmp:rw,noexec,nosuid,size=64m",
-            f"--memory=512m",
-            "-e", "MPLCONFIGDIR=/tmp/matplotlib",
-            "-e", "XDG_CONFIG_HOME=/tmp",
-            "-v", f"{script_path.resolve()}:/workspace/script.py:ro",
-            "-v", f"{output_dir.resolve()}:/workspace/output:rw",
-            "-w", "/workspace/output",  # BUG-60: CWD = output dir so relative paths work
-            "--user", _get_docker_user_id(),
-            "--entrypoint", "python3",
+            "--tmpfs",
+            "/tmp:rw,noexec,nosuid,size=64m",
+            "--memory=512m",
+            "-e",
+            "MPLCONFIGDIR=/tmp/matplotlib",
+            "-e",
+            "XDG_CONFIG_HOME=/tmp",
+            "-v",
+            f"{script_path.resolve()}:/workspace/script.py:ro",
+            "-v",
+            f"{output_dir.resolve()}:/workspace/output:rw",
+            "-w",
+            "/workspace/output",  # BUG-60: CWD = output dir so relative paths work
+            "--user",
+            _get_docker_user_id(),
+            "--entrypoint",
+            "python3",
             self._docker_image,
             "/workspace/script.py",
         ]

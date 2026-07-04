@@ -20,7 +20,6 @@ import re
 import threading
 import time
 from pathlib import Path
-from typing import Any
 
 try:
     import arxiv  # pip install arxiv
@@ -101,7 +100,8 @@ def _cb_on_failure() -> bool:
             _cb_trip_count += 1
             logger.warning(
                 "arXiv circuit breaker TRIPPED (trip #%d, cooldown %.0fs)",
-                _cb_trip_count, _cb_cooldown_sec,
+                _cb_trip_count,
+                _cb_cooldown_sec,
             )
             return True
         return False
@@ -119,9 +119,9 @@ def _get_client() -> arxiv.Client:
     global _client  # noqa: PLW0603
     if _client is None:
         _client = arxiv.Client(
-            page_size=100,       # fetch up to 100 per API call
-            delay_seconds=3.1,   # arXiv requires ≥3s between requests
-            num_retries=3,       # built-in retry on failure
+            page_size=100,  # fetch up to 100 per API call
+            delay_seconds=3.1,  # arXiv requires ≥3s between requests
+            num_retries=3,  # built-in retry on failure
         )
     return _client
 

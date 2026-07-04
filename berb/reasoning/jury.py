@@ -33,21 +33,21 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from .base import (
-    ReasoningMethod,
-    ReasoningContext,
-    ReasoningResult,
     MethodType,
+    ReasoningContext,
+    ReasoningMethod,
+    ReasoningResult,
 )
 from .registry import ReasonerRegistry
 
 logger = logging.getLogger(__name__)
 
 
-class JurorRole(str, Enum):
+class JurorRole(StrEnum):
     """Role of a juror in the jury."""
 
     OPTIMIST = "optimist"  # Sees potential and benefits
@@ -78,7 +78,9 @@ class JuryResult:
 
     case: str = ""
     jurors: list[Juror] = field(default_factory=list)
-    verdict: str = ""  # "unanimous_approve", "majority_approve", "majority_reject", "unanimous_reject", "hung"
+    verdict: str = (
+        ""  # "unanimous_approve", "majority_approve", "majority_reject", "unanimous_reject", "hung"
+    )
     foreman_synthesis: str = ""
     vote_count: dict[str, int] = field(default_factory=dict)  # approve, reject, abstain
     key_arguments: list[str] = field(default_factory=list)
@@ -114,7 +116,7 @@ class JuryMethod(ReasoningMethod):
 
     def __init__(
         self,
-        router: Any = None,      # NEW: Primary (ExtendedNadirClawRouter)
+        router: Any = None,  # NEW: Primary (ExtendedNadirClawRouter)
         llm_client: Any = None,  # DEPRECATED: Fallback only
         jury_size: int = 6,
         require_unanimous: bool = False,
@@ -155,7 +157,7 @@ class JuryMethod(ReasoningMethod):
             Exception: If deliberation fails
         """
         import uuid
-        
+
         start_time = time.time()
         self._run_id = f"jury-{uuid.uuid4().hex[:8]}"
 
@@ -184,9 +186,7 @@ class JuryMethod(ReasoningMethod):
                 await self._juror_deliberation(juror, case, context)
 
             # Foreman synthesis
-            verdict, synthesis, vote_count = await self._foreman_synthesis(
-                jurors, case, context
-            )
+            verdict, synthesis, vote_count = await self._foreman_synthesis(jurors, case, context)
 
             # Collect key arguments and dissenting opinions
             key_args = self._collect_key_arguments(jurors)
@@ -221,20 +221,17 @@ class JuryMethod(ReasoningMethod):
                     "foreman_synthesis": synthesis,
                     "key_arguments": key_args,
                     "dissenting_opinions": dissenting,
-                    "juror_reasoning": {
-                        f"{j.name} ({j.role.value})": j.reasoning
-                        for j in jurors
-                    },
+                    "juror_reasoning": {f"{j.name} ({j.role.value})": j.reasoning for j in jurors},
                     "confidence": result.confidence,
                 },
                 confidence=result.confidence,
                 duration_sec=duration,
                 model_used=context.metadata.get("model", "unknown"),
             )
-            
+
             # Track cost if router supports it
             self._track_cost(duration)
-            
+
             return jury_result
 
         except Exception as e:
@@ -370,8 +367,7 @@ Respond in JSON format:
         # Generate synthesis
         if self.llm_client:
             juror_summaries = "\n".join(
-                f"{j.name} ({j.role.value}): {j.verdict} - {j.reasoning[:100]}..."
-                for j in jurors
+                f"{j.name} ({j.role.value}): {j.verdict} - {j.reasoning[:100]}..." for j in jurors
             )
 
             prompt = f"""As the jury foreman, synthesize the deliberations:
@@ -381,7 +377,7 @@ Case: {case}
 Juror votes:
 {juror_summaries}
 
-Vote count: Approve={vote_count['approve']}, Reject={vote_count['reject']}, Abstain={vote_count['abstain']}
+Vote count: Approve={vote_count["approve"]}, Reject={vote_count["reject"]}, Abstain={vote_count["abstain"]}
 
 Provide a synthesis that:
 1. Summarizes the key considerations
@@ -456,17 +452,17 @@ Respond in JSON format:
         majority_bonus = (majority_size / len(jurors)) * 0.2
 
         return min(1.0, unanimity_bonus + (avg_confidence * 0.6) + majority_bonus)
-    
+
     def _track_cost(self, duration_sec: float) -> None:
         """Track cost for jury execution."""
         if self.router is None or self._run_id is None:
             return
-        
-        if hasattr(self.router, 'track_cost'):
+
+        if hasattr(self.router, "track_cost"):
             # Estimate tokens for jury (6 jurors + foreman synthesis)
             estimated_input = 500 * self.jury_size + 1000  # jurors + synthesis
             estimated_output = 400 * self.jury_size + 800
-            
+
             self.router.track_cost(
                 method="jury",
                 phase="all",

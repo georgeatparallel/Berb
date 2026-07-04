@@ -8,6 +8,7 @@ Features:
   - JSON mode support
   - Streaming disabled (sync only)
   - Stage-based output token limits (15-25% cost reduction)
+  - Circuit breaker for cascading failure prevention (P0 2026-04-02)
 """
 
 from __future__ import annotations
@@ -15,21 +16,23 @@ from __future__ import annotations
 import json
 import logging
 import os
+import threading
 import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-class LLMProvider(str, Enum):
+class LLMProvider(StrEnum):
     """LLM provider enumeration.
-    
+
     Used for cross-model review and provider-specific routing.
     """
+
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
     GOOGLE = "google"
@@ -45,41 +48,58 @@ class LLMProvider(str, Enum):
     UNKNOWN = "unknown"
 
 
+# OpenRouter uses different vendor slugs than our LLMProvider enum values
+# for a few providers (e.g. "z-ai/glm-4.5", "x-ai/grok-4"). Map those
+# OpenRouter-specific prefixes onto the corresponding LLMProvider.
+_OPENROUTER_PREFIX_ALIASES: dict[str, LLMProvider] = {
+    "z-ai": LLMProvider.GLM,
+    "x-ai": LLMProvider.XAI,
+    "moonshotai": LLMProvider.KIMI,
+    "xiaomi": LLMProvider.MIMO,
+}
+
+
 def get_provider_from_model(model: str) -> LLMProvider:
     """Extract provider from model string.
-    
+
     Args:
         model: Model identifier (e.g., 'qwen/qwen3.5-flash')
-    
+
     Returns:
         LLMProvider enum value
-    
+
     Example:
         >>> get_provider_from_model('qwen/qwen3.5-flash')
         <LLMProvider.QWEN: 'qwen'>
+        >>> get_provider_from_model('z-ai/glm-4.5')
+        <LLMProvider.GLM: 'glm'>
         >>> get_provider_from_model('unknown-model')
         <LLMProvider.UNKNOWN: 'unknown'>
     """
     if not model:
         return LLMProvider.UNKNOWN
-    
-    model_lower = model.lower().split('/')[0]  # Extract provider prefix
+
+    model_lower = model.lower().split("/")[0]  # Extract provider prefix
+
+    if model_lower in _OPENROUTER_PREFIX_ALIASES:
+        return _OPENROUTER_PREFIX_ALIASES[model_lower]
+
     for provider in LLMProvider:
-        if provider.value != 'unknown' and model_lower == provider.value:
+        if provider.value != "unknown" and model_lower == provider.value:
             return provider
     return LLMProvider.UNKNOWN
 
 
 def validate_model_for_provider(model: str, provider: LLMProvider) -> bool:
     """Validate that model string matches provider.
-    
+
     Args:
         model: Model identifier
         provider: Expected provider
-    
+
     Returns:
         True if model matches provider
-    
+
     Example:
         >>> validate_model_for_provider('qwen/qwen3.5-flash', LLMProvider.QWEN)
         True
@@ -142,9 +162,7 @@ class LLMConfig:
     api_key: str
     wire_api: str = "chat_completions"
     primary_model: str = "gpt-4o"
-    fallback_models: list[str] = field(
-        default_factory=lambda: ["gpt-4.1", "gpt-4o-mini"]
-    )
+    fallback_models: list[str] = field(default_factory=lambda: ["gpt-4.1", "gpt-4o-mini"])
     max_tokens: int = 4096
     temperature: float = 0.7
     max_retries: int = 3
@@ -188,14 +206,16 @@ class TokenBucketRateLimiter:
         self._token_tokens = float(tokens_per_minute)
         self._last_update = time.monotonic()
 
-        # Lock for thread safety
-        self._lock = None  # Lazy init
+        # BUG-004 FIX: Lock must be created eagerly here, not lazily on first
+        # use. Lazy init had a TOCTOU window — two threads could both see
+        # self._lock is None and each create a separate Lock, so one thread
+        # would end up operating without mutual exclusion.
+        import threading
+
+        self._lock = threading.Lock()
 
     def _get_lock(self):
-        """Get or create lock (lazy initialization)."""
-        if self._lock is None:
-            import threading
-            self._lock = threading.Lock()
+        """Return the lock created eagerly in __init__ (BUG-004)."""
         return self._lock
 
     def _refill(self) -> None:
@@ -206,11 +226,10 @@ class TokenBucketRateLimiter:
         # Refill at steady rate
         self._request_tokens = min(
             self.requests_per_minute,
-            self._request_tokens + elapsed * (self.requests_per_minute / 60.0)
+            self._request_tokens + elapsed * (self.requests_per_minute / 60.0),
         )
         self._token_tokens = min(
-            self.tokens_per_minute,
-            self._token_tokens + elapsed * (self.tokens_per_minute / 60.0)
+            self.tokens_per_minute, self._token_tokens + elapsed * (self.tokens_per_minute / 60.0)
         )
 
         self._last_update = now
@@ -256,13 +275,146 @@ class TokenBucketRateLimiter:
             }
 
 
+@dataclass
+class CircuitBreakerState:
+    """State for circuit breaker pattern."""
+
+    failure_count: int = 0
+    success_count: int = 0
+    last_failure_time: float = 0.0
+    state: str = "closed"  # closed, open, half_open
+
+
+class CircuitBreaker:
+    """Circuit breaker for preventing cascading failures.
+
+    P0 Implementation (2026-04-02): Prevents system-wide failures during LLM outages.
+
+    States:
+    - closed: Normal operation, requests pass through
+    - open: Circuit tripped, requests fail immediately
+    - half_open: Testing if service recovered
+
+    Args:
+        fail_max: Number of failures before opening circuit
+        reset_timeout: Seconds to wait before trying again
+        success_threshold: Successes needed in half_open to close
+    """
+
+    def __init__(
+        self,
+        fail_max: int = 5,
+        reset_timeout: float = 60.0,
+        success_threshold: int = 3,
+    ):
+        self.fail_max = fail_max
+        self.reset_timeout = reset_timeout
+        self.success_threshold = success_threshold
+        self._state = CircuitBreakerState()
+        self._lock = threading.Lock()
+
+    def __enter__(self) -> CircuitBreaker:
+        """Enter circuit breaker context."""
+        if not self._can_execute():
+            raise CircuitBreakerOpenError(
+                f"Circuit breaker open. Retry after {self.reset_timeout}s"
+            )
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: Any,
+    ) -> None:
+        """Exit circuit breaker context, recording success or failure.
+
+        NOTE: _on_success()/_on_failure() each acquire self._lock
+        themselves — don't also acquire it here, self._lock is a plain
+        (non-reentrant) threading.Lock and double-acquiring it from the
+        same thread deadlocks forever.
+        """
+        if exc_type is None:
+            self._on_success()
+        else:
+            self._on_failure()
+
+    def _can_execute(self) -> bool:
+        """Check if request can proceed."""
+        with self._lock:
+            state = self._state
+
+            if state.state == "closed":
+                return True
+
+            if state.state == "open":
+                # Check if reset timeout has passed
+                if time.monotonic() - state.last_failure_time >= self.reset_timeout:
+                    state.state = "half_open"
+                    state.success_count = 0
+                    return True
+                return False
+
+            # half_open state
+            return True
+
+    def _on_success(self) -> None:
+        """Record successful request."""
+        with self._lock:
+            state = self._state
+
+            if state.state == "half_open":
+                state.success_count += 1
+                if state.success_count >= self.success_threshold:
+                    state.state = "closed"
+                    state.failure_count = 0
+                    state.success_count = 0
+            elif state.state == "closed":
+                state.failure_count = 0
+
+    def _on_failure(self) -> None:
+        """Record failed request."""
+        with self._lock:
+            state = self._state
+            state.failure_count += 1
+            state.last_failure_time = time.monotonic()
+
+            if state.state == "half_open":
+                # Immediately back to open on failure in half_open
+                state.state = "open"
+                state.success_count = 0
+            elif state.state == "closed" and state.failure_count >= self.fail_max:
+                state.state = "open"
+
+    def get_status(self) -> dict[str, Any]:
+        """Get circuit breaker status."""
+        with self._lock:
+            state = self._state
+            return {
+                "state": state.state,
+                "failure_count": state.failure_count,
+                "success_count": state.success_count,
+                "last_failure_time": state.last_failure_time,
+            }
+
+
+class CircuitBreakerOpenError(Exception):
+    """Raised when circuit breaker is open."""
+
+    pass
+
+
 class LLMClient:
     """Stateless OpenAI-compatible chat completion client.
 
     SECURITY FIX #6: Includes rate limiting to prevent quota exhaustion.
     """
 
-    def __init__(self, config: LLMConfig) -> None:
+    def __init__(
+        self,
+        config: LLMConfig,
+        circuit_breaker_enabled: bool = True,
+    ) -> None:
         self.config = config
         self._model_chain = [config.primary_model] + list(config.fallback_models)
         self._anthropic = None  # Will be set by from_rc_config if needed
@@ -275,10 +427,25 @@ class LLMClient:
                 tokens_per_minute=config.rate_limit_tokens_per_minute,
             )
 
+        # P0 2026-04-02: Initialize circuit breaker for cascading failure prevention
+        self._circuit_breaker: CircuitBreaker | None = None
+        if circuit_breaker_enabled:
+            self._circuit_breaker = CircuitBreaker(
+                fail_max=5,  # Open after 5 failures
+                reset_timeout=60.0,  # Try again after 60 seconds
+                success_threshold=3,  # Need 3 successes to close
+            )
+
     def get_rate_limiter_status(self) -> dict[str, Any] | None:
         """Get current rate limiter status (for monitoring)."""
         if self._rate_limiter:
             return self._rate_limiter.get_status()
+        return None
+
+    def get_circuit_breaker_status(self) -> dict[str, Any] | None:
+        """Get current circuit breaker status (for monitoring)."""
+        if self._circuit_breaker:
+            return self._circuit_breaker.get_status()
         return None
 
     @staticmethod
@@ -303,16 +470,14 @@ class LLMClient:
         return not any(model.startswith(prefix) for prefix in _NO_TEMPERATURE_MODELS)
 
     @classmethod
-    def from_rc_config(cls, rc_config: Any) -> LLMClient:
+    def from_rc_config(cls, rc_config: Any, circuit_breaker_enabled: bool = True) -> LLMClient:
         from berb.llm import PROVIDER_PRESETS
 
         provider = getattr(rc_config.llm, "provider", "openai")
         preset = PROVIDER_PRESETS.get(provider, {})
         preset_base_url = preset.get("base_url")
 
-        api_key = str(
-            rc_config.llm.api_key or os.environ.get(rc_config.llm.api_key_env, "") or ""
-        )
+        api_key = str(rc_config.llm.api_key or os.environ.get(rc_config.llm.api_key_env, "") or "")
 
         # Use preset base_url if available and config doesn't override
         base_url = rc_config.llm.base_url or preset_base_url or ""
@@ -337,16 +502,25 @@ class LLMClient:
             if bridge.fallback_api_key:
                 fallback_api_key = bridge.fallback_api_key
 
+        # fallback_models is a same-provider model chain (e.g. MiniMax's
+        # "MiniMax-M2.5-highspeed" as a fallback for "MiniMax-M2.5", or
+        # OpenRouter's "qwen/qwen3.5-flash" slugs). It is the operator's
+        # responsibility to configure IDs that resolve against the selected
+        # provider — wire it through unconditionally rather than guessing
+        # by provider name.
+        model_chain_fallbacks = list(rc_config.llm.fallback_models or [])
+
         config = LLMConfig(
             base_url=base_url,
             api_key=api_key,
             wire_api=getattr(rc_config.llm, "wire_api", "chat_completions"),
             primary_model=rc_config.llm.primary_model or "gpt-4o",
-            fallback_models=list(rc_config.llm.fallback_models or []),
+            fallback_models=model_chain_fallbacks,
             fallback_url=fallback_url,
             fallback_api_key=fallback_api_key,
+            rate_limit_enabled=False,  # Disable rate limiter for faster response
         )
-        client = cls(config)
+        client = cls(config, circuit_breaker_enabled=circuit_breaker_enabled)
 
         # Detect Anthropic or Kimi-Anthropic provider — use original URL/key (not the
         # MetaClaw proxy URL which is OpenAI-compatible only).
@@ -414,10 +588,7 @@ class LLMClient:
                         f"Consider reducing request frequency or increasing limits."
                     )
                 # Wait and retry
-                logger.warning(
-                    "Rate limit hit. Waiting %.1f seconds before retry.",
-                    wait_time
-                )
+                logger.warning("Rate limit hit. Waiting %.1f seconds before retry.", wait_time)
                 time.sleep(wait_time)
                 # Try again after waiting
                 allowed, _ = self._rate_limiter.acquire(estimated_tokens)
@@ -427,6 +598,7 @@ class LLMClient:
         # Apply stage-based token limit if stage provided and max_tokens not set
         if stage is not None and max_tokens is None:
             from .output_limits import get_stage_token_limit
+
             max_tokens = get_stage_token_limit(stage)
             logger.debug(f"Stage {stage}: auto-set max_tokens={max_tokens}")
 
@@ -460,9 +632,7 @@ class LLMClient:
                 logger.warning("Model %s failed: %s. Trying next.", m, exc)
                 last_error = exc
 
-        raise RuntimeError(
-            f"All models failed. Last error: {last_error}"
-        ) from last_error
+        raise RuntimeError(f"All models failed. Last error: {last_error}") from last_error
 
     def preflight(self) -> tuple[bool, str]:
         """Quick connectivity check - one minimal chat call.
@@ -471,9 +641,7 @@ class LLMClient:
         Distinguishes: 401 (bad key), 403 (model forbidden),
                        404 (bad endpoint), 429 (rate limited), timeout.
         """
-        is_reasoning = any(
-            self.config.primary_model.startswith(p) for p in _NEW_PARAM_MODELS
-        )
+        is_reasoning = any(self.config.primary_model.startswith(p) for p in _NEW_PARAM_MODELS)
         min_tokens = 64 if is_reasoning else 1
         try:
             _ = self.chat(
@@ -515,12 +683,32 @@ class LLMClient:
         temperature: float,
         json_mode: bool,
     ) -> LLMResponse:
-        """Call with exponential backoff retry."""
+        """Call with exponential backoff retry and circuit breaker.
+
+        P0 2026-04-02: Added circuit breaker for cascading failure prevention.
+        P0 2026-04-06: Added IncompleteRead retry for network stability.
+        """
+        import http.client
+        
         for attempt in range(self.config.max_retries):
             try:
-                return self._raw_call(
-                    model, messages, max_tokens, temperature, json_mode
-                )
+                # P0 2026-04-02: Wrap call with circuit breaker
+                if self._circuit_breaker:
+                    with self._circuit_breaker:
+                        return self._raw_call(model, messages, max_tokens, temperature, json_mode)
+                else:
+                    return self._raw_call(model, messages, max_tokens, temperature, json_mode)
+            except http.client.IncompleteRead as e:
+                # P0 2026-04-06: Retry on IncompleteRead (streaming truncation)
+                if attempt < self.config.max_retries - 1:
+                    delay = self.config.retry_base_delay * (2**attempt)
+                    logger.warning(
+                        "IncompleteRead from %s (attempt %d/%d), retrying in %.1fs: %s",
+                        model, attempt + 1, self.config.max_retries, delay, e
+                    )
+                    time.sleep(delay)
+                    continue
+                raise
             except urllib.error.HTTPError as e:
                 status = e.code
                 body = ""
@@ -663,9 +851,7 @@ class LLMClient:
             req = urllib.request.Request(url, data=payload, headers=headers)
 
             try:
-                with urllib.request.urlopen(
-                    req, timeout=self.config.timeout_sec
-                ) as resp:
+                with urllib.request.urlopen(req, timeout=self.config.timeout_sec) as resp:
                     data = json.loads(resp.read())
             except (urllib.error.URLError, OSError) as exc:
                 # MetaClaw bridge: fallback to direct LLM if proxy unreachable
@@ -736,9 +922,7 @@ class LLMClient:
         body["max_output_tokens"] = max_tokens
         return body
 
-    def _messages_to_responses_input(
-        self, messages: list[dict[str, str]]
-    ) -> list[dict[str, Any]]:
+    def _messages_to_responses_input(self, messages: list[dict[str, str]]) -> list[dict[str, Any]]:
         items: list[dict[str, Any]] = []
         for message in messages:
             role = str(message.get("role", "user") or "user")
@@ -751,9 +935,7 @@ class LLMClient:
             )
         return items
 
-    def _parse_chat_completions_response(
-        self, data: dict[str, Any], model: str
-    ) -> LLMResponse:
+    def _parse_chat_completions_response(self, data: dict[str, Any], model: str) -> LLMResponse:
         if "choices" not in data or not data["choices"]:
             raise ValueError(f"Malformed API response: missing choices. Got: {data}")
 
@@ -774,14 +956,10 @@ class LLMClient:
             raw=data,
         )
 
-    def _parse_responses_response(
-        self, data: dict[str, Any], model: str
-    ) -> LLMResponse:
+    def _parse_responses_response(self, data: dict[str, Any], model: str) -> LLMResponse:
         output_items = data.get("output")
         if not isinstance(output_items, list) or not output_items:
-            raise ValueError(
-                f"Malformed responses API payload: missing output. Got: {data}"
-            )
+            raise ValueError(f"Malformed responses API payload: missing output. Got: {data}")
 
         chunks: list[str] = []
         finish_reason = str(data.get("status", "") or "")
@@ -817,9 +995,7 @@ class LLMClient:
         if isinstance(usage, dict):
             prompt_tokens = int(usage.get("input_tokens", 0) or 0)
             completion_tokens = int(usage.get("output_tokens", 0) or 0)
-            total_tokens = int(
-                usage.get("total_tokens", prompt_tokens + completion_tokens) or 0
-            )
+            total_tokens = int(usage.get("total_tokens", prompt_tokens + completion_tokens) or 0)
 
         return LLMResponse(
             content="".join(chunks),
@@ -861,9 +1037,7 @@ def create_client_from_yaml(yaml_path: str | None = None) -> LLMClient:
             api_key=api_key,
             wire_api=llm_section.get("wire_api", "chat_completions"),
             primary_model=llm_section.get("primary_model", "gpt-4o"),
-            fallback_models=llm_section.get(
-                "fallback_models", ["gpt-4.1", "gpt-4o-mini"]
-            ),
+            fallback_models=llm_section.get("fallback_models", ["gpt-4.1", "gpt-4o-mini"]),
         )
     )
 
@@ -894,8 +1068,13 @@ class MultiProviderLLMClient:
         self._primary = clients[0]
         self._current_provider_idx = 0
 
+    @property
+    def config(self) -> LLMConfig:
+        """Primary provider's config (for callers that inspect .config)."""
+        return self._primary.config
+
     @classmethod
-    def from_rc_config(cls, rc_config: Any) -> "MultiProviderLLMClient":
+    def from_rc_config(cls, rc_config: Any) -> MultiProviderLLMClient:
         """Create a multi-provider client from RCConfig.
 
         Reads fallback_providers from config and creates clients for each.
@@ -909,6 +1088,10 @@ class MultiProviderLLMClient:
         # Get fallback providers from config
         fallback_providers = list(rc_config.llm.fallback_providers or [])
         clients = [primary_client]
+
+        # Model IDs are not portable across providers (e.g. "deepseek-chat"
+        # vs OpenRouter-style "deepseek/deepseek-v3.2"). Resolve per-provider.
+        model_overrides = dict(getattr(rc_config.llm, "fallback_provider_models", ()) or ())
 
         for fallback_provider in fallback_providers:
             if fallback_provider == rc_config.llm.provider:
@@ -937,13 +1120,28 @@ class MultiProviderLLMClient:
                 )
                 continue
 
+            fallback_model = (
+                model_overrides.get(fallback_provider)
+                or preset.get("default_model")
+                or rc_config.llm.primary_model
+                or "gpt-4o"
+            )
+            # OpenRouter-style fallback_models (e.g. "qwen/qwen3.5-flash") only
+            # resolve against OpenRouter's own model catalog — reusing them
+            # against a direct provider API (DeepSeek, xAI, ...) would 404.
+            chain_models = (
+                list(rc_config.llm.fallback_models or [])
+                if fallback_provider == "openrouter"
+                else []
+            )
+
             # Create fallback client config
             fallback_config = LLMConfig(
                 base_url=preset_base_url,
                 api_key=api_key,
                 wire_api="chat_completions",
-                primary_model=rc_config.llm.primary_model or "gpt-4o",
-                fallback_models=list(rc_config.llm.fallback_models or []),
+                primary_model=fallback_model,
+                fallback_models=chain_models,
                 provider_name=fallback_provider,
             )
             clients.append(LLMClient(fallback_config))

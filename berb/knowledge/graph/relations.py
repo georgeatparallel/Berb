@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
-class RelationType(str, Enum):
+class RelationType(StrEnum):
     """Types of relations between entities."""
 
     CITES = "cites"

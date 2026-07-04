@@ -37,10 +37,10 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from .base import (
-    ReasoningMethod,
-    ReasoningContext,
-    ReasoningResult,
     MethodType,
+    ReasoningContext,
+    ReasoningMethod,
+    ReasoningResult,
 )
 from .registry import ReasonerRegistry
 
@@ -97,7 +97,7 @@ class SocraticMethod(ReasoningMethod):
 
     def __init__(
         self,
-        router: Any = None,      # NEW: Primary (ExtendedNadirClawRouter)
+        router: Any = None,  # NEW: Primary (ExtendedNadirClawRouter)
         llm_client: Any = None,  # DEPRECATED: Fallback only
         depth: int = 2,  # Questions per category
         **kwargs: Any,
@@ -135,7 +135,7 @@ class SocraticMethod(ReasoningMethod):
             Exception: If questioning fails
         """
         import uuid
-        
+
         start_time = time.time()
         self._run_id = f"socratic-{uuid.uuid4().hex[:8]}"
 
@@ -159,9 +159,7 @@ class SocraticMethod(ReasoningMethod):
             # Iterate through question categories
             for category in self.CATEGORIES:
                 for i in range(self.depth):
-                    sq = await self._generate_question(
-                        question, category, i, questions, context
-                    )
+                    sq = await self._generate_question(question, category, i, questions, context)
                     questions.append(sq)
                     all_insights.extend(sq.insights)
 
@@ -171,9 +169,7 @@ class SocraticMethod(ReasoningMethod):
             )
 
             # Identify remaining questions
-            remaining = await self._identify_remaining_questions(
-                question, questions, context
-            )
+            remaining = await self._identify_remaining_questions(question, questions, context)
 
             result = SocraticResult(
                 original_question=question,
@@ -193,7 +189,8 @@ class SocraticMethod(ReasoningMethod):
                     "questions_by_category": {
                         cat: [
                             {"question": q.question, "answer": q.answer}
-                            for q in questions if q.category == cat
+                            for q in questions
+                            if q.category == cat
                         ]
                         for cat in self.CATEGORIES
                     },
@@ -206,10 +203,10 @@ class SocraticMethod(ReasoningMethod):
                 duration_sec=duration,
                 model_used=context.metadata.get("model", "unknown"),
             )
-            
+
             # Track cost if router supports it
             self._track_cost(duration)
-            
+
             return socratic_result
 
         except Exception as e:
@@ -248,7 +245,7 @@ class SocraticMethod(ReasoningMethod):
             prompt = f"""Original question: {original_question}
 
 Previous questions and answers:
-{prev_context if prev_context else 'None yet'}
+{prev_context if prev_context else "None yet"}
 
 Generate a {category} question: {category_prompts[category]}
 
@@ -295,17 +292,14 @@ Respond in JSON format:
     ) -> str:
         """Synthesize final understanding from Socratic dialogue."""
         if self.llm_client:
-            qa_text = "\n\n".join(
-                f"Q{q.category}: {q.question}\nA: {q.answer}"
-                for q in questions
-            )
+            qa_text = "\n\n".join(f"Q{q.category}: {q.question}\nA: {q.answer}" for q in questions)
 
             prompt = f"""Original question: {original_question}
 
 Socratic dialogue:
 {qa_text}
 
-Key insights: {', '.join(insights)}
+Key insights: {", ".join(insights)}
 
 Synthesize a deeper understanding that emerges from this Socratic exploration.
 
@@ -331,10 +325,7 @@ Respond with the synthesis text only.
     ) -> list[str]:
         """Identify questions that remain after Socratic dialogue."""
         if self.llm_client:
-            qa_text = "\n".join(
-                f"{q.category}: {q.question} → {q.answer}"
-                for q in questions
-            )
+            qa_text = "\n".join(f"{q.category}: {q.question} → {q.answer}" for q in questions)
 
             prompt = f"""Original question: {original_question}
 
@@ -361,17 +352,17 @@ Respond in JSON format:
                 logger.warning(f"Remaining questions identification failed: {e}")
 
         return ["Further empirical validation needed"]
-    
+
     def _track_cost(self, duration_sec: float) -> None:
         """Track cost for Socratic execution."""
         if self.router is None or self._run_id is None:
             return
-        
-        if hasattr(self.router, 'track_cost'):
+
+        if hasattr(self.router, "track_cost"):
             # Estimate tokens for Socratic (6 categories × depth questions)
             estimated_input = 400 * 6 * self.depth + 1000  # questions + synthesis
             estimated_output = 300 * 6 * self.depth + 800
-            
+
             self.router.track_cost(
                 method="socratic",
                 phase="all",

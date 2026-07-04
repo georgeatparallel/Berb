@@ -17,7 +17,6 @@ from typing import Any
 from berb.review.council_mode import (
     CouncilMode,
     CouncilSynthesis,
-    CouncilConfig,
 )
 
 logger = logging.getLogger(__name__)
@@ -26,13 +25,14 @@ logger = logging.getLogger(__name__)
 @dataclass
 class CouncilStageResult:
     """Result from council stage integration.
-    
+
     Attributes:
         synthesis: Council synthesis
         stage_id: Pipeline stage ID
         consensus_reached: Whether consensus was reached
         recommendation: Council recommendation
     """
+
     synthesis: CouncilSynthesis
     stage_id: str
     consensus_reached: bool
@@ -41,7 +41,7 @@ class CouncilStageResult:
 
 class CouncilIntegration:
     """Integrates Council Mode with pipeline stages.
-    
+
     Usage in pipeline:
         integration = CouncilIntegration()
         result = await integration.run_synthesis_council(
@@ -49,7 +49,7 @@ class CouncilIntegration:
             stage_id="SYNTHESIS",
         )
     """
-    
+
     def __init__(
         self,
         models: list[str] | None = None,
@@ -57,7 +57,7 @@ class CouncilIntegration:
         consensus_threshold: float = 0.8,
     ):
         """Initialize council integration.
-        
+
         Args:
             models: Models to use in council
             judge_model: Judge model for synthesis
@@ -67,11 +67,9 @@ class CouncilIntegration:
         self.judge_model = judge_model
         self.consensus_threshold = consensus_threshold
         self.council = CouncilMode()
-        
-        logger.info(
-            f"Initialized CouncilIntegration with {len(self.models)} models"
-        )
-    
+
+        logger.info(f"Initialized CouncilIntegration with {len(self.models)} models")
+
     async def run_synthesis_council(
         self,
         literature_summary: str,
@@ -79,12 +77,12 @@ class CouncilIntegration:
         stage_id: str = "SYNTHESIS",
     ) -> CouncilStageResult:
         """Stage 7: Run council on literature synthesis.
-        
+
         Args:
             literature_summary: Summary of collected literature
             topic: Research topic
             stage_id: Pipeline stage ID
-            
+
         Returns:
             Council stage result
         """
@@ -100,32 +98,30 @@ Provide a comprehensive synthesis that:
 3. Identifies research gaps
 4. Suggests promising directions
 """
-        
+
         synthesis = await self.council.run_council(
             task=task,
             models=self.models,
             judge_model=self.judge_model,
         )
-        
+
         consensus_reached = synthesis.consensus_score >= self.consensus_threshold
-        
+
         recommendation = (
             "Proceed with synthesis - high consensus"
             if consensus_reached
             else "Review divergences before proceeding"
         )
-        
-        logger.info(
-            f"Stage {stage_id}: Council consensus={synthesis.consensus_score:.2f}"
-        )
-        
+
+        logger.info(f"Stage {stage_id}: Council consensus={synthesis.consensus_score:.2f}")
+
         return CouncilStageResult(
             synthesis=synthesis,
             stage_id=stage_id,
             consensus_reached=consensus_reached,
             recommendation=recommendation,
         )
-    
+
     async def run_hypothesis_council(
         self,
         synthesis_report: str,
@@ -133,12 +129,12 @@ Provide a comprehensive synthesis that:
         stage_id: str = "HYPOTHESIS_GEN",
     ) -> CouncilStageResult:
         """Stage 8: Run council on hypothesis generation.
-        
+
         Args:
             synthesis_report: Literature synthesis report
             topic: Research topic
             stage_id: Pipeline stage ID
-            
+
         Returns:
             Council stage result
         """
@@ -156,32 +152,30 @@ Provide diverse hypotheses that:
 3. Have potential for high impact
 4. Represent different perspectives
 """
-        
+
         synthesis = await self.council.run_council(
             task=task,
             models=self.models,
             judge_model=self.judge_model,
         )
-        
+
         consensus_reached = synthesis.consensus_score >= self.consensus_threshold
-        
+
         recommendation = (
             "Proceed with top hypotheses - high consensus"
             if consensus_reached
             else "Consider multiple hypotheses - diverse perspectives"
         )
-        
-        logger.info(
-            f"Stage {stage_id}: Council consensus={synthesis.consensus_score:.2f}"
-        )
-        
+
+        logger.info(f"Stage {stage_id}: Council consensus={synthesis.consensus_score:.2f}")
+
         return CouncilStageResult(
             synthesis=synthesis,
             stage_id=stage_id,
             consensus_reached=consensus_reached,
             recommendation=recommendation,
         )
-    
+
     async def run_decision_council(
         self,
         analysis_report: str,
@@ -189,12 +183,12 @@ Provide diverse hypotheses that:
         stage_id: str = "RESEARCH_DECISION",
     ) -> CouncilStageResult:
         """Stage 15: Run council on research decision.
-        
+
         Args:
             analysis_report: Result analysis report
             results_summary: Summary of experimental results
             stage_id: Pipeline stage ID
-            
+
         Returns:
             Council stage result
         """
@@ -212,22 +206,22 @@ Provide recommendation on:
 2. REFINE experiments (specify what)
 3. PIVOT to new hypothesis (specify which)
 """
-        
+
         synthesis = await self.council.run_council(
             task=task,
             models=self.models,
             judge_model=self.judge_model,
         )
-        
+
         consensus_reached = synthesis.consensus_score >= self.consensus_threshold
-        
+
         recommendation = synthesis.recommendation
-        
+
         logger.info(
             f"Stage {stage_id}: Council consensus={synthesis.consensus_score:.2f}, "
             f"decision={recommendation}"
         )
-        
+
         return CouncilStageResult(
             synthesis=synthesis,
             stage_id=stage_id,
@@ -243,18 +237,18 @@ async def run_council_stage(
     judge_model: str = "claude-sonnet",
 ) -> CouncilStageResult:
     """Run council mode for specific pipeline stage.
-    
+
     Args:
         stage_id: Pipeline stage ID
         context: Stage context data
         models: Models to use
         judge_model: Judge model
-        
+
     Returns:
         Council stage result
     """
     integration = CouncilIntegration(models=models, judge_model=judge_model)
-    
+
     if stage_id == "SYNTHESIS":
         return await integration.run_synthesis_council(
             literature_summary=context.get("literature_summary", ""),

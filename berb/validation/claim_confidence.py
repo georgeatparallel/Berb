@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Protocol
 
 from pydantic import BaseModel, Field
@@ -24,7 +24,7 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger(__name__)
 
 
-class ClaimConfidenceLevel(str, Enum):
+class ClaimConfidenceLevel(StrEnum):
     """Claim confidence levels.
 
     Attributes:
@@ -145,23 +145,46 @@ class ClaimConfidenceAnalyzer:
 
     # Claim indicator patterns
     CLAIM_INDICATORS = [
-        "we found", "we show", "we demonstrate", "our results",
-        "this paper", "our approach", "experiments show",
-        "significantly", "substantially", "improves by",
-        "achieves", "outperforms", "better than",
-        "first to", "novel", "new method",
+        "we found",
+        "we show",
+        "we demonstrate",
+        "our results",
+        "this paper",
+        "our approach",
+        "experiments show",
+        "significantly",
+        "substantially",
+        "improves by",
+        "achieves",
+        "outperforms",
+        "better than",
+        "first to",
+        "novel",
+        "new method",
     ]
 
     # Hedging patterns (indicate weaker claims)
     HEDGING_PATTERNS = [
-        "may", "might", "could", "suggests", "appears",
-        "potentially", "possibly", "likely", "probably",
+        "may",
+        "might",
+        "could",
+        "suggests",
+        "appears",
+        "potentially",
+        "possibly",
+        "likely",
+        "probably",
     ]
 
     # Overstatement patterns
     OVERSTATEMENT_PATTERNS = [
-        "proves", "definitely", "certainly", "always",
-        "never", "without doubt", "conclusively",
+        "proves",
+        "definitely",
+        "certainly",
+        "always",
+        "never",
+        "without doubt",
+        "conclusively",
     ]
 
     def __init__(self, source_client: SourceClient | None = None):
@@ -271,9 +294,7 @@ class ClaimConfidenceAnalyzer:
 
         # Use multi-perspective analysis if enabled
         if use_multi_perspective and llm_client:
-            return await self._multiperspective_analyze_confidence(
-                claim, sources, llm_client
-            )
+            return await self._multiperspective_analyze_confidence(claim, sources, llm_client)
         else:
             # Fallback to simple analysis
             return self._simple_analyze_confidence(claim, sources)
@@ -379,8 +400,7 @@ class ClaimConfidenceAnalyzer:
 
         # Count supporting sources
         supporting_count = sum(
-            1 for s in sources
-            if "supports" in str(s).lower() or "confirm" in str(s).lower()
+            1 for s in sources if "supports" in str(s).lower() or "confirm" in str(s).lower()
         )
 
         # Score based on count
@@ -410,8 +430,14 @@ class ClaimConfidenceAnalyzer:
 
         # Check for methodology keywords
         quality_keywords = [
-            "randomized", "controlled", "double-blind", "peer-reviewed",
-            "statistical", "significant", "meta-analysis", "systematic",
+            "randomized",
+            "controlled",
+            "double-blind",
+            "peer-reviewed",
+            "statistical",
+            "significant",
+            "meta-analysis",
+            "systematic",
         ]
 
         quality_score = 0.5
@@ -442,8 +468,13 @@ class ClaimConfidenceAnalyzer:
 
         # Check for replication keywords
         replication_keywords = [
-            "replicated", "reproduced", "confirmed", "validated",
-            "independent", "multiple studies", "consistent",
+            "replicated",
+            "reproduced",
+            "confirmed",
+            "validated",
+            "independent",
+            "multiple studies",
+            "consistent",
         ]
 
         replication_score = 0.5
@@ -474,8 +505,14 @@ class ClaimConfidenceAnalyzer:
 
         # Check for consensus keywords
         consensus_keywords = [
-            "consensus", "agreement", "widely accepted", "established",
-            "expert", "review", "position", "guideline",
+            "consensus",
+            "agreement",
+            "widely accepted",
+            "established",
+            "expert",
+            "review",
+            "position",
+            "guideline",
         ]
 
         consensus_score = 0.5
@@ -505,11 +542,17 @@ class ClaimConfidenceAnalyzer:
 
         for perspective, score in perspectives_scores.items():
             if score >= 0.8:
-                reasoning_parts.append(f"{perspective.replace('_', ' ').title()}: Strong ({score:.2f})")
+                reasoning_parts.append(
+                    f"{perspective.replace('_', ' ').title()}: Strong ({score:.2f})"
+                )
             elif score >= 0.6:
-                reasoning_parts.append(f"{perspective.replace('_', ' ').title()}: Moderate ({score:.2f})")
+                reasoning_parts.append(
+                    f"{perspective.replace('_', ' ').title()}: Moderate ({score:.2f})"
+                )
             else:
-                reasoning_parts.append(f"{perspective.replace('_', ' ').title()}: Weak ({score:.2f})")
+                reasoning_parts.append(
+                    f"{perspective.replace('_', ' ').title()}: Weak ({score:.2f})"
+                )
 
         return "; ".join(reasoning_parts)
 
@@ -671,7 +714,9 @@ class ClaimConfidenceAnalyzer:
             recommendations.append("Consider acknowledging limitations")
 
         elif confidence_level == ClaimConfidenceLevel.OVERSTATED:
-            recommendations.append("Soften absolute language (e.g., 'suggests' instead of 'proves')")
+            recommendations.append(
+                "Soften absolute language (e.g., 'suggests' instead of 'proves')"
+            )
             recommendations.append("Acknowledge uncertainty or limitations")
 
         elif confidence_level == ClaimConfidenceLevel.CONTRADICTED:
@@ -764,7 +809,8 @@ class ClaimConfidenceAnalyzer:
         # If claim has citations, use those
         if claim.citations:
             return [
-                ref for ref in references
+                ref
+                for ref in references
                 if ref.get("id") in claim.citations or ref.get("doi") in claim.citations
             ]
 

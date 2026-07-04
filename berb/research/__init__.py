@@ -7,40 +7,40 @@ Research gap analysis with multi-perspective reasoning.
 # Author: Georgios-Chrysovalantis Chatzivantsidis
 """
 
-from .tree_search import (
-    ParallelizedTreeSearch,
-    SearchConfig,
-    SearchPath,
-    BranchNode,
-    BranchStatus,
-    DecisionPoint,
-    explore_research_space,
+from .gap_analysis import (
+    GapAnalysisConfig,
+    GapAnalysisResult,
+    GapToHypothesisConverter,
+    GapType,
+    ResearchGap,
+    ResearchGapAnalyzer,
+    analyze_research_gaps,
 )
 from .idea_scorer import (
     IdeaQualityScorer,
-    ScoringConfig,
+    NoveltyLevel,
     ResearchIdea,
     ScoredIdea,
-    NoveltyLevel,
+    ScoringConfig,
     score_and_rank_ideas,
 )
 from .open_ended_discovery import (
-    OpenEndedDiscoveryAgent,
     DiscoveryNode,
     DiscoveryResult,
-    NodeStatus,
     ExperimentManagerAgent,
+    NodeStatus,
     NoveltyVerifier,
+    OpenEndedDiscoveryAgent,
     run_open_ended_discovery,
 )
-from .gap_analysis import (
-    ResearchGapAnalyzer,
-    GapAnalysisResult,
-    ResearchGap,
-    GapType,
-    GapAnalysisConfig,
-    GapToHypothesisConverter,
-    analyze_research_gaps,
+from .tree_search import (
+    BranchNode,
+    BranchStatus,
+    DecisionPoint,
+    ParallelizedTreeSearch,
+    SearchConfig,
+    SearchPath,
+    explore_research_space,
 )
 
 __all__ = [

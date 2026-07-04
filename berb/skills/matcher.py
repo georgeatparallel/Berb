@@ -116,7 +116,7 @@ def format_skills_for_prompt(skills: list[Skill], max_chars: int = 4000) -> str:
         content = skill.body or skill.prompt_template
         # Truncate long bodies
         if len(content) > per_skill_budget:
-            content = content[:per_skill_budget - 20] + "\n\n[... truncated]"
+            content = content[: per_skill_budget - 20] + "\n\n[... truncated]"
 
         section = f"### {skill.name} ({skill.category})\n{content}"
         if skill.code_template:

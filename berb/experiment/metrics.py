@@ -16,7 +16,7 @@ import json
 import logging
 import math
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from io import StringIO
 from pathlib import Path
 from typing import Any
@@ -24,7 +24,7 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
-class MetricType(str, Enum):
+class MetricType(StrEnum):
     SCALAR = "scalar"
     TABLE = "table"
     CONVERGENCE = "convergence"
@@ -120,7 +120,12 @@ class UniversalMetricParser:
         if results_json.exists():
             try:
                 result = self._parse_json(results_json)
-                if result.scalars or result.conditions or result.convergence or result.regression_table:
+                if (
+                    result.scalars
+                    or result.conditions
+                    or result.convergence
+                    or result.regression_table
+                ):
                     logger.info("Parsed results from results.json")
                     return result
             except Exception:
@@ -200,7 +205,13 @@ class UniversalMetricParser:
 
         # Top-level scalar metrics
         for key, val in data.items():
-            if key not in ("conditions", "convergence", "regression_table", "metadata", "experiment_type"):
+            if key not in (
+                "conditions",
+                "convergence",
+                "regression_table",
+                "metadata",
+                "experiment_type",
+            ):
                 if isinstance(val, (int, float)) and math.isfinite(val):
                     result.scalars[key] = float(val)
 
@@ -262,3 +273,55 @@ class UniversalMetricParser:
             scalars={k: float(v) for k, v in metrics.items() if isinstance(v, (int, float))},
             source="stdout",
         )
+
+
+# Words that indicate a log/status line rather than a metric (moved from berb.hardware)
+LOG_WORDS: frozenset[str] = frozenset(
+    {
+        "running",
+        "loading",
+        "saving",
+        "processing",
+        "starting",
+        "finished",
+        "completed",
+        "initializing",
+        "downloading",
+        "training",
+        "evaluating",
+        "epoch",
+        "step",
+        "iteration",
+        "experiment",
+        "warning",
+        "error",
+        "info",
+        "debug",
+        "experiments",
+        "using",
+        "setting",
+        "creating",
+        "building",
+        "computing",
+        "reading",
+        "writing",
+        "opening",
+        "closing",
+    }
+)
+
+# Maximum word count for a plausible metric name
+_MAX_METRIC_NAME_WORDS = 6
+
+
+def is_metric_name(name: str) -> bool:
+    """Return True if *name* looks like a metric name rather than a log line.
+
+    Used to filter stdout lines when parsing ``name: value`` metric output.
+    """
+    words = name.lower().split()
+    if len(words) > _MAX_METRIC_NAME_WORDS:
+        return False
+    if any(w in LOG_WORDS for w in words):
+        return False
+    return True

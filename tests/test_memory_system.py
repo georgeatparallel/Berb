@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import math
+import sys
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
@@ -56,12 +57,14 @@ def populated_store(store: MemoryStore) -> MemoryStore:
 @pytest.fixture
 def embedding_fn() -> object:
     """Simple deterministic embedding for testing."""
+
     def _embed(text: str) -> list[float]:
         vec = [0.0] * 16
         for i, ch in enumerate(text[:16]):
             vec[i] = ord(ch) / 256.0
         norm = math.sqrt(sum(v * v for v in vec)) or 1.0
         return [v / norm for v in vec]
+
     return _embed
 
 
@@ -188,7 +191,8 @@ class TestMemoryPersistence:
     def test_roundtrip_preserves_data(self, tmp_store_dir: Path) -> None:
         store = MemoryStore(tmp_store_dir)
         entry_id = store.add(
-            "experiment", "test content",
+            "experiment",
+            "test content",
             metadata={"key": "value"},
             embedding=[0.1, 0.2, 0.3],
             confidence=0.7,
@@ -228,8 +232,12 @@ class TestMemoryPrune:
 class TestMemoryEntry:
     def test_to_dict(self) -> None:
         entry = MemoryEntry(
-            id="abc", category="ideation", content="test",
-            metadata={}, embedding=[], confidence=0.5,
+            id="abc",
+            category="ideation",
+            content="test",
+            metadata={},
+            embedding=[],
+            confidence=0.5,
             created_at="2024-01-01T00:00:00+00:00",
             last_accessed="2024-01-01T00:00:00+00:00",
             access_count=0,
@@ -240,8 +248,12 @@ class TestMemoryEntry:
 
     def test_from_dict(self) -> None:
         data = {
-            "id": "xyz", "category": "experiment", "content": "hp test",
-            "metadata": {"run": "1"}, "embedding": [0.1], "confidence": 0.6,
+            "id": "xyz",
+            "category": "experiment",
+            "content": "hp test",
+            "metadata": {"run": "1"},
+            "embedding": [0.1],
+            "confidence": 0.6,
             "created_at": "2024-06-01T00:00:00+00:00",
             "last_accessed": "2024-06-01T00:00:00+00:00",
             "access_count": 3,
@@ -309,6 +321,13 @@ class TestConfidenceUpdate:
 
 
 class TestEmbeddings:
+    @pytest.fixture(autouse=True)
+    def _force_tfidf_backend(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # sentence-transformers may be installed in the dev env; block it so
+        # these tests exercise the TF-IDF fallback path instead of loading
+        # (or trying to download) a real embedding model.
+        monkeypatch.setitem(sys.modules, "sentence_transformers", None)
+
     def test_tfidf_fallback(self) -> None:
         provider = EmbeddingProvider()
         vec = provider.embed("hello world test")
@@ -673,7 +692,7 @@ class TestSharedResearchMemoryConcurrency:
         is held.  A secondary thread must be able to acquire the lock during I/O.
 
         Strategy: pause _save_to_disk mid-execution, then have another thread
-        attempt to acquire mem._lock.  If the lock is free (fix applied) the
+        attempt to acquire mem._sync_lock.  If the lock is free (fix applied) the
         thread succeeds; if still held (bug present) the thread times out.
         """
         import threading
@@ -699,10 +718,10 @@ class TestSharedResearchMemoryConcurrency:
             # Attempt to acquire the lock from a different thread.
             # RLock from a DIFFERENT thread behaves like a regular lock —
             # it will block if the writer_thread holds it.
-            acquired = mem._lock.acquire(blocking=True, timeout=0.2)
+            acquired = mem._sync_lock.acquire(blocking=True, timeout=0.2)
             if acquired:
                 lock_was_free_during_io.set()
-                mem._lock.release()
+                mem._sync_lock.release()
             io_can_finish.set()
 
         writer_thread = threading.Thread(target=lambda: mem.store("k", "v"))

@@ -13,13 +13,15 @@ class SecurityPromptAdapter(PromptAdapter):
     def get_code_generation_blocks(self, context: dict[str, Any]) -> PromptBlocks:
         domain = self.domain
         return PromptBlocks(
-            dataset_guidance=domain.dataset_guidance or (
+            dataset_guidance=domain.dataset_guidance
+            or (
                 "Generate synthetic network/security data in code:\n"
                 "- Normal traffic patterns + attack patterns\n"
                 "- Class-imbalanced (realistic: ~5% attacks)\n"
                 "- Do NOT download external datasets"
             ),
-            code_generation_hints=domain.code_generation_hints or (
+            code_generation_hints=domain.code_generation_hints
+            or (
                 "Security detection code:\n"
                 "1. Generate synthetic tabular features (packet size, duration, etc.)\n"
                 "2. Train classifiers (RF, XGBoost, SVM)\n"

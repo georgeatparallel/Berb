@@ -65,7 +65,6 @@ enabled_stages:
   - 21
   - 22
   - 23
-
 stage_overrides:
   3:  # Literature — process engineering + ML
     extra_sources:

@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import threading
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
@@ -74,6 +75,9 @@ class BaseAgent:
         self._llm = llm
         self._calls = 0
         self._tokens = 0
+        # BUG-003 fix: Thread-safe lock for statistics counters
+        # Prevents race conditions when agent is used from multiple threads
+        self._stats_lock = threading.Lock()
         self.logger = logging.getLogger(f"{__name__}.{self.name}")
 
     # -- LLM helpers -------------------------------------------------------
@@ -88,7 +92,9 @@ class BaseAgent:
         json_mode: bool = False,
     ) -> str:
         """Send a chat message and return the content string."""
-        self._calls += 1
+        with self._stats_lock:
+            self._calls += 1
+        # Perform LLM call outside lock to minimize contention
         resp = self._llm.chat(
             [{"role": "user", "content": user}],
             system=system,
@@ -96,7 +102,10 @@ class BaseAgent:
             temperature=temperature,
             json_mode=json_mode,
         )
-        self._tokens += getattr(resp, "total_tokens", 0)
+        # Update token count safely
+        tokens_used = getattr(resp, "total_tokens", 0)
+        with self._stats_lock:
+            self._tokens += tokens_used
         return resp.content
 
     def _chat_json(
@@ -109,7 +118,8 @@ class BaseAgent:
     ) -> dict[str, Any]:
         """Send a chat message expecting JSON output.  Falls back to regex extraction."""
         raw = self._chat(
-            system, user,
+            system,
+            user,
             max_tokens=max_tokens,
             temperature=temperature,
             json_mode=True,
@@ -125,6 +135,7 @@ class BaseAgent:
         Always returns a ``dict`` or ``None`` — lists and other JSON
         primitives are discarded so callers can safely use ``.get()``.
         """
+
         def _as_dict(val: Any) -> dict[str, Any] | None:
             return val if isinstance(val, dict) else None
 
@@ -165,13 +176,19 @@ class BaseAgent:
         raise NotImplementedError
 
     def _make_result(
-        self, success: bool, data: dict[str, Any] | None = None, error: str = "",
+        self,
+        success: bool,
+        data: dict[str, Any] | None = None,
+        error: str = "",
     ) -> AgentStepResult:
         # BUG-DA6-01: Return per-call delta, then reset counters to avoid
         # double-counting when the same agent instance is reused across retries.
-        calls, tokens = self._calls, self._tokens
-        self._calls = 0
-        self._tokens = 0
+        # Hold _stats_lock for the entire read+reset so concurrent _chat calls
+        # cannot increment a counter between the read and the zero-out.
+        with self._stats_lock:
+            calls, tokens = self._calls, self._tokens
+            self._calls = 0
+            self._tokens = 0
         return AgentStepResult(
             success=success,
             data=data or {},

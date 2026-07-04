@@ -26,8 +26,8 @@ Usage:
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
-from typing import Callable
+from collections.abc import Callable
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -87,9 +87,9 @@ class VerletIntegrator:
     Hamiltonian systems.
 
     The velocity Verlet algorithm:
-    1. p(t+dt/2) = p(t) - (dt/2) * ∂H/∂q(q(t))
-    2. q(t+dt) = q(t) + dt * ∂H/∂p(p(t+dt/2))
-    3. p(t+dt) = p(t+dt/2) - (dt/2) * ∂H/∂q(q(t+dt))
+    1. p(t+dt/2) = p(t) - (dt/2) * ∂h/∂q(q(t))
+    2. q(t+dt) = q(t) + dt * ∂h/∂p(p(t+dt/2))
+    3. p(t+dt) = p(t+dt/2) - (dt/2) * ∂h/∂q(q(t+dt))
 
     Attributes:
         dt: Time step
@@ -114,8 +114,8 @@ class VerletIntegrator:
     def integrate(
         self,
         hamiltonian: Callable[[np.ndarray, np.ndarray], float],
-        dH_dq: Callable[[np.ndarray, np.ndarray], np.ndarray],
-        dH_dp: Callable[[np.ndarray, np.ndarray], np.ndarray],
+        dh_dq: Callable[[np.ndarray, np.ndarray], np.ndarray],
+        dh_dp: Callable[[np.ndarray, np.ndarray], np.ndarray],
         q0: np.ndarray,
         p0: np.ndarray,
         steps: int = 1000,
@@ -126,8 +126,8 @@ class VerletIntegrator:
 
         Args:
             hamiltonian: Hamiltonian function H(q, p)
-            dH_dq: Gradient ∂H/∂q
-            dH_dp: Gradient ∂H/∂p (velocity)
+            dh_dq: Gradient ∂h/∂q
+            dh_dp: Gradient ∂h/∂p (velocity)
             q0: Initial position
             p0: Initial momentum
             steps: Number of integration steps
@@ -157,18 +157,19 @@ class VerletIntegrator:
         half_dt = dt / 2.0
 
         import time
+
         t_start = time.monotonic()
 
         for i in range(steps):
             # Half step for momentum
-            force = -dH_dq(q, p)
+            force = -dh_dq(q, p)
             p_half = p + half_dt * force
 
             # Full step for position
-            q = q + dt * dH_dp(q, p_half)
+            q = q + dt * dh_dp(q, p_half)
 
             # Half step for momentum
-            force_new = -dH_dq(q, p_half)
+            force_new = -dh_dq(q, p_half)
             p = p_half + half_dt * force_new
 
             # Update time
@@ -218,7 +219,7 @@ class YoshidaIntegrator:
 
     # Yoshida coefficients
     W1 = 1.0 / (2.0 - 2.0 ** (1.0 / 3.0))
-    W2 = -2.0 ** (1.0 / 3.0) / (2.0 - 2.0 ** (1.0 / 3.0))
+    W2 = -(2.0 ** (1.0 / 3.0)) / (2.0 - 2.0 ** (1.0 / 3.0))
     W3 = W1
 
     def __init__(
@@ -239,8 +240,8 @@ class YoshidaIntegrator:
     def integrate(
         self,
         hamiltonian: Callable[[np.ndarray, np.ndarray], float],
-        dH_dq: Callable[[np.ndarray, np.ndarray], np.ndarray],
-        dH_dp: Callable[[np.ndarray, np.ndarray], np.ndarray],
+        dh_dq: Callable[[np.ndarray, np.ndarray], np.ndarray],
+        dh_dp: Callable[[np.ndarray, np.ndarray], np.ndarray],
         q0: np.ndarray,
         p0: np.ndarray,
         steps: int = 1000,
@@ -251,8 +252,8 @@ class YoshidaIntegrator:
 
         Args:
             hamiltonian: Hamiltonian function H(q, p)
-            dH_dq: Gradient ∂H/∂q
-            dH_dp: Gradient ∂H/∂p (velocity)
+            dh_dq: Gradient ∂h/∂q
+            dh_dp: Gradient ∂h/∂p (velocity)
             q0: Initial position
             p0: Initial momentum
             steps: Number of integration steps
@@ -282,6 +283,7 @@ class YoshidaIntegrator:
         w1, w2, w3 = self.W1, self.W2, self.W3
 
         import time
+
         t_start = time.monotonic()
 
         # Pre-allocate arrays for sub-steps
@@ -290,19 +292,19 @@ class YoshidaIntegrator:
 
         for i in range(steps):
             # Stage 1
-            force = -dH_dq(q, p)
+            force = -dh_dq(q, p)
             p_temp = p + w1 * dt * force
-            q_temp = q + w1 * dt * dH_dp(q, p_temp)
+            q_temp = q + w1 * dt * dh_dp(q, p_temp)
 
             # Stage 2
-            force = -dH_dq(q_temp, p_temp)
+            force = -dh_dq(q_temp, p_temp)
             p_temp = p_temp + w2 * dt * force
-            q_temp = q_temp + w2 * dt * dH_dp(q_temp, p_temp)
+            q_temp = q_temp + w2 * dt * dh_dp(q_temp, p_temp)
 
             # Stage 3
-            force = -dH_dq(q_temp, p_temp)
+            force = -dh_dq(q_temp, p_temp)
             p = p_temp + w3 * dt * force
-            q = q_temp + w3 * dt * dH_dp(q, p)
+            q = q_temp + w3 * dt * dh_dp(q, p)
 
             # Update time
             t = t0 + (i + 1) * dt
@@ -369,8 +371,8 @@ class AdaptiveVerletIntegrator:
     def integrate(
         self,
         hamiltonian: Callable[[np.ndarray, np.ndarray], float],
-        dH_dq: Callable[[np.ndarray, np.ndarray], np.ndarray],
-        dH_dp: Callable[[np.ndarray, np.ndarray], np.ndarray],
+        dh_dq: Callable[[np.ndarray, np.ndarray], np.ndarray],
+        dh_dp: Callable[[np.ndarray, np.ndarray], np.ndarray],
         q0: np.ndarray,
         p0: np.ndarray,
         steps: int = 1000,
@@ -381,8 +383,8 @@ class AdaptiveVerletIntegrator:
 
         Args:
             hamiltonian: Hamiltonian function H(q, p)
-            dH_dq: Gradient ∂H/∂q
-            dH_dp: Gradient ∂H/∂p (velocity)
+            dh_dq: Gradient ∂h/∂q
+            dh_dp: Gradient ∂h/∂p (velocity)
             q0: Initial position
             p0: Initial momentum
             steps: Number of integration steps
@@ -410,14 +412,15 @@ class AdaptiveVerletIntegrator:
         t_current = t0
 
         import time
+
         t_start = time.monotonic()
 
         for i in range(steps):
             # Try step with current dt
-            force = -dH_dq(q, p)
+            force = -dh_dq(q, p)
             p_half = p + (dt / 2.0) * force
-            q_new = q + dt * dH_dp(q, p_half)
-            force_new = -dH_dq(q_new, p_half)
+            q_new = q + dt * dh_dp(q, p_half)
+            force_new = -dh_dq(q_new, p_half)
             p_new = p_half + (dt / 2.0) * force_new
 
             # Check energy

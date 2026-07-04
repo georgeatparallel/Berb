@@ -1,6 +1,5 @@
 """Anthropic Messages API adapter for Berb."""
 
-import json
 import logging
 import urllib.error
 from typing import Any
@@ -15,8 +14,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 _JSON_MODE_INSTRUCTION = (
-    "You MUST respond with valid JSON only. "
-    "Do not include any text outside the JSON object."
+    "You MUST respond with valid JSON only. Do not include any text outside the JSON object."
 )
 
 # Map Anthropic stop_reason → OpenAI finish_reason
@@ -33,9 +31,7 @@ class AnthropicAdapter:
 
     def __init__(self, base_url: str, api_key: str, timeout_sec: int = 300):
         if not HAS_HTTPX:
-            raise ImportError(
-                "httpx is required for Anthropic adapter. Install: pip install httpx"
-            )
+            raise ImportError("httpx is required for Anthropic adapter. Install: pip install httpx")
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.timeout_sec = timeout_sec
@@ -168,9 +164,7 @@ class AnthropicAdapter:
         content = ""
         if "content" in data and data["content"]:
             text_parts = [
-                block.get("text", "")
-                for block in data["content"]
-                if block.get("type") == "text"
+                block.get("text", "") for block in data["content"] if block.get("type") == "text"
             ]
             content = "\n".join(text_parts)
 

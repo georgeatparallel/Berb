@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -59,9 +59,7 @@ class ResearchRepository:
                 "run_id": run_id,
                 "type": artifact_type,
                 "content": content,
-                "published_at": datetime.now(timezone.utc).isoformat(
-                    timespec="seconds"
-                ),
+                "published_at": datetime.now(UTC).isoformat(timespec="seconds"),
             }
             artifact_path.write_text(
                 json.dumps(payload, indent=2, ensure_ascii=False, default=str),
@@ -105,9 +103,7 @@ class ResearchRepository:
                     continue
 
                 try:
-                    payload = json.loads(
-                        artifact_file.read_text(encoding="utf-8")
-                    )
+                    payload = json.loads(artifact_file.read_text(encoding="utf-8"))
                 except (json.JSONDecodeError, OSError):
                     continue
 

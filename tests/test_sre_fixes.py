@@ -19,23 +19,27 @@ import pytest
 # BUG-001 — get_shared_memory() global singleton race
 # ---------------------------------------------------------------------------
 
+
 class TestGetSharedMemorySingleton:
     """BUG-001: global _memory must be initialised exactly once under concurrent callers."""
 
     def setup_method(self):
         # Reset the global between tests
         import berb.memory.shared_memory as _sm
+
         with _sm._memory_lock:
             _sm._memory = None
 
     def teardown_method(self):
         import berb.memory.shared_memory as _sm
+
         with _sm._memory_lock:
             _sm._memory = None
 
     def test_single_thread_returns_same_instance(self):
         """Baseline: sequential calls return the same object."""
         from berb.memory.shared_memory import get_shared_memory
+
         a = get_shared_memory("proj_x")
         b = get_shared_memory("proj_x")
         assert a is b
@@ -66,6 +70,7 @@ class TestGetSharedMemorySingleton:
     def test_project_id_change_creates_new_instance(self):
         """Changing project_id should create a fresh instance."""
         from berb.memory.shared_memory import get_shared_memory
+
         a = get_shared_memory("proj_a")
         b = get_shared_memory("proj_b")
         assert a is not b
@@ -74,6 +79,7 @@ class TestGetSharedMemorySingleton:
     def test_data_stored_before_concurrent_call_is_not_lost(self):
         """Data written to the first instance must survive concurrent re-entrancy."""
         from berb.memory.shared_memory import get_shared_memory
+
         mem = get_shared_memory("proj_safe")
         mem.store("key_x", "value_x")
 
@@ -97,11 +103,13 @@ class TestGetSharedMemorySingleton:
 # BUG-002 — send_message / get_messages non-atomic counter increments
 # ---------------------------------------------------------------------------
 
+
 class TestMessageCountersThreadSafety:
     """BUG-002: messages_sent and messages_received must be exact under concurrency."""
 
     def _make_memory(self) -> "SharedResearchMemory":  # noqa: F821
         from berb.memory.shared_memory import SharedResearchMemory
+
         mem = SharedResearchMemory(project_id="test_counters")
         mem.register_agent("agent_a")
         return mem
@@ -126,7 +134,7 @@ class TestMessageCountersThreadSafety:
         state = mem.get_agent_state("agent_a")
         assert state is not None
         assert state.messages_sent == N * M, (
-            f"BUG-002 regression: expected {N*M} sent, got {state.messages_sent}"
+            f"BUG-002 regression: expected {N * M} sent, got {state.messages_sent}"
         )
 
     def test_messages_received_exact_under_concurrency(self):
@@ -175,6 +183,7 @@ class TestMessageCountersThreadSafety:
 # BUG-003 — execute_stage() TypeError introspection mask
 # ---------------------------------------------------------------------------
 
+
 class TestExecuteStageSignatureIntrospection:
     """BUG-003: executor dispatch must use inspect.signature, not exception message matching."""
 
@@ -199,7 +208,10 @@ class TestExecuteStageSignatureIntrospection:
             received_kwargs["prompts"] = prompts
             from berb.pipeline._helpers import StageResult
             from berb.pipeline.stages import Stage, StageStatus
-            return StageResult(stage=Stage.TOPIC_INIT, status=StageStatus.DONE, artifacts=("topic.json",))
+
+            return StageResult(
+                stage=Stage.TOPIC_INIT, status=StageStatus.DONE, artifacts=("topic.json",)
+            )
 
         assert "prompts" in inspect.signature(fake_executor).parameters, (
             "Test setup error: fake_executor must declare 'prompts'"
@@ -210,6 +222,7 @@ class TestExecuteStageSignatureIntrospection:
 
     def test_executor_without_prompts_does_not_receive_prompts(self):
         """An executor that does NOT declare 'prompts' must not receive it."""
+
         def legacy_executor(stage_dir, run_dir, config, adapters, *, llm=None):
             return MagicMock()
 

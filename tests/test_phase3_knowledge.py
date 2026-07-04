@@ -26,6 +26,7 @@ from berb.literature.zotero_integration import (
 
 # ============== Obsidian Export Tests ==============
 
+
 class TestObsidianConfig:
     """Test Obsidian configuration."""
 
@@ -230,7 +231,7 @@ class TestObsidianFrontmatter:
         content = Path(result.file_path).read_text()
 
         assert content.startswith("---")
-        assert "title: \"Test Card\"" in content
+        assert 'title: "Test Card"' in content
         assert "id: kc-001" in content
         assert "berb/test" in content
 
@@ -256,6 +257,7 @@ class TestObsidianFrontmatter:
 
 
 # ============== Zotero Integration Tests ==============
+
 
 class TestZoteroConfig:
     """Test Zotero configuration."""
@@ -364,8 +366,8 @@ class TestZoteroMCPClient:
     async def test_health_check_success(self):
         """Test health check (mocked)."""
         client = ZoteroMCPClient()
-        
-        with patch.object(client, '_mcp_call', new_callable=AsyncMock) as mock_call:
+
+        with patch.object(client, "_mcp_call", new_callable=AsyncMock) as mock_call:
             mock_call.return_value = {}
             result = await client.health_check()
             assert result is True
@@ -374,8 +376,8 @@ class TestZoteroMCPClient:
     async def test_health_check_failure(self):
         """Test health check failure (mocked)."""
         client = ZoteroMCPClient()
-        
-        with patch.object(client, '_mcp_call', new_callable=AsyncMock) as mock_call:
+
+        with patch.object(client, "_mcp_call", new_callable=AsyncMock) as mock_call:
             mock_call.side_effect = Exception("Connection failed")
             result = await client.health_check()
             assert result is False
@@ -384,16 +386,16 @@ class TestZoteroMCPClient:
     async def test_list_collections_mcp(self):
         """Test list collections via MCP (mocked)."""
         client = ZoteroMCPClient()
-        
+
         mock_collections = [
             {"id": "coll-001", "name": "Test Collection 1"},
             {"id": "coll-002", "name": "Test Collection 2"},
         ]
-        
-        with patch.object(client, '_mcp_call', new_callable=AsyncMock) as mock_call:
+
+        with patch.object(client, "_mcp_call", new_callable=AsyncMock) as mock_call:
             mock_call.return_value = mock_collections
             collections = await client.list_collections()
-            
+
             assert len(collections) == 2
             assert collections[0].name == "Test Collection 1"
 
@@ -401,23 +403,21 @@ class TestZoteroMCPClient:
     async def test_get_collection_papers(self):
         """Test get collection papers (mocked)."""
         client = ZoteroMCPClient()
-        
+
         mock_items = [
             {
                 "key": "item-001",
                 "data": {
                     "title": "Test Paper 1",
-                    "creators": [
-                        {"firstName": "John", "lastName": "Doe", "creatorType": "author"}
-                    ],
-                }
+                    "creators": [{"firstName": "John", "lastName": "Doe", "creatorType": "author"}],
+                },
             },
         ]
-        
-        with patch.object(client, '_mcp_call', new_callable=AsyncMock) as mock_call:
+
+        with patch.object(client, "_mcp_call", new_callable=AsyncMock) as mock_call:
             mock_call.return_value = mock_items
             papers = await client.get_collection_papers("coll-001")
-            
+
             assert len(papers) == 1
             assert papers[0].title == "Test Paper 1"
             assert "John Doe" in papers[0].authors
@@ -430,7 +430,7 @@ class TestZoteroAnnotationExport:
     async def test_export_annotations_markdown(self):
         """Test markdown annotation export."""
         client = ZoteroMCPClient()
-        
+
         # Mock item with annotations
         mock_item = ZoteroItem(
             id="item-001",
@@ -446,13 +446,13 @@ class TestZoteroAnnotationExport:
                 }
             ],
         )
-        
+
         # Mock the API call
-        with patch.object(client, '_get_collection_papers_api', new_callable=AsyncMock) as mock_api:
+        with patch.object(client, "_get_collection_papers_api", new_callable=AsyncMock) as mock_api:
             mock_api.return_value = [mock_item]
-            
+
             result = await client._export_annotations_api("item-001", format="markdown")
-            
+
             assert "Test Paper" in result
             assert "Important finding" in result
             assert "Key result" in result
@@ -460,25 +460,34 @@ class TestZoteroAnnotationExport:
 
 # ============== Environment Configuration Tests ==============
 
+
 class TestEnvironmentConfig:
     """Test environment-based configuration."""
 
     def test_create_obsidian_exporter_from_env(self):
         """Test creating ObsidianExporter from environment."""
-        with patch.dict('os.environ', {
-            'OBSIDIAN_VAULT_PATH': '/tmp/test-vault',
-            'OBSIDIAN_KNOWLEDGE_FOLDER': 'Cards',
-        }, clear=False):
+        with patch.dict(
+            "os.environ",
+            {
+                "OBSIDIAN_VAULT_PATH": "/tmp/test-vault",
+                "OBSIDIAN_KNOWLEDGE_FOLDER": "Cards",
+            },
+            clear=False,
+        ):
             exporter = create_exporter_from_env()
             assert exporter.config.vault_path == "/tmp/test-vault"
             assert exporter.config.knowledge_folder == "Cards"
 
     def test_create_zotero_client_from_env(self):
         """Test creating ZoteroMCPClient from environment."""
-        with patch.dict('os.environ', {
-            'ZOTERO_MCP_URL': 'http://custom:8765',
-            'ZOTERO_API_KEY': 'test-key',
-        }, clear=False):
+        with patch.dict(
+            "os.environ",
+            {
+                "ZOTERO_MCP_URL": "http://custom:8765",
+                "ZOTERO_API_KEY": "test-key",
+            },
+            clear=False,
+        ):
             client = create_zotero_client_from_env()
             assert client.config.mcp_url == "http://custom:8765"
             assert client.config.api_key == "test-key"
@@ -486,18 +495,21 @@ class TestEnvironmentConfig:
 
 # ============== Integration Tests ==============
 
+
 class TestKnowledgeIntegration:
     """Test knowledge module integration."""
 
     def test_import_obsidian_exporter(self):
         """Test ObsidianExporter can be imported."""
         from berb.knowledge import ObsidianExporter, ObsidianConfig
+
         assert ObsidianExporter is not None
         assert ObsidianConfig is not None
 
     def test_import_zotero_client(self):
         """Test ZoteroMCPClient can be imported."""
         from berb.literature.zotero_integration import ZoteroMCPClient, ZoteroConfig
+
         assert ZoteroMCPClient is not None
         assert ZoteroConfig is not None
 

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import re
-import subprocess
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -74,10 +73,12 @@ def _extract_conflicts(content: str) -> list[dict[str, str]]:
         elif line.startswith("=======") and in_conflict:
             current = theirs_lines
         elif line.startswith(">>>>>>>") and in_conflict:
-            conflicts.append({
-                "ours": "\n".join(ours_lines),
-                "theirs": "\n".join(theirs_lines),
-            })
+            conflicts.append(
+                {
+                    "ours": "\n".join(ours_lines),
+                    "theirs": "\n".join(theirs_lines),
+                }
+            )
             in_conflict = False
         elif in_conflict:
             current.append(line)

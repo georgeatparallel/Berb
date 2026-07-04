@@ -39,6 +39,7 @@ def test_build_run_command_network_none(tmp_path: Path):
     """network_policy='none' → --network none, --user UID:GID."""
     cfg = DockerSandboxConfig(network_policy="none")
     sandbox = DockerSandbox(cfg, tmp_path / "work")
+    # Mock _get_user_id to return a user ID (simulating Linux behavior)
     with patch("berb.experiment.docker_sandbox._get_user_id", return_value="1000:1000"):
         cmd = sandbox._build_run_command(
             tmp_path / "staging",
@@ -60,6 +61,7 @@ def test_build_run_command_setup_only(tmp_path: Path):
     """Default network_policy='setup_only' → RC_SETUP_ONLY_NETWORK=1, --cap-add."""
     cfg = DockerSandboxConfig()  # default is setup_only
     sandbox = DockerSandbox(cfg, tmp_path / "work")
+    # Mock _get_user_id to return a user ID (simulating Linux behavior)
     with patch("berb.experiment.docker_sandbox._get_user_id", return_value="1000:1000"):
         cmd = sandbox._build_run_command(
             tmp_path / "staging",
@@ -84,6 +86,7 @@ def test_build_run_command_full_network(tmp_path: Path):
     """network_policy='full' → no --network none, has --user."""
     cfg = DockerSandboxConfig(network_policy="full")
     sandbox = DockerSandbox(cfg, tmp_path / "work")
+    # Mock _get_user_id to return a user ID (simulating Linux behavior)
     with patch("berb.experiment.docker_sandbox._get_user_id", return_value="1000:1000"):
         cmd = sandbox._build_run_command(
             tmp_path / "staging",
@@ -160,6 +163,7 @@ def test_factory_falls_back_when_docker_unavailable(mock_avail, tmp_path: Path):
     sandbox = create_sandbox(config, tmp_path / "work")
     # BUG-002: Should fall back to subprocess sandbox instead of raising
     from berb.experiment.sandbox import ExperimentSandbox
+
     assert isinstance(sandbox, ExperimentSandbox)
 
 
@@ -168,7 +172,7 @@ def test_factory_falls_back_when_docker_unavailable(mock_avail, tmp_path: Path):
 def test_factory_falls_back_when_image_missing(mock_avail, mock_image, tmp_path: Path):
     """P0 FIX: Factory should fall back to sandbox when image is missing."""
     from berb.experiment.sandbox import ExperimentSandbox
-    
+
     config = ExperimentConfig(mode="docker")
     sandbox = create_sandbox(config, tmp_path / "work")
     # P0 FIX: Should fall back to subprocess sandbox instead of raising
@@ -222,9 +226,7 @@ def test_docker_run_timeout(mock_run, tmp_path: Path):
 
 
 def test_detect_pip_packages(tmp_path: Path):
-    (tmp_path / "main.py").write_text(
-        "import torchdiffeq\nimport numpy\nfrom PIL import Image\n"
-    )
+    (tmp_path / "main.py").write_text("import torchdiffeq\nimport numpy\nfrom PIL import Image\n")
     detected = DockerSandbox._detect_pip_packages(tmp_path)
     # torchdiffeq and PIL/Pillow are now in builtin → skipped
     # numpy should be skipped (builtin)
@@ -234,9 +236,7 @@ def test_detect_pip_packages(tmp_path: Path):
 
 def test_detect_pip_packages_finds_unknown(tmp_path: Path):
     """Unknown packages should be detected."""
-    (tmp_path / "main.py").write_text(
-        "import some_new_package\nimport numpy\n"
-    )
+    (tmp_path / "main.py").write_text("import some_new_package\nimport numpy\n")
     detected = DockerSandbox._detect_pip_packages(tmp_path)
     assert "some_new_package" in detected
     assert "numpy" not in detected
@@ -252,9 +252,7 @@ def test_detect_pip_packages_skips_setup_py(tmp_path: Path):
 
 def test_detect_pip_packages_maps_imports(tmp_path: Path):
     """Known import-to-pip mappings should be applied."""
-    (tmp_path / "main.py").write_text(
-        "import cv2\nimport wandb\n"
-    )
+    (tmp_path / "main.py").write_text("import cv2\nimport wandb\n")
     detected = DockerSandbox._detect_pip_packages(tmp_path)
     assert "opencv-python" in detected
     assert "wandb" in detected
@@ -447,7 +445,10 @@ def test_run_project_rejects_absolute_path(mock_run: MagicMock, tmp_path: Path):
 def test_cleanup_on_normal_exit(mock_run: MagicMock, mock_remove: MagicMock, tmp_path: Path):
     """_remove_container is called on normal successful exit."""
     mock_run.return_value = subprocess.CompletedProcess(
-        args=["docker", "run"], returncode=0, stdout="metric: 1.0\n", stderr="",
+        args=["docker", "run"],
+        returncode=0,
+        stdout="metric: 1.0\n",
+        stderr="",
     )
     cfg = DockerSandboxConfig(network_policy="none")
     sandbox = DockerSandbox(cfg, tmp_path / "work")
@@ -461,7 +462,10 @@ def test_cleanup_on_normal_exit(mock_run: MagicMock, mock_remove: MagicMock, tmp
 @patch.object(DockerSandbox, "_kill_container")
 @patch("subprocess.run")
 def test_cleanup_on_timeout(
-    mock_run: MagicMock, mock_kill: MagicMock, mock_remove: MagicMock, tmp_path: Path,
+    mock_run: MagicMock,
+    mock_kill: MagicMock,
+    mock_remove: MagicMock,
+    tmp_path: Path,
 ):
     """Both _kill_container and _remove_container are called on timeout."""
     mock_run.side_effect = subprocess.TimeoutExpired(cmd="docker run", timeout=10)
@@ -492,11 +496,17 @@ def test_cleanup_on_exception(mock_run: MagicMock, mock_remove: MagicMock, tmp_p
 @patch.object(DockerSandbox, "_kill_container")
 @patch("subprocess.run")
 def test_keep_containers_skips_removal(
-    mock_run: MagicMock, mock_kill: MagicMock, mock_remove: MagicMock, tmp_path: Path,
+    mock_run: MagicMock,
+    mock_kill: MagicMock,
+    mock_remove: MagicMock,
+    tmp_path: Path,
 ):
     """When keep_containers=True, _remove_container is never called."""
     mock_run.return_value = subprocess.CompletedProcess(
-        args=["docker", "run"], returncode=0, stdout="", stderr="",
+        args=["docker", "run"],
+        returncode=0,
+        stdout="",
+        stderr="",
     )
     cfg = DockerSandboxConfig(network_policy="none", keep_containers=True)
     sandbox = DockerSandbox(cfg, tmp_path / "work")

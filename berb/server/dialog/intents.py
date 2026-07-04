@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import re
-from enum import Enum
-from typing import Any
+from enum import StrEnum
 
 
-class Intent(str, Enum):
+class Intent(StrEnum):
     """Research chat intents."""
 
     TOPIC_SELECTION = "topic_selection"
@@ -22,32 +21,51 @@ class Intent(str, Enum):
 
 # Keyword patterns for fast classification
 _INTENT_PATTERNS: list[tuple[Intent, re.Pattern[str]]] = [
-    (Intent.HELP, re.compile(
-        r"(?:^\s*help\s*$|\bhow\s+to\b|\busage\b|帮助|怎么用)", re.IGNORECASE
-    )),
-    (Intent.START_PIPELINE, re.compile(
-        r"(?:\b(?:start|run|begin|launch)\b|开始|启动|跑|运行)",
-        re.IGNORECASE,
-    )),
-    (Intent.CHECK_STATUS, re.compile(
-        r"(?:\b(?:status|progress|stage|current)\b|阶段|进度|到哪|第几|哪一步)", re.IGNORECASE
-    )),
-    (Intent.TOPIC_SELECTION, re.compile(
-        r"(?:\b(?:topic|idea|direction)\b|research\s+direction|研究方向|选题|研究主题|想法)",
-        re.IGNORECASE,
-    )),
-    (Intent.MODIFY_CONFIG, re.compile(
-        r"(?:\b(?:config|setting|parameter|batch|epoch)\b|learning\s+rate|学习率|修改|设置)",
-        re.IGNORECASE,
-    )),
-    (Intent.DISCUSS_RESULTS, re.compile(
-        r"(?:\b(?:results?|metrics?|accuracy|loss|performance)\b|结果|指标|效果|怎么样)",
-        re.IGNORECASE,
-    )),
-    (Intent.EDIT_PAPER, re.compile(
-        r"(?:\b(?:paper|abstract|introduction|draft)\b|论文|摘要|改一下|写)",
-        re.IGNORECASE,
-    )),
+    (
+        Intent.HELP,
+        re.compile(r"(?:^\s*help\s*$|\bhow\s+to\b|\busage\b|帮助|怎么用)", re.IGNORECASE),
+    ),
+    (
+        Intent.START_PIPELINE,
+        re.compile(
+            r"(?:\b(?:start|run|begin|launch)\b|开始|启动|跑|运行)",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        Intent.CHECK_STATUS,
+        re.compile(
+            r"(?:\b(?:status|progress|stage|current)\b|阶段|进度|到哪|第几|哪一步)", re.IGNORECASE
+        ),
+    ),
+    (
+        Intent.TOPIC_SELECTION,
+        re.compile(
+            r"(?:\b(?:topic|idea|direction)\b|research\s+direction|研究方向|选题|研究主题|想法)",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        Intent.MODIFY_CONFIG,
+        re.compile(
+            r"(?:\b(?:config|setting|parameter|batch|epoch)\b|learning\s+rate|学习率|修改|设置)",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        Intent.DISCUSS_RESULTS,
+        re.compile(
+            r"(?:\b(?:results?|metrics?|accuracy|loss|performance)\b|结果|指标|效果|怎么样)",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        Intent.EDIT_PAPER,
+        re.compile(
+            r"(?:\b(?:paper|abstract|introduction|draft)\b|论文|摘要|改一下|写)",
+            re.IGNORECASE,
+        ),
+    ),
 ]
 
 

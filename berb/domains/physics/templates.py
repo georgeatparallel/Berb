@@ -35,7 +35,6 @@ from __future__ import annotations
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Callable
 
 import numpy as np
 
@@ -68,8 +67,8 @@ class HamiltonianSystem(ABC):
 
     Subclasses must implement:
     - hamiltonian(q, p): Compute H(q, p)
-    - dH_dq(q, p): Compute ∂H/∂q
-    - dH_dp(q, p): Compute ∂H/∂p
+    - dH_dq(q, p): Compute ∂h/∂q
+    - dH_dp(q, p): Compute ∂h/∂p
     """
 
     name: str = "Hamiltonian System"
@@ -81,13 +80,13 @@ class HamiltonianSystem(ABC):
         pass
 
     @abstractmethod
-    def dH_dq(self, q: np.ndarray, p: np.ndarray) -> np.ndarray:
-        """Compute gradient ∂H/∂q."""
+    def dh_dq(self, q: np.ndarray, p: np.ndarray) -> np.ndarray:
+        """Compute gradient ∂h/∂q."""
         pass
 
     @abstractmethod
-    def dH_dp(self, q: np.ndarray, p: np.ndarray) -> np.ndarray:
-        """Compute gradient ∂H/∂p."""
+    def dh_dp(self, q: np.ndarray, p: np.ndarray) -> np.ndarray:
+        """Compute gradient ∂h/∂p."""
         pass
 
     def equations_of_motion(
@@ -109,8 +108,8 @@ class HamiltonianSystem(ABC):
         q = y[:n]
         p = y[n:]
 
-        dqdt = self.dH_dp(q, p)
-        dpdt = -self.dH_dq(q, p)
+        dqdt = self.dh_dp(q, p)
+        dpdt = -self.dh_dq(q, p)
 
         return np.concatenate([dqdt, dpdt])
 
@@ -144,14 +143,14 @@ class HarmonicOscillator(HamiltonianSystem):
 
     def hamiltonian(self, q: np.ndarray, p: np.ndarray) -> float:
         """H = p²/(2m) + (1/2)kq²"""
-        return p[0]**2 / (2 * self.m) + 0.5 * self.k * q[0]**2
+        return p[0] ** 2 / (2 * self.m) + 0.5 * self.k * q[0] ** 2
 
-    def dH_dq(self, q: np.ndarray, p: np.ndarray) -> np.ndarray:
-        """∂H/∂q = kq"""
+    def dh_dq(self, q: np.ndarray, p: np.ndarray) -> np.ndarray:
+        """∂h/∂q = kq"""
         return np.array([self.k * q[0]])
 
-    def dH_dp(self, q: np.ndarray, p: np.ndarray) -> np.ndarray:
-        """∂H/∂p = p/m"""
+    def dh_dp(self, q: np.ndarray, p: np.ndarray) -> np.ndarray:
+        """∂h/∂p = p/m"""
         return np.array([p[0] / self.m])
 
 
@@ -182,14 +181,16 @@ class SimplePendulum(HamiltonianSystem):
     def hamiltonian(self, q: np.ndarray, p: np.ndarray) -> float:
         """H = p²/(2ml²) - mgl·cos(θ)"""
         theta = q[0]
-        return p[0]**2 / (2 * self.m * self.l**2) - self.m * self.g * self.l * np.cos(theta)
+        return p[0] ** 2 / (2 * self.m * self.l**2) - self.m * self.g * self.l * np.cos(
+            theta
+        )
 
-    def dH_dq(self, q: np.ndarray, p: np.ndarray) -> np.ndarray:
+    def dh_dq(self, q: np.ndarray, p: np.ndarray) -> np.ndarray:
         """∂H/∂θ = -mgl·sin(θ)"""
         return np.array([-self.m * self.g * self.l * np.sin(q[0])])
 
-    def dH_dp(self, q: np.ndarray, p: np.ndarray) -> np.ndarray:
-        """∂H/∂p = p/(ml²)"""
+    def dh_dp(self, q: np.ndarray, p: np.ndarray) -> np.ndarray:
+        """∂h/∂p = p/(ml²)"""
         return np.array([p[0] / (self.m * self.l**2)])
 
 
@@ -242,7 +243,7 @@ class DoublePendulum(HamiltonianSystem):
         det = M11 * M22 - M12**2
 
         if abs(det) < 1e-10:
-            return float('inf')
+            return float("inf")
 
         # Kinetic energy
         T = (M22 * p1**2 - 2 * M12 * p1 * p2 + M11 * p2**2) / (2 * det)
@@ -252,8 +253,8 @@ class DoublePendulum(HamiltonianSystem):
 
         return T + V
 
-    def dH_dq(self, q: np.ndarray, p: np.ndarray) -> np.ndarray:
-        """Compute ∂H/∂q."""
+    def dh_dq(self, q: np.ndarray, p: np.ndarray) -> np.ndarray:
+        """Compute ∂h/∂q."""
         theta1, theta2 = q
         p1, p2 = p
 
@@ -265,8 +266,8 @@ class DoublePendulum(HamiltonianSystem):
 
         return np.array([dV_dtheta1, dV_dtheta2])
 
-    def dH_dp(self, q: np.ndarray, p: np.ndarray) -> np.ndarray:
-        """Compute ∂H/∂p = velocities."""
+    def dh_dp(self, q: np.ndarray, p: np.ndarray) -> np.ndarray:
+        """Compute ∂h/∂p = velocities."""
         theta1, theta2 = q
         p1, p2 = p
 
@@ -315,16 +316,18 @@ class HenonHeiles(HamiltonianSystem):
 
         return kinetic + potential
 
-    def dH_dq(self, q: np.ndarray, p: np.ndarray) -> np.ndarray:
-        """∂H/∂q."""
+    def dh_dq(self, q: np.ndarray, p: np.ndarray) -> np.ndarray:
+        """∂h/∂q."""
         q1, q2 = q
-        return np.array([
-            q1 + 2 * q1 * q2,
-            q2 + q1**2 - q2**2,
-        ])
+        return np.array(
+            [
+                q1 + 2 * q1 * q2,
+                q2 + q1**2 - q2**2,
+            ]
+        )
 
-    def dH_dp(self, q: np.ndarray, p: np.ndarray) -> np.ndarray:
-        """∂H/∂p = velocities."""
+    def dh_dp(self, q: np.ndarray, p: np.ndarray) -> np.ndarray:
+        """∂h/∂p = velocities."""
         p1, p2 = p
         return np.array([p1, p2])
 
@@ -368,23 +371,23 @@ class KeplerProblem(HamiltonianSystem):
         """H = p²/(2μ) - k/r"""
         r = np.linalg.norm(q)
         if r < 1e-10:
-            return float('inf')
+            return float("inf")
 
         kinetic = np.dot(p, p) / (2 * self.mu)
         potential = -self.k / r
 
         return kinetic + potential
 
-    def dH_dq(self, q: np.ndarray, p: np.ndarray) -> np.ndarray:
-        """∂H/∂q = k·q/r³"""
+    def dh_dq(self, q: np.ndarray, p: np.ndarray) -> np.ndarray:
+        """∂h/∂q = k·q/r³"""
         r = np.linalg.norm(q)
         if r < 1e-10:
             return np.zeros(3)
 
         return self.k * q / r**3
 
-    def dH_dp(self, q: np.ndarray, p: np.ndarray) -> np.ndarray:
-        """∂H/∂p = p/μ"""
+    def dh_dp(self, q: np.ndarray, p: np.ndarray) -> np.ndarray:
+        """∂h/∂p = p/μ"""
         return p / self.mu
 
 
@@ -417,13 +420,13 @@ class CoupledOscillators(HamiltonianSystem):
 
         return kinetic + potential
 
-    def dH_dq(self, q: np.ndarray, p: np.ndarray) -> np.ndarray:
-        """∂H/∂q."""
+    def dh_dq(self, q: np.ndarray, p: np.ndarray) -> np.ndarray:
+        """∂h/∂q."""
         q1, q2 = q
         return np.array([q1 + self.k * q2, q2 + self.k * q1])
 
-    def dH_dp(self, q: np.ndarray, p: np.ndarray) -> np.ndarray:
-        """∂H/∂p = velocities."""
+    def dh_dp(self, q: np.ndarray, p: np.ndarray) -> np.ndarray:
+        """∂h/∂p = velocities."""
         p1, p2 = p
         return np.array([p1, p2])
 
@@ -452,14 +455,14 @@ class DuffingOscillator(HamiltonianSystem):
 
     def hamiltonian(self, q: np.ndarray, p: np.ndarray) -> float:
         """Compute Hamiltonian."""
-        return p[0]**2 / 2 - self.a * q[0]**2 / 2 + self.b * q[0]**4 / 4
+        return p[0] ** 2 / 2 - self.a * q[0] ** 2 / 2 + self.b * q[0] ** 4 / 4
 
-    def dH_dq(self, q: np.ndarray, p: np.ndarray) -> np.ndarray:
-        """∂H/∂q = -aq + bq³"""
-        return np.array([-self.a * q[0] + self.b * q[0]**3])
+    def dh_dq(self, q: np.ndarray, p: np.ndarray) -> np.ndarray:
+        """∂h/∂q = -aq + bq³"""
+        return np.array([-self.a * q[0] + self.b * q[0] ** 3])
 
-    def dH_dp(self, q: np.ndarray, p: np.ndarray) -> np.ndarray:
-        """∂H/∂p = p"""
+    def dh_dp(self, q: np.ndarray, p: np.ndarray) -> np.ndarray:
+        """∂h/∂p = p"""
         return np.array([p[0]])
 
 
@@ -524,11 +527,11 @@ class StandardMap(HamiltonianSystem):
         """Not applicable for discrete map."""
         return 0.0
 
-    def dH_dq(self, q: np.ndarray, p: np.ndarray) -> np.ndarray:
+    def dh_dq(self, q: np.ndarray, p: np.ndarray) -> np.ndarray:
         """Not applicable for discrete map."""
         return np.zeros_like(q)
 
-    def dH_dp(self, q: np.ndarray, p: np.ndarray) -> np.ndarray:
+    def dh_dp(self, q: np.ndarray, p: np.ndarray) -> np.ndarray:
         """Not applicable for discrete map."""
         return np.zeros_like(p)
 
@@ -561,9 +564,6 @@ def get_template(name: str, **kwargs) -> HamiltonianSystem:
         ValueError: If template name not found
     """
     if name not in TEMPLATES:
-        raise ValueError(
-            f"Unknown template: {name}. "
-            f"Available: {', '.join(TEMPLATES.keys())}"
-        )
+        raise ValueError(f"Unknown template: {name}. Available: {', '.join(TEMPLATES.keys())}")
 
     return TEMPLATES[name](**kwargs)

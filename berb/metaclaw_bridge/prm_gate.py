@@ -77,12 +77,14 @@ def _single_judge_call(
             ),
         },
     ]
-    body = json.dumps({
-        "model": model,
-        "messages": messages,
-        "temperature": temperature,
-        "max_completion_tokens": 512,
-    }).encode("utf-8")
+    body = json.dumps(
+        {
+            "model": model,
+            "messages": messages,
+            "temperature": temperature,
+            "max_completion_tokens": 512,
+        }
+    ).encode("utf-8")
 
     url = f"{api_base.rstrip('/')}/chat/completions"
     req = urllib.request.Request(

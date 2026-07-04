@@ -36,9 +36,10 @@ Usage:
 from __future__ import annotations
 
 import asyncio
+import inspect
 import logging
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from berb.reasoning.base import (
@@ -52,18 +53,18 @@ from berb.reasoning.registry import ReasonerRegistry
 logger = logging.getLogger(__name__)
 
 
-class PerspectiveType(str, Enum):
+class PerspectiveType(StrEnum):
     """Type of perspective for multi-perspective analysis."""
-    
+
     CONSTRUCTIVE = "constructive"
     """Build the strongest solution"""
-    
+
     DESTRUCTIVE = "destructive"
     """Find every flaw"""
-    
+
     SYSTEMIC = "systemic"
     """Identify second/third-order effects"""
-    
+
     MINIMALIST = "minimalist"
     """Find simplest 80% solution (Occam's Razor)"""
 
@@ -71,14 +72,14 @@ class PerspectiveType(str, Enum):
 @dataclass
 class PerspectiveCandidate:
     """Candidate solution from a perspective."""
-    
+
     perspective: PerspectiveType
     content: str
     key_insights: list[str] = field(default_factory=list)
     model_used: str = ""
     tokens_used: int = 0
     cost: float = 0.0
-    
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
@@ -94,7 +95,7 @@ class PerspectiveCandidate:
 @dataclass
 class PerspectiveScore:
     """Score for a perspective candidate."""
-    
+
     perspective: PerspectiveType
     logical_consistency: float = 0.0  # 0-10
     evidence_support: float = 0.0  # 0-10
@@ -102,17 +103,14 @@ class PerspectiveScore:
     novelty: float = 0.0  # 0-10
     steel_man: str = ""  # Strongest counter-argument
     confidence_vs_accuracy_penalty: float = 0.0  # Penalty for overconfidence
-    
+
     @property
     def total(self) -> float:
         """Calculate total score (0-10)."""
         return (
-            self.logical_consistency
-            + self.evidence_support
-            + self.feasibility
-            + self.novelty
+            self.logical_consistency + self.evidence_support + self.feasibility + self.novelty
         ) / 4.0
-    
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
@@ -129,16 +127,16 @@ class PerspectiveScore:
 
 class MultiPerspectiveMethod(ReasoningMethod):
     """Multi-perspective reasoning method.
-    
+
     Analyzes problems from 4 distinct perspectives in parallel,
     then critiques and scores each to select the best candidates.
-    
+
     Attributes:
         router: LLM model router for perspective generation
         parallel: Whether to run perspectives in parallel
         top_k: Number of top candidates to return
     """
-    
+
     method_type = MethodType.MULTI_PERSPECTIVE
 
     def __init__(
@@ -164,7 +162,8 @@ class MultiPerspectiveMethod(ReasoningMethod):
         """
         super().__init__(
             name=name or "Multi-Perspective Analysis",
-            description=description or (
+            description=description
+            or (
                 "Analyzes problems from 4 perspectives: "
                 "constructive, destructive, systemic, minimalist"
             ),
@@ -174,27 +173,28 @@ class MultiPerspectiveMethod(ReasoningMethod):
         self.parallel = parallel
         self.top_k = top_k
         self._run_id: str | None = None  # For cost tracking
-    
+
     async def execute(self, context: ReasoningContext) -> ReasoningResult:
         """
         Execute multi-perspective analysis.
-        
+
         Args:
             context: Reasoning context with problem description
-        
+
         Returns:
             ReasoningResult with perspectives, scores, and top candidates
         """
         import time
+
         t0 = time.monotonic()
-        
+
         # Validate context
         if not self.validate_context(context):
             return ReasoningResult.error_result(
                 self.method_type,
                 "Invalid context: missing stage_id or input_data",
             )
-        
+
         # Extract problem from context
         problem = context.get("problem") or context.get("query") or context.get("topic")
         if not problem:
@@ -202,12 +202,13 @@ class MultiPerspectiveMethod(ReasoningMethod):
                 self.method_type,
                 "Context missing problem/query/topic",
             )
-        
+
         try:
             # Generate start time and run ID for cost tracking
             import uuid
+
             self._run_id = f"mp-{uuid.uuid4().hex[:8]}"
-            
+
             # Generate perspectives
             perspectives = await self._generate_perspectives(problem)
 
@@ -238,44 +239,41 @@ class MultiPerspectiveMethod(ReasoningMethod):
                     "run_id": self._run_id,
                 },
             )
-            
+
             # Track cost if router supports it
             self._track_cost(elapsed)
-            
+
             return result
-            
+
         except Exception as e:
             self._logger.error("Multi-perspective analysis failed: %s", e)
             return ReasoningResult.error_result(
                 self.method_type,
                 str(e),
             )
-    
+
     async def _generate_perspectives(
         self,
         problem: str,
     ) -> list[PerspectiveCandidate]:
         """Generate perspectives in parallel or sequentially."""
         perspectives = list(PerspectiveType)
-        
+
         if self.parallel:
             # Run all perspectives concurrently
-            tasks = [
-                self._generate_single_perspective(p, problem)
-                for p in perspectives
-            ]
+            tasks = [self._generate_single_perspective(p, problem) for p in perspectives]
             results = await asyncio.gather(*tasks, return_exceptions=True)
-            
+
             # Filter out exceptions
             candidates = [r for r in results if isinstance(r, PerspectiveCandidate)]
-            
+
             if len(candidates) < len(perspectives):
                 self._logger.warning(
                     "Only %d/%d perspectives generated successfully",
                     len(candidates),
                     len(perspectives),
                 )
-            
+
             return candidates
         else:
             # Run sequentially
@@ -286,9 +284,9 @@ class MultiPerspectiveMethod(ReasoningMethod):
                     candidates.append(candidate)
                 except Exception as e:
                     self._logger.warning("Perspective %s failed: %s", p.value, e)
-            
+
             return candidates
-    
+
     async def _generate_single_perspective(
         self,
         perspective: PerspectiveType,
@@ -297,16 +295,16 @@ class MultiPerspectiveMethod(ReasoningMethod):
         """Generate single perspective."""
         # Get LLM provider for this perspective
         provider = self._get_provider_for_perspective(perspective)
-        
+
         # Build prompt
         prompt = self._build_perspective_prompt(perspective, problem)
-        
+
         # Call LLM
         response = await provider.complete(prompt)
-        
+
         # Parse response
         content, insights = self._parse_perspective_response(response.content)
-        
+
         return PerspectiveCandidate(
             perspective=perspective,
             content=content,
@@ -315,13 +313,15 @@ class MultiPerspectiveMethod(ReasoningMethod):
             tokens_used=getattr(response, "tokens", 0),
             cost=getattr(response, "cost", 0.0),
         )
-    
+
     def _get_provider_for_perspective(self, perspective: PerspectiveType) -> Any:
         """Get LLM provider for perspective."""
         if self.router is None:
-            self._logger.warning("No router configured, using fallback")
+            if self.llm_client is not None:
+                return _LLMClientProvider(self.llm_client)
+            self._logger.warning("No router or llm_client configured, using fallback")
             return _FallbackProvider()
-        
+
         # Get provider based on perspective role
         role_map = {
             PerspectiveType.CONSTRUCTIVE: "constructive",
@@ -329,10 +329,10 @@ class MultiPerspectiveMethod(ReasoningMethod):
             PerspectiveType.SYSTEMIC: "systemic",
             PerspectiveType.MINIMALIST: "minimalist",
         }
-        
+
         role = role_map[perspective]
         return self.router.get_provider_for_role(role)
-    
+
     def _build_perspective_prompt(
         self,
         perspective: PerspectiveType,
@@ -353,7 +353,6 @@ Focus on:
 Output your solution with key insights as bullet points.
 
 JSON format: {{"solution": "...", "key_insights": ["insight1", "insight2"]}}""",
-            
             PerspectiveType.DESTRUCTIVE: f"""You are a critical adversary.
 Your task is to find EVERY FLAW in potential solutions to this problem.
 
@@ -367,7 +366,6 @@ Focus on:
 Output your critique with key flaws as bullet points.
 
 JSON format: {{"critique": "...", "key_insights": ["flaw1", "flaw2"]}}""",
-            
             PerspectiveType.SYSTEMIC: f"""You are a systems thinker.
 Your task is to identify SECOND and THIRD-ORDER EFFECTS of solutions.
 
@@ -381,7 +379,6 @@ Focus on:
 Output your analysis with key systemic effects as bullet points.
 
 JSON format: {{"analysis": "...", "key_insights": ["effect1", "effect2"]}}""",
-            
             PerspectiveType.MINIMALIST: f"""You are a minimalist problem solver (Occam's Razor).
 Your task is to find the SIMPLEST solution that achieves 80% of the value.
 
@@ -396,9 +393,9 @@ Output your minimal solution with key simplifications as bullet points.
 
 JSON format: {{"solution": "...", "key_insights": ["simplification1", "simplification2"]}}""",
         }
-        
+
         return prompts[perspective]
-    
+
     def _parse_perspective_response(
         self,
         response: str,
@@ -406,9 +403,9 @@ JSON format: {{"solution": "...", "key_insights": ["simplification1", "simplific
         """Parse perspective response."""
         import json
         import re
-        
+
         # Try to extract JSON
-        json_match = re.search(r'\{.*\}', response, re.DOTALL)
+        json_match = re.search(r"\{.*\}", response, re.DOTALL)
         if json_match:
             try:
                 data = json.loads(json_match.group())
@@ -417,10 +414,10 @@ JSON format: {{"solution": "...", "key_insights": ["simplification1", "simplific
                 return content, insights
             except json.JSONDecodeError:
                 pass
-        
+
         # Fallback: use entire response
         return response, []
-    
+
     async def _critique_and_score(
         self,
         perspectives: list[PerspectiveCandidate],
@@ -429,36 +426,40 @@ JSON format: {{"solution": "...", "key_insights": ["simplification1", "simplific
         """Critique and score all perspectives."""
         # Get scoring provider
         provider = self._get_scoring_provider()
-        
+
         # Build critique prompt
         prompt = self._build_critique_prompt(perspectives, problem)
-        
+
         # Call LLM for scoring
         response = await provider.complete(prompt)
-        
+
         # Parse scores
         scores = self._parse_critique_response(response.content, perspectives)
-        
+
         return scores
-    
+
     def _get_scoring_provider(self) -> Any:
         """Get LLM provider for scoring."""
         if self.router is None:
+            if self.llm_client is not None:
+                return _LLMClientProvider(self.llm_client)
             return _FallbackProvider()
-        
+
         return self.router.get_provider_for_role("scoring")
-    
+
     def _build_critique_prompt(
         self,
         perspectives: list[PerspectiveCandidate],
         problem: str,
     ) -> str:
         """Build critique prompt."""
-        candidates_str = "\n\n".join([
-            f"### {p.perspective.value.upper()}:\n{p.content}\nInsights: {', '.join(p.key_insights)}"
-            for p in perspectives
-        ])
-        
+        candidates_str = "\n\n".join(
+            [
+                f"### {p.perspective.value.upper()}:\n{p.content}\nInsights: {', '.join(p.key_insights)}"
+                for p in perspectives
+            ]
+        )
+
         return f"""You are an objective evaluator. Score each perspective on the following criteria:
 
 Problem: {problem}
@@ -481,7 +482,7 @@ Output JSON format:
         ...
     ]
 }}"""
-    
+
     def _parse_critique_response(
         self,
         response: str,
@@ -490,36 +491,37 @@ Output JSON format:
         """Parse critique response."""
         import json
         import re
-        
+
         # Try to extract JSON
-        json_match = re.search(r'\{.*\}', response, re.DOTALL)
+        json_match = re.search(r"\{.*\}", response, re.DOTALL)
         if json_match:
             try:
                 data = json.loads(json_match.group())
                 scores_data = data.get("scores", [])
-                
+
                 scores = []
                 for s in scores_data:
                     perspective = PerspectiveType(s.get("perspective", "constructive"))
-                    scores.append(PerspectiveScore(
-                        perspective=perspective,
-                        logical_consistency=s.get("logical_consistency", 5.0),
-                        evidence_support=s.get("evidence_support", 5.0),
-                        feasibility=s.get("feasibility", 5.0),
-                        novelty=s.get("novelty", 5.0),
-                        confidence_vs_accuracy_penalty=s.get("confidence_vs_accuracy_penalty", 0.0),
-                    ))
-                
+                    scores.append(
+                        PerspectiveScore(
+                            perspective=perspective,
+                            logical_consistency=s.get("logical_consistency", 5.0),
+                            evidence_support=s.get("evidence_support", 5.0),
+                            feasibility=s.get("feasibility", 5.0),
+                            novelty=s.get("novelty", 5.0),
+                            confidence_vs_accuracy_penalty=s.get(
+                                "confidence_vs_accuracy_penalty", 0.0
+                            ),
+                        )
+                    )
+
                 return scores
             except (json.JSONDecodeError, ValueError):
                 pass
-        
+
         # Fallback: equal scores
-        return [
-            PerspectiveScore(perspective=p.perspective)
-            for p in perspectives
-        ]
-    
+        return [PerspectiveScore(perspective=p.perspective) for p in perspectives]
+
     def _select_top_candidates(
         self,
         perspectives: list[PerspectiveCandidate],
@@ -529,16 +531,16 @@ Output JSON format:
         """Select top-k candidates based on scores."""
         # Create score lookup
         score_map = {s.perspective: s.total for s in scores}
-        
+
         # Sort by score
         sorted_perspectives = sorted(
             perspectives,
             key=lambda p: score_map.get(p.perspective, 0.0),
             reverse=True,
         )
-        
+
         return sorted_perspectives[:top_k]
-    
+
     async def _generate_steel_man(
         self,
         perspectives: list[PerspectiveCandidate],
@@ -547,13 +549,13 @@ Output JSON format:
         """Generate steel-man arguments for weakest candidates."""
         if not scores:
             return
-        
+
         # Find weakest candidate
         weakest_score = min(scores, key=lambda s: s.total)
         weakest_perspective = next(
             p for p in perspectives if p.perspective == weakest_score.perspective
         )
-        
+
         # Generate steel-man argument
         provider = self._get_scoring_provider()
         prompt = f"""Generate the STRONGEST possible argument (steel-man) for this perspective:
@@ -562,25 +564,29 @@ Perspective: {weakest_perspective.perspective.value}
 Content: {weakest_perspective.content[:500]}
 
 What is the most compelling case for this perspective, even if you disagree?"""
-        
+
         response = await provider.complete(prompt)
         weakest_score.steel_man = response.content
-    
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        """Async context manager exit."""
+        pass
+
     def _track_cost(self, duration_sec: float) -> None:
         """Track cost for multi-perspective execution.
-        
+
         Args:
             duration_sec: Execution duration in seconds
         """
         if self.router is None or self._run_id is None:
             return
-        
+
         # Check if router has cost tracking (ExtendedNadirClawRouter)
-        if hasattr(self.router, 'track_cost'):
+        if hasattr(self.router, "track_cost"):
             # Estimate tokens (rough estimate: 1 perspective ≈ 500 tokens)
             estimated_input = 500 * 4  # 4 perspectives
             estimated_output = 300 * 4
-            
+
             self.router.track_cost(
                 method="multi_perspective",
                 phase="all",
@@ -590,6 +596,34 @@ What is the most compelling case for this perspective, even if you disagree?"""
                 duration_ms=int(duration_sec * 1000),
                 run_id=self._run_id,
             )
+
+
+class _LLMClientProvider:
+    """Adapts a raw LLM client (sync or async .chat()) to the .complete(prompt) interface.
+
+    Backward-compat path for callers that pass ``llm_client=`` instead of a
+    router. Supports both a sync ``LLMClient.chat()`` (the production client,
+    run off the event loop via a thread) and an async ``chat()`` (e.g. test
+    doubles / alternate clients).
+    """
+
+    def __init__(self, llm_client: Any) -> None:
+        self.llm_client = llm_client
+        self.model = getattr(getattr(llm_client, "config", None), "primary_model", "unknown")
+
+    async def complete(self, prompt: str) -> Any:
+        messages = [{"role": "user", "content": prompt}]
+        if asyncio.iscoroutinefunction(self.llm_client.chat):
+            return await self.llm_client.chat(messages)
+
+        from concurrent.futures import ThreadPoolExecutor
+
+        loop = asyncio.get_event_loop()
+        with ThreadPoolExecutor() as executor:
+            result = await loop.run_in_executor(executor, lambda: self.llm_client.chat(messages))
+        if inspect.isawaitable(result):
+            return await result
+        return result
 
 
 class _FallbackProvider:

@@ -73,8 +73,11 @@ class TestMLPromptAdapter:
             assert all(
                 getattr(blocks, f) == ""
                 for f in [
-                    "compute_budget", "dataset_guidance", "hp_reporting",
-                    "code_generation_hints", "result_analysis_hints",
+                    "compute_budget",
+                    "dataset_guidance",
+                    "hp_reporting",
+                    "code_generation_hints",
+                    "result_analysis_hints",
                 ]
             )
 
@@ -184,9 +187,7 @@ class TestGetAdapter:
             if profile is None:
                 continue
             adapter = get_adapter(profile)
-            assert isinstance(adapter, MLPromptAdapter), (
-                f"{domain_id} should use MLPromptAdapter"
-            )
+            assert isinstance(adapter, MLPromptAdapter), f"{domain_id} should use MLPromptAdapter"
 
     def test_generic_domain_gets_generic_adapter(self):
         profile = get_generic_profile()
@@ -199,6 +200,7 @@ class TestGetAdapter:
             pytest.skip("physics_simulation profile not found")
         adapter = get_adapter(profile)
         from berb.domains.adapters.physics import PhysicsPromptAdapter
+
         assert isinstance(adapter, PhysicsPromptAdapter)
 
     def test_unknown_domain_gets_generic(self):

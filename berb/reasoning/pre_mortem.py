@@ -56,14 +56,14 @@ logger = logging.getLogger(__name__)
 @dataclass
 class FailureNarrative:
     """Narrative of how the solution failed."""
-    
+
     scenario_name: str
     what_happened: str
     immediate_triggers: list[str] = field(default_factory=list)
     affected_stakeholders: list[str] = field(default_factory=list)
     severity: str = "moderate"  # catastrophic, severe, moderate
     timeline: list[str] = field(default_factory=list)
-    
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
@@ -79,13 +79,13 @@ class FailureNarrative:
 @dataclass
 class RootCause:
     """Root cause analysis result."""
-    
+
     pivot_decision: str
     decision_point: str
     why_it_seemed_reasonable: str
     cascade: list[str] = field(default_factory=list)
     alternative_decision: str = ""
-    
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
@@ -100,13 +100,13 @@ class RootCause:
 @dataclass
 class EarlySignal:
     """Early warning signal."""
-    
+
     signal: str
     day: int  # Days after implementation
     how_to_detect: str
     action_threshold: str
     severity: str = "low"  # low, medium, high, critical
-    
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
@@ -120,20 +120,21 @@ class EarlySignal:
 
 class PreMortemMethod(ReasoningMethod):
     """Pre-mortem analysis method.
-    
+
     Assumes failure has already occurred and reconstructs why,
     then uses those insights to harden the original design.
-    
+
     Attributes:
         router: LLM model router
         num_scenarios: Number of failure scenarios to generate
     """
-    
+
     method_type = MethodType.PRE_MORTEM
-    
+
     def __init__(
         self,
         router: Any | None = None,
+        llm_client: Any | None = None,
         num_scenarios: int = 3,
         name: str | None = None,
         description: str | None = None,
@@ -150,7 +151,8 @@ class PreMortemMethod(ReasoningMethod):
         """
         super().__init__(
             name=name or "Pre-Mortem Analysis",
-            description=description or (
+            description=description
+            or (
                 "Assumes failure has occurred and reconstructs why, "
                 "then hardens the design against identified failure modes"
             ),
@@ -164,35 +166,34 @@ class PreMortemMethod(ReasoningMethod):
         """Execute pre-mortem analysis."""
         import time
         import uuid
+
         t0 = time.monotonic()
         self._run_id = f"pm-{uuid.uuid4().hex[:8]}"
-        
+
         # Validate context
         if not self.validate_context(context):
             return ReasoningResult.error_result(
                 self.method_type,
                 "Invalid context: missing stage_id or input_data",
             )
-        
+
         # Extract proposed design from context
         proposed_design = (
-            context.get("proposed_design")
-            or context.get("design")
-            or context.get("solution")
+            context.get("proposed_design") or context.get("design") or context.get("solution")
         )
         if not proposed_design:
             return ReasoningResult.error_result(
                 self.method_type,
                 "Context missing proposed_design/design/solution",
             )
-        
+
         try:
             # Phase 1: Generate failure narratives
             failure_narratives = await self._generate_failure_narratives(
                 proposed_design=proposed_design,
                 num_scenarios=self.num_scenarios,
             )
-            
+
             # Phase 2: Root cause backtrack
             root_causes = []
             for narrative in failure_narratives:
@@ -201,13 +202,13 @@ class PreMortemMethod(ReasoningMethod):
                     proposed_design=proposed_design,
                 )
                 root_causes.append(root_cause)
-            
+
             # Phase 3: Early warning signals
             early_signals = []
             for root_cause in root_causes:
                 signals = await self._generate_early_signals(root_cause)
                 early_signals.extend(signals)
-            
+
             # Phase 4: Hardened redesign
             hardened_solution = await self._harden_design(
                 proposed_design=proposed_design,
@@ -215,7 +216,7 @@ class PreMortemMethod(ReasoningMethod):
                 root_causes=root_causes,
                 early_signals=early_signals,
             )
-            
+
             elapsed = time.monotonic() - t0
 
             result = ReasoningResult.success_result(
@@ -235,19 +236,19 @@ class PreMortemMethod(ReasoningMethod):
                     "run_id": self._run_id,
                 },
             )
-            
+
             # Track cost if router supports it
             self._track_cost(elapsed)
-            
+
             return result
-            
+
         except Exception as e:
             self._logger.error("Pre-mortem analysis failed: %s", e)
             return ReasoningResult.error_result(
                 self.method_type,
                 str(e),
             )
-    
+
     async def _generate_failure_narratives(
         self,
         proposed_design: Any,
@@ -256,7 +257,7 @@ class PreMortemMethod(ReasoningMethod):
         """Generate vivid failure scenarios."""
         provider = self._get_provider("destructive")
         design_str = self._format_design(proposed_design)
-        
+
         prompt = f"""It is exactly 1 year later. This solution has CATASTROPHICALLY FAILED.
 
 Proposed Design:
@@ -287,12 +288,12 @@ Output JSON format:
         }}
     ]
 }}"""
-        
+
         response = await provider.complete(prompt)
         narratives = self._parse_failure_narratives(response.content, num_scenarios)
-        
+
         return narratives
-    
+
     async def _backtrack_root_cause(
         self,
         narrative: FailureNarrative,
@@ -301,7 +302,7 @@ Output JSON format:
         """Backtrack to identify the root cause pivot decision."""
         provider = self._get_provider("destructive")
         design_str = self._format_design(proposed_design)
-        
+
         prompt = f"""Original Proposed Design:
 {design_str}
 
@@ -325,17 +326,17 @@ Output JSON format:
     "cascade": ["step1", "step2", "step3"],
     "alternative_decision": "..."
 }}"""
-        
+
         response = await provider.complete(prompt)
         return self._parse_root_cause(response.content)
-    
+
     async def _generate_early_signals(
         self,
         root_cause: RootCause,
     ) -> list[EarlySignal]:
         """Generate early warning signals."""
         provider = self._get_provider("systemic")
-        
+
         prompt = f"""Root Cause Analysis:
 {self._format_root_cause(root_cause)}
 
@@ -362,10 +363,10 @@ Output JSON format:
         }}
     ]
 }}"""
-        
+
         response = await provider.complete(prompt)
         return self._parse_early_signals(response.content)
-    
+
     async def _harden_design(
         self,
         proposed_design: Any,
@@ -375,12 +376,12 @@ Output JSON format:
     ) -> str:
         """Create hardened redesign addressing all failure modes."""
         provider = self._get_provider("constructive")
-        
+
         design_str = self._format_design(proposed_design)
         narratives_str = "\n\n".join([self._format_narrative(n) for n in failure_narratives])
         root_causes_str = "\n\n".join([self._format_root_cause(c) for c in root_causes])
         signals_str = "\n\n".join([self._format_signal(s) for s in early_signals])
-        
+
         prompt = f"""Original Proposed Design:
 {design_str}
 
@@ -409,45 +410,48 @@ For each safeguard, explain:
 - Any trade-offs or costs
 
 Output the complete hardened design with clear sections."""
-        
+
         response = await provider.complete(prompt)
         return response.content
-    
+
     def _get_provider(self, role: str) -> Any:
         """Get LLM provider for role."""
         if self.router is None:
-            self._logger.warning("No router configured, using fallback")
+            if self.llm_client is not None:
+                return _LLMClientProvider(self.llm_client)
+            self._logger.warning("No router or llm_client configured, using fallback")
             return _FallbackProvider()
-        
+
         return self.router.get_provider_for_role(role)
-    
+
     def _format_design(self, design: Any) -> str:
         """Format design for prompt."""
         if isinstance(design, str):
             return design
         elif isinstance(design, dict):
             import json
+
             return json.dumps(design, indent=2, default=str)
         else:
             return str(design)
-    
+
     def _format_narrative(self, narrative: FailureNarrative) -> str:
         """Format narrative for prompt."""
         return f"""Scenario: {narrative.scenario_name}
 What Happened: {narrative.what_happened}
-Triggers: {', '.join(narrative.immediate_triggers)}
-Stakeholders: {', '.join(narrative.affected_stakeholders)}
+Triggers: {", ".join(narrative.immediate_triggers)}
+Stakeholders: {", ".join(narrative.affected_stakeholders)}
 Severity: {narrative.severity}
-Timeline: {' → '.join(narrative.timeline)}"""
-    
+Timeline: {" → ".join(narrative.timeline)}"""
+
     def _format_root_cause(self, cause: RootCause) -> str:
         """Format root cause for prompt."""
         return f"""Pivot Decision: {cause.pivot_decision}
 Decision Point: {cause.decision_point}
 Why Seemed Reasonable: {cause.why_it_seemed_reasonable}
-Cascade: {' → '.join(cause.cascade)}
+Cascade: {" → ".join(cause.cascade)}
 Alternative: {cause.alternative_decision}"""
-    
+
     def _format_signal(self, signal: EarlySignal) -> str:
         """Format signal for prompt."""
         return f"""Signal: {signal.signal}
@@ -455,7 +459,7 @@ Day: {signal.day}
 Detection: {signal.how_to_detect}
 Threshold: {signal.action_threshold}
 Severity: {signal.severity}"""
-    
+
     def _parse_failure_narratives(
         self,
         response: str,
@@ -464,36 +468,38 @@ Severity: {signal.severity}"""
         """Parse failure narratives from response."""
         import json
         import re
-        
-        json_match = re.search(r'\{.*\}', response, re.DOTALL)
+
+        json_match = re.search(r"\{.*\}", response, re.DOTALL)
         if json_match:
             try:
                 data = json.loads(json_match.group())
                 narratives_data = data.get("narratives", [])
-                
+
                 narratives = []
                 for n in narratives_data[:num_scenarios]:
-                    narratives.append(FailureNarrative(
-                        scenario_name=n.get("scenario_name", "Unknown"),
-                        what_happened=n.get("what_happened", ""),
-                        immediate_triggers=n.get("immediate_triggers", []),
-                        affected_stakeholders=n.get("affected_stakeholders", []),
-                        severity=n.get("severity", "moderate"),
-                        timeline=n.get("timeline", []),
-                    ))
-                
+                    narratives.append(
+                        FailureNarrative(
+                            scenario_name=n.get("scenario_name", "Unknown"),
+                            what_happened=n.get("what_happened", ""),
+                            immediate_triggers=n.get("immediate_triggers", []),
+                            affected_stakeholders=n.get("affected_stakeholders", []),
+                            severity=n.get("severity", "moderate"),
+                            timeline=n.get("timeline", []),
+                        )
+                    )
+
                 return narratives
             except (json.JSONDecodeError, ValueError):
                 pass
-        
+
         return []
-    
+
     def _parse_root_cause(self, response: str) -> RootCause:
         """Parse root cause from response."""
         import json
         import re
-        
-        json_match = re.search(r'\{.*\}', response, re.DOTALL)
+
+        json_match = re.search(r"\{.*\}", response, re.DOTALL)
         if json_match:
             try:
                 data = json.loads(json_match.group())
@@ -506,50 +512,52 @@ Severity: {signal.severity}"""
                 )
             except (json.JSONDecodeError, ValueError):
                 pass
-        
+
         return RootCause(
             pivot_decision="Unknown",
             decision_point="Unknown",
             why_it_seemed_reasonable="Unknown",
         )
-    
+
     def _parse_early_signals(self, response: str) -> list[EarlySignal]:
         """Parse early signals from response."""
         import json
         import re
-        
-        json_match = re.search(r'\{.*\}', response, re.DOTALL)
+
+        json_match = re.search(r"\{.*\}", response, re.DOTALL)
         if json_match:
             try:
                 data = json.loads(json_match.group())
                 signals_data = data.get("signals", [])
-                
+
                 signals = []
                 for s in signals_data:
-                    signals.append(EarlySignal(
-                        signal=s.get("signal", ""),
-                        day=s.get("day", 0),
-                        how_to_detect=s.get("how_to_detect", ""),
-                        action_threshold=s.get("action_threshold", ""),
-                        severity=s.get("severity", "low"),
-                    ))
-                
+                    signals.append(
+                        EarlySignal(
+                            signal=s.get("signal", ""),
+                            day=s.get("day", 0),
+                            how_to_detect=s.get("how_to_detect", ""),
+                            action_threshold=s.get("action_threshold", ""),
+                            severity=s.get("severity", "low"),
+                        )
+                    )
+
                 return signals
             except (json.JSONDecodeError, ValueError):
                 pass
-        
+
         return []
-    
+
     def _track_cost(self, duration_sec: float) -> None:
         """Track cost for pre-mortem execution."""
         if self.router is None or self._run_id is None:
             return
-        
-        if hasattr(self.router, 'track_cost'):
+
+        if hasattr(self.router, "track_cost"):
             # Estimate tokens for pre-mortem (4 phases)
             estimated_input = 800 * self.num_scenarios
             estimated_output = 600 * self.num_scenarios
-            
+
             self.router.track_cost(
                 method="pre_mortem",
                 phase="all",
@@ -559,6 +567,34 @@ Severity: {signal.severity}"""
                 duration_ms=int(duration_sec * 1000),
                 run_id=self._run_id,
             )
+
+
+class _LLMClientProvider:
+    """Adapts a raw LLM client (sync or async .chat()) to the .complete(prompt) interface.
+
+    Backward-compat path for callers that pass ``llm_client=`` instead of a router.
+    """
+
+    def __init__(self, llm_client: Any) -> None:
+        self.llm_client = llm_client
+        self.model = getattr(getattr(llm_client, "config", None), "primary_model", "unknown")
+
+    async def complete(self, prompt: str) -> Any:
+        import asyncio
+        import inspect
+
+        messages = [{"role": "user", "content": prompt}]
+        if asyncio.iscoroutinefunction(self.llm_client.chat):
+            return await self.llm_client.chat(messages)
+
+        from concurrent.futures import ThreadPoolExecutor
+
+        loop = asyncio.get_event_loop()
+        with ThreadPoolExecutor() as executor:
+            result = await loop.run_in_executor(executor, lambda: self.llm_client.chat(messages))
+        if inspect.isawaitable(result):
+            return await result
+        return result
 
 
 class _FallbackProvider:

@@ -21,28 +21,73 @@ logger = logging.getLogger(__name__)
 
 # Numbers that are always allowed (years, common constants, etc.)
 _ALWAYS_ALLOWED: set[float] = {
-    0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 10.0, 20.0, 50.0, 100.0, 200.0,
-    0.5, 0.01, 0.001, 0.0001, 0.1, 0.05, 0.95, 0.99,
-    2024.0, 2025.0, 2026.0, 2027.0,
-    8.0, 16.0, 32.0, 64.0, 128.0, 256.0, 512.0, 1024.0, 2048.0,
-    224.0, 299.0, 384.0,  # Common image sizes
+    0.0,
+    1.0,
+    2.0,
+    3.0,
+    4.0,
+    5.0,
+    10.0,
+    20.0,
+    50.0,
+    100.0,
+    200.0,
+    0.5,
+    0.01,
+    0.001,
+    0.0001,
+    0.1,
+    0.05,
+    0.95,
+    0.99,
+    2024.0,
+    2025.0,
+    2026.0,
+    2027.0,
+    8.0,
+    16.0,
+    32.0,
+    64.0,
+    128.0,
+    256.0,
+    512.0,
+    1024.0,
+    2048.0,
+    224.0,
+    299.0,
+    384.0,  # Common image sizes
     # BUG-192: Common hyperparameter values
-    0.0003, 3e-4, 0.0005, 5e-4, 0.002, 2e-3,  # learning rates
-    0.2, 0.3, 0.25, 0.7, 0.6, 0.8,  # clip epsilon, dropout, gradient clip, GCE q, common HP
-    0.9, 0.999, 0.9999,  # Adam betas, momentum
-    0.02, 0.03,  # weight init std
-    1e-5, 1e-6, 1e-8,  # epsilon, weight decay
-    300.0, 400.0, 500.0,  # epochs
-    4096.0, 8192.0,  # larger batch sizes / hidden dims
+    0.0003,
+    0.0005,
+    0.002,  # learning rates
+    0.2,
+    0.3,
+    0.25,
+    0.7,
+    0.6,
+    0.8,  # clip epsilon, dropout, gradient clip, GCE q, common HP
+    0.9,
+    0.999,
+    0.9999,  # Adam betas, momentum
+    0.02,
+    0.03,  # weight init std
+    1e-5,
+    1e-6,
+    1e-8,  # epsilon, weight decay
+    300.0,
+    400.0,
+    500.0,  # epochs
+    4096.0,
+    8192.0,  # larger batch sizes / hidden dims
 }
 
 # Regex for extracting decimal numbers (including negative, scientific notation)
 # NOTE: lookbehind/lookahead must NOT exclude { } — numbers inside \textbf{91.5}
 # must still be extracted.  We only exclude letters, underscore, and backslash.
 _NUMBER_RE = re.compile(
-    r"(?<![a-zA-Z_\\])"   # Not preceded by letter, underscore, or backslash
+    r"(?<![a-zA-Z_\\])"  # Not preceded by letter, underscore, or backslash
     r"(-?\d+\.?\d*(?:[eE][+-]?\d+)?)"
-    r"(?![a-zA-Z_])"      # Not followed by letter or underscore
+    r"(?![a-zA-Z_])"  # Not followed by letter or underscore
 )
 
 # Section header patterns (LaTeX)
@@ -192,8 +237,7 @@ def verify_paper(
         section_lower = section.lower() if section else ""
 
         in_table = any(
-            start <= line_idx <= end and is_results
-            for start, end, is_results in table_ranges
+            start <= line_idx <= end and is_results for start, end, is_results in table_ranges
         )
 
         for m in _NUMBER_RE.finditer(line):
@@ -315,8 +359,15 @@ def _section_at_line(sections: list[tuple[int, str]], line_idx: int) -> str | No
 
 
 _STRICT_EXEMPT_KEYWORDS: set[str] = {
-    "dataset", "setup", "protocol", "hyperparameter", "implementation",
-    "hardware", "infrastructure", "notation", "preliminaries",
+    "dataset",
+    "setup",
+    "protocol",
+    "hyperparameter",
+    "implementation",
+    "hardware",
+    "infrastructure",
+    "notation",
+    "preliminaries",
 }
 
 
@@ -348,8 +399,13 @@ def _find_table_ranges(tex_text: str) -> list[tuple[int, int, bool]]:
     on their numeric content (BUG-192).
     """
     _HP_CAPTION_KW = {
-        "hyperparameter", "hyper-parameter", "configuration", "config",
-        "setting", "training detail", "implementation detail",
+        "hyperparameter",
+        "hyper-parameter",
+        "configuration",
+        "config",
+        "setting",
+        "training detail",
+        "implementation detail",
     }
     ranges: list[tuple[int, int, bool]] = []
     lines = tex_text.split("\n")
@@ -406,11 +462,28 @@ def _check_condition_names(
 
     # Common generic terms that should NOT be flagged as fabricated conditions
     _GENERIC_TERMS = {
-        "method", "metric", "condition", "---", "",
-        "model", "approach", "variant", "architecture",
-        "ours", "average", "mean", "std", "total",
-        "baseline", "proposed", "ablation", "default",
-        "results", "table", "figure", "section",
+        "method",
+        "metric",
+        "condition",
+        "---",
+        "",
+        "model",
+        "approach",
+        "variant",
+        "architecture",
+        "ours",
+        "average",
+        "mean",
+        "std",
+        "total",
+        "baseline",
+        "proposed",
+        "ablation",
+        "default",
+        "results",
+        "table",
+        "figure",
+        "section",
     }
 
     def _is_candidate(name: str) -> bool:
@@ -423,7 +496,7 @@ def _check_condition_names(
             and len(name) > 1
             and not name.isdigit()
             # BUG-DA8-15: Reject numeric-looking strings (e.g. "91.5" from \textbf{91.5})
-            and not re.match(r'^[\d.eE+\-]+$', name)
+            and not re.match(r"^[\d.eE+\-]+$", name)
         )
 
     def _clean_latex(s: str) -> str:
@@ -452,8 +525,12 @@ def _check_condition_names(
     # 2. BUG-23 P2: Also check PROSE — bold/italic condition mentions in
     #    Results/Experiments sections that don't match known conditions.
     _strict_sections_lower = {
-        "results", "experiments", "experimental results",
-        "evaluation", "ablation", "comparison",
+        "results",
+        "experiments",
+        "experimental results",
+        "evaluation",
+        "ablation",
+        "comparison",
     }
     sections = _parse_sections(tex_text)
     for i, line in enumerate(lines):

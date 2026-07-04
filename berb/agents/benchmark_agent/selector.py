@@ -16,14 +16,16 @@ from berb.agents.base import AgentStepResult, BaseAgent
 
 logger = logging.getLogger(__name__)
 
-_KNOWLEDGE_PATH = Path(__file__).resolve().parent.parent.parent / "data" / "benchmark_knowledge.yaml"
+_KNOWLEDGE_PATH = (
+    Path(__file__).resolve().parent.parent.parent / "data" / "benchmark_knowledge.yaml"
+)
 
 # Maximum dataset size (MB) by tier and network policy
 _SIZE_LIMITS: dict[str, int] = {
-    "none": 0,          # No download allowed — tier 1 only
+    "none": 0,  # No download allowed — tier 1 only
     "setup_only": 5000,  # Can download during setup phase
-    "pip_only": 0,       # pip only, no data download
-    "full": 50000,       # Generous limit
+    "pip_only": 0,  # pip only, no data download
+    "full": 50000,  # Generous limit
 }
 
 
@@ -56,7 +58,8 @@ class SelectorAgent(BaseAgent):
     # -- Filtering ---------------------------------------------------------
 
     def _filter_benchmarks(
-        self, benchmarks: list[dict[str, Any]],
+        self,
+        benchmarks: list[dict[str, Any]],
     ) -> list[dict[str, Any]]:
         """Filter benchmarks by tier, size, and network policy."""
         max_size = _SIZE_LIMITS.get(self._network_policy, 5000)
@@ -83,7 +86,8 @@ class SelectorAgent(BaseAgent):
         return filtered
 
     def _filter_baselines(
-        self, baselines: list[dict[str, Any]],
+        self,
+        baselines: list[dict[str, Any]],
     ) -> list[dict[str, Any]]:
         """Filter baselines by pip availability."""
         filtered: list[dict[str, Any]] = []
@@ -98,9 +102,11 @@ class SelectorAgent(BaseAgent):
     # -- Ranking -----------------------------------------------------------
 
     def _rank_benchmarks(
-        self, benchmarks: list[dict[str, Any]],
+        self,
+        benchmarks: list[dict[str, Any]],
     ) -> list[dict[str, Any]]:
         """Sort benchmarks by preference: tier 1 > tier 2, knowledge_base > hf, downloads."""
+
         def _score(b: dict[str, Any]) -> tuple[int, int, int]:
             tier = b.get("tier", 3)
             # Prefer lower tier (cached first)
@@ -118,9 +124,11 @@ class SelectorAgent(BaseAgent):
         return sorted(benchmarks, key=_score, reverse=True)
 
     def _rank_baselines(
-        self, baselines: list[dict[str, Any]],
+        self,
+        baselines: list[dict[str, Any]],
     ) -> list[dict[str, Any]]:
         """Sort baselines: knowledge_base first, fewer deps preferred."""
+
         def _score(bl: dict[str, Any]) -> tuple[int, int]:
             origin_score = 1 if bl.get("origin") == "knowledge_base" else 0
             dep_score = -len(bl.get("pip", []))
@@ -144,8 +152,7 @@ class SelectorAgent(BaseAgent):
             for b in benchmarks[:15]
         )
         base_summary = "\n".join(
-            f"- {bl.get('name', 'Unknown')}: {bl.get('paper', 'N/A')}"
-            for bl in baselines[:10]
+            f"- {bl.get('name', 'Unknown')}: {bl.get('paper', 'N/A')}" for bl in baselines[:10]
         )
 
         system = (
@@ -285,8 +292,10 @@ class SelectorAgent(BaseAgent):
 
         self.logger.info(
             "Filtered: %d/%d benchmarks, %d/%d baselines",
-            len(filtered_bench), len(benchmarks),
-            len(filtered_base), len(baselines),
+            len(filtered_bench),
+            len(benchmarks),
+            len(filtered_base),
+            len(baselines),
         )
 
         # 2. Rank
@@ -297,14 +306,18 @@ class SelectorAgent(BaseAgent):
         if len(ranked_bench) >= 2 or len(ranked_base) >= 2:
             selection = self._select_with_llm(topic, ranked_bench, ranked_base)
             selected_bench, selected_base = self._resolve_selection(
-                selection, ranked_bench, ranked_base,
+                selection,
+                ranked_bench,
+                ranked_base,
             )
         else:
             # Not enough to warrant LLM call — use top ranked
             # BUG-DA6-06: Create copies to avoid mutating input dicts
-            selected_bench = [{**b, "role": "primary"} if i == 0 else {**b, "role": "secondary"}
-                              for i, b in enumerate(ranked_bench[:3])]
-            selected_base = ranked_base[:self._min_base]
+            selected_bench = [
+                {**b, "role": "primary"} if i == 0 else {**b, "role": "secondary"}
+                for i, b in enumerate(ranked_bench[:3])
+            ]
+            selected_base = ranked_base[: self._min_base]
             selection = {}
 
         # 4. Fallback: ensure minimums
@@ -324,7 +337,9 @@ class SelectorAgent(BaseAgent):
 
         # 4b. Improvement E: Inject required baselines from knowledge base
         _injected_required = self._inject_required_baselines(
-            topic, selected_base, ranked_base,
+            topic,
+            selected_base,
+            ranked_base,
         )
         if _injected_required:
             self.logger.info(
@@ -353,7 +368,9 @@ class SelectorAgent(BaseAgent):
 
         self.logger.info(
             "Selected: %d benchmarks, %d baselines, %d pip packages",
-            len(selected_bench), len(selected_base), len(required_pip),
+            len(selected_bench),
+            len(selected_base),
+            len(required_pip),
         )
 
         return self._make_result(True, data=result)

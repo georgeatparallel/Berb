@@ -292,8 +292,11 @@ class TestCheckNovelty:
         assert "novelty_score" in result
 
     @patch("berb.literature.search.search_papers_multi_query")
-    def test_output_keys_complete(self, mock_search: MagicMock) -> None:
+    def test_output_keys_complete(
+        self, mock_search: MagicMock, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """All expected keys present in output."""
+        monkeypatch.delenv("PERPLEXITY_API_KEY", raising=False)
         mock_search.return_value = []
         result = check_novelty(
             topic="Test topic",
@@ -311,6 +314,7 @@ class TestCheckNovelty:
             "similarity_threshold",
             "search_coverage",
             "total_papers_retrieved",
+            "perplexity_check",
             "generated",
         }
         assert expected_keys == set(result.keys())
@@ -323,7 +327,12 @@ class TestCheckNovelty:
             topic="Test",
             hypotheses_text="## H1: Hypothesis one\n",
         )
-        assert result["recommendation"] in ("proceed", "differentiate", "abort", "proceed_with_caution")
+        assert result["recommendation"] in (
+            "proceed",
+            "differentiate",
+            "abort",
+            "proceed_with_caution",
+        )
 
     @patch("berb.literature.search.search_papers_multi_query")
     def test_json_serializable(self, mock_search: MagicMock) -> None:
@@ -359,6 +368,144 @@ class TestCheckNovelty:
             similarity_threshold=0.0,  # low threshold → many matches
         )
         assert len(result["similar_papers"]) <= 20
+
+
+def _unrelated_papers(n: int = 5) -> list[MagicMock]:
+    """N mock papers with content unrelated to any test topic keywords —
+    used to reach "full" search_coverage without tripping similarity."""
+    papers = []
+    for i in range(n):
+        p = MagicMock()
+        p.title = f"Protein Folding Simulation Study {i}"
+        p.abstract = "Molecular dynamics simulations of protein structures."
+        p.paper_id = f"unrelated-{i}"
+        p.year = 2020
+        p.venue = "Nature"
+        p.citation_count = 10
+        p.url = "https://example.com"
+        p.cite_key = f"unrelated{i}2020"
+        papers.append(p)
+    return papers
+
+
+class TestPerplexityNoveltyCheck:
+    """_check_perplexity_novelty and its blend into check_novelty()."""
+
+    def test_no_api_key_returns_none(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from berb.literature.novelty import _check_perplexity_novelty
+
+        monkeypatch.delenv("PERPLEXITY_API_KEY", raising=False)
+        assert _check_perplexity_novelty("topic", "hypotheses") is None
+
+    def test_parses_novel_response(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from berb.literature.novelty import _check_perplexity_novelty
+        from berb.llm.deep_query_client import DeepQueryResult
+
+        fake_result = DeepQueryResult(
+            title="t",
+            content=(
+                '{"likely_novel": true, "confidence": 0.8, '
+                '"overlapping_work": [], "reasoning": "No matching prior work found."}'
+            ),
+            url="",
+            source="DeepQuery",
+        )
+
+        class _FakeClient:
+            def __init__(self, api_key: str) -> None:
+                pass
+
+            def search(self, *a: Any, **kw: Any) -> DeepQueryResult:
+                return fake_result
+
+        monkeypatch.setattr("berb.llm.deep_query_client.DeepQueryClient", _FakeClient)
+
+        result = _check_perplexity_novelty("topic", "hypotheses", api_key="fake-key")
+        assert result is not None
+        assert result["likely_novel"] is True
+        assert result["confidence"] == 0.8
+
+    def test_unparseable_response_returns_none(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from berb.literature.novelty import _check_perplexity_novelty
+        from berb.llm.deep_query_client import DeepQueryResult
+
+        class _FakeClient:
+            def __init__(self, api_key: str) -> None:
+                pass
+
+            def search(self, *a: Any, **kw: Any) -> DeepQueryResult:
+                return DeepQueryResult(title="t", content="not json", url="", source="DeepQuery")
+
+        monkeypatch.setattr("berb.llm.deep_query_client.DeepQueryClient", _FakeClient)
+
+        assert _check_perplexity_novelty("topic", "hypotheses", api_key="fake-key") is None
+
+    @patch("berb.literature.search.search_papers_multi_query")
+    def test_overlap_downgrades_proceed_to_differentiate(
+        self, mock_search: MagicMock, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A locally-computed 'proceed' recommendation should be downgraded
+        when Perplexity confidently flags overlap the keyword scorer missed."""
+        # 5 unrelated papers → "full" coverage, no keyword overlap →
+        # novelty_score=1.0, recommendation="proceed" before Perplexity blend.
+        mock_search.return_value = _unrelated_papers()
+
+        monkeypatch.setattr(
+            "berb.literature.novelty._check_perplexity_novelty",
+            lambda *a, **kw: {
+                "likely_novel": False,
+                "confidence": 0.9,
+                "overlapping_work": [{"title": "Prior Work", "why": "Same idea"}],
+                "reasoning": "This exact approach was published in 2023.",
+            },
+        )
+
+        result = check_novelty(topic="Test topic", hypotheses_text="## H1: idea")
+
+        assert result["novelty_score"] == 1.0  # local score untouched
+        assert result["recommendation"] == "differentiate"  # but recommendation downgraded
+        assert result["perplexity_check"]["likely_novel"] is False
+
+    @patch("berb.literature.search.search_papers_multi_query")
+    def test_low_confidence_overlap_does_not_downgrade(
+        self, mock_search: MagicMock, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        mock_search.return_value = _unrelated_papers()
+
+        monkeypatch.setattr(
+            "berb.literature.novelty._check_perplexity_novelty",
+            lambda *a, **kw: {
+                "likely_novel": False,
+                "confidence": 0.3,  # below the 0.6 threshold
+                "overlapping_work": [],
+                "reasoning": "Weak signal.",
+            },
+        )
+
+        result = check_novelty(topic="Test topic", hypotheses_text="## H1: idea")
+
+        assert result["recommendation"] == "proceed"
+
+    @patch("berb.literature.search.search_papers_multi_query")
+    def test_disabled_flag_skips_check(
+        self, mock_search: MagicMock, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        mock_search.return_value = []
+        called = False
+
+        def _fake_check(*a: Any, **kw: Any) -> dict | None:
+            nonlocal called
+            called = True
+            return None
+
+        monkeypatch.setattr("berb.literature.novelty._check_perplexity_novelty", _fake_check)
+
+        result = check_novelty(
+            topic="Test topic", hypotheses_text="## H1: idea", perplexity_check=False
+        )
+
+        assert not called
+        assert result["perplexity_check"] is None
 
 
 # ---------------------------------------------------------------------------
@@ -397,15 +544,12 @@ class TestHypothesisGenNoveltyIntegration:
                 "provider": "openai-compatible",
                 "base_url": "http://localhost:1234/v1",
                 "api_key_env": "RC_TEST_KEY",
-                "api_key": "inline",
             },
         }
         config = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
         adapters = AdapterBundle()
 
-        with patch(
-            "berb.literature.search.search_papers_multi_query"
-        ) as mock_search:
+        with patch("berb.literature.search.search_papers_multi_query") as mock_search:
             mock_search.return_value = []
             result = _execute_hypothesis_gen(stage_dir, run_dir, config, adapters)
 
@@ -445,7 +589,6 @@ class TestHypothesisGenNoveltyIntegration:
                 "provider": "openai-compatible",
                 "base_url": "http://localhost:1234/v1",
                 "api_key_env": "RC_TEST_KEY",
-                "api_key": "inline",
             },
         }
         config = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)

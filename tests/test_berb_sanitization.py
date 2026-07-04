@@ -20,16 +20,17 @@ def run_dir(tmp_path: Path) -> Path:
 def _write_experiment_summary(run_dir: Path, data: dict) -> None:
     stage14 = run_dir / "stage-14"
     stage14.mkdir(parents=True, exist_ok=True)
-    (stage14 / "experiment_summary.json").write_text(
-        json.dumps(data, indent=2), encoding="utf-8"
-    )
+    (stage14 / "experiment_summary.json").write_text(json.dumps(data, indent=2), encoding="utf-8")
 
 
 def test_sanitize_replaces_unverified_numbers(run_dir: Path) -> None:
-    _write_experiment_summary(run_dir, {
-        "metrics_summary": {"accuracy": 0.85, "f1": 0.82},
-        "best_run": {"metrics": {"accuracy": 0.85}},
-    })
+    _write_experiment_summary(
+        run_dir,
+        {
+            "metrics_summary": {"accuracy": 0.85, "f1": 0.82},
+            "best_run": {"metrics": {"accuracy": 0.85}},
+        },
+    )
     paper = (
         "## Results\n\n"
         "| Method | Accuracy | F1 | Precision |\n"
@@ -51,15 +52,13 @@ def test_sanitize_replaces_unverified_numbers(run_dir: Path) -> None:
 
 
 def test_sanitize_preserves_table_structure(run_dir: Path) -> None:
-    _write_experiment_summary(run_dir, {
-        "metrics_summary": {"loss": 0.12},
-    })
-    paper = (
-        "| Model | Loss |\n"
-        "| --- | --- |\n"
-        "| A | 0.12 |\n"
-        "| B | 0.8765 |\n"
+    _write_experiment_summary(
+        run_dir,
+        {
+            "metrics_summary": {"loss": 0.12},
+        },
     )
+    paper = "| Model | Loss |\n| --- | --- |\n| A | 0.12 |\n| B | 0.8765 |\n"
     sanitized, _ = _sanitize_fabricated_data(paper, run_dir)
     # Table pipes should still be intact
     assert sanitized.count("|") == paper.count("|")
@@ -75,9 +74,12 @@ def test_sanitize_no_experiment_summary(run_dir: Path) -> None:
 
 
 def test_sanitize_tolerance_within_1_percent(run_dir: Path) -> None:
-    _write_experiment_summary(run_dir, {
-        "metrics_summary": {"accuracy": 100.0},
-    })
+    _write_experiment_summary(
+        run_dir,
+        {
+            "metrics_summary": {"accuracy": 100.0},
+        },
+    )
     paper = (
         "| Method | Acc |\n"
         "| --- | --- |\n"
@@ -90,14 +92,13 @@ def test_sanitize_tolerance_within_1_percent(run_dir: Path) -> None:
 
 
 def test_sanitize_header_row_preserved(run_dir: Path) -> None:
-    _write_experiment_summary(run_dir, {
-        "metrics_summary": {"val": 5.0},
-    })
-    paper = (
-        "| Col1 | Col2 |\n"
-        "| --- | --- |\n"
-        "| data | 99.9 |\n"
+    _write_experiment_summary(
+        run_dir,
+        {
+            "metrics_summary": {"val": 5.0},
+        },
     )
+    paper = "| Col1 | Col2 |\n| --- | --- |\n| data | 99.9 |\n"
     sanitized, _ = _sanitize_fabricated_data(paper, run_dir)
     # Header row should be untouched
     assert "| Col1 | Col2 |" in sanitized
@@ -105,10 +106,13 @@ def test_sanitize_header_row_preserved(run_dir: Path) -> None:
 
 def test_sanitize_hp_columns_preserved_in_mixed_table(run_dir: Path) -> None:
     """BUG-184: HP columns in mixed tables should not be sanitized."""
-    _write_experiment_summary(run_dir, {
-        "metrics_summary": {"accuracy": 0.85},
-        "best_run": {"metrics": {"accuracy": 0.85}},
-    })
+    _write_experiment_summary(
+        run_dir,
+        {
+            "metrics_summary": {"accuracy": 0.85},
+            "best_run": {"metrics": {"accuracy": 0.85}},
+        },
+    )
     paper = (
         "## Results\n\n"
         "| Method | LR | Batch Size | Accuracy | F1 |\n"
@@ -128,9 +132,12 @@ def test_sanitize_hp_columns_preserved_in_mixed_table(run_dir: Path) -> None:
 
 def test_sanitize_pure_hp_table_skipped(run_dir: Path) -> None:
     """BUG-192: Pure HP tables (header keywords) should be fully skipped."""
-    _write_experiment_summary(run_dir, {
-        "metrics_summary": {"accuracy": 0.85},
-    })
+    _write_experiment_summary(
+        run_dir,
+        {
+            "metrics_summary": {"accuracy": 0.85},
+        },
+    )
     paper = (
         "| Hyperparameter | Value |\n"
         "| --- | --- |\n"
@@ -147,10 +154,13 @@ def test_sanitize_pure_hp_table_skipped(run_dir: Path) -> None:
 
 def test_prose_sanitization_replaces_unverified(run_dir: Path) -> None:
     """Prose numbers in Results section should be sanitized."""
-    _write_experiment_summary(run_dir, {
-        "metrics_summary": {"accuracy": 0.85},
-        "best_run": {"metrics": {"accuracy": 0.85}},
-    })
+    _write_experiment_summary(
+        run_dir,
+        {
+            "metrics_summary": {"accuracy": 0.85},
+            "best_run": {"metrics": {"accuracy": 0.85}},
+        },
+    )
     paper = (
         "# Introduction\n"
         "Prior work achieved 92.3% accuracy on this task.\n\n"
@@ -171,10 +181,13 @@ def test_prose_sanitization_replaces_unverified(run_dir: Path) -> None:
 
 def test_sanitize_model_name_numbers_preserved(run_dir: Path) -> None:
     """BUG-206: Numbers in model names (ResNet-34) must not be replaced."""
-    _write_experiment_summary(run_dir, {
-        "metrics_summary": {"accuracy": 0.85},
-        "best_run": {"metrics": {"accuracy": 0.85}},
-    })
+    _write_experiment_summary(
+        run_dir,
+        {
+            "metrics_summary": {"accuracy": 0.85},
+            "best_run": {"metrics": {"accuracy": 0.85}},
+        },
+    )
     # Table with model variant numbers in the first column (ci=1, skipped)
     paper = (
         "## Results\n\n"
@@ -191,10 +204,13 @@ def test_sanitize_model_name_numbers_preserved(run_dir: Path) -> None:
 
 def test_sanitize_unicode_hyphen_model_names_preserved(run_dir: Path) -> None:
     """BUG-206: Unicode non-breaking hyphen in model names must not be replaced."""
-    _write_experiment_summary(run_dir, {
-        "metrics_summary": {"accuracy": 0.85},
-        "best_run": {"metrics": {"accuracy": 0.85}},
-    })
+    _write_experiment_summary(
+        run_dir,
+        {
+            "metrics_summary": {"accuracy": 0.85},
+            "best_run": {"metrics": {"accuracy": 0.85}},
+        },
+    )
     # U+2011 non-breaking hyphen (common LLM output)
     paper = (
         "## Results\n\n"
@@ -210,9 +226,12 @@ def test_sanitize_unicode_hyphen_model_names_preserved(run_dir: Path) -> None:
 
 def test_prose_sanitization_preserves_introduction(run_dir: Path) -> None:
     """Numbers outside Results/Experiments should NOT be touched."""
-    _write_experiment_summary(run_dir, {
-        "metrics_summary": {"val": 0.50},
-    })
+    _write_experiment_summary(
+        run_dir,
+        {
+            "metrics_summary": {"val": 0.50},
+        },
+    )
     paper = (
         "# Introduction\n"
         "Previous methods achieved 94.2% accuracy.\n\n"
@@ -271,21 +290,32 @@ def test_sanitize_reads_promoted_best_data(run_dir: Path) -> None:
     that file, not scan all refinement logs.
     """
     # Stale stage-14 data (from a regressed iteration)
-    _write_experiment_summary(run_dir, {
-        "metrics_summary": {"primary_metric": {"min": 8.42, "max": 8.91, "mean": 8.6467, "count": 3}},
-        "best_run": {"metrics": {"primary_metric": 8.65}},
-    })
+    _write_experiment_summary(
+        run_dir,
+        {
+            "metrics_summary": {
+                "primary_metric": {"min": 8.42, "max": 8.91, "mean": 8.6467, "count": 3}
+            },
+            "best_run": {"metrics": {"primary_metric": 8.65}},
+        },
+    )
     # Promoted best data (from the winning iteration)
     (run_dir / "experiment_summary_best.json").write_text(
-        json.dumps({
-            "metrics_summary": {"primary_metric": {"min": 73.07, "max": 78.93, "mean": 75.56, "count": 3}},
-            "best_run": {"metrics": {"primary_metric": 78.93}},
-            "condition_summaries": {
-                "Ours": {"metrics": {"primary_metric": 78.93}},
-                "SGD": {"metrics": {"primary_metric": 73.07}},
-                "AdamW": {"metrics": {"primary_metric": 68.67}},
+        json.dumps(
+            {
+                "metrics_summary": {
+                    "primary_metric": {"min": 73.07, "max": 78.93, "mean": 75.56, "count": 3}
+                },
+                "best_run": {"metrics": {"primary_metric": 78.93}},
+                "condition_summaries": {
+                    "Ours": {"metrics": {"primary_metric": 78.93}},
+                    "SGD": {"metrics": {"primary_metric": 73.07}},
+                    "AdamW": {"metrics": {"primary_metric": 68.67}},
+                },
             },
-        }, indent=2), encoding="utf-8"
+            indent=2,
+        ),
+        encoding="utf-8",
     )
     # Paper uses values from promoted best
     paper = (
@@ -312,30 +342,38 @@ def test_sanitize_rejects_regressed_refine_data(run_dir: Path) -> None:
     """
     # v1 (best) promoted to experiment_summary_best.json
     (run_dir / "experiment_summary_best.json").write_text(
-        json.dumps({
-            "best_run": {"metrics": {"FeatureKD/0/metric": 0.7452}},
-            "condition_summaries": {
-                "FeatureKD": {"metrics": {"metric": 0.7452}},
-                "Teacher": {"metrics": {"metric": 0.7431}},
+        json.dumps(
+            {
+                "best_run": {"metrics": {"FeatureKD/0/metric": 0.7452}},
+                "condition_summaries": {
+                    "FeatureKD": {"metrics": {"metric": 0.7452}},
+                    "Teacher": {"metrics": {"metric": 0.7431}},
+                },
+                "metrics_summary": {"metric": {"mean": 0.7442, "min": 0.7431, "max": 0.7452}},
             },
-            "metrics_summary": {"metric": {"mean": 0.7442, "min": 0.7431, "max": 0.7452}},
-        }, indent=2), encoding="utf-8"
+            indent=2,
+        ),
+        encoding="utf-8",
     )
     # v3 (regressed) in stage-14 (stale)
-    _write_experiment_summary(run_dir, {
-        "best_run": {"metrics": {"FeatureKD/0/metric": 0.6930}},
-        "condition_summaries": {
-            "FeatureKD": {"metrics": {"metric": 0.6930}},
-            "Teacher": {"metrics": {"metric": 0.7292}},
+    _write_experiment_summary(
+        run_dir,
+        {
+            "best_run": {"metrics": {"FeatureKD/0/metric": 0.6930}},
+            "condition_summaries": {
+                "FeatureKD": {"metrics": {"metric": 0.6930}},
+                "Teacher": {"metrics": {"metric": 0.7292}},
+            },
+            "metrics_summary": {"metric": {"mean": 0.7111, "min": 0.6930, "max": 0.7292}},
         },
-        "metrics_summary": {"metric": {"mean": 0.7111, "min": 0.6930, "max": 0.7292}},
-    })
+    )
     # v3 sandbox data in refinement_log
     stage13 = run_dir / "stage-13_v2"
     stage13.mkdir(parents=True, exist_ok=True)
-    (stage13 / "refinement_log.json").write_text(json.dumps({
-        "iterations": [{"sandbox": {"metrics": {"primary_metric": 0.6930}}}]
-    }), encoding="utf-8")
+    (stage13 / "refinement_log.json").write_text(
+        json.dumps({"iterations": [{"sandbox": {"metrics": {"primary_metric": 0.6930}}}]}),
+        encoding="utf-8",
+    )
     # Paper fabricates v3 numbers
     paper = (
         "## Results\n\n"
@@ -364,10 +402,13 @@ def test_sanitize_rejects_regressed_refine_data(run_dir: Path) -> None:
 
 def test_sanitize_condition_names_with_decimals_preserved(run_dir: Path) -> None:
     """BUG-210: Condition names with decimal params (ema_decay_0.9) must not be damaged."""
-    _write_experiment_summary(run_dir, {
-        "metrics_summary": {"accuracy": 73.07},
-        "best_run": {"metrics": {"accuracy": 73.07}},
-    })
+    _write_experiment_summary(
+        run_dir,
+        {
+            "metrics_summary": {"accuracy": 73.07},
+            "best_run": {"metrics": {"accuracy": 73.07}},
+        },
+    )
     paper = (
         "## Results\n\n"
         "| Condition | Accuracy |\n"
@@ -405,10 +446,13 @@ model = DQN('MlpPolicy', env)
 
 def test_sanitize_latex_tabular_replaces_unverified(run_dir: Path) -> None:
     """BUG-211: Numbers inside \\begin{tabular} must be sanitized."""
-    _write_experiment_summary(run_dir, {
-        "metrics_summary": {"accuracy": 0.4816},
-        "best_run": {"metrics": {"accuracy": 0.4816}},
-    })
+    _write_experiment_summary(
+        run_dir,
+        {
+            "metrics_summary": {"accuracy": 0.4816},
+            "best_run": {"metrics": {"accuracy": 0.4816}},
+        },
+    )
     paper = (
         "## Results\n\n"
         "```latex\n"
@@ -440,9 +484,12 @@ def test_sanitize_latex_tabular_replaces_unverified(run_dir: Path) -> None:
 
 def test_sanitize_latex_tabular_hp_table_skipped(run_dir: Path) -> None:
     """BUG-211: LaTeX HP tables should be skipped just like markdown ones."""
-    _write_experiment_summary(run_dir, {
-        "metrics_summary": {"accuracy": 0.85},
-    })
+    _write_experiment_summary(
+        run_dir,
+        {
+            "metrics_summary": {"accuracy": 0.85},
+        },
+    )
     paper = (
         "\\begin{table}[htbp]\n"
         "\\centering\n"
@@ -466,13 +513,16 @@ def test_sanitize_latex_tabular_hp_table_skipped(run_dir: Path) -> None:
 
 def test_sanitize_latex_tabular_with_pm(run_dir: Path) -> None:
     """BUG-211: Numbers with ± in LaTeX cells must be individually checked."""
-    _write_experiment_summary(run_dir, {
-        "metrics_summary": {"accuracy": 48.16, "accuracy_std": 0.35},
-        "best_run": {"metrics": {"accuracy": 48.16}},
-        "condition_summaries": {
-            "method_a": {"primary_metric_mean": 48.16, "primary_metric_std": 0.35},
+    _write_experiment_summary(
+        run_dir,
+        {
+            "metrics_summary": {"accuracy": 48.16, "accuracy_std": 0.35},
+            "best_run": {"metrics": {"accuracy": 48.16}},
+            "condition_summaries": {
+                "method_a": {"primary_metric_mean": 48.16, "primary_metric_std": 0.35},
+            },
         },
-    })
+    )
     paper = (
         "\\begin{tabular}{l c}\n"
         "\\toprule\n"
@@ -494,10 +544,13 @@ def test_sanitize_latex_tabular_with_pm(run_dir: Path) -> None:
 
 def test_sanitize_latex_tabular_preserves_first_column(run_dir: Path) -> None:
     """BUG-211: First column (method names) must be preserved."""
-    _write_experiment_summary(run_dir, {
-        "metrics_summary": {"accuracy": 0.85},
-        "best_run": {"metrics": {"accuracy": 0.85}},
-    })
+    _write_experiment_summary(
+        run_dir,
+        {
+            "metrics_summary": {"accuracy": 0.85},
+            "best_run": {"metrics": {"accuracy": 0.85}},
+        },
+    )
     paper = (
         "\\begin{tabular}{l r r r r}\n"
         "\\toprule\n"
@@ -518,13 +571,17 @@ def test_sanitize_latex_tabular_preserves_first_column(run_dir: Path) -> None:
 # BUG-224: Statistical analysis tables should NOT be sanitized
 # ---------------------------------------------------------------------------
 
+
 def test_sanitize_skips_statistical_analysis_table(run_dir: Path) -> None:
     """BUG-224: Tables with t-statistics, p-values, and effect sizes are
     derived from experiment data and should not be sanitized."""
-    _write_experiment_summary(run_dir, {
-        "metrics_summary": {"accuracy": {"mean": 64.26}},
-        "condition_summaries": {"ce": {"metrics": {"accuracy": 64.26}}},
-    })
+    _write_experiment_summary(
+        run_dir,
+        {
+            "metrics_summary": {"accuracy": {"mean": 64.26}},
+            "condition_summaries": {"ce": {"metrics": {"accuracy": 64.26}}},
+        },
+    )
     paper = (
         "## Results\n\n"
         "| Method | Accuracy |\n"
@@ -549,10 +606,13 @@ def test_sanitize_skips_statistical_analysis_table(run_dir: Path) -> None:
 
 def test_sanitize_preserves_common_hp_values(run_dir: Path) -> None:
     """BUG-224: Common HP values like 0.7 should be in the always-allowed set."""
-    _write_experiment_summary(run_dir, {
-        "metrics_summary": {"accuracy": {"mean": 64.26}},
-        "condition_summaries": {"ce": {"metrics": {"accuracy": 64.26}}},
-    })
+    _write_experiment_summary(
+        run_dir,
+        {
+            "metrics_summary": {"accuracy": {"mean": 64.26}},
+            "condition_summaries": {"ce": {"metrics": {"accuracy": 64.26}}},
+        },
+    )
     paper = (
         "| Method | q | Accuracy |\n"
         "|--------|---|----------|\n"

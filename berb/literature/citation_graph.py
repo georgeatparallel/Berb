@@ -14,9 +14,7 @@ This module provides citation network navigation and analysis:
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Protocol
 
 from pydantic import BaseModel, Field
@@ -24,7 +22,7 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger(__name__)
 
 
-class ClusterAlgorithm(str, Enum):
+class ClusterAlgorithm(StrEnum):
     """Citation clustering algorithm.
 
     Attributes:
@@ -135,33 +133,23 @@ class JournalQuality(BaseModel):
 class CitationGraphClient(Protocol):
     """Protocol for citation graph API clients."""
 
-    async def get_citing_papers(
-        self, paper_id: str, limit: int = 100
-    ) -> list[Paper]:
+    async def get_citing_papers(self, paper_id: str, limit: int = 100) -> list[Paper]:
         """Get papers that cite the given paper."""
         ...
 
-    async def get_references(
-        self, paper_id: str
-    ) -> list[str]:
+    async def get_references(self, paper_id: str) -> list[str]:
         """Get papers referenced by the given paper."""
         ...
 
-    async def get_paper_details(
-        self, paper_id: str
-    ) -> Paper | None:
+    async def get_paper_details(self, paper_id: str) -> Paper | None:
         """Get paper metadata."""
         ...
 
-    async def get_journal_metrics(
-        self, journal_name: str
-    ) -> dict[str, Any]:
+    async def get_journal_metrics(self, journal_name: str) -> dict[str, Any]:
         """Get journal metrics."""
         ...
 
-    async def get_author_metrics(
-        self, author_id: str
-    ) -> dict[str, Any]:
+    async def get_author_metrics(self, author_id: str) -> dict[str, Any]:
         """Get author metrics."""
         ...
 
@@ -243,9 +231,7 @@ class CitationGraphEngine:
 
             to_process = next_level
 
-        logger.info(
-            f"Forward traversal complete: {len(all_citing)} papers at depth {depth}"
-        )
+        logger.info(f"Forward traversal complete: {len(all_citing)} papers at depth {depth}")
         return all_citing[:max_papers]
 
     async def traverse_backward(
@@ -302,9 +288,7 @@ class CitationGraphEngine:
 
             to_process = next_level
 
-        logger.info(
-            f"Backward traversal complete: {len(all_referenced)} papers at depth {depth}"
-        )
+        logger.info(f"Backward traversal complete: {len(all_referenced)} papers at depth {depth}")
         return all_referenced[:max_papers]
 
     async def find_citation_clusters(
@@ -342,9 +326,7 @@ class CitationGraphEngine:
 
         # Enhance cluster confidence with Bayesian updates if enabled
         if use_bayesian_confidence and llm_client:
-            clusters = await self._enhance_cluster_confidence_bayesian(
-                clusters, papers, llm_client
-            )
+            clusters = await self._enhance_cluster_confidence_bayesian(clusters, papers, llm_client)
 
         logger.info(f"Found {len(clusters)} clusters from {len(papers)} papers")
         return clusters
@@ -374,9 +356,7 @@ class CitationGraphEngine:
 
         for cluster in clusters:
             # Get papers in cluster
-            cluster_papers = [
-                p for p in papers if p.id in cluster.papers
-            ]
+            cluster_papers = [p for p in papers if p.id in cluster.papers]
 
             if len(cluster_papers) < 2:
                 enhanced_clusters.append(cluster)
@@ -397,8 +377,7 @@ class CitationGraphEngine:
             prior_invalid = 1 - prior_confidence
 
             evidence_prob = (
-                likelihood_given_valid * prior_valid +
-                likelihood_given_invalid * prior_invalid
+                likelihood_given_valid * prior_valid + likelihood_given_invalid * prior_invalid
             )
 
             if evidence_prob > 0:
@@ -436,15 +415,12 @@ class CitationGraphEngine:
         evidence_scores = []
 
         # Evidence 1: Keyword overlap
-        title_words = [
-            set(p.title.lower().split())
-            for p in cluster_papers if p.title
-        ]
+        title_words = [set(p.title.lower().split()) for p in cluster_papers if p.title]
         if len(title_words) >= 2:
             overlaps = [
                 len(w1 & w2) / max(len(w1), len(w2))
                 for i, w1 in enumerate(title_words)
-                for w2 in title_words[i+1:]
+                for w2 in title_words[i + 1 :]
             ]
             if overlaps:
                 evidence_scores.append(sum(overlaps) / len(overlaps))
@@ -455,7 +431,7 @@ class CitationGraphEngine:
             ref_overlaps = [
                 len(r1 & r2) / max(len(r1), len(r2))
                 for i, r1 in enumerate(ref_sets)
-                for r2 in ref_sets[i+1:]
+                for r2 in ref_sets[i + 1 :]
                 if r1 and r2
             ]
             if ref_overlaps:
@@ -538,9 +514,7 @@ class CitationGraphEngine:
             return []
 
         # Build reference sets
-        paper_refs: dict[str, set[str]] = {
-            p.id: set(p.references) for p in papers
-        }
+        paper_refs: dict[str, set[str]] = {p.id: set(p.references) for p in papers}
 
         # Simple Jaccard similarity clustering
         clusters: list[Cluster] = []
@@ -604,8 +578,27 @@ class CitationGraphEngine:
         # Simplified keyword extraction from titles
         words: dict[str, int] = {}
         stop_words = {
-            "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for",
-            "of", "with", "by", "from", "as", "is", "was", "are", "were", "been",
+            "the",
+            "a",
+            "an",
+            "and",
+            "or",
+            "but",
+            "in",
+            "on",
+            "at",
+            "to",
+            "for",
+            "of",
+            "with",
+            "by",
+            "from",
+            "as",
+            "is",
+            "was",
+            "are",
+            "were",
+            "been",
         }
 
         for paper in papers:
@@ -642,13 +635,11 @@ class CitationGraphEngine:
 
         # Use multi-perspective analysis if enabled
         if use_multi_perspective and llm_client:
-            contradictions = await self._detect_contradictions_multiperspective(
-                papers, llm_client
-            )
+            contradictions = await self._detect_contradictions_multiperspective(papers, llm_client)
         else:
             # Fallback to simplified detection
             for i, paper1 in enumerate(papers):
-                for paper2 in papers[i + 1:]:
+                for paper2 in papers[i + 1 :]:
                     if self._might_contradict(paper1, paper2):
                         contradictions.append(
                             Contradiction(
@@ -687,94 +678,50 @@ class CitationGraphEngine:
         """
         from berb.reasoning.multi_perspective import (
             MultiPerspectiveMethod,
-            PerspectiveType,
         )
 
         contradictions = []
-        mp_method = MultiPerspectiveMethod(llm_client=llm_client)
+        MultiPerspectiveMethod(llm_client=llm_client)
 
         # Analyze each pair of papers
         for i, paper1 in enumerate(papers):
-            for paper2 in papers[i + 1:]:
+            for paper2 in papers[i + 1 :]:
                 # Build analysis prompt for each perspective
-                perspectives_analysis = {}
 
                 # 1. Methodology perspective
-                method_problem = f"""Analyze if these papers have contradictory methodologies:
-
-Paper 1: {paper1.title}
-Paper 2: {paper2.title}
-
-Consider:
-- Different experimental designs?
-- Different measurement techniques?
-- Different control conditions?
-- Different statistical methods?
-
-Return JSON: {{"contradicts": bool, "reasoning": "explanation", "confidence": 0-1}}"""
 
                 # 2. Results perspective
-                results_problem = f"""Analyze if these papers report contradictory results:
-
-Paper 1: {paper1.title}
-Paper 2: {paper2.title}
-
-Consider:
-- Opposite findings?
-- Significantly different effect sizes?
-- Different directions of correlation?
-
-Return JSON: {{"contradicts": bool, "reasoning": "explanation", "confidence": 0-1}}"""
 
                 # 3. Interpretation perspective
-                interpretation_problem = f"""Analyze if these papers interpret findings differently:
-
-Paper 1: {paper1.title}
-Paper 2: {paper2.title}
-
-Consider:
-- Different theoretical frameworks?
-- Different causal explanations?
-- Different implications drawn?
-
-Return JSON: {{"contradicts": bool, "reasoning": "explanation", "confidence": 0-1}}"""
 
                 # 4. Scope perspective
-                scope_problem = f"""Analyze if these papers are actually about different things:
-
-Paper 1: {paper1.title}
-Paper 2: {paper2.title}
-
-Consider:
-- Different populations studied?
-- Different conditions examined?
-- Different variables measured?
-- Different research questions?
-
-Return JSON: {{"different_scope": bool, "reasoning": "explanation", "confidence": 0-1}}"""
 
                 # Run perspective analyses (simplified - would use full MP framework)
                 # For now, use keyword-based analysis as placeholder
                 method_analysis = self._analyze_perspective(paper1, paper2, "methodology")
                 results_analysis = self._analyze_perspective(paper1, paper2, "results")
-                interpretation_analysis = self._analyze_perspective(paper1, paper2, "interpretation")
+                interpretation_analysis = self._analyze_perspective(
+                    paper1, paper2, "interpretation"
+                )
                 scope_analysis = self._analyze_perspective(paper1, paper2, "scope")
 
                 # Aggregate perspectives
-                contradiction_count = sum([
-                    method_analysis.get("contradicts", False),
-                    results_analysis.get("contradicts", False),
-                    interpretation_analysis.get("contradicts", False),
-                ])
+                contradiction_count = sum(
+                    [
+                        method_analysis.get("contradicts", False),
+                        results_analysis.get("contradicts", False),
+                        interpretation_analysis.get("contradicts", False),
+                    ]
+                )
                 scope_different = scope_analysis.get("different_scope", False)
 
                 # Determine if true contradiction
                 if contradiction_count >= 2 and not scope_different:
                     # True contradiction (multiple perspectives agree, not just different scope)
                     avg_confidence = (
-                        method_analysis.get("confidence", 0.5) +
-                        results_analysis.get("confidence", 0.5) +
-                        interpretation_analysis.get("confidence", 0.5)
+                        method_analysis.get("confidence", 0.5)
+                        + results_analysis.get("confidence", 0.5)
+                        + interpretation_analysis.get("confidence", 0.5)
                     ) / 3
 
                     contradictions.append(
@@ -817,32 +764,45 @@ Return JSON: {{"different_scope": bool, "reasoning": "explanation", "confidence"
             # Check for different methodology keywords
             method1_keywords = ["experimental", "clinical", "survey", "meta-analysis"]
             method2_keywords = ["simulation", "theoretical", "review", "case study"]
-            contradicts = any(kw in title1 for kw in method1_keywords) and \
-                         any(kw in title2 for kw in method2_keywords)
+            contradicts = any(kw in title1 for kw in method1_keywords) and any(
+                kw in title2 for kw in method2_keywords
+            )
             return {"contradicts": contradicts, "confidence": 0.6 if contradicts else 0.4}
 
         elif perspective == "results":
             # Check for contrasting result keywords
-            contrast_keywords = ["increases", "decreases", "improves", "worsens",
-                               "positive", "negative", "significant", "null"]
-            contradicts = sum(kw in title1 for kw in contrast_keywords) > 0 and \
-                         sum(kw in title2 for kw in contrast_keywords) > 0
+            contrast_keywords = [
+                "increases",
+                "decreases",
+                "improves",
+                "worsens",
+                "positive",
+                "negative",
+                "significant",
+                "null",
+            ]
+            contradicts = (
+                sum(kw in title1 for kw in contrast_keywords) > 0
+                and sum(kw in title2 for kw in contrast_keywords) > 0
+            )
             return {"contradicts": contradicts, "confidence": 0.5 if contradicts else 0.4}
 
         elif perspective == "interpretation":
             # Check for different interpretation keywords
             interp1_keywords = ["causes", "leads to", "mechanism", "pathway"]
             interp2_keywords = ["correlates", "associated with", "relationship", "link"]
-            contradicts = any(kw in title1 for kw in interp1_keywords) and \
-                         any(kw in title2 for kw in interp2_keywords)
+            contradicts = any(kw in title1 for kw in interp1_keywords) and any(
+                kw in title2 for kw in interp2_keywords
+            )
             return {"contradicts": contradicts, "confidence": 0.55 if contradicts else 0.4}
 
         elif perspective == "scope":
             # Check for different scope keywords
             scope1_keywords = ["children", "elderly", "patients", "healthy"]
             scope2_keywords = ["animals", "cells", "in vitro", "in silico"]
-            different = any(kw in title1 for kw in scope1_keywords) and \
-                       any(kw in title2 for kw in scope2_keywords)
+            different = any(kw in title1 for kw in scope1_keywords) and any(
+                kw in title2 for kw in scope2_keywords
+            )
             return {"different_scope": different, "confidence": 0.7 if different else 0.3}
 
         return {"contradicts": False, "confidence": 0.4}
@@ -872,7 +832,9 @@ Return JSON: {{"different_scope": bool, "reasoning": "explanation", "confidence"
         if interpretation_analysis.get("contradicts"):
             evidence_parts.append("Different interpretations")
 
-        return "; ".join(evidence_parts) if evidence_parts else "Multiple perspective contradictions"
+        return (
+            "; ".join(evidence_parts) if evidence_parts else "Multiple perspective contradictions"
+        )
 
     def _might_contradict(
         self,
@@ -899,8 +861,16 @@ Return JSON: {{"different_scope": bool, "reasoning": "explanation", "confidence"
 
         # Check for contrasting keywords
         contrasting = {
-            "not", "no", "without", "fail", "failed", "impossible",
-            "contrary", "opposite", "contradict", "challenge",
+            "not",
+            "no",
+            "without",
+            "fail",
+            "failed",
+            "impossible",
+            "contrary",
+            "opposite",
+            "contradict",
+            "challenge",
         }
 
         has_contrast1 = any(w in title1 for w in contrasting)
@@ -1013,7 +983,7 @@ Return JSON: {{"different_scope": bool, "reasoning": "explanation", "confidence"
 
         # Domain relevance
         domain_match = metrics.get("domain_relevance", 0.5)
-        score *= (0.5 + domain_match * 0.5)
+        score *= 0.5 + domain_match * 0.5
 
         return max(0.0, min(10.0, score))
 
