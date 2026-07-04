@@ -491,8 +491,6 @@ def _execute_literature_collect(
     web_context_parts: list[str] = []
     if config.web_search.enabled:
         try:
-            import os
-
             from berb.web.agent import WebSearchAgent
 
             tavily_key = config.web_search.tavily_api_key or os.environ.get(

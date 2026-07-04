@@ -2143,6 +2143,7 @@ def _execute_export_publish(
     # and copy final references.bib to export stage
     _ay_map: dict[str, str] = {}  # BUG-102: author-year → cite_key map
     bib_text = _read_prior_artifact(run_dir, "references.bib")
+    final_paper_latex = final_paper  # default: no citation conversion (no bib_text)
     if bib_text:
         # Replace [cite_key] patterns in the final paper with \cite{cite_key}
         # Collect all valid cite_keys from the bib file
@@ -2337,7 +2338,6 @@ def _execute_export_publish(
                     )
                     artifacts.append("resolved_citations.json")
 
-        final_paper_latex = final_paper  # default: no citation conversion
         if valid_keys:
             _CITE_KEY_PAT = r"[a-zA-Z][a-zA-Z0-9_-]*\d{4}[a-zA-Z0-9]*"
 

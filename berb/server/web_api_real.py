@@ -41,10 +41,12 @@ _jobs: dict[str, Any] = {}
 _pending_approvals: dict[str, dict] = {}
 
 # API Key
-API_KEY = os.environ.get(
-    "OPENROUTER_API_KEY",
-    "***REMOVED-OPENROUTER-KEY***",
-)
+API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
+if not API_KEY:
+    raise RuntimeError(
+        "OPENROUTER_API_KEY environment variable is not set. "
+        "Set it in .env or the environment before starting the API server."
+    )
 
 
 # Custom middleware to ensure CORS on ALL responses including OPTIONS

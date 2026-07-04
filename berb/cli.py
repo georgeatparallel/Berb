@@ -42,6 +42,16 @@ try:
 except ImportError:
     pass
 
+# Pipeline output contains non-ASCII characters (arrows, em-dashes, etc.).
+# When stdout/stderr is redirected (piped, tee'd, logged to a file) instead
+# of a real console, Python falls back to the system codepage with strict
+# error handling instead of the console's lenient one — crashing the whole
+# run on a single print(). Force UTF-8 with replacement so redirected runs
+# can't die on encoding.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+
 # ---------------------------------------------------------------------------
 # OpenCode installation helpers
 # ---------------------------------------------------------------------------
@@ -267,6 +277,24 @@ def cmd_run(args: argparse.Namespace) -> int:
                 )
 
     run_dir.mkdir(parents=True, exist_ok=True)
+
+    # Resuming re-reads config.research.topic — the static config default
+    # unless --topic is re-supplied — which can silently diverge from the
+    # topic this specific run's earlier stages actually used. Restore the
+    # topic that was persisted at the run's first execution instead.
+    if resume:
+        topic_file = run_dir / "topic.txt"
+        if topic_file.exists():
+            persisted_topic = topic_file.read_text(encoding="utf-8").strip()
+            if persisted_topic and persisted_topic != config.research.topic:
+                print(
+                    f"Resuming with topic recorded at run start "
+                    f"(overriding config default): {persisted_topic[:80]}..."
+                )
+                import dataclasses as _dc_topic
+
+                new_research = _dc_topic.replace(config.research, topic=persisted_topic)
+                config = _dc_topic.replace(config, research=new_research)
 
     if config.knowledge_base.root:
         kb_root_path = Path(config.knowledge_base.root)

@@ -108,10 +108,20 @@ def _extract_paper_title(md_text: str) -> str:
     return bold_fallback or "Untitled Paper"
 
 
-def _generate_neurips_checklist(paper_text: str, topic: str) -> str:
+def _generate_neurips_checklist(has_experiments: bool = True, has_code: bool = True) -> str:
     """Generate a NeurIPS-style checklist for the paper."""
-    # Lazy import to avoid circular dependency
     import textwrap
+
+    reproducibility_answer = (
+        "Yes — see the Experiments section and released code for full detail."
+        if has_experiments
+        else "N/A — this paper presents theoretical/mathematical results with no empirical experiments."
+    )
+    code_answer = (
+        "Yes — code is released alongside the paper."
+        if has_code
+        else "N/A — no code artifacts accompany this paper."
+    )
 
     return textwrap.dedent(f"""\
         # NeurIPS Paper Checklist
@@ -122,9 +132,9 @@ def _generate_neurips_checklist(paper_text: str, topic: str) -> str:
 
         3. **Theory Assumptions and Proofs**: Question: For each theoretical result, does the paper provide the full set of assumptions and a complete explanation of the theory?
 
-        4. **Experimental Result Reproducibility**: Question: Does the paper provide sufficient detail to reproduce the experimental results?
+        4. **Experimental Result Reproducibility**: Question: Does the paper provide sufficient detail to reproduce the experimental results? Answer: {reproducibility_answer}
 
-        5. **Open access to data and code**: Question: Does the paper provide open access to the data and code, with sufficient instructions to faithfully reproduce the main experimental results?
+        5. **Open access to data and code**: Question: Does the paper provide open access to the data and code, with sufficient instructions to faithfully reproduce the main experimental results? Answer: {code_answer}
     """)
 
 

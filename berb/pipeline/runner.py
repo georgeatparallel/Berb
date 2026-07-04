@@ -275,6 +275,14 @@ async def execute_pipeline(
     event_store = EventStore(run_id=run_id, storage_path=str(event_store_path))
     checkpoint_mgr = CheckpointManager()
 
+    # Persist the topic actually used for this run on first entry, so a later
+    # `berb run --resume` (which re-reads config.research.topic — the static
+    # config default unless --topic is re-supplied) can restore the real
+    # topic instead of silently drifting to whatever config.yaml has now.
+    topic_file = run_dir / "topic.txt"
+    if not topic_file.exists():
+        topic_file.write_text(config.research.topic, encoding="utf-8")
+
     if _pivot_depth > MAX_DECISION_PIVOTS:
         logger.error(
             "execute_pipeline recursion depth %d exceeds MAX_DECISION_PIVOTS (%d); aborting.",
@@ -470,7 +478,20 @@ async def _handle_pivot(
         logger.warning("Consecutive REFINE cycles produced empty metrics — forcing PROCEED")
         print(f"[{run_id}] Consecutive empty metrics across REFINE cycles — forcing PROCEED")
         _promote_best_stage14(run_dir, config)
-        return []
+        # "Forcing PROCEED" means continue into writing with the best
+        # available results — not stop the pipeline before a paper exists.
+        return await execute_pipeline(
+            run_dir=run_dir,
+            run_id=run_id,
+            config=config,
+            adapters=adapters,
+            from_stage=Stage.PAPER_OUTLINE,
+            auto_approve_gates=auto_approve_gates,
+            stop_on_gate=stop_on_gate,
+            skip_noncritical=skip_noncritical,
+            kb_root=kb_root,
+            _pivot_depth=pivot_depth,
+        )
     elif pivot_count < MAX_DECISION_PIVOTS:
         rollback_target = _get_rollback_target(stage, result.decision)
         record_decision_history(run_dir, result.decision, rollback_target, pivot_count + 1)
@@ -528,7 +549,19 @@ async def _handle_pivot(
             )
         print(f"[{run_id}] Max pivot attempts reached — forcing PROCEED")
         _promote_best_stage14(run_dir, config)
-        return []
+        # Same as above: PROCEED must continue into writing, not dead-end.
+        return await execute_pipeline(
+            run_dir=run_dir,
+            run_id=run_id,
+            config=config,
+            adapters=adapters,
+            from_stage=Stage.PAPER_OUTLINE,
+            auto_approve_gates=auto_approve_gates,
+            stop_on_gate=stop_on_gate,
+            skip_noncritical=skip_noncritical,
+            kb_root=kb_root,
+            _pivot_depth=pivot_depth,
+        )
 
 
 async def _run_diagnosis_and_repair(

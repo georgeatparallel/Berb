@@ -178,6 +178,15 @@ def check_llm_connectivity(base_url: str) -> CheckResult:
                 detail=f"Reachable: {url}",
             )
     except urllib.error.HTTPError as exc:
+        if exc.code in (401, 403):
+            # Endpoint responded, it just requires auth on /models.
+            # Key correctness is verified separately by check_api_key_valid.
+            return CheckResult(
+                name="llm_connectivity",
+                status="pass",
+                detail=f"Reachable (requires auth): {url}",
+            )
+
         if exc.code == 405:
             try:
                 with urllib.request.urlopen(url, timeout=5):
@@ -187,6 +196,12 @@ def check_llm_connectivity(base_url: str) -> CheckResult:
                         detail=f"Reachable: {url}",
                     )
             except urllib.error.HTTPError as get_exc:
+                if get_exc.code in (401, 403):
+                    return CheckResult(
+                        name="llm_connectivity",
+                        status="pass",
+                        detail=f"Reachable (requires auth): {url}",
+                    )
                 return CheckResult(
                     name="llm_connectivity",
                     status="fail",
@@ -472,6 +487,18 @@ def check_sandbox_python(python_path: str) -> CheckResult:
             status="pass",
             detail=f"Sandbox python found: {path}",
         )
+
+    # Bare command (no path separator) is resolved via PATH at run time,
+    # not relative to the current directory — check PATH before warning.
+    if os.sep not in python_path and (not os.altsep or os.altsep not in python_path):
+        resolved = shutil.which(python_path)
+        if resolved:
+            return CheckResult(
+                name="sandbox_python",
+                status="pass",
+                detail=f"Sandbox python found on PATH: {resolved}",
+            )
+
     return CheckResult(
         name="sandbox_python",
         status="warn",
@@ -653,7 +680,12 @@ def run_doctor(config_path: str | Path) -> DoctorReport:
         base_url = config.llm.base_url
         api_key = config.llm.api_key or os.environ.get(config.llm.api_key_env, "")
         model = config.llm.primary_model
-        fallback_models = config.llm.fallback_models
+        # llm.fallback_models is the OpenRouter-internal chain (see config
+        # comments) — it only resolves against base_url when the primary
+        # provider IS openrouter. For other providers (deepseek, xai, ...)
+        # those model IDs live behind fallback_provider_models on a
+        # different endpoint, so checking them here would always false-fail.
+        fallback_models = config.llm.fallback_models if provider == "openrouter" else ()
         sandbox_python_path = config.experiment.sandbox.python_path
         experiment_mode = config.experiment.mode
         acp_agent_command = config.llm.acp.agent

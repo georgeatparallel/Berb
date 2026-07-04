@@ -6,6 +6,7 @@ import logging
 import math
 import os
 import re
+import shutil
 import subprocess
 import threading
 import time
@@ -530,7 +531,14 @@ class ExperimentSandbox:
         python = self.config.python_path
         python_path = Path(python)
         if not python_path.is_absolute():
-            python_path = Path.cwd() / python_path
+            # A bare command (e.g. "python", "python3", no path separator) is
+            # meant to be resolved via PATH, not joined onto cwd — cwd-joining
+            # it produces a nonexistent file like "<cwd>/python".
+            if os.sep not in python and (not os.altsep or os.altsep not in python):
+                resolved = shutil.which(python)
+                python_path = Path(resolved) if resolved else python_path
+            else:
+                python_path = Path.cwd() / python_path
         # -u: unbuffered stdout/stderr so subprocess.run captures all output
         return [str(python_path), "-u", str(script_path)]
 
