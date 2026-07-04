@@ -43,7 +43,13 @@ class RateLimiter:
     ) -> None:
         self._interval = min_interval_sec
         self._jitter = max_jitter_sec if max_jitter_sec is not None else min_interval_sec * 0.1
-        self._last_call: float = 0.0
+        # None (not 0.0) sentinels "never called yet". time.monotonic() is
+        # anchored to an arbitrary reference point (often system boot), not
+        # epoch 0 — on a freshly booted machine with a low monotonic clock
+        # value, `time.monotonic() - 0.0` could be smaller than _interval,
+        # making the very first call sleep for nearly the full interval
+        # instead of returning immediately.
+        self._last_call: float | None = None
         # BUG-002 FIX: Use a regular threading.Lock for async lock initialization
         # to avoid the race condition. The _async_lock is protected by _init_lock.
         self._async_lock: asyncio.Lock | None = None
@@ -86,11 +92,12 @@ class RateLimiter:
         """
         lock = await self._get_async_lock()
         async with lock:
-            elapsed = time.monotonic() - self._last_call
-            delay = self._interval + random.uniform(0.0, self._jitter) - elapsed
-            if delay > 0:
-                logger.debug("RateLimiter: async sleep %.3fs", delay)
-                await asyncio.sleep(delay)
+            if self._last_call is not None:
+                elapsed = time.monotonic() - self._last_call
+                delay = self._interval + random.uniform(0.0, self._jitter) - elapsed
+                if delay > 0:
+                    logger.debug("RateLimiter: async sleep %.3fs", delay)
+                    await asyncio.sleep(delay)
             self._last_call = time.monotonic()
 
     # ------------------------------------------------------------------
@@ -104,11 +111,12 @@ class RateLimiter:
         asyncio event loop.  Prefer ``await wait()`` from coroutines.
         """
         with self._sync_lock:
-            elapsed = time.monotonic() - self._last_call
-            delay = self._interval + random.uniform(0.0, self._jitter) - elapsed
-            if delay > 0:
-                logger.debug("RateLimiter: sync sleep %.3fs", delay)
-                time.sleep(delay)
+            if self._last_call is not None:
+                elapsed = time.monotonic() - self._last_call
+                delay = self._interval + random.uniform(0.0, self._jitter) - elapsed
+                if delay > 0:
+                    logger.debug("RateLimiter: sync sleep %.3fs", delay)
+                    time.sleep(delay)
             self._last_call = time.monotonic()
 
     # ------------------------------------------------------------------

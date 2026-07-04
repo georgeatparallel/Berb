@@ -209,14 +209,17 @@ class TestCircuitBreaker:
             except Exception:
                 failure_count[0] += 1
 
-        # Run concurrent operations
+        # Run concurrent operations. This test exercises thread-safety of the
+        # synchronous CircuitBreaker, so plain ThreadPoolExecutor is enough —
+        # wrapping futures in asyncio.gather() only added a fragile dependency
+        # on ambient event-loop state (asyncio.get_event_loop() behavior
+        # differs across Python versions when no loop is set).
         with ThreadPoolExecutor(max_workers=10) as executor:
-            futures = []
-            for i in range(50):
-                futures.append(executor.submit(worker, success=(i % 2 == 0)))
-            asyncio.get_event_loop().run_until_complete(
-                asyncio.gather(*[asyncio.wrap_future(f) for f in futures])
-            )
+            futures = [
+                executor.submit(worker, success=(i % 2 == 0)) for i in range(50)
+            ]
+            for future in futures:
+                future.result()
 
         # Should not have crashed
         assert success_count[0] + failure_count[0] == 50

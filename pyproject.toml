@@ -66,6 +66,7 @@ dev = [
     "mypy>=1.15",
     "scipy>=1.10",
     "ruff>=0.4",
+    "fastapi>=0.100",
 ]
 
 [project.scripts]

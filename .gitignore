@@ -44,7 +44,8 @@ config_run*.yaml
 
 # Internal dev/debug docs (not for public)
 docs/internal/
-docs/kb/
+docs/kb/*
+!docs/kb/.gitkeep
 docs/plans/
 docs/BUGFIX_TRACKER*.md
 docs/IMPROVEMENT_PLAN*.md
