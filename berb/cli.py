@@ -249,19 +249,39 @@ def cmd_run(args: argparse.Namespace) -> int:
 
     # BUG-119: When --resume without --output, search for the most recent
     # existing run directory that matches the topic and has a checkpoint.
+    #
+    # Matching must not hash config.research.topic — that's just the static
+    # config default and can silently diverge from whatever topic the
+    # original run was started with (e.g. via a one-off --topic override
+    # that was never saved back into config.yaml). Match each candidate
+    # against its own persisted topic.txt instead, falling back to the
+    # dirname hash only for older runs saved before topic.txt existed.
     if resume and not output:
-        topic_hash = hashlib.sha256(config.research.topic.encode()).hexdigest()[:6]
+        explicit_topic_hash = (
+            hashlib.sha256(topic.encode()).hexdigest()[:6] if topic else None
+        )
         artifacts_root = Path("artifacts")
         if artifacts_root.is_dir():
-            candidates = sorted(
-                (
-                    d
-                    for d in artifacts_root.iterdir()
-                    if d.is_dir()
+
+            def _is_candidate(d: Path) -> bool:
+                if not (
+                    d.is_dir()
                     and d.name.startswith("rc-")
-                    and d.name.endswith(f"-{topic_hash}")
                     and (d / "checkpoint.json").exists()
-                ),
+                ):
+                    return False
+                if explicit_topic_hash is None:
+                    # No --topic re-supplied this invocation: resume intent
+                    # is "whatever I was last doing", not tied to any topic.
+                    return True
+                topic_file = d / "topic.txt"
+                if topic_file.exists():
+                    persisted = topic_file.read_text(encoding="utf-8").strip()
+                    return persisted == topic
+                return d.name.endswith(f"-{explicit_topic_hash}")
+
+            candidates = sorted(
+                (d for d in artifacts_root.iterdir() if _is_candidate(d)),
                 key=lambda d: d.name,
                 reverse=True,  # newest first (timestamp in name)
             )
@@ -270,9 +290,10 @@ def cmd_run(args: argparse.Namespace) -> int:
                 run_id = run_dir.name
                 print(f"Found existing run to resume: {run_dir}")
             else:
+                match_desc = f"topic '{topic}'" if topic else "any topic"
                 print(
-                    "Warning: --resume specified but no checkpoint found "
-                    f"for topic hash '{topic_hash}'. Starting new run.",
+                    f"Warning: --resume specified but no checkpoint found "
+                    f"for {match_desc}. Starting new run.",
                     file=sys.stderr,
                 )
 
