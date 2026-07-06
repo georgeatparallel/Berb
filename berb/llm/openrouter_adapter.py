@@ -61,7 +61,7 @@ import asyncio
 import logging
 import os
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 import httpx
@@ -77,7 +77,7 @@ logger = logging.getLogger(__name__)
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-class ModelVariant(str, Enum):
+class ModelVariant(StrEnum):
     """OpenRouter model variant suffixes.
 
     Appended to a model ID to select a routing variant:

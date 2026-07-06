@@ -1,14 +1,13 @@
 """Unit tests for speculative generation."""
 
-import pytest
 import asyncio
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 from berb.llm.speculative_gen import (
     SpeculativeClient,
     SpeculativeConfig,
-    SpeculativeOutcome,
-    SpeculativeResult,
     get_speculative_config_for_stage,
 )
 

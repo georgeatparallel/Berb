@@ -154,7 +154,8 @@ class SkillRegistry:
     def get_applicable(self, stage_id: str) -> list[Skill]:
         """Return skills whose *applicable_stages* or trigger-keywords mention *stage_id*."""
         return [
-            s for s in self._skills.values()
+            s
+            for s in self._skills.values()
             if stage_id.lower() in (kw.lower() for kw in s.trigger_keywords)
             or stage_id in (str(n) for n in s.applicable_stages)
         ]

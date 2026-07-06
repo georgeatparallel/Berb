@@ -29,12 +29,14 @@ def test_resolve_stage_order_from_mid_pipeline() -> None:
 def test_topic_init_has_no_dependencies() -> None:
     """TOPIC_INIT is the root stage — no dependencies."""
     from berb.pipeline.contracts import CONTRACTS
+
     assert CONTRACTS[Stage.TOPIC_INIT].depends_on == frozenset()
 
 
 def test_experiment_run_depends_on_both_code_and_resources() -> None:
     """EXPERIMENT_RUN requires both CODE_GENERATION and RESOURCE_PLANNING."""
     from berb.pipeline.contracts import CONTRACTS
+
     deps = CONTRACTS[Stage.EXPERIMENT_RUN].depends_on
     assert Stage.CODE_GENERATION in deps
     assert Stage.RESOURCE_PLANNING in deps
@@ -53,9 +55,15 @@ def test_eligible_stages_returns_correct_subset() -> None:
 def test_eligible_stages_concurrent_opportunity() -> None:
     """CODE_GENERATION and RESOURCE_PLANNING are eligible after EXPERIMENT_DESIGN."""
     completed = {
-        Stage.TOPIC_INIT, Stage.PROBLEM_DECOMPOSE, Stage.SEARCH_STRATEGY,
-        Stage.LITERATURE_COLLECT, Stage.LITERATURE_SCREEN, Stage.KNOWLEDGE_EXTRACT,
-        Stage.SYNTHESIS, Stage.HYPOTHESIS_GEN, Stage.EXPERIMENT_DESIGN,
+        Stage.TOPIC_INIT,
+        Stage.PROBLEM_DECOMPOSE,
+        Stage.SEARCH_STRATEGY,
+        Stage.LITERATURE_COLLECT,
+        Stage.LITERATURE_SCREEN,
+        Stage.KNOWLEDGE_EXTRACT,
+        Stage.SYNTHESIS,
+        Stage.HYPOTHESIS_GEN,
+        Stage.EXPERIMENT_DESIGN,
     }
     queue = {Stage.CODE_GENERATION, Stage.RESOURCE_PLANNING}
     eligible = eligible_stages(completed, queue)

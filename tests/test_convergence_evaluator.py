@@ -2,16 +2,10 @@
 
 from __future__ import annotations
 
-import math
-import pytest
-
 from berb.experiment.evaluators.convergence import (
-    ConvergenceReport,
-    ConvergenceResult,
     analyze_convergence,
     compute_convergence_order,
 )
-
 
 # ---------------------------------------------------------------------------
 # compute_convergence_order tests
@@ -38,7 +32,7 @@ class TestComputeConvergenceOrder:
     def test_first_order(self):
         """Error ~ h."""
         hs = [0.1, 0.05, 0.025, 0.0125]
-        errors = [h for h in hs]
+        errors = list(hs)
         order, r2 = compute_convergence_order(hs, errors)
         assert abs(order - 1.0) < 0.1
 

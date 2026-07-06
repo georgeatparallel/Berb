@@ -17,9 +17,7 @@ from berb.pipeline.registry import get_registration
 from berb.pipeline.stages import Stage, StageStatus
 
 
-def _patch_stage_executor(
-    monkeypatch: pytest.MonkeyPatch, stage: Stage, fn: object
-) -> None:
+def _patch_stage_executor(monkeypatch: pytest.MonkeyPatch, stage: Stage, fn: object) -> None:
     """Temporarily replace a stage's registered executor function.
 
     execute_stage() looks up stage implementations via the plugin
@@ -663,7 +661,7 @@ class TestStageHealth:
 
 
 # Contracts import for Stage 13/22 preservation features.
-from berb.pipeline.contracts import CONTRACTS
+from berb.pipeline.contracts import CONTRACTS  # noqa: E402
 
 
 class TestIterativeRefine:
@@ -1278,9 +1276,7 @@ class TestHypothesisGenDebate:
         # hits real academic-search APIs unless mocked — without this every
         # test in this class hangs retrying live network calls in a
         # sandboxed environment.
-        monkeypatch.setattr(
-            "berb.literature.search.search_papers_multi_query", lambda *a, **kw: []
-        )
+        monkeypatch.setattr("berb.literature.search.search_papers_multi_query", lambda *a, **kw: [])
 
     def test_hypothesis_gen_with_llm_creates_perspectives(
         self,
@@ -1695,7 +1691,6 @@ class TestWritePaperSections:
     """Tests for _write_paper_sections() multi-call writing."""
 
     def test_produces_three_part_draft(self) -> None:
-        call_count = {"n": 0}
         parts = [
             "# Test Title\n\n## Abstract\nTest abstract.\n\n## Introduction\nTest intro.\n\n## Related Work\nTest related.",
             "## Method\nTest method.\n\n## Experiments\nTest experiments.",
@@ -1896,7 +1891,9 @@ class TestComputeBudgetBlock:
                 },
             },
         }
-        cfg = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
+        cfg = RCConfig.from_dict(
+            data, project_root=tmp_path, check_paths=False, check_security=False
+        )
 
         # Write exp_plan prior artifact
         _write_prior_artifact(run_dir, 10, "exp_plan.yaml", "objectives: test")
@@ -1960,7 +1957,9 @@ class TestPartialTimeoutStatus:
                 },
             },
         }
-        cfg = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
+        cfg = RCConfig.from_dict(
+            data, project_root=tmp_path, check_paths=False, check_security=False
+        )
 
         # Write experiment code that prints some metrics then sleeps
         exp_dir = run_dir / "stage-11" / "experiment"
@@ -2059,7 +2058,9 @@ class TestTimeoutAwareRefine:
                 "metric_direction": "minimize",
             },
         }
-        cfg = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
+        cfg = RCConfig.from_dict(
+            data, project_root=tmp_path, check_paths=False, check_security=False
+        )
 
         llm = FakeLLMClient("```python\nimport numpy as np\nprint('best_loss: 0.1')\n```")
 
@@ -2126,7 +2127,7 @@ class TestDataIntegrityBlock:
         stage_dir.mkdir(parents=True, exist_ok=True)
 
         llm = FakeLLMClient("# Paper Title\n## Abstract\nSome abstract text.")
-        result = rc_executor._execute_paper_draft(stage_dir, run_dir, rc_config, adapters, llm=llm)
+        _result = rc_executor._execute_paper_draft(stage_dir, run_dir, rc_config, adapters, llm=llm)
 
         # Should proceed (LLM was called)
         assert len(llm.calls) >= 1
@@ -2235,7 +2236,7 @@ class TestRefineTimeoutAndIterationCap:
         import inspect
 
         source = inspect.getsource(rc_executor._execute_iterative_refine)
-        tree = ast.parse(source)
+        ast.parse(source)
         source_text = inspect.getsource(rc_executor._execute_iterative_refine)
         # Should NOT contain min(..., 120)
         assert "min(config.experiment.time_budget_sec, 120)" not in source_text
@@ -2299,7 +2300,9 @@ class TestRefineTimeoutAndIterationCap:
                 "metric_direction": "minimize",
             },
         }
-        cfg = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
+        cfg = RCConfig.from_dict(
+            data, project_root=tmp_path, check_paths=False, check_security=False
+        )
 
         # LLM always returns same code — will trigger no_improvement early stop
         llm = FakeLLMClient("```python\nprint('best_loss: 0.5')\n```")
@@ -2419,6 +2422,7 @@ class TestExperimentHarness:
 
     def test_harness_finalize(self, tmp_path: Path) -> None:
         import os
+
         from berb.experiment.harness_template import ExperimentHarness
 
         old_cwd = os.getcwd()
@@ -2446,6 +2450,7 @@ class TestExperimentHarness:
 
     def test_harness_injected_into_sandbox(self, tmp_path: Path) -> None:
         import sys
+
         from berb.config import SandboxConfig
         from berb.experiment.sandbox import ExperimentSandbox
 
@@ -2469,6 +2474,7 @@ class TestExperimentHarness:
 
     def test_harness_not_overwritten_by_project(self, tmp_path: Path) -> None:
         import sys
+
         from berb.config import SandboxConfig
         from berb.experiment.sandbox import ExperimentSandbox
 
@@ -2564,7 +2570,9 @@ class TestStdoutTruncation:
                 "metric_direction": "minimize",
             },
         }
-        cfg = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
+        cfg = RCConfig.from_dict(
+            data, project_root=tmp_path, check_paths=False, check_security=False
+        )
 
         llm = FakeLLMClient("```python\nprint('best_loss: 0.3')\n```")
         rc_executor._execute_iterative_refine(stage_dir, run_dir, cfg, adapters, llm=llm)
@@ -2641,11 +2649,13 @@ class TestNoImproveStreakFix:
                 "metric_direction": "minimize",
             },
         }
-        cfg = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
+        cfg = RCConfig.from_dict(
+            data, project_root=tmp_path, check_paths=False, check_security=False
+        )
 
         # LLM returns code that won't produce metrics in simulated mode
         llm = FakeLLMClient("```python\nprint('no metrics here')\n```")
-        result = rc_executor._execute_iterative_refine(stage_dir, run_dir, cfg, adapters, llm=llm)
+        _result = rc_executor._execute_iterative_refine(stage_dir, run_dir, cfg, adapters, llm=llm)
 
         # Should abort after 3 consecutive no-metrics iterations
         log_path = stage_dir / "refinement_log.json"
@@ -2699,7 +2709,7 @@ class TestStdoutFailureDetection:
                 "provider": "openai-compatible",
                 "base_url": "http://localhost:1234/v1",
                 "api_key_env": "RC_TEST_KEY",
-                                "primary_model": "fake-model",
+                "primary_model": "fake-model",
                 "fallback_models": [],
             },
             "security": {"hitl_required_stages": [5, 9, 20]},
@@ -2717,10 +2727,12 @@ class TestStdoutFailureDetection:
                 },
             },
         }
-        cfg = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
+        cfg = RCConfig.from_dict(
+            data, project_root=tmp_path, check_paths=False, check_security=False
+        )
         adapters = AdapterBundle()
 
-        result = _execute_experiment_run(stage_dir, run_dir, cfg, adapters)
+        _result = _execute_experiment_run(stage_dir, run_dir, cfg, adapters)
 
         # Check the run payload
         runs_dir = stage_dir / "runs"
@@ -2766,7 +2778,7 @@ class TestStdoutFailureDetection:
                 "provider": "openai-compatible",
                 "base_url": "http://localhost:1234/v1",
                 "api_key_env": "RC_TEST_KEY",
-                                "primary_model": "fake-model",
+                "primary_model": "fake-model",
                 "fallback_models": [],
             },
             "security": {"hitl_required_stages": [5, 9, 20]},
@@ -2784,10 +2796,12 @@ class TestStdoutFailureDetection:
                 },
             },
         }
-        cfg = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
+        cfg = RCConfig.from_dict(
+            data, project_root=tmp_path, check_paths=False, check_security=False
+        )
         adapters = AdapterBundle()
 
-        result = _execute_experiment_run(stage_dir, run_dir, cfg, adapters)
+        _result = _execute_experiment_run(stage_dir, run_dir, cfg, adapters)
 
         runs_dir = stage_dir / "runs"
         payload = json.loads((runs_dir / "run-1.json").read_text())
@@ -3034,7 +3048,9 @@ class TestConditionCoverageDetection:
                 "metric_direction": "minimize",
             },
         }
-        cfg = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
+        cfg = RCConfig.from_dict(
+            data, project_root=tmp_path, check_paths=False, check_security=False
+        )
 
         llm = FakeLLMClient("```python\nprint('primary_metric: 0.3')\n```")
         rc_executor._execute_iterative_refine(stage_dir, run_dir, cfg, adapters, llm=llm)
@@ -3108,7 +3124,9 @@ class TestConditionCoverageDetection:
                 "metric_direction": "minimize",
             },
         }
-        cfg = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
+        cfg = RCConfig.from_dict(
+            data, project_root=tmp_path, check_paths=False, check_security=False
+        )
 
         llm = FakeLLMClient("```python\nprint('primary_metric: 0.3')\n```")
         rc_executor._execute_iterative_refine(stage_dir, run_dir, cfg, adapters, llm=llm)
@@ -3205,7 +3223,9 @@ class TestRefineFilePreservation:
                 "metric_direction": "minimize",
             },
         }
-        cfg = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
+        cfg = RCConfig.from_dict(
+            data, project_root=tmp_path, check_paths=False, check_security=False
+        )
 
         # LLM returns only main.py in multi-file format
         llm = FakeLLMClient(

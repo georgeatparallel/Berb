@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from berb.pipeline.contracts import StageContract
 from berb.pipeline.registry import (
-    StageRegistration,
     clear_registry,
     get_all_registrations,
     get_registration,
@@ -44,13 +43,23 @@ def test_register_stage_stores_metadata() -> None:
 def test_get_all_registrations_returns_all() -> None:
     """get_all_registrations returns every registered stage."""
     clear_registry()
-    c1 = StageContract(stage=Stage.TOPIC_INIT, input_files=(), output_files=("a",), dod="t", error_code="E1")
-    c2 = StageContract(stage=Stage.PROBLEM_DECOMPOSE, input_files=("a",), output_files=("b",), dod="t", error_code="E2")
+    c1 = StageContract(
+        stage=Stage.TOPIC_INIT, input_files=(), output_files=("a",), dod="t", error_code="E1"
+    )
+    c2 = StageContract(
+        stage=Stage.PROBLEM_DECOMPOSE,
+        input_files=("a",),
+        output_files=("b",),
+        dod="t",
+        error_code="E2",
+    )
 
     @register_stage(stage=Stage.TOPIC_INIT, depends_on=frozenset(), contract=c1)
     def fn1() -> None: ...
 
-    @register_stage(stage=Stage.PROBLEM_DECOMPOSE, depends_on=frozenset({Stage.TOPIC_INIT}), contract=c2)
+    @register_stage(
+        stage=Stage.PROBLEM_DECOMPOSE, depends_on=frozenset({Stage.TOPIC_INIT}), contract=c2
+    )
     def fn2() -> None: ...
 
     all_regs = get_all_registrations()
@@ -87,7 +96,9 @@ def test_clear_registry_removes_all() -> None:
     """clear_registry empties the registry completely."""
     clear_registry()
 
-    c = StageContract(stage=Stage.TOPIC_INIT, input_files=(), output_files=("a",), dod="t", error_code="E1")
+    c = StageContract(
+        stage=Stage.TOPIC_INIT, input_files=(), output_files=("a",), dod="t", error_code="E1"
+    )
 
     @register_stage(stage=Stage.TOPIC_INIT, depends_on=frozenset(), contract=c)
     def my_stage() -> None: ...

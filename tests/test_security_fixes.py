@@ -8,15 +8,12 @@ These tests validate the security fixes implemented:
 
 from __future__ import annotations
 
-import asyncio
 import os
-import tempfile
 import time
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 
 # =============================================================================
 # Fix #1: HyperAgent Docker Sandbox Tests
@@ -57,8 +54,8 @@ class TestHyperAgentDockerSandbox:
 
     def test_code_validation_blocks_dangerous_patterns(self):
         """Verify code validation blocks dangerous patterns."""
-        from berb.hyperagent.task_agent import TaskAgent, TaskAgentConfig
         from berb.config import RCConfig
+        from berb.hyperagent.task_agent import TaskAgent, TaskAgentConfig
 
         # Create minimal mock config
         mock_config = MagicMock(spec=RCConfig)
@@ -80,8 +77,8 @@ class TestHyperAgentDockerSandbox:
 
     def test_code_validation_accepts_safe_code(self):
         """Verify code validation accepts safe code."""
-        from berb.hyperagent.task_agent import TaskAgent, TaskAgentConfig
         from berb.config import RCConfig
+        from berb.hyperagent.task_agent import TaskAgent, TaskAgentConfig
 
         mock_config = MagicMock(spec=RCConfig)
         agent = TaskAgent(mock_config, TaskAgentConfig())
@@ -98,8 +95,8 @@ class TestHyperAgentDockerSandbox:
 
     def test_code_size_limit_enforced(self):
         """Verify code size limit is enforced."""
-        from berb.hyperagent.task_agent import TaskAgent, TaskAgentConfig
         from berb.config import RCConfig
+        from berb.hyperagent.task_agent import TaskAgent, TaskAgentConfig
 
         mock_config = MagicMock(spec=RCConfig)
         agent = TaskAgent(mock_config, TaskAgentConfig())
@@ -111,8 +108,8 @@ class TestHyperAgentDockerSandbox:
 
     def test_excessive_line_length_rejected(self):
         """Verify excessive line length is rejected."""
-        from berb.hyperagent.task_agent import TaskAgent, TaskAgentConfig
         from berb.config import RCConfig
+        from berb.hyperagent.task_agent import TaskAgent, TaskAgentConfig
 
         mock_config = MagicMock(spec=RCConfig)
         agent = TaskAgent(mock_config, TaskAgentConfig())
@@ -124,8 +121,8 @@ class TestHyperAgentDockerSandbox:
     @pytest.mark.asyncio
     async def test_simulated_execution_fallback(self):
         """Verify simulated execution works when Docker unavailable."""
-        from berb.hyperagent.task_agent import TaskAgent, TaskAgentConfig
         from berb.config import RCConfig
+        from berb.hyperagent.task_agent import TaskAgent, TaskAgentConfig
 
         mock_config = MagicMock(spec=RCConfig)
         config = TaskAgentConfig(sandbox_enabled=True, fallback_to_simulated=True)
@@ -476,6 +473,7 @@ class TestLLMRateLimiting:
         one thread to operate without mutual exclusion.
         """
         import threading
+
         from berb.llm.client import TokenBucketRateLimiter
 
         limiter = TokenBucketRateLimiter()
@@ -484,13 +482,12 @@ class TestLLMRateLimiting:
         assert limiter._lock is not None, (
             "_lock is None after __init__ — lazy init TOCTOU not fixed (BUG-004)."
         )
-        assert isinstance(limiter._lock, type(threading.Lock())), (
-            "_lock is not a threading.Lock."
-        )
+        assert isinstance(limiter._lock, type(threading.Lock())), "_lock is not a threading.Lock."
 
     def test_rate_limiter_lock_identity_stable_under_concurrency(self):
         """REGRESSION BUG-004: concurrent _get_lock() calls must return identical object."""
         import threading
+
         from berb.llm.client import TokenBucketRateLimiter
 
         limiter = TokenBucketRateLimiter()
@@ -546,7 +543,6 @@ class TestSecurityFixesIntegration:
 
     def test_security_fix_markers_present(self):
         """Verify SECURITY FIX markers are present in code."""
-        import re
 
         # Check task_agent.py
         task_agent_path = Path("berb/hyperagent/task_agent.py")
@@ -582,12 +578,15 @@ class TestSSRFFailClosed:
 
     def test_unresolvable_hostname_is_blocked(self):
         """REGRESSION: unresolvable hostname must be blocked, not allowed."""
-        from berb.web._ssrf import check_url_ssrf
         import socket
         from unittest.mock import patch
 
+        from berb.web._ssrf import check_url_ssrf
+
         with patch("socket.getaddrinfo", side_effect=socket.gaierror("NXDOMAIN")):
-            result = check_url_ssrf("http://this-domain-definitely-does-not-exist-xyzzy.invalid/path")
+            result = check_url_ssrf(
+                "http://this-domain-definitely-does-not-exist-xyzzy.invalid/path"
+            )
 
         # Must return a non-None error — not silently allow the request.
         assert result is not None, (
@@ -598,8 +597,9 @@ class TestSSRFFailClosed:
 
     def test_oserror_on_dns_is_blocked(self):
         """OSError during DNS lookup must also be blocked."""
-        from berb.web._ssrf import check_url_ssrf
         from unittest.mock import patch
+
+        from berb.web._ssrf import check_url_ssrf
 
         with patch("socket.getaddrinfo", side_effect=OSError("network unreachable")):
             result = check_url_ssrf("http://attacker.example.com/internal")
@@ -608,9 +608,10 @@ class TestSSRFFailClosed:
 
     def test_public_resolvable_domain_still_allowed(self):
         """Regression guard: legitimate resolvable public IPs remain allowed."""
-        from berb.web._ssrf import check_url_ssrf
         import socket
         from unittest.mock import patch
+
+        from berb.web._ssrf import check_url_ssrf
 
         # Simulate resolving to a public IP (e.g. 93.184.216.34 = example.com)
         mock_info = [(socket.AF_INET, socket.SOCK_STREAM, 0, "", ("93.184.216.34", 0))]
@@ -630,9 +631,10 @@ class TestSSRFFailClosed:
 
     def test_is_safe_url_mirrors_check(self):
         """is_safe_url() must return False when DNS resolution fails."""
-        from berb.web._ssrf import is_safe_url
         import socket
         from unittest.mock import patch
+
+        from berb.web._ssrf import is_safe_url
 
         with patch("socket.getaddrinfo", side_effect=socket.gaierror("NXDOMAIN")):
             safe = is_safe_url("http://unresolvable.invalid/")

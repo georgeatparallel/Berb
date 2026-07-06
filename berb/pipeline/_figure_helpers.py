@@ -138,7 +138,9 @@ def _generate_neurips_checklist(has_experiments: bool = True, has_code: bool = T
     """)
 
 
-def _generate_framework_diagram_prompt(framework_description: str, style: str = "matplotlib") -> str:
+def _generate_framework_diagram_prompt(
+    framework_description: str, style: str = "matplotlib"
+) -> str:
     """Generate a prompt for creating a framework diagram."""
     return (
         f"Create a {style} figure illustrating: {framework_description}\n\n"
@@ -203,7 +205,7 @@ def _synthesize_perspectives(
 def reconcile_figure_refs(
     text: str,
 ) -> str:
-    """Reconcile figure references in paper text.
+    r"""Reconcile figure references in paper text.
 
     Ensures that all \Fig{{ref}} and \Figure{{ref}} tags are consistent.
     """

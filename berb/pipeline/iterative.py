@@ -136,10 +136,10 @@ def _version_rollback_stages(run_dir: Path, rollback_target: Stage, attempt: int
     """Rename stage directories that will be overwritten by a PIVOT/REFINE."""
     import shutil as _shutil
 
-    from berb.pipeline.stages import Stage as _S
+    from berb.pipeline.stages import Stage as _Stage
 
     rollback_num = int(rollback_target)
-    decision_num = int(_S.RESEARCH_DECISION)
+    decision_num = int(_Stage.RESEARCH_DECISION)
 
     for stage_num in range(rollback_num, decision_num + 1):
         stage_dir = run_dir / f"stage-{stage_num:02d}"

@@ -18,9 +18,8 @@ import logging
 import re
 import statistics
 from dataclasses import dataclass, field
-from enum import Enum
-from pathlib import Path
-from typing import Any, Literal
+from enum import StrEnum
+from typing import Any
 
 import httpx
 from pydantic import BaseModel, Field
@@ -28,7 +27,7 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger(__name__)
 
 
-class VocabularyLevel(str, Enum):
+class VocabularyLevel(StrEnum):
     """Vocabulary complexity levels."""
 
     ACCESSIBLE = "accessible"
@@ -37,7 +36,7 @@ class VocabularyLevel(str, Enum):
     EXPERT = "expert"
 
 
-class FirstPersonUsage(str, Enum):
+class FirstPersonUsage(StrEnum):
     """First person usage frequency."""
 
     NEVER = "never"
@@ -168,17 +167,19 @@ class StyleFingerprint(BaseModel):
         for author in self.source_authors[:3]:
             lines.append(f"  - {author.name} ({author.affiliation or 'Unknown'})")
 
-        lines.extend([
-            f"\n**Sentence Structure:**",
-            f"  - Average sentence length: {self.avg_sentence_length:.1f} words (±{self.sentence_length_std:.1f})",
-            f"  - Average paragraph: {self.avg_paragraph_sentences:.1f} sentences",
-            f"\n**Style Characteristics:**",
-            f"  - Vocabulary level: {self.vocabulary_level.value}",
-            f"  - Hedging frequency: {self.hedging_frequency:.0%}",
-            f"  - Passive voice ratio: {self.passive_voice_ratio:.0%}",
-            f"  - First person usage: {self.first_person_usage.value}",
-            f"\n**Paper Structure:**",
-        ])
+        lines.extend(
+            [
+                "\n**Sentence Structure:**",
+                f"  - Average sentence length: {self.avg_sentence_length:.1f} words (±{self.sentence_length_std:.1f})",
+                f"  - Average paragraph: {self.avg_paragraph_sentences:.1f} sentences",
+                "\n**Style Characteristics:**",
+                f"  - Vocabulary level: {self.vocabulary_level.value}",
+                f"  - Hedging frequency: {self.hedging_frequency:.0%}",
+                f"  - Passive voice ratio: {self.passive_voice_ratio:.0%}",
+                f"  - First person usage: {self.first_person_usage.value}",
+                "\n**Paper Structure:**",
+            ]
+        )
 
         for section, ratio in self.section_ratios.items():
             lines.append(f"  - {section.replace('_', ' ').title()}: {ratio:.0%}")
@@ -189,7 +190,7 @@ class StyleFingerprint(BaseModel):
             lines.append(f"\n**Common Transitions:** {', '.join(self.transition_patterns[:5])}")
 
         if self.sample_paragraphs:
-            lines.append(f"\n**Example Paragraphs for Reference:**")
+            lines.append("\n**Example Paragraphs for Reference:**")
             for i, para in enumerate(self.sample_paragraphs[:3], 1):
                 lines.append(f"  Example {i}: {para[:100]}...")
 
@@ -224,7 +225,7 @@ class StyleFingerprint(BaseModel):
             scores.append(hedging_score)
 
         # First person conformance
-        first_person_count = len(re.findall(r'\b(we|our|us|I|my|me)\b', text.lower()))
+        first_person_count = len(re.findall(r"\b(we|our|us|I|my|me)\b", text.lower()))
         fp_ratio = first_person_count / total_words if total_words > 0 else 0
         expected_fp = {
             FirstPersonUsage.NEVER: 0.0,
@@ -240,16 +241,26 @@ class StyleFingerprint(BaseModel):
 
     def _extract_sentences(self, text: str) -> list[str]:
         """Extract sentences from text."""
-        sentences = re.split(r'[.!?]+', text)
+        sentences = re.split(r"[.!?]+", text)
         return [s.strip() for s in sentences if s.strip() and len(s.split()) > 3]
 
     def _count_hedging(self, text: str) -> int:
         """Count hedging phrases in text."""
         hedging_patterns = [
-            r'\bmay\b', r'\bmight\b', r'\bcould\b', r'\bsuggests?\b',
-            r'\bappears?\b', r'\bseems?\b', r'\bpossibly\b', r'\bpotentially\b',
-            r'\blikely\b', r'\bperhaps\b', r'\bapproximately\b',
-            r'\bit is possible\b', r'\bwe propose\b', r'\bwe suggest\b',
+            r"\bmay\b",
+            r"\bmight\b",
+            r"\bcould\b",
+            r"\bsuggests?\b",
+            r"\bappears?\b",
+            r"\bseems?\b",
+            r"\bpossibly\b",
+            r"\bpotentially\b",
+            r"\blikely\b",
+            r"\bperhaps\b",
+            r"\bapproximately\b",
+            r"\bit is possible\b",
+            r"\bwe propose\b",
+            r"\bwe suggest\b",
         ]
         count = 0
         for pattern in hedging_patterns:
@@ -295,17 +306,40 @@ class StyleFingerprintEngine:
 
     # Hedging phrases for detection
     HEDGING_PHRASES = [
-        "may", "might", "could", "suggests", "suggest", "appears",
-        "seems", "possibly", "potentially", "likely", "perhaps",
-        "approximately", "it is possible", "we propose", "we suggest",
-        "our results indicate", "this suggests", "may be",
+        "may",
+        "might",
+        "could",
+        "suggests",
+        "suggest",
+        "appears",
+        "seems",
+        "possibly",
+        "potentially",
+        "likely",
+        "perhaps",
+        "approximately",
+        "it is possible",
+        "we propose",
+        "we suggest",
+        "our results indicate",
+        "this suggests",
+        "may be",
     ]
 
     # Transition phrase patterns
     TRANSITION_PATTERNS = [
-        "however", "furthermore", "moreover", "additionally",
-        "in contrast", "similarly", "consequently", "therefore",
-        "thus", "hence", "notably", "importantly",
+        "however",
+        "furthermore",
+        "moreover",
+        "additionally",
+        "in contrast",
+        "similarly",
+        "consequently",
+        "therefore",
+        "thus",
+        "hence",
+        "notably",
+        "importantly",
     ]
 
     def __init__(
@@ -364,26 +398,20 @@ class StyleFingerprintEngine:
         # Fallback to OpenAlex
         if not authors and openalex_client:
             try:
-                authors = await self._search_authors_openalex(
-                    domain, openalex_client
-                )
+                authors = await self._search_authors_openalex(domain, openalex_client)
             except Exception as e:
                 logger.warning(f"OpenAlex search failed: {e}")
 
         # Filter for native speakers if target language is English
         if self._is_english_target():
-            native_authors = [
-                a for a in authors if a.is_native_english_speaker()
-            ]
+            native_authors = [a for a in authors if a.is_native_english_speaker()]
             if len(native_authors) >= self.num_target_authors:
                 authors = native_authors
                 logger.info(f"Filtered to {len(authors)} native English speakers")
 
         # Fallback: use top authors regardless of language
         if len(authors) < self.num_target_authors:
-            logger.warning(
-                f"Only found {len(authors)} authors, using regardless of language"
-            )
+            logger.warning(f"Only found {len(authors)} authors, using regardless of language")
 
         return authors[: self.num_target_authors]
 
@@ -430,9 +458,7 @@ class StyleFingerprintEngine:
         profiles.sort(key=lambda a: a.total_citations, reverse=True)
         return profiles
 
-    async def _search_authors_openalex(
-        self, domain: str, client: Any
-    ) -> list[AuthorProfile]:
+    async def _search_authors_openalex(self, domain: str, client: Any) -> list[AuthorProfile]:
         """Search authors via OpenAlex.
 
         Args:
@@ -525,22 +551,24 @@ class StyleFingerprintEngine:
         if not all_sentences:
             return StyleFingerprint(source_authors=authors)
 
-        # Sentence length statistics
-        all_sentence_lengths = [
-            len(s) for sentences in all_sentences for s in sentences
-        ]
-        avg_sentence_length = statistics.mean(all_sentence_lengths) if all_sentence_lengths else 25.0
+        # Sentence length statistics, in WORDS (matching the field's documented
+        # unit and compute_style_conformance_score's own len(s.split()) usage).
+        # This previously used len(s) — character count, not word count —
+        # which both violated the field's semantics and could overshoot the
+        # StyleFingerprint.avg_sentence_length Pydantic bound (le=50.0),
+        # raising a ValidationError that silently killed the whole feature.
+        all_sentence_lengths = [len(s.split()) for sentences in all_sentences for s in sentences]
+        avg_sentence_length = (
+            statistics.mean(all_sentence_lengths) if all_sentence_lengths else 25.0
+        )
+        avg_sentence_length = max(10.0, min(50.0, avg_sentence_length))
         sentence_length_std = (
             statistics.stdev(all_sentence_lengths) if len(all_sentence_lengths) > 1 else 8.0
         )
 
         # Paragraph statistics
-        paragraph_lengths = [
-            len(p) for paragraphs in all_paragraphs for p in paragraphs
-        ]
-        avg_paragraph_sentences = (
-            statistics.mean(paragraph_lengths) if paragraph_lengths else 4.5
-        )
+        paragraph_lengths = [len(p) for paragraphs in all_paragraphs for p in paragraphs]
+        avg_paragraph_sentences = statistics.mean(paragraph_lengths) if paragraph_lengths else 4.5
 
         # Hedging frequency
         total_hedging = sum(all_hedging_counts)
@@ -626,12 +654,17 @@ class StyleFingerprintEngine:
             arxiv_id = paper_id.replace("arXiv:", "")
             url = f"https://arxiv.org/abs/{arxiv_id}"
             try:
-                async with self.http_client as client:
-                    response = await client.get(url, timeout=30)
-                    if response.status_code == 200:
-                        # Extract abstract at minimum
-                        # Full text would require PDF parsing
-                        return self._extract_arxiv_abstract(response.text)
+                # self.http_client is a long-lived instance member, not a
+                # per-call context manager: `async with self.http_client`
+                # would call __aexit__ and close the connection pool after
+                # the FIRST fetch, breaking every subsequent call in the
+                # same engine's lifetime (e.g. the loop in _get_author_papers
+                # over multiple papers/authors).
+                response = await self.http_client.get(url, timeout=30)
+                if response.status_code == 200:
+                    # Extract abstract at minimum
+                    # Full text would require PDF parsing
+                    return self._extract_arxiv_abstract(response.text)
             except Exception:
                 pass
 
@@ -752,9 +785,7 @@ class StyleFingerprintEngine:
         else:
             return FirstPersonUsage.FREQUENT
 
-    def _estimate_vocabulary_level(
-        self, sentence_lengths: list[int]
-    ) -> VocabularyLevel:
+    def _estimate_vocabulary_level(self, sentence_lengths: list[int]) -> VocabularyLevel:
         """Estimate vocabulary complexity level.
 
         Args:

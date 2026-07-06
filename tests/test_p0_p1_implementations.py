@@ -17,14 +17,12 @@ P1 High Priority:
 from __future__ import annotations
 
 import asyncio
-import json
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 
@@ -34,8 +32,13 @@ from berb.llm.client import (
     CircuitBreakerState,
     LLMClient,
 )
-from berb.llm.model_cascade import CascadingLLMClient, CascadeConfig, CascadeStep
+from berb.llm.model_cascade import CascadeConfig, CascadeStep, CascadingLLMClient
 from berb.memory.shared_memory import SharedResearchMemory
+from berb.pipeline.runner import (
+    _create_pivot_event,
+    _get_rollback_target,
+    _should_pivot,
+)
 from berb.pipeline.stages import (
     EventStore,
     PipelineState,
@@ -44,13 +47,6 @@ from berb.pipeline.stages import (
     StageTransitionEvent,
     TransitionEvent,
 )
-from berb.pipeline.runner import (
-    _should_pivot,
-    _get_rollback_target,
-    _should_force_proceed,
-    _create_pivot_event,
-)
-
 
 # ============================================================================
 # P0-1: Circuit Breaker Tests
@@ -215,9 +211,7 @@ class TestCircuitBreaker:
         # on ambient event-loop state (asyncio.get_event_loop() behavior
         # differs across Python versions when no loop is set).
         with ThreadPoolExecutor(max_workers=10) as executor:
-            futures = [
-                executor.submit(worker, success=(i % 2 == 0)) for i in range(50)
-            ]
+            futures = [executor.submit(worker, success=(i % 2 == 0)) for i in range(50)]
             for future in futures:
                 future.result()
 

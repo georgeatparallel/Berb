@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 # VRAM threshold (MB) — GPUs with less than this are "limited"
 _HIGH_VRAM_THRESHOLD_MB = 8192
 
+
 @dataclass(frozen=True)
 class HardwareProfile:
     """Detected hardware capabilities of the local machine."""
@@ -206,4 +207,4 @@ def ensure_torch_available(python_path: str, gpu_type: str) -> bool:
 
 
 # Re-exported from berb.experiment.metrics for backwards compatibility.
-from berb.experiment.metrics import is_metric_name  # noqa: F401
+from berb.experiment.metrics import is_metric_name  # noqa: E402,F401

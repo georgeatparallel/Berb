@@ -14,7 +14,6 @@ import pytest
 from berb.pipeline import runner as rc_runner
 from berb.pipeline.stages import Stage
 
-
 # ── Heartbeat writing tests ──
 
 
@@ -66,7 +65,9 @@ class TestHeartbeatInPipeline:
                 "api_key_env": "K",
             },
         }
-        config = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
+        config = RCConfig.from_dict(
+            data, project_root=tmp_path, check_paths=False, check_security=False
+        )
         run_dir = tmp_path / "run"
         run_dir.mkdir()
 
@@ -117,7 +118,9 @@ class TestSentinelScript:
             pytest.skip(f"bash unavailable in this environment: {result.stderr.strip()}")
         assert result.returncode == 0, f"Bash syntax error: {result.stderr}"
 
-    @pytest.mark.skipif(sys.platform == "win32", reason="Unix file permissions not applicable on Windows")
+    @pytest.mark.skipif(
+        sys.platform == "win32", reason="Unix file permissions not applicable on Windows"
+    )
     def test_sentinel_script_is_executable(self) -> None:
         script = Path(__file__).parent.parent / "sentinel.sh"
         assert os.access(script, os.X_OK)

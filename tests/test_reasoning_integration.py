@@ -11,22 +11,21 @@ Tests verify:
 
 from __future__ import annotations
 
-import asyncio
-import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
-from berb.reasoning.base import ReasoningContext, MethodType
-from berb.reasoning.multi_perspective import MultiPerspectiveMethod
-from berb.reasoning.pre_mortem import PreMortemMethod
+import pytest
+
+from berb.llm.extended_router import ExtendedNadirClawRouter
+from berb.reasoning.base import ReasoningContext
 from berb.reasoning.bayesian import BayesianMethod
 from berb.reasoning.debate import DebateMethod
 from berb.reasoning.dialectical import DialecticalMethod
-from berb.reasoning.research import ResearchMethod
-from berb.reasoning.socratic import SocraticMethod
-from berb.reasoning.scientific import ScientificMethod
 from berb.reasoning.jury import JuryMethod
-from berb.llm.extended_router import ExtendedNadirClawRouter
-
+from berb.reasoning.multi_perspective import MultiPerspectiveMethod
+from berb.reasoning.pre_mortem import PreMortemMethod
+from berb.reasoning.research import ResearchMethod
+from berb.reasoning.scientific import ScientificMethod
+from berb.reasoning.socratic import SocraticMethod
 
 # =============================================================================
 # Mock Provider for Testing
@@ -428,7 +427,7 @@ class TestBackwardCompatibility:
             }
         )
 
-        for i, method in enumerate(methods):
+        for _i, method in enumerate(methods):
             result = await method.execute(test_context)
             # Should succeed with fallback
             assert result is not None

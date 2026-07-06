@@ -8,7 +8,6 @@ from pathlib import Path
 import pytest
 
 from berb.pipeline.paper_verifier import (
-    VerificationResult,
     verify_paper,
 )
 from berb.pipeline.verified_registry import VerifiedRegistry

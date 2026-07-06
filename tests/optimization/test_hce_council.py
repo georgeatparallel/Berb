@@ -1,19 +1,16 @@
 """Tests for Hidden Consistent Evaluation (Upgrade 2) and Council Mode (Upgrade 3)."""
 
-import pytest
-from unittest.mock import AsyncMock, patch
-
-from berb.validation.hidden_eval import (
-    HiddenConsistentEvaluation,
-    PaperDocument,
-    EvaluationResult,
-    CriteriaVisibility,
-)
 from berb.review.council_mode import (
+    CouncilConfig,
     CouncilMode,
     CouncilReport,
     CouncilSynthesis,
-    CouncilConfig,
+)
+from berb.validation.hidden_eval import (
+    CriteriaVisibility,
+    EvaluationResult,
+    HiddenConsistentEvaluation,
+    PaperDocument,
 )
 
 

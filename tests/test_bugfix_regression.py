@@ -11,6 +11,7 @@ Bug Fixes Covered:
 Author: Georgios-Chrysovalantis Chatzivantsidis
 Date: 2026-04-03
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -21,10 +22,10 @@ from berb.config import RCConfig
 from berb.pipeline import executor as rc_executor
 from berb.pipeline.registry import get_all_registrations, get_registration
 
-
 # ============================================================================
 # BUG #1 Regression: _expand_search_queries Export
 # ============================================================================
+
 
 class TestBugFix1ExpandSearchQueriesExport:
     """Regression tests for BUG #1: Missing _expand_search_queries export.
@@ -47,7 +48,7 @@ class TestBugFix1ExpandSearchQueriesExport:
     def test_expand_search_queries_is_exported(self) -> None:
         """Verify _expand_search_queries is accessible from executor module."""
         assert hasattr(rc_executor, "_expand_search_queries")
-        assert callable(getattr(rc_executor, "_expand_search_queries"))
+        assert callable(rc_executor._expand_search_queries)
 
     def test_expand_search_queries_deduplicates(self) -> None:
         """Verify _expand_search_queries removes duplicate queries."""
@@ -65,9 +66,7 @@ class TestBugFix1ExpandSearchQueriesExport:
         result = rc_executor._expand_search_queries(queries, topic)
         assert isinstance(result, list)
         # Should preserve original unique queries
-        assert "deep learning survey" in result or any(
-            "deep learning" in q for q in result
-        )
+        assert "deep learning survey" in result or any("deep learning" in q for q in result)
 
     def test_expand_search_queries_handles_empty_input(self) -> None:
         """Verify graceful handling of empty query list."""
@@ -78,6 +77,7 @@ class TestBugFix1ExpandSearchQueriesExport:
 # ============================================================================
 # BUG #2 Regression: Security Validation for API Keys
 # ============================================================================
+
 
 class TestBugFix2SecurityValidation:
     """Regression tests for BUG #2: Security validation regression.
@@ -149,7 +149,6 @@ class TestBugFix2SecurityValidation:
         but the config is still accepted. The warning is logged to help
         users avoid misconfiguration.
         """
-        import logging
 
         data = {
             "project": {"name": "test-wrong-env", "mode": "docs-first"},
@@ -176,6 +175,7 @@ class TestBugFix2SecurityValidation:
 # ============================================================================
 # BUG #3 Regression: Import Organization
 # ============================================================================
+
 
 class TestBugFix3ImportOrganization:
     """Regression tests for BUG #3: Import organization and structure.
@@ -246,9 +246,7 @@ class TestBugFix3ImportOrganization:
 
         # Verify all expected stages have registered executors
         for stage in expected_order:
-            assert get_registration(stage) is not None, (
-                f"Stage {stage.name} should have executor"
-            )
+            assert get_registration(stage) is not None, f"Stage {stage.name} should have executor"
 
     def test_helper_functions_are_accessible(self) -> None:
         """Verify helper functions are properly imported and accessible."""
@@ -262,6 +260,7 @@ class TestBugFix3ImportOrganization:
 # ============================================================================
 # Integration Tests: Combined Bug Fix Verification
 # ============================================================================
+
 
 class TestCombinedBugFixVerification:
     """Integration tests verifying all bug fixes work together.
@@ -286,7 +285,7 @@ class TestCombinedBugFixVerification:
                 "api_key_env": "INTEGRATION_TEST_KEY",
             },
         }
-        config = RCConfig.from_dict(config_data, project_root=tmp_path, check_paths=False)
+        _config = RCConfig.from_dict(config_data, project_root=tmp_path, check_paths=False)
 
         # 2. All stage executors should be available
         from berb.pipeline.stages import Stage
@@ -330,9 +329,7 @@ class TestCombinedBugFixVerification:
                 content = Path(test_file).read_text(encoding="utf-8")
                 matches = api_key_pattern.findall(content)
                 # Should find no plaintext API keys in actual test fixtures
-                assert len(matches) == 0, (
-                    f"Found plaintext API keys in {test_file}: {matches}"
-                )
+                assert len(matches) == 0, f"Found plaintext API keys in {test_file}: {matches}"
             except FileNotFoundError:
                 # File might not exist yet, that's OK for this test
                 pass

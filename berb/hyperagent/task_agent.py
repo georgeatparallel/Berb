@@ -269,7 +269,6 @@ def execute_task(task: str, **kwargs) -> dict:
 
         # Build a self-contained runner that embeds the agent code and calls
         # execute_task(), then emits a JSON result line on stdout.
-        agent_code_escaped = self.code.replace("\\", "\\\\").replace('"""', '\\"\\"\\"')
         runner = (
             "import json, sys\n"
             "\n"
@@ -324,7 +323,7 @@ def execute_task(task: str, **kwargs) -> dict:
             )
 
         # Parse the last JSON line from stdout
-        stdout_lines = [l for l in result.stdout.splitlines() if l.strip().startswith("{")]
+        stdout_lines = [line for line in result.stdout.splitlines() if line.strip().startswith("{")]
         if stdout_lines:
             try:
                 output = json.loads(stdout_lines[-1])
@@ -333,8 +332,11 @@ def execute_task(task: str, **kwargs) -> dict:
                     success=output.get("success", True),
                     output=output,
                     error=output.get("error"),
-                    metrics={k: float(v) for k, v in result.metrics.items()
-                             if isinstance(v, (int, float))},
+                    metrics={
+                        k: float(v)
+                        for k, v in result.metrics.items()
+                        if isinstance(v, (int, float))
+                    },
                 )
             except (json.JSONDecodeError, ValueError):
                 pass
@@ -344,8 +346,7 @@ def execute_task(task: str, **kwargs) -> dict:
             task_id=task,
             success=True,
             output={"raw_output": result.stdout[:2000]},
-            metrics={k: float(v) for k, v in result.metrics.items()
-                     if isinstance(v, (int, float))},
+            metrics={k: float(v) for k, v in result.metrics.items() if isinstance(v, (int, float))},
         )
 
     async def _execute_simulated(self, task: str, timeout: int) -> Any:
@@ -356,6 +357,7 @@ def execute_task(task: str, **kwargs) -> dict:
         without real code execution.  Must NOT be used in production.
         """
         import asyncio
+
         from berb.hyperagent.base import TaskResult
 
         logger.debug("Simulated execution: task=%r timeout=%d", task, timeout)
@@ -363,7 +365,11 @@ def execute_task(task: str, **kwargs) -> dict:
         return TaskResult(
             task_id=task,
             success=True,
-            output={"mode": "simulated", "task": task, "message": "Simulated execution (no Docker)"},
+            output={
+                "mode": "simulated",
+                "task": task,
+                "message": "Simulated execution (no Docker)",
+            },
             metrics={"execution_time": 0.0, "simulated": True},
         )
 
@@ -488,6 +494,7 @@ def execute_task(task: str, **kwargs) -> dict:
 
             # Normalize unicode to prevent homoglyph / invisible-char bypass
             import unicodedata
+
             normalized = unicodedata.normalize("NFKC", code)
 
             # SECURITY FIX #1: Include network-capable imports in the block
@@ -550,7 +557,9 @@ def execute_task(task: str, **kwargs) -> dict:
         """Convert to dictionary."""
         return {
             "config": {
-                "code_path": str(self.task_config.code_path) if self.task_config.code_path else None,
+                "code_path": str(self.task_config.code_path)
+                if self.task_config.code_path
+                else None,
                 "max_execution_time": self.task_config.max_execution_time,
                 "sandbox_enabled": self.task_config.sandbox_enabled,
             },

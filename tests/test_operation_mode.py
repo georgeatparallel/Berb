@@ -8,21 +8,19 @@ including feedback collection, audit trail, and mode management.
 
 from __future__ import annotations
 
-import asyncio
 import json
+from unittest.mock import patch
+
 import pytest
-from datetime import datetime, timezone
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
 
 from berb.modes.operation_mode import (
-    OperationMode,
-    OperationModeManager,
+    AuditTrail,
     CollaborativeConfig,
     FeedbackAction,
     HumanFeedback,
+    OperationMode,
+    OperationModeManager,
     StageSummary,
-    AuditTrail,
     create_mode_manager,
 )
 
@@ -394,7 +392,7 @@ class TestAsyncApproval:
             output_summary="Test",
         )
 
-        with patch("asyncio.wait_for", side_effect=asyncio.TimeoutError()):
+        with patch("asyncio.wait_for", side_effect=TimeoutError()):
             with pytest.raises(TimeoutError):
                 await manager.present_for_approval(summary)
 

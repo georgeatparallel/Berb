@@ -13,12 +13,10 @@ from berb.llm.client import LLMResponse
 from berb.pipeline.code_agent import (
     CodeAgent,
     CodeAgentConfig,
-    CodeAgentResult,
     SolutionNode,
     _SimpleResult,
 )
 from berb.prompts import PromptManager
-
 
 # ---------------------------------------------------------------------------
 # Test fixtures
@@ -552,7 +550,7 @@ class TestFullPipeline:
             sandbox_factory=lambda cfg, wd: sandbox,
             experiment_config=None,
         )
-        result = agent.generate(
+        _result = agent.generate(
             topic="t",
             exp_plan="p",
             metric="x",
@@ -695,7 +693,9 @@ class TestConfigIntegration:
                 },
             },
         }
-        cfg = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
+        cfg = RCConfig.from_dict(
+            data, project_root=tmp_path, check_paths=False, check_security=False
+        )
         assert cfg.experiment.code_agent.enabled is False
         assert cfg.experiment.code_agent.tree_search_enabled is True
         assert cfg.experiment.code_agent.tree_search_candidates == 5

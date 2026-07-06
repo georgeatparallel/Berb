@@ -13,21 +13,21 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from enum import Enum
+import re
+from datetime import UTC, datetime
+from enum import StrEnum
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
 from pydantic import BaseModel, Field
 
-from berb.reasoning.research import ResearchMethod
 from berb.llm.client import LLMProvider
+from berb.reasoning.research import ResearchMethod
 
 logger = logging.getLogger(__name__)
 
 
-class PatternType(str, Enum):
+class PatternType(StrEnum):
     """Type of writing pattern.
 
     Attributes:
@@ -118,7 +118,7 @@ class WritingPatternsMemory(BaseModel):
         super().__init__(**kwargs)
         self.total_patterns = len(self.patterns)
         if not self.last_updated:
-            self.last_updated = datetime.now(timezone.utc).isoformat()
+            self.last_updated = datetime.now(UTC).isoformat()
 
     def add_pattern(self, pattern: WritingPattern) -> None:
         """Add or update a pattern.
@@ -130,18 +130,18 @@ class WritingPatternsMemory(BaseModel):
             # Update existing
             existing = self.patterns[pattern.id]
             existing.frequency += 1
-            existing.updated_at = datetime.now(timezone.utc).isoformat()
+            existing.updated_at = datetime.now(UTC).isoformat()
             if pattern.source_papers:
                 existing.source_papers.extend(pattern.source_papers)
                 existing.source_papers = list(set(existing.source_papers))
         else:
             # Add new
-            pattern.created_at = datetime.now(timezone.utc).isoformat()
+            pattern.created_at = datetime.now(UTC).isoformat()
             pattern.updated_at = pattern.created_at
             self.patterns[pattern.id] = pattern
 
         self.total_patterns = len(self.patterns)
-        self.last_updated = datetime.now(timezone.utc).isoformat()
+        self.last_updated = datetime.now(UTC).isoformat()
 
     def get_patterns_by_type(
         self,
@@ -157,10 +157,7 @@ class WritingPatternsMemory(BaseModel):
         Returns:
             List of matching patterns
         """
-        patterns = [
-            p for p in self.patterns.values()
-            if p.type == pattern_type
-        ]
+        patterns = [p for p in self.patterns.values() if p.type == pattern_type]
 
         if domain:
             patterns = [p for p in patterns if p.domain == domain]
@@ -198,13 +195,13 @@ class WritingPatternsMemory(BaseModel):
 
         return patterns[:20]  # Top 20
 
-    def merge(self, other: "WritingPatternsMemory") -> None:
+    def merge(self, other: WritingPatternsMemory) -> None:
         """Merge another memory into this one.
 
         Args:
             other: Another writing patterns memory
         """
-        for pattern_id, pattern in other.patterns.items():
+        for _pattern_id, pattern in other.patterns.items():
             self.add_pattern(pattern)
 
     def to_json(self) -> str:
@@ -223,7 +220,7 @@ class WritingPatternsMemory(BaseModel):
         return json.dumps(data, indent=2)
 
     @classmethod
-    def from_json(cls, json_str: str) -> "WritingPatternsMemory":
+    def from_json(cls, json_str: str) -> WritingPatternsMemory:
         """Deserialize from JSON.
 
         Args:
@@ -383,7 +380,6 @@ Extract hedging phrases as a JSON list."""
             List of extracted patterns
         """
         patterns = []
-        timestamp = datetime.now(timezone.utc).isoformat()
 
         # Extract transitions
         transitions = await self._extract_transitions(text)
@@ -530,11 +526,13 @@ Extract hedging phrases as a JSON list."""
             sentences = section_text.split(".")[:3]
             if sentences:
                 template = ". ".join(sentences) + "."
-                templates.append({
-                    "section": section_name,
-                    "template": template,
-                    "example": section_text[:200],
-                })
+                templates.append(
+                    {
+                        "section": section_name,
+                        "template": template,
+                        "example": section_text[:200],
+                    }
+                )
 
         return templates
 
@@ -593,7 +591,7 @@ Extract hedging phrases as a JSON list."""
             return
 
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 json_str = f.read()
             self.memory = WritingPatternsMemory.from_json(json_str)
             logger.info(f"Loaded writing pattern memory from {path}")
@@ -653,7 +651,7 @@ class WritingPatternRetriever:
         # Sort by frequency and effectiveness
         patterns = sorted(
             patterns,
-            key=lambda p: (p.frequency * 0.7 + p.effectiveness_score * 0.3),
+            key=lambda p: p.frequency * 0.7 + p.effectiveness_score * 0.3,
             reverse=True,
         )
 

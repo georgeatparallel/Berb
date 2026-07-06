@@ -23,6 +23,7 @@ def test_validate_checkpoint_checksum_accepts_valid() -> None:
         "run_id": "test-run-001",
     }
     import hashlib
+
     checksum_data = f"{data['last_completed_stage']}:{data['last_completed_name']}:{data['run_id']}"
     data["checksum"] = hashlib.sha256(checksum_data.encode()).hexdigest()[:16]
 

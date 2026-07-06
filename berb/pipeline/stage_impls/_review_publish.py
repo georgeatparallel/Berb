@@ -14,7 +14,6 @@ import yaml  # noqa: F401 — available for downstream use
 
 from berb.adapters import AdapterBundle
 from berb.config import RCConfig
-from berb.adapters import LLMProvider
 from berb.llm.client import LLMClient
 from berb.pipeline._domain import _detect_domain  # noqa: F401
 from berb.pipeline._helpers import (
@@ -39,6 +38,7 @@ from berb.pipeline.contracts import StageContract
 from berb.pipeline.registry import register_stage
 from berb.pipeline.stages import Stage, StageStatus
 from berb.prompts import PromptManager
+from berb.writing.anti_ai import AntiAIEncoder
 
 logger = logging.getLogger(__name__)
 
@@ -304,6 +304,11 @@ def _execute_paper_revision(
             except Exception:  # noqa: BLE001
                 pass
 
+        # Note: AI-writing-slop detection already happened in Stage 17
+        # (_validate_draft_quality → draft_quality.json.revision_directives,
+        # loaded into _quality_prefix above) since it runs AntiAIEncoder on
+        # this same draft text. No need to re-detect here.
+
         _overlay = _get_evolution_overlay(run_dir, "paper_revision")
         sp = _pm.for_stage(
             "paper_revision",
@@ -395,6 +400,11 @@ def _execute_paper_revision(
                 revised = draft
     else:
         revised = draft
+    if revised:
+        try:
+            revised = AntiAIEncoder().fix_mechanical(revised)
+        except Exception:  # noqa: BLE001
+            pass
     (stage_dir / "paper_revised.md").write_text(revised, encoding="utf-8")
     return StageResult(
         stage=Stage.PAPER_REVISION,
@@ -1685,6 +1695,7 @@ _KNOWN_PACKAGES: dict[str, str] = {
 def _detect_dependencies(source_code: str) -> list[str]:
     """Return sorted list of known PyPI packages imported by *source_code*."""
     import ast as _ast
+
     detected: set[str] = set()
     try:
         tree = _ast.parse(source_code)
@@ -2707,6 +2718,154 @@ def _execute_export_publish(
                                 )
                     except Exception as _pdf_exc:  # noqa: BLE001
                         logger.debug("Stage 22: PDF review skipped: %s", _pdf_exc)
+                # Claim-citation hallucination check: does each \cite{} actually
+                # support the specific claim it's attached to, and does the key
+                # exist in this paper's own bibliography?
+                if _pdf_path.exists() and llm is not None:
+                    try:
+                        import asyncio
+
+                        from berb.literature.verify import parse_bibtex_entries
+                        from berb.pipeline.hallucination_detector import HallucinationDetector
+
+                        _bib_text_h = _read_prior_artifact(run_dir, "references.bib") or ""
+                        _known_keys = {e["key"] for e in parse_bibtex_entries(_bib_text_h)}
+                        _hdet = HallucinationDetector(llm_client=llm, known_bib_keys=_known_keys)
+                        _tex_text_h = tex_path.read_text(encoding="utf-8")
+                        _halluc_report = asyncio.run(
+                            _hdet.verify_paper(tex_path, paper_text=_tex_text_h)
+                        )
+                        (stage_dir / "hallucination_report.json").write_text(
+                            json.dumps(_halluc_report.to_dict(), indent=2, ensure_ascii=False),
+                            encoding="utf-8",
+                        )
+                        artifacts.append("hallucination_report.json")
+                        if _halluc_report.has_hallucinations:
+                            logger.warning(
+                                "Stage 22: Hallucination check %.1f/10 — %d unverified "
+                                "citation(s), %d unsupported claim(s)",
+                                _halluc_report.overall_score,
+                                _halluc_report.hallucinated_citations,
+                                _halluc_report.unsupported_claims,
+                            )
+                        else:
+                            logger.info(
+                                "Stage 22: Hallucination check passed (%.1f/10)",
+                                _halluc_report.overall_score,
+                            )
+                    except Exception as _halluc_exc:  # noqa: BLE001
+                        logger.debug("Stage 22: Hallucination check skipped: %s", _halluc_exc)
+                # 5-reviewer ensemble + Area Chair meta-review: an additional,
+                # non-blocking, more structured perspective alongside the
+                # single-call peer_review from Stage 18 and the 7-dimension
+                # PDF review above. Does not replace either.
+                if _pdf_path.exists() and llm is not None:
+                    try:
+                        import asyncio
+
+                        from berb.review.ensemble import AutomatedReviewerEnsemble
+
+                        _ensemble = AutomatedReviewerEnsemble(llm_client=llm)
+                        _tex_text_e = tex_path.read_text(encoding="utf-8")
+                        _ens_reviews = asyncio.run(
+                            _ensemble.review_paper(tex_path, paper_text=_tex_text_e)
+                        )
+                        _ens_meta = _ensemble.area_chair_decision(_ens_reviews)
+                        _ensemble.generate_review_report(
+                            _ens_reviews,
+                            _ens_meta,
+                            output_path=stage_dir / "ensemble_review.md",
+                        )
+                        artifacts.append("ensemble_review.md")
+                        logger.info(
+                            "Stage 22: Ensemble review %.2f/10 (%s), %d conflict(s)",
+                            _ens_meta.average_score,
+                            _ens_meta.consensus_decision.value,
+                            len(_ens_meta.reviewer_conflicts),
+                        )
+                    except Exception as _ens_exc:  # noqa: BLE001
+                        logger.debug("Stage 22: Ensemble review skipped: %s", _ens_exc)
+                # Humanitarian impact assessment: contribution-type classification
+                # and a broader-impact statement, non-blocking, informational only.
+                if _pdf_path.exists() and llm is not None:
+                    try:
+                        import asyncio
+
+                        from berb.writing.impact_assessment import HumanitarianImpactAssessment
+
+                        _tex_text_i = tex_path.read_text(encoding="utf-8")
+                        _title_i = _extract_paper_title(_tex_text_i) or config.research.topic
+                        _impact_assessor = HumanitarianImpactAssessment(llm_client=llm)
+                        _contribution = asyncio.run(
+                            _impact_assessor.assess_contribution_type(_tex_text_i, title=_title_i)
+                        )
+                        _broader_impact = asyncio.run(
+                            _impact_assessor.generate_broader_impact(_tex_text_i, title=_title_i)
+                        )
+                        (stage_dir / "impact_assessment.json").write_text(
+                            json.dumps(
+                                {
+                                    **_contribution.to_dict(),
+                                    "broader_impact_statement": _broader_impact,
+                                },
+                                indent=2,
+                                ensure_ascii=False,
+                            ),
+                            encoding="utf-8",
+                        )
+                        artifacts.append("impact_assessment.json")
+                        logger.info(
+                            "Stage 22: Contribution type: %s (novelty=%.1f/10)",
+                            _contribution.contribution_type.value,
+                            _contribution.novelty_score,
+                        )
+                        if _contribution.contribution_type.value == "text_without_insight":
+                            logger.warning(
+                                "Stage 22: Impact assessment flagged this paper as "
+                                "text-without-insight — %s",
+                                _contribution.reasoning,
+                            )
+                    except Exception as _impact_exc:  # noqa: BLE001
+                        logger.debug("Stage 22: Impact assessment skipped: %s", _impact_exc)
+                # Source-grounding check: does the paper's text share
+                # vocabulary with the literature corpus actually gathered in
+                # Phase B? A cheap, deterministic, complementary signal to
+                # the LLM-based claim-citation check above (this one ignores
+                # \cite{} entirely and just checks topical overlap).
+                if _pdf_path.exists():
+                    try:
+                        import asyncio
+
+                        from berb.writing.source_writer import SourceGroundingVerifier
+
+                        _tex_text_g = tex_path.read_text(encoding="utf-8")
+                        _candidates_text_g = _read_prior_artifact(run_dir, "candidates.jsonl") or ""
+                        _sources_g = [
+                            row
+                            for row in (
+                                _safe_json_loads(line, {})
+                                for line in _candidates_text_g.strip().splitlines()
+                            )
+                            if isinstance(row, dict) and row.get("abstract")
+                        ]
+                        if _sources_g:
+                            _verifier = SourceGroundingVerifier(min_grounding_score=0.3)
+                            _grounding = asyncio.run(
+                                _verifier.verify_grounding(_tex_text_g, _sources_g)
+                            )
+                            (stage_dir / "grounding_report.json").write_text(
+                                _grounding.model_dump_json(indent=2),
+                                encoding="utf-8",
+                            )
+                            artifacts.append("grounding_report.json")
+                            logger.info(
+                                "Stage 22: Source grounding score %.2f (%d/%d claims grounded)",
+                                _grounding.grounding_score,
+                                _grounding.grounded_claims,
+                                _grounding.total_claims,
+                            )
+                    except Exception as _ground_exc:  # noqa: BLE001
+                        logger.debug("Stage 22: Source grounding check skipped: %s", _ground_exc)
                 # Post-compilation quality checks
                 try:
                     from berb.templates.compiler import check_compiled_quality
@@ -2807,9 +2966,12 @@ def _execute_export_publish(
         if _bib_path.exists():
             try:
                 import re as _bib_re
+
                 _bib_text = _bib_path.read_text(encoding="utf-8")
                 # Parse bib entries into dict format
-                for _entry in _bib_re.findall(r"@(\w+)\{([^,]+),\s*(.*?)\n\}", _bib_text, _bib_re.DOTALL):
+                for _entry in _bib_re.findall(
+                    r"@(\w+)\{([^,]+),\s*(.*?)\n\}", _bib_text, _bib_re.DOTALL
+                ):
                     _references.append({"type": _entry[0], "key": _entry[1], "content": _entry[2]})
             except Exception:
                 pass
@@ -2822,7 +2984,11 @@ def _execute_export_publish(
 
         # Create exporter config and run export
         _exp_config = ExportConfig(
-            formats=[ExportFormat(f) for f in _export_config.formats if f in [e.value for e in ExportFormat]],
+            formats=[
+                ExportFormat(f)
+                for f in _export_config.formats
+                if f in [e.value for e in ExportFormat]
+            ],
             output_dir=str(_output_dir),
             template=_export_config.template,
         )
@@ -2830,9 +2996,8 @@ def _execute_export_publish(
 
         # Run async export
         import asyncio
-        _export_result = asyncio.run(
-            _exporter.export(_paper_content, _references, _figures)
-        )
+
+        _export_result = asyncio.run(_exporter.export(_paper_content, _references, _figures))
 
         if _export_result.exported_formats:
             logger.info(

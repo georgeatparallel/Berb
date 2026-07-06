@@ -689,7 +689,7 @@ class LLMClient:
         P0 2026-04-06: Added IncompleteRead retry for network stability.
         """
         import http.client
-        
+
         for attempt in range(self.config.max_retries):
             try:
                 # P0 2026-04-02: Wrap call with circuit breaker
@@ -704,7 +704,11 @@ class LLMClient:
                     delay = self.config.retry_base_delay * (2**attempt)
                     logger.warning(
                         "IncompleteRead from %s (attempt %d/%d), retrying in %.1fs: %s",
-                        model, attempt + 1, self.config.max_retries, delay, e
+                        model,
+                        attempt + 1,
+                        self.config.max_retries,
+                        delay,
+                        e,
                     )
                     time.sleep(delay)
                     continue

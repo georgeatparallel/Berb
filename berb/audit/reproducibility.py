@@ -154,13 +154,7 @@ dependencies:
         self.artifacts.append(str(env_path))
 
         # requirements.txt (pip-compatible; parallel to environment.yml)
-        req_content = (
-            "pyyaml>=6.0\n"
-            "rich>=13.0\n"
-            "pydantic>=2.0\n"
-            "numpy>=1.24\n"
-            "httpx>=0.24\n"
-        )
+        req_content = "pyyaml>=6.0\nrich>=13.0\npydantic>=2.0\nnumpy>=1.24\nhttpx>=0.24\n"
         req_path = output_dir / "requirements.txt"
         with open(req_path, "w", encoding="utf-8") as f:
             f.write(req_content)

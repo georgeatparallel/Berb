@@ -23,10 +23,10 @@ Coverage:
 # Author: Georgios-Chrysovalantis Chatzivantsidis
 # Date: 2026-04-03
 """
+
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -39,7 +39,6 @@ from berb.config import RCConfig
 from berb.pipeline.contracts import CONTRACTS
 from berb.pipeline.executor import execute_stage
 from berb.pipeline.stages import Stage, StageStatus
-
 
 # ============================================================================
 # E2E Test Fixtures
@@ -216,18 +215,20 @@ class MockLLMClient:
             return self._default_response()
 
     def _topic_init_response(self) -> str:
-        return json.dumps({
-            "topic": "Machine Learning for Scientific Discovery",
-            "research_questions": [
-                "How can ML accelerate scientific discovery?",
-                "What are the key challenges in ML-driven science?"
-            ],
-            "success_criteria": [
-                "Novel ML approach",
-                "Empirical validation",
-                "Scientific impact"
-            ]
-        })
+        return json.dumps(
+            {
+                "topic": "Machine Learning for Scientific Discovery",
+                "research_questions": [
+                    "How can ML accelerate scientific discovery?",
+                    "What are the key challenges in ML-driven science?",
+                ],
+                "success_criteria": [
+                    "Novel ML approach",
+                    "Empirical validation",
+                    "Scientific impact",
+                ],
+            }
+        )
 
     def _problem_decompose_response(self) -> str:
         return """# Problem Decomposition
@@ -243,36 +244,53 @@ Empirical testing and evaluation
 """
 
     def _search_strategy_response(self) -> str:
-        return json.dumps({
-            "search_plan": {
+        return json.dumps(
+            {
+                "search_plan": {
+                    "queries": ["ML for science", "automated discovery"],
+                    "sources": ["arxiv", "semantic_scholar", "openalex"],
+                },
+                "sources": ["arxiv", "semantic_scholar", "openalex"],
                 "queries": ["ML for science", "automated discovery"],
-                "sources": ["arxiv", "semantic_scholar", "openalex"]
-            },
-            "sources": ["arxiv", "semantic_scholar", "openalex"],
-            "queries": ["ML for science", "automated discovery"]
-        })
+            }
+        )
 
     def _literature_collect_response(self) -> str:
         papers = [
-            {"title": f"Paper {i}", "authors": ["Author et al."], "year": 2025, "abstract": f"Abstract {i}"}
+            {
+                "title": f"Paper {i}",
+                "authors": ["Author et al."],
+                "year": 2025,
+                "abstract": f"Abstract {i}",
+            }
             for i in range(10)
         ]
         return "\n".join(json.dumps(p) for p in papers)
 
     def _literature_screen_response(self) -> str:
         papers = [
-            {"title": f"Screened Paper {i}", "relevance_score": 0.9 - i * 0.1, "quality_score": 8.0 - i * 0.5}
+            {
+                "title": f"Screened Paper {i}",
+                "relevance_score": 0.9 - i * 0.1,
+                "quality_score": 8.0 - i * 0.5,
+            }
             for i in range(5)
         ]
         return "\n".join(json.dumps(p) for p in papers)
 
     def _knowledge_extract_response(self) -> str:
-        return json.dumps({
-            "cards": [
-                {"id": f"card-{i}", "title": f"Paper {i}", "key_findings": ["Finding 1", "Finding 2"]}
-                for i in range(5)
-            ]
-        })
+        return json.dumps(
+            {
+                "cards": [
+                    {
+                        "id": f"card-{i}",
+                        "title": f"Paper {i}",
+                        "key_findings": ["Finding 1", "Finding 2"],
+                    }
+                    for i in range(5)
+                ]
+            }
+        )
 
     def _synthesis_response(self) -> str:
         return """# Knowledge Synthesis
@@ -302,17 +320,19 @@ Cross-domain transfer learning enables rapid adaptation with 80% less data
 """
 
     def _experiment_design_response(self) -> str:
-        return json.dumps({
-            "experiment_plan": {
-                "objective": "Validate ML acceleration hypothesis",
-                "method": "Comparative study with baseline",
-                "metrics": ["time-to-insight", "accuracy", "resource_usage"],
-                "conditions": [
-                    {"name": "control", "description": "Traditional method"},
-                    {"name": "treatment", "description": "ML-accelerated method"}
-                ]
+        return json.dumps(
+            {
+                "experiment_plan": {
+                    "objective": "Validate ML acceleration hypothesis",
+                    "method": "Comparative study with baseline",
+                    "metrics": ["time-to-insight", "accuracy", "resource_usage"],
+                    "conditions": [
+                        {"name": "control", "description": "Traditional method"},
+                        {"name": "treatment", "description": "ML-accelerated method"},
+                    ],
+                }
             }
-        })
+        )
 
     def _code_generation_response(self) -> str:
         return """```python
@@ -341,34 +361,44 @@ if __name__ == '__main__':
 """
 
     def _resource_planning_response(self) -> str:
-        return json.dumps({
-            "schedule": {
-                "total_time_estimate": "2 hours",
-                "gpu_required": False,
-                "memory_required_gb": 4,
-                "trials": [
-                    {"condition": "control", "repeats": 5},
-                    {"condition": "treatment", "repeats": 5}
-                ]
+        return json.dumps(
+            {
+                "schedule": {
+                    "total_time_estimate": "2 hours",
+                    "gpu_required": False,
+                    "memory_required_gb": 4,
+                    "trials": [
+                        {"condition": "control", "repeats": 5},
+                        {"condition": "treatment", "repeats": 5},
+                    ],
+                }
             }
-        })
+        )
 
     def _experiment_run_response(self) -> str:
-        return json.dumps({
-            "runs": [
-                {"run_id": f"run-{i}", "condition": "control" if i < 5 else "treatment", "accuracy": 0.7 + i * 0.02}
-                for i in range(10)
-            ]
-        })
+        return json.dumps(
+            {
+                "runs": [
+                    {
+                        "run_id": f"run-{i}",
+                        "condition": "control" if i < 5 else "treatment",
+                        "accuracy": 0.7 + i * 0.02,
+                    }
+                    for i in range(10)
+                ]
+            }
+        )
 
     def _iterative_refine_response(self) -> str:
-        return json.dumps({
-            "refinement_log": {
-                "iterations": 3,
-                "final_metrics": {"accuracy": 0.85},
-                "improvements": ["Hyperparameter tuning", "Feature engineering"]
+        return json.dumps(
+            {
+                "refinement_log": {
+                    "iterations": 3,
+                    "final_metrics": {"accuracy": 0.85},
+                    "improvements": ["Hyperparameter tuning", "Feature engineering"],
+                }
             }
-        })
+        )
 
     def _result_analysis_response(self) -> str:
         return """# Result Analysis
@@ -390,11 +420,13 @@ p-value < 0.05 for primary metric
 """
 
     def _research_decision_response(self) -> str:
-        return json.dumps({
-            "decision": "PROCEED",
-            "justification": "Results support hypothesis with statistical significance",
-            "confidence": 0.85
-        })
+        return json.dumps(
+            {
+                "decision": "PROCEED",
+                "justification": "Results support hypothesis with statistical significance",
+                "confidence": 0.85,
+            }
+        )
 
     def _paper_outline_response(self) -> str:
         return """# Paper Outline
@@ -494,26 +526,30 @@ We present a novel ML approach for accelerating scientific discovery...
 """
 
     def _quality_gate_response(self) -> str:
-        return json.dumps({
-            "quality_report": {
-                "score_1_to_10": 8.5,
-                "verdict": "accept",
-                "criteria": {
-                    "novelty": 8.0,
-                    "methodological_rigor": 9.0,
-                    "clarity": 8.5,
-                    "reproducibility": 8.5
+        return json.dumps(
+            {
+                "quality_report": {
+                    "score_1_to_10": 8.5,
+                    "verdict": "accept",
+                    "criteria": {
+                        "novelty": 8.0,
+                        "methodological_rigor": 9.0,
+                        "clarity": 8.5,
+                        "reproducibility": 8.5,
+                    },
                 }
             }
-        })
+        )
 
     def _knowledge_archive_response(self) -> str:
-        return json.dumps({
-            "archive": {
-                "retrospective": "Research completed successfully",
-                "bundle_index": ["paper", "code", "data", "experiments"]
+        return json.dumps(
+            {
+                "archive": {
+                    "retrospective": "Research completed successfully",
+                    "bundle_index": ["paper", "code", "data", "experiments"],
+                }
             }
-        })
+        )
 
     def _export_publish_response(self) -> str:
         return """# Final Paper
@@ -524,14 +560,16 @@ We present a novel ML approach for accelerating scientific discovery...
 """
 
     def _citation_verify_response(self) -> str:
-        return json.dumps({
-            "verification_report": {
-                "total_citations": 15,
-                "verified_citations": 15,
-                "hallucinated_citations": 0,
-                "status": "all_verified"
+        return json.dumps(
+            {
+                "verification_report": {
+                    "total_citations": 15,
+                    "verified_citations": 15,
+                    "hallucinated_citations": 0,
+                    "status": "all_verified",
+                }
             }
-        })
+        )
 
     def _default_response(self) -> str:
         return "Mock response for pipeline stage"
@@ -551,7 +589,9 @@ class TestPhaseA_ResearchScoping:
     - Goal formulation
     """
 
-    def test_stage_01_topic_init(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_01_topic_init(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 1: Initialize research topic."""
         stage_dir = run_dir / f"stage-{Stage.TOPIC_INIT:02d}"
         stage_dir.mkdir(parents=True, exist_ok=True)
@@ -574,7 +614,9 @@ class TestPhaseA_ResearchScoping:
         assert (stage_dir / "goal.md").exists()
         assert (stage_dir / "hardware_profile.json").exists()
 
-    def test_stage_02_problem_decompose(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_02_problem_decompose(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 2: Decompose problem into sub-problems."""
         # Setup: Create prior artifact from Stage 1
         stage1_dir = run_dir / f"stage-{Stage.TOPIC_INIT:02d}"
@@ -630,7 +672,9 @@ class TestPhaseB_LiteratureDiscovery:
                 stage_dir.mkdir(parents=True, exist_ok=True)
                 (stage_dir / file_name).write_text(content, encoding="utf-8")
 
-    def test_stage_03_search_strategy(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_03_search_strategy(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 3: Formulate search strategy."""
         self._setup_prior_stages(run_dir, 3)
 
@@ -654,7 +698,9 @@ class TestPhaseB_LiteratureDiscovery:
         assert "sources.json" in result.artifacts
         assert "queries.json" in result.artifacts
 
-    def test_stage_04_literature_collect(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_04_literature_collect(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 4: Collect literature."""
         self._setup_prior_stages(run_dir, 4)
         stage3_dir = run_dir / "stage-03"
@@ -682,7 +728,9 @@ class TestPhaseB_LiteratureDiscovery:
         assert result.status == StageStatus.DONE, f"Stage failed: {result.error}"
         assert "candidates.jsonl" in result.artifacts
 
-    def test_stage_05_literature_screen(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_05_literature_screen(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 5: Screen literature (GATE)."""
         self._setup_prior_stages(run_dir, 5)
         stage4_dir = run_dir / "stage-04"
@@ -707,7 +755,9 @@ class TestPhaseB_LiteratureDiscovery:
         assert result.status == StageStatus.DONE, f"Stage failed: {result.error}"
         assert "shortlist.jsonl" in result.artifacts
 
-    def test_stage_06_knowledge_extract(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_06_knowledge_extract(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 6: Extract knowledge from papers."""
         self._setup_prior_stages(run_dir, 6)
         stage5_dir = run_dir / "stage-05"
@@ -758,7 +808,9 @@ class TestPhaseC_KnowledgeSynthesis:
             else:
                 (stage_dir / f"artifact-{i}.md").write_text(f"# Artifact {i}", encoding="utf-8")
 
-    def test_stage_07_synthesis(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_07_synthesis(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 7: Synthesize knowledge."""
         self._setup_prior_stages(run_dir)
 
@@ -780,7 +832,9 @@ class TestPhaseC_KnowledgeSynthesis:
         assert result.status == StageStatus.DONE, f"Stage failed: {result.error}"
         assert "synthesis.md" in result.artifacts
 
-    def test_stage_08_hypothesis_gen(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_08_hypothesis_gen(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 8: Generate hypotheses."""
         self._setup_prior_stages(run_dir)
         stage7_dir = run_dir / "stage-07"
@@ -830,7 +884,9 @@ class TestPhaseD_ExperimentDesign:
             else:
                 (stage_dir / f"artifact-{i}.md").write_text(f"# Artifact {i}", encoding="utf-8")
 
-    def test_stage_09_experiment_design(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_09_experiment_design(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 9: Design experiment (GATE)."""
         self._setup_prior_stages(run_dir)
 
@@ -852,7 +908,9 @@ class TestPhaseD_ExperimentDesign:
         assert result.status == StageStatus.DONE, f"Stage failed: {result.error}"
         assert "exp_plan.yaml" in result.artifacts
 
-    def test_stage_10_code_generation(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_10_code_generation(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 10: Generate experiment code."""
         self._setup_prior_stages(run_dir)
         stage9_dir = run_dir / "stage-09"
@@ -877,7 +935,9 @@ class TestPhaseD_ExperimentDesign:
         assert result.status == StageStatus.DONE, f"Stage failed: {result.error}"
         assert "experiment/" in result.artifacts or "main.py" in result.artifacts
 
-    def test_stage_11_resource_planning(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_11_resource_planning(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 11: Plan resources."""
         self._setup_prior_stages(run_dir)
         stage9_dir = run_dir / "stage-09"
@@ -932,7 +992,9 @@ class TestPhaseE_ExperimentExecution:
             else:
                 (stage_dir / f"artifact-{i}.md").write_text(f"# Artifact {i}", encoding="utf-8")
 
-    def test_stage_12_experiment_run(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_12_experiment_run(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 12: Run experiment."""
         self._setup_prior_stages(run_dir)
 
@@ -952,9 +1014,13 @@ class TestPhaseE_ExperimentExecution:
             )
 
         # Stage 12 may succeed or need refinement
-        assert result.status in [StageStatus.DONE, StageStatus.BLOCKED_APPROVAL], f"Stage failed: {result.error}"
+        assert result.status in [StageStatus.DONE, StageStatus.BLOCKED_APPROVAL], (
+            f"Stage failed: {result.error}"
+        )
 
-    def test_stage_13_iterative_refine(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_13_iterative_refine(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 13: Iterative refinement."""
         self._setup_prior_stages(run_dir)
         stage12_dir = run_dir / "stage-12"
@@ -1006,7 +1072,9 @@ class TestPhaseF_AnalysisDecision:
             else:
                 (stage_dir / f"artifact-{i}.md").write_text(f"# Artifact {i}", encoding="utf-8")
 
-    def test_stage_14_result_analysis(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_14_result_analysis(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 14: Analyze results."""
         self._setup_prior_stages(run_dir)
 
@@ -1028,7 +1096,9 @@ class TestPhaseF_AnalysisDecision:
         assert result.status == StageStatus.DONE, f"Stage failed: {result.error}"
         assert "analysis.md" in result.artifacts
 
-    def test_stage_15_research_decision(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_15_research_decision(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 15: Make research decision."""
         self._setup_prior_stages(run_dir)
         stage14_dir = run_dir / "stage-14"
@@ -1079,8 +1149,7 @@ class TestPhaseG_PaperWriting:
                 runs_dir = stage_dir / "runs"
                 runs_dir.mkdir(parents=True, exist_ok=True)
                 (runs_dir / "run-1.json").write_text(
-                    '{"status": "completed", "metrics": {"accuracy": 0.85}}',
-                    encoding="utf-8"
+                    '{"status": "completed", "metrics": {"accuracy": 0.85}}', encoding="utf-8"
                 )
             elif i == 15:
                 (stage_dir / "decision.md").write_text("# Decision: PROCEED", encoding="utf-8")
@@ -1088,7 +1157,9 @@ class TestPhaseG_PaperWriting:
             else:
                 (stage_dir / f"artifact-{i}.md").write_text(f"# Artifact {i}", encoding="utf-8")
 
-    def test_stage_16_paper_outline(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_16_paper_outline(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 16: Create paper outline."""
         self._setup_prior_stages(run_dir)
 
@@ -1110,7 +1181,9 @@ class TestPhaseG_PaperWriting:
         assert result.status == StageStatus.DONE, f"Stage failed: {result.error}"
         assert "outline.md" in result.artifacts
 
-    def test_stage_17_paper_draft(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_17_paper_draft(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 17: Write paper draft."""
         self._setup_prior_stages(run_dir)
         stage16_dir = run_dir / "stage-16"
@@ -1135,7 +1208,9 @@ class TestPhaseG_PaperWriting:
         assert result.status == StageStatus.DONE, f"Stage failed: {result.error}"
         assert "paper_draft.md" in result.artifacts
 
-    def test_stage_18_peer_review(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_18_peer_review(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 18: Peer review."""
         self._setup_prior_stages(run_dir)
         stage17_dir = run_dir / "stage-17"
@@ -1160,7 +1235,9 @@ class TestPhaseG_PaperWriting:
         assert result.status == StageStatus.DONE, f"Stage failed: {result.error}"
         assert "reviews.md" in result.artifacts
 
-    def test_stage_19_paper_revision(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_19_paper_revision(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 19: Revise paper."""
         self._setup_prior_stages(run_dir)
         stage17_dir = run_dir / "stage-17"
@@ -1219,15 +1296,16 @@ class TestPhaseH_Finalization:
                 runs_dir = stage_dir / "runs"
                 runs_dir.mkdir(parents=True, exist_ok=True)
                 (runs_dir / "run-1.json").write_text(
-                    '{"status": "completed", "metrics": {"accuracy": 0.85}}',
-                    encoding="utf-8"
+                    '{"status": "completed", "metrics": {"accuracy": 0.85}}', encoding="utf-8"
                 )
             elif i == 19:
                 (stage_dir / "paper_revised.md").write_text("# Revised Paper", encoding="utf-8")
             else:
                 (stage_dir / f"artifact-{i}.md").write_text(f"# Artifact {i}", encoding="utf-8")
 
-    def test_stage_20_quality_gate(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_20_quality_gate(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 20: Quality gate."""
         self._setup_prior_stages(run_dir)
 
@@ -1249,7 +1327,9 @@ class TestPhaseH_Finalization:
         assert result.status == StageStatus.DONE, f"Stage failed: {result.error}"
         assert "quality_report.json" in result.artifacts
 
-    def test_stage_21_knowledge_archive(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_21_knowledge_archive(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 21: Knowledge archive."""
         self._setup_prior_stages(run_dir)
 
@@ -1271,7 +1351,9 @@ class TestPhaseH_Finalization:
         assert result.status == StageStatus.DONE, f"Stage failed: {result.error}"
         assert "archive.md" in result.artifacts
 
-    def test_stage_22_export_publish(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_22_export_publish(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 22: Export and publish."""
         self._setup_prior_stages(run_dir)
         stage19_dir = run_dir / "stage-19"
@@ -1300,12 +1382,16 @@ class TestPhaseH_Finalization:
         assert result.status == StageStatus.DONE, f"Stage failed: {result.error}"
         assert "paper_final.md" in result.artifacts
 
-    def test_stage_23_citation_verify(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_23_citation_verify(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 23: Citation verification."""
         self._setup_prior_stages(run_dir)
         stage22_dir = run_dir / "stage-22"
         stage22_dir.mkdir(parents=True, exist_ok=True)
-        (stage22_dir / "paper_final.md").write_text("# Final Paper\n\n[1] Smith et al.", encoding="utf-8")
+        (stage22_dir / "paper_final.md").write_text(
+            "# Final Paper\n\n[1] Smith et al.", encoding="utf-8"
+        )
 
         stage_dir = run_dir / f"stage-{Stage.CITATION_VERIFY:02d}"
         stage_dir.mkdir(parents=True, exist_ok=True)
@@ -1346,7 +1432,9 @@ class TestIntegration:
             assert Stage(i) is not None, f"Missing stage {i}"
             assert Stage(i).name is not None, f"Stage {i} missing name"
 
-    def test_all_stages_executable(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_all_stages_executable(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Test that all stages can be executed without crashing."""
         # Setup minimal prior artifacts
         for i in range(1, 24):
@@ -1354,9 +1442,11 @@ class TestIntegration:
             stage_dir.mkdir(parents=True, exist_ok=True)
             # Create minimal required artifacts for each stage
             if i > 1:
-                prior_dir = run_dir / f"stage-{i-1:02d}"
+                prior_dir = run_dir / f"stage-{i - 1:02d}"
                 prior_dir.mkdir(parents=True, exist_ok=True)
-                (prior_dir / f"artifact-{i-1}.md").write_text(f"# Artifact {i-1}", encoding="utf-8")
+                (prior_dir / f"artifact-{i - 1}.md").write_text(
+                    f"# Artifact {i - 1}", encoding="utf-8"
+                )
 
         llm = MockLLMClient()
 
@@ -1382,7 +1472,9 @@ class TestIntegration:
 class TestRegression:
     """Regression tests for bug fixes."""
 
-    def test_missing_input_artifact_handling(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_missing_input_artifact_handling(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Test that missing input artifacts are handled gracefully."""
         stage_dir = run_dir / f"stage-{Stage.PROBLEM_DECOMPOSE:02d}"
         stage_dir.mkdir(parents=True, exist_ok=True)
@@ -1403,12 +1495,16 @@ class TestRegression:
         assert result.status == StageStatus.FAILED
         assert "Missing input" in (result.error or "")
 
-    def test_llm_unavailable_fallback(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_llm_unavailable_fallback(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Test that stages handle LLM unavailability gracefully."""
         stage1_dir = run_dir / "stage-01"
         stage1_dir.mkdir(parents=True, exist_ok=True)
 
-        with patch("berb.pipeline.executor.create_llm_client", side_effect=Exception("LLM unavailable")):
+        with patch(
+            "berb.pipeline.executor.create_llm_client", side_effect=Exception("LLM unavailable")
+        ):
             result = execute_stage(
                 Stage.TOPIC_INIT,
                 run_dir=run_dir,

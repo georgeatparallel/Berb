@@ -8,7 +8,6 @@ Tests for:
 # Author: Georgios-Chrysovalantis Chatzivantsidis
 """
 
-import pytest
 from berb.llm.client import LLMProvider, get_provider_from_model, validate_model_for_provider
 
 

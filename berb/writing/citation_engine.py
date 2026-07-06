@@ -17,18 +17,16 @@ from __future__ import annotations
 
 import logging
 import re
-from dataclasses import dataclass, field
-from enum import Enum
-from pathlib import Path
+from enum import StrEnum
 from typing import Any, Literal
 
 import httpx
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
 
-class CitationLevel(str, Enum):
+class CitationLevel(StrEnum):
     """Citation specificity level.
 
     Attributes:
@@ -40,7 +38,7 @@ class CitationLevel(str, Enum):
     PAGE = "page"
 
 
-class CitationStyle(str, Enum):
+class CitationStyle(StrEnum):
     """Citation style for formatting.
 
     Attributes:
@@ -320,7 +318,7 @@ class CitationEngine:
                 entry += f" doi:{doi}."
 
         elif self.config.style == CitationStyle.CHICAGO:
-            entry = f"{author_list}. {year}. \"{title}.\""
+            entry = f'{author_list}. {year}. "{title}."'
             if venue:
                 entry += f" *{venue}*"
             if volume:
@@ -352,7 +350,7 @@ class CitationEngine:
             return "Anonymous"
 
         formatted = []
-        for i, author in enumerate(authors):
+        for _i, author in enumerate(authors):
             parts = author.split()
             if len(parts) >= 2:
                 # Last, F. format
@@ -599,7 +597,7 @@ class CitationStyleLibrary:
     # Chicago 17th edition rules
     CHICAGO_RULES = {
         "inline_author_date": "({author} {year}, {page})",
-        "bibliography": "{authors}. {year}. \"{title}.\" {venue} {volume}: {pages}.",
+        "bibliography": '{authors}. {year}. "{title}." {venue} {volume}: {pages}.',
     }
 
     def get_style_rules(

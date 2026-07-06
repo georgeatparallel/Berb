@@ -16,5 +16,3 @@ Test suite for all 12 optimization upgrades:
 
 # Author: Georgios-Chrysovalantis Chatzivantsidis
 """
-
-import pytest

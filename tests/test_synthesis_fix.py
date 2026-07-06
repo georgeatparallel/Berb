@@ -2,16 +2,17 @@
 
 from __future__ import annotations
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
-from berb.pipeline.stage_impls._synthesis import (
-    _SimpleRouter,
-    _LLMProviderWrapper,
-    _fallback_hypothesis_gen,
-)
+import pytest
+
 from berb.llm.client import LLMClient, LLMConfig
+from berb.pipeline.stage_impls._synthesis import (
+    _fallback_hypothesis_gen,
+    _LLMProviderWrapper,
+    _SimpleRouter,
+)
 
 
 class TestSimpleRouter:
@@ -184,6 +185,7 @@ class TestAdversarialValidation:
     def test_fallback_creates_stage_dir(self):
         """Test fallback creates perspective directory."""
         import tempfile
+
         from berb.llm.client import LLMConfig
 
         config = LLMConfig(

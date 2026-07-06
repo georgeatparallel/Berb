@@ -9,19 +9,15 @@ from __future__ import annotations
 import json
 import textwrap
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
-from berb.literature.models import Author, Paper
-from berb.literature.semantic_scholar import (
-    _parse_s2_paper,
-    search_semantic_scholar,
-)
 from berb.literature.arxiv_client import (
     _convert_result,
     search_arxiv,
 )
+from berb.literature.models import Author, Paper
 from berb.literature.search import (
     _deduplicate,
     _normalise_title,
@@ -29,7 +25,10 @@ from berb.literature.search import (
     search_papers,
     search_papers_multi_query,
 )
-
+from berb.literature.semantic_scholar import (
+    _parse_s2_paper,
+    search_semantic_scholar,
+)
 
 # ──────────────────────────────────────────────────────────────────────
 # Fixtures & helpers
@@ -253,8 +252,8 @@ class TestSemanticScholar:
 class TestArxiv:
     def test_convert_result(self) -> None:
         """Test converting arxiv.Result to Paper via the new library."""
-        from unittest.mock import MagicMock
         from datetime import datetime
+        from unittest.mock import MagicMock
 
         mock_result = MagicMock()
         mock_result.entry_id = "http://arxiv.org/abs/2401.00001v1"
@@ -282,9 +281,8 @@ class TestArxiv:
 
     def test_search_arxiv_mock(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test search_arxiv with mocked arxiv library."""
-        from unittest.mock import MagicMock
         from datetime import datetime
-        import types
+        from unittest.mock import MagicMock
 
         mock_result = MagicMock()
         mock_result.entry_id = "http://arxiv.org/abs/2401.00001v1"
@@ -323,8 +321,8 @@ class TestArxiv:
 
     def test_search_arxiv_error_graceful(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """search_arxiv returns empty list on error, not raise."""
-        from unittest.mock import MagicMock
         import types
+        from unittest.mock import MagicMock
 
         # Build a fake arxiv module with real exception classes so
         # `except arxiv.HTTPError` doesn't TypeError.
@@ -584,9 +582,7 @@ class TestPerplexityTopUp:
             failure_counter = kw.get("failure_counter")
             if failure_counter is not None:
                 failure_counter["openalex"] = failure_counter.get("openalex", 0) + 1
-                failure_counter["semantic_scholar"] = (
-                    failure_counter.get("semantic_scholar", 0) + 1
-                )
+                failure_counter["semantic_scholar"] = failure_counter.get("semantic_scholar", 0) + 1
             return [
                 _make_paper(paper_id=f"p{i}", title=f"Paper {i}", doi=f"10.{i}/unique", arxiv_id="")
                 for i in range(15)
@@ -659,9 +655,7 @@ class TestPerplexityTopUp:
             def search(self, *a: Any, **kw: Any) -> DeepQueryResult:
                 return fake_result
 
-        monkeypatch.setattr(
-            "berb.llm.deep_query_client.DeepQueryClient", _FakeClient
-        )
+        monkeypatch.setattr("berb.llm.deep_query_client.DeepQueryClient", _FakeClient)
 
         papers = search_perplexity("test query", api_key="fake-key")
         assert len(papers) == 1
@@ -683,9 +677,7 @@ class TestPerplexityTopUp:
                     title="test", content="not json at all", url="", source="DeepQuery"
                 )
 
-        monkeypatch.setattr(
-            "berb.llm.deep_query_client.DeepQueryClient", _FakeClient
-        )
+        monkeypatch.setattr("berb.llm.deep_query_client.DeepQueryClient", _FakeClient)
 
         assert search_perplexity("test query", api_key="fake-key") == []
 
@@ -747,6 +739,7 @@ class TestArxivCircuitBreaker:
     def test_breaker_open_skips_requests(self) -> None:
         """When breaker is OPEN, requests should be skipped."""
         import time as time_mod
+
         from berb.literature import arxiv_client
 
         arxiv_client._cb_state = arxiv_client._CB_OPEN
@@ -961,7 +954,7 @@ class TestMultiSourceFallback:
 class TestCacheTTL:
     def test_source_specific_ttl(self, tmp_path: Any) -> None:
         """arXiv cache should expire after 24h, not 7 days."""
-        from berb.literature.cache import get_cached, put_cache, _SOURCE_TTL
+        from berb.literature.cache import _SOURCE_TTL, get_cached, put_cache
 
         assert _SOURCE_TTL["arxiv"] == 86400  # 24h
         assert _SOURCE_TTL["semantic_scholar"] == 86400 * 3
@@ -978,4 +971,4 @@ class TestCacheTTL:
         assert _SOURCE_TTL["citation_verify"] >= 86400 * 365
 
 
-import urllib.error
+import urllib.error  # noqa: E402

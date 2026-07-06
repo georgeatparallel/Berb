@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 # pyright: reportMissingImports=false, reportUnknownVariableType=false, reportUnknownMemberType=false, reportUnknownArgumentType=false
-
 from berb.quality import (
     assess_quality,
     check_strict_quality,

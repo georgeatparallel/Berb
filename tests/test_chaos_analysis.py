@@ -8,35 +8,33 @@ Coverage:
 # Author: Georgios-Chrysovalantis Chatzivantsidis
 """
 
-import pytest
 import numpy as np
+import pytest
 
 from berb.domains.chaos.entropy import (
-    kolmogorov_sinai_entropy,
-    correlation_dimension,
-    approximate_entropy,
-    sample_entropy,
-    permutation_entropy,
     EntropyResult,
+    approximate_entropy,
+    correlation_dimension,
+    kolmogorov_sinai_entropy,
+    permutation_entropy,
+    sample_entropy,
 )
 from berb.domains.chaos.recurrence import (
     RecurrencePlot,
     RecurrenceQuantificationAnalysis,
+    RQAMetrics,
     compute_recurrence_matrix,
     compute_rqa_metrics,
     cross_recurrence,
     joint_recurrence,
-    RQAMetrics,
-    RecurrenceResult,
 )
 from berb.domains.chaos.test_01 import (
-    run_01_chaos_test,
-    run_01_chaos_batch,
-    compute_translation_variables,
-    compute_mean_square_displacement,
     Test01Result,
+    compute_mean_square_displacement,
+    compute_translation_variables,
+    run_01_chaos_batch,
+    run_01_chaos_test,
 )
-
 
 # =============================================================================
 # Entropy Tests
@@ -289,7 +287,7 @@ class TestRecurrenceQuantificationAnalysis:
         R[3, 4] = 1  # Line of length 2
 
         rqa = RecurrenceQuantificationAnalysis(min_line_length=2)
-        metrics = rqa.compute(R)
+        rqa.compute(R)
 
         # Should only count lines >= 2
 
@@ -374,7 +372,7 @@ class Test01ChaosFunction:
         # The 0-1 test can be sensitive to parameters
         if not np.isnan(result.K):
             assert result.K < 0.5
-            assert result.is_chaotic == False
+            assert not result.is_chaotic
 
     def test_random_signal(self):
         """Test 0-1 test for random signal."""
@@ -387,7 +385,7 @@ class Test01ChaosFunction:
         # The 0-1 test can be sensitive to parameters and signal length
         if not np.isnan(result.K):
             assert result.K > 0.5
-            assert result.is_chaotic == True
+            assert result.is_chaotic
 
     def test_short_series(self):
         """Test with too short time series."""
@@ -452,7 +450,7 @@ class Test01ResultClass:
         d = result.to_dict()
 
         assert d["K"] == 0.8
-        assert d["is_chaotic"] == True
+        assert d["is_chaotic"]
         assert d["confidence"] == 0.9
 
 

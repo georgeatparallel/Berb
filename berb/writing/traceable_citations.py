@@ -86,19 +86,15 @@ class CitationTraceReport(BaseModel):
         super().__init__(**kwargs)
         # Calculate derived fields
         self.total_citations = len(self.citations)
-        self.traceable_citations = sum(
-            1 for c in self.citations if c.page_number > 0
-        )
+        self.traceable_citations = sum(1 for c in self.citations if c.page_number > 0)
         self.untraceable_citations = self.total_citations - self.traceable_citations
 
         if self.citations:
-            self.average_alignment = sum(
-                c.alignment_score for c in self.citations
-            ) / len(self.citations)
+            self.average_alignment = sum(c.alignment_score for c in self.citations) / len(
+                self.citations
+            )
 
-        self.low_alignment_citations = [
-            c for c in self.citations if c.alignment_score < 0.6
-        ]
+        self.low_alignment_citations = [c for c in self.citations if c.alignment_score < 0.6]
 
 
 @dataclass
@@ -368,27 +364,31 @@ class CitationTracer:
                 if "[" in pattern:
                     # Numeric citation
                     ref_nums = [int(x.strip()) for x in match.group(2).split(",")]
-                    citations.append({
-                        "type": "numeric",
-                        "refs": ref_nums,
-                        "claim": claim,
-                        "location": location,
-                        "paper": {},
-                        "doi": "",
-                    })
+                    citations.append(
+                        {
+                            "type": "numeric",
+                            "refs": ref_nums,
+                            "claim": claim,
+                            "location": location,
+                            "paper": {},
+                            "doi": "",
+                        }
+                    )
                 else:
                     # Author-year citation
                     author = match.group(3)
                     year = match.group(4)
-                    citations.append({
-                        "type": "author_year",
-                        "author": author,
-                        "year": year,
-                        "claim": claim,
-                        "location": location,
-                        "paper": {},
-                        "doi": "",
-                    })
+                    citations.append(
+                        {
+                            "type": "author_year",
+                            "author": author,
+                            "year": year,
+                            "claim": claim,
+                            "location": location,
+                            "paper": {},
+                            "doi": "",
+                        }
+                    )
 
         return citations
 
@@ -442,9 +442,36 @@ class CitationTracer:
 
         # Remove common words
         stop_words = {
-            "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for",
-            "of", "with", "by", "from", "as", "is", "was", "are", "were", "been",
-            "this", "that", "these", "those", "it", "its", "we", "our", "they",
+            "the",
+            "a",
+            "an",
+            "and",
+            "or",
+            "but",
+            "in",
+            "on",
+            "at",
+            "to",
+            "for",
+            "of",
+            "with",
+            "by",
+            "from",
+            "as",
+            "is",
+            "was",
+            "are",
+            "were",
+            "been",
+            "this",
+            "that",
+            "these",
+            "those",
+            "it",
+            "its",
+            "we",
+            "our",
+            "they",
         }
 
         # Extract words
@@ -482,17 +509,20 @@ class CitationTracer:
 
         # Check for contradiction indicators
         contradiction_words = {
-            "however", "but", "contrary", "opposite", "disagree",
-            "contradict", "challenge", "question",
+            "however",
+            "but",
+            "contrary",
+            "opposite",
+            "disagree",
+            "contradict",
+            "challenge",
+            "question",
         }
 
         claim_lower = claim.lower()
         source_lower = source_text.lower()
 
-        has_contradiction = any(
-            w in claim_lower or w in source_lower
-            for w in contradiction_words
-        )
+        has_contradiction = any(w in claim_lower or w in source_lower for w in contradiction_words)
 
         # Adjust score
         if has_contradiction:
@@ -537,7 +567,8 @@ class CitationTracer:
         Returns:
             HTML string
         """
-        html = """<!DOCTYPE html>
+        html = (
+            """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -570,20 +601,27 @@ class CitationTracer:
     <table>
         <tr>
             <th>Total Citations</th>
-            <td>""" + str(len(citations)) + """</td>
+            <td>"""
+            + str(len(citations))
+            + """</td>
         </tr>
         <tr>
             <th>Traceable</th>
-            <td>""" + str(sum(1 for c in citations if c.page_number > 0)) + """</td>
+            <td>"""
+            + str(sum(1 for c in citations if c.page_number > 0))
+            + """</td>
         </tr>
         <tr>
             <th>Average Alignment</th>
-            <td>""" + f"{sum(c.alignment_score for c in citations) / max(len(citations), 1):.2f}" + """</td>
+            <td>"""
+            + f"{sum(c.alignment_score for c in citations) / max(len(citations), 1):.2f}"
+            + """</td>
         </tr>
     </table>
 
     <h2>Citations</h2>
 """
+        )
 
         for i, citation in enumerate(citations, 1):
             # Determine quality class
@@ -598,7 +636,7 @@ class CitationTracer:
     <div class="citation {quality_class}">
         <h3>Citation {i}</h3>
         <div class="metadata">
-            <strong>DOI:</strong> {citation.source_paper.get('doi', 'N/A')} |
+            <strong>DOI:</strong> {citation.source_paper.get("doi", "N/A")} |
             <strong>Page:</strong> {citation.page_number} |
             <strong>Paragraph:</strong> {citation.paragraph_index} |
             <strong>Alignment:</strong> <span class="score {quality_class}">{citation.alignment_score:.2f}</span>

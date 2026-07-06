@@ -6,14 +6,10 @@ All tests run without external services (mocked LLM, mocked Whisper).
 
 from __future__ import annotations
 
-import asyncio
 import json
-import os
-import sys
 import tempfile
 import time
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -80,7 +76,7 @@ class TestServerConfig:
         assert cfg.max_log_lines == 500
 
     def test_rcconfig_has_server_and_dashboard(self) -> None:
-        from berb.config import RCConfig, ServerConfig, DashboardConfig
+        from berb.config import DashboardConfig, RCConfig, ServerConfig
 
         # Build minimal valid config dict
         data = {
@@ -589,8 +585,8 @@ class TestFastAPIApp:
     @pytest.fixture
     def _skip_if_no_fastapi(self) -> None:
         try:
-            import fastapi
-            import httpx
+            import fastapi  # noqa: F401
+            import httpx  # noqa: F401
         except ImportError:
             pytest.skip("fastapi/httpx not installed")
 
@@ -617,7 +613,7 @@ class TestFastAPIApp:
 
     @pytest.mark.asyncio
     async def test_health_endpoint(self, app: object) -> None:
-        from httpx import AsyncClient, ASGITransport
+        from httpx import ASGITransport, AsyncClient
 
         transport = ASGITransport(app=app)  # type: ignore[arg-type]
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
@@ -628,7 +624,7 @@ class TestFastAPIApp:
 
     @pytest.mark.asyncio
     async def test_config_endpoint(self, app: object) -> None:
-        from httpx import AsyncClient, ASGITransport
+        from httpx import ASGITransport, AsyncClient
 
         transport = ASGITransport(app=app)  # type: ignore[arg-type]
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
@@ -639,7 +635,7 @@ class TestFastAPIApp:
 
     @pytest.mark.asyncio
     async def test_pipeline_status_idle(self, app: object) -> None:
-        from httpx import AsyncClient, ASGITransport
+        from httpx import ASGITransport, AsyncClient
 
         transport = ASGITransport(app=app)  # type: ignore[arg-type]
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
@@ -649,7 +645,7 @@ class TestFastAPIApp:
 
     @pytest.mark.asyncio
     async def test_pipeline_stages(self, app: object) -> None:
-        from httpx import AsyncClient, ASGITransport
+        from httpx import ASGITransport, AsyncClient
 
         transport = ASGITransport(app=app)  # type: ignore[arg-type]
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
@@ -660,7 +656,7 @@ class TestFastAPIApp:
 
     @pytest.mark.asyncio
     async def test_runs_list(self, app: object) -> None:
-        from httpx import AsyncClient, ASGITransport
+        from httpx import ASGITransport, AsyncClient
 
         transport = ASGITransport(app=app)  # type: ignore[arg-type]
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
@@ -670,7 +666,7 @@ class TestFastAPIApp:
 
     @pytest.mark.asyncio
     async def test_projects_list(self, app: object) -> None:
-        from httpx import AsyncClient, ASGITransport
+        from httpx import ASGITransport, AsyncClient
 
         transport = ASGITransport(app=app)  # type: ignore[arg-type]
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
@@ -680,7 +676,7 @@ class TestFastAPIApp:
 
     @pytest.mark.asyncio
     async def test_stop_pipeline_404_when_idle(self, app: object) -> None:
-        from httpx import AsyncClient, ASGITransport
+        from httpx import ASGITransport, AsyncClient
 
         transport = ASGITransport(app=app)  # type: ignore[arg-type]
         async with AsyncClient(transport=transport, base_url="http://test") as ac:

@@ -181,9 +181,7 @@ class SimplePendulum(HamiltonianSystem):
     def hamiltonian(self, q: np.ndarray, p: np.ndarray) -> float:
         """H = p²/(2ml²) - mgl·cos(θ)"""
         theta = q[0]
-        return p[0] ** 2 / (2 * self.m * self.l**2) - self.m * self.g * self.l * np.cos(
-            theta
-        )
+        return p[0] ** 2 / (2 * self.m * self.l**2) - self.m * self.g * self.l * np.cos(theta)
 
     def dh_dq(self, q: np.ndarray, p: np.ndarray) -> np.ndarray:
         """∂H/∂θ = -mgl·sin(θ)"""

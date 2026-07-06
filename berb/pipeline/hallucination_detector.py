@@ -25,6 +25,7 @@ Usage:
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 from dataclasses import dataclass, field
@@ -32,6 +33,18 @@ from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+
+def _safe_json_loads(text: str, default: Any) -> Any:
+    """Parse JSON from an LLM response, tolerating markdown code fences."""
+    stripped = text.strip()
+    if stripped.startswith("```"):
+        stripped = re.sub(r"^```(?:json)?\n?", "", stripped)
+        stripped = re.sub(r"\n?```$", "", stripped)
+    try:
+        return json.loads(stripped)
+    except (json.JSONDecodeError, TypeError):
+        return default
 
 
 @dataclass
@@ -115,15 +128,25 @@ class HallucinationDetector:
         self,
         llm_client: Any | None = None,
         literature_client: Any | None = None,
+        known_bib_keys: set[str] | None = None,
     ) -> None:
         """Initialize detector.
 
         Args:
-            llm_client: LLM client for claim analysis
+            llm_client: LLM client for claim analysis (needs a sync .chat()
+                method returning an object with .content, matching LLMClient)
             literature_client: Literature search client for citation verification
+            known_bib_keys: Citation keys present in the paper's references.bib.
+                Existence-checking a \\cite{} key against this set is a cheap,
+                deterministic, honest check — distinct from and complementary
+                to the API-based existence verification already performed by
+                berb.literature.verify.verify_citations() elsewhere in the
+                pipeline. If None, citation existence is reported as unchecked
+                rather than fabricated.
         """
         self._llm_client = llm_client
         self._literature_client = literature_client
+        self._known_bib_keys = known_bib_keys
         self._verification_history: list[HallucinationReport] = []
 
     async def verify_paper(
@@ -237,25 +260,40 @@ class HallucinationDetector:
         self,
         citation: dict[str, str],
     ) -> CitationVerification:
-        """Verify a single citation."""
-        # Placeholder - integrate with actual APIs
-        # For now, simulate verification
+        """Verify a citation key exists in the paper's own bibliography.
 
-        import random
+        This is a cheap existence check against ``known_bib_keys`` — it does
+        NOT call external APIs (arXiv/CrossRef/Semantic Scholar); that's
+        already done by berb.literature.verify.verify_citations() at Stage 17
+        pre-verification and Stage 23 CITATION_VERIFY. Running it again here
+        would duplicate network calls for no new signal. If no bibliography
+        was provided, existence is reported as unchecked rather than guessed.
+        """
+        key = citation["key"]
+        if self._known_bib_keys is None:
+            return CitationVerification(
+                citation_key=key,
+                title="",
+                authors=[],
+                venue="",
+                year=0,
+                verified=False,
+                source="unchecked",
+                confidence=0.0,
+                issues=["No bibliography provided — existence not checked"],
+            )
 
-        # Simulate 95% verification rate (realistic for well-curated papers)
-        is_verified = random.random() > 0.05
-
+        exists = key in self._known_bib_keys
         return CitationVerification(
-            citation_key=citation["key"],
-            title=f"Paper about {citation['key']}",
-            authors=["Author A", "Author B"],
-            venue="Conference/Journal",
-            year=2024,
-            verified=is_verified,
-            source="Semantic Scholar" if is_verified else "Unknown",
-            confidence=0.95 if is_verified else 0.3,
-            issues=[] if is_verified else ["Citation not found in databases"],
+            citation_key=key,
+            title="",
+            authors=[],
+            venue="",
+            year=0,
+            verified=exists,
+            source="references.bib" if exists else "not found",
+            confidence=1.0 if exists else 0.0,
+            issues=[] if exists else ["Citation key not found in references.bib"],
         )
 
     def _extract_claims(
@@ -341,32 +379,95 @@ class HallucinationDetector:
         claims: list[dict[str, Any]],
         paper_text: str,
     ) -> list[ClaimVerification]:
-        """Verify claims against citations and evidence."""
-        verifications = []
+        """Verify claims against citations and evidence.
+
+        Claims with no nearby citation are trivially unsupported — no LLM
+        call needed. Claims WITH a nearby citation still need judgment: does
+        the citation actually back up this specific statement, or is it just
+        topically nearby? That judgment is delegated to the LLM in a single
+        batched call (not one call per claim) when an llm_client is available.
+        """
+        verifications: list[ClaimVerification] = []
+        needs_llm_check: list[tuple[int, dict[str, Any], list[str]]] = []
 
         for claim in claims:
-            # Check if claim has citation support
             citation_support = self._find_citation_support(claim, paper_text)
-
-            # Use LLM to verify claim is supported by citations
-            # In production:
-            # supported = await self._llm_verify_claim(claim, citation_support)
-
-            # Placeholder
-            supported = len(citation_support) > 0
-
+            supported = bool(citation_support)
             verifications.append(
                 ClaimVerification(
                     claim_text=claim["text"],
                     section=claim["section"],
                     citation_support=citation_support,
                     supported=supported,
-                    confidence=0.8 if supported else 0.4,
+                    confidence=0.5 if supported else 0.4,
                     issues=[] if supported else ["No citation support found"],
                 )
             )
+            if citation_support:
+                needs_llm_check.append((len(verifications) - 1, claim, citation_support))
+
+        if needs_llm_check and self._llm_client is not None:
+            try:
+                verdicts = self._llm_verify_claims_batch(needs_llm_check)
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("LLM claim verification failed, keeping heuristic result: %s", exc)
+                verdicts = {}
+            for idx, (supported, confidence, reason) in verdicts.items():
+                v = verifications[idx]
+                v.supported = supported
+                v.confidence = confidence
+                v.issues = [] if supported else [reason or "Citation does not support this claim"]
 
         return verifications
+
+    def _llm_verify_claims_batch(
+        self,
+        items: list[tuple[int, dict[str, Any], list[str]]],
+    ) -> dict[int, tuple[bool, float, str]]:
+        """Ask the LLM whether each claim is actually backed by its nearby citation(s).
+
+        One batched call for all claims-with-citations rather than one call
+        per claim. Returns {claim_index: (supported, confidence, reason)}.
+        """
+        numbered = "\n".join(
+            f'{idx}. Claim: "{claim["text"]}"\n   Nearby citation(s): {", ".join(support)}'
+            for idx, claim, support in items
+        )
+        prompt = (
+            "For each numbered claim below, decide whether the nearby citation(s) plausibly "
+            "support the SPECIFIC claim being made — not just topical relevance. A citation "
+            "supports a claim only if it is reasonable that the cited work backs up this exact "
+            "statement (e.g. a specific number, a specific comparison, a specific method "
+            "attribution).\n\n"
+            f"{numbered}\n\n"
+            "Return ONLY a JSON object mapping each claim number (as a string) to "
+            '{"supported": true or false, "confidence": 0.0-1.0, "reason": "short reason"}.'
+        )
+        response = self._llm_client.chat(
+            messages=[{"role": "user", "content": prompt}],
+            system=(
+                "You are a meticulous fact-checker verifying citation-claim alignment "
+                "in an academic paper. Be skeptical of citations that are merely nearby."
+            ),
+        )
+        content = response.content if hasattr(response, "content") else str(response)
+        data = _safe_json_loads(content, {})
+        results: dict[int, tuple[bool, float, str]] = {}
+        if not isinstance(data, dict):
+            return results
+        for idx_str, verdict in data.items():
+            try:
+                idx = int(idx_str)
+            except (TypeError, ValueError):
+                continue
+            if not isinstance(verdict, dict):
+                continue
+            results[idx] = (
+                bool(verdict.get("supported", False)),
+                float(verdict.get("confidence", 0.5)),
+                str(verdict.get("reason", "")),
+            )
+        return results
 
     def _find_citation_support(
         self,

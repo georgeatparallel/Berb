@@ -222,7 +222,9 @@ def _execute_hypothesis_gen(
                         p_name = p_dict.get("perspective", "unknown")
                         p_content = p_dict.get("content", "")
                         if p_content:
-                            (perspectives_dir / f"{p_name}.md").write_text(p_content, encoding="utf-8")
+                            (perspectives_dir / f"{p_name}.md").write_text(
+                                p_content, encoding="utf-8"
+                            )
 
                 # Synthesize hypotheses from top candidates
                 if top_candidates:

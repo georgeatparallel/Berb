@@ -14,8 +14,8 @@ Inspired by Claude Scholar's review-response skill.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
-from enum import Enum
+from datetime import UTC, datetime
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -23,7 +23,7 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger(__name__)
 
 
-class ReviewCommentType(str, Enum):
+class ReviewCommentType(StrEnum):
     """Review comment type.
 
     Attributes:
@@ -39,7 +39,7 @@ class ReviewCommentType(str, Enum):
     MISUNDERSTANDING = "misunderstanding"
 
 
-class ResponseStrategy(str, Enum):
+class ResponseStrategy(StrEnum):
     """Response strategy for review comment.
 
     Attributes:
@@ -132,7 +132,7 @@ class RebuttalLetter(BaseModel):
 
     manuscript_id: str
     authors: list[str] = Field(default_factory=list)
-    date: str = Field(default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d"))
+    date: str = Field(default_factory=lambda: datetime.now(UTC).strftime("%Y-%m-%d"))
     editor_response: str = ""
     reviewer_responses: dict[str, list[RebuttalResponse]] = Field(default_factory=dict)
     summary_of_changes: list[str] = Field(default_factory=list)
@@ -177,31 +177,37 @@ class RebuttalLetter(BaseModel):
         ]
 
         for reviewer, responses in self.reviewer_responses.items():
-            lines.extend([
-                "=" * 60,
-                f"RESPONSE TO {reviewer.upper()}",
-                "=" * 60,
-                "",
-            ])
+            lines.extend(
+                [
+                    "=" * 60,
+                    f"RESPONSE TO {reviewer.upper()}",
+                    "=" * 60,
+                    "",
+                ]
+            )
 
             for i, response in enumerate(responses, 1):
-                lines.extend([
-                    f"**Comment {i}:** {response.comment.comment_text}",
-                    "",
-                    f"**Response:** {response.response_text}",
-                    "",
-                ])
+                lines.extend(
+                    [
+                        f"**Comment {i}:** {response.comment.comment_text}",
+                        "",
+                        f"**Response:** {response.response_text}",
+                        "",
+                    ]
+                )
 
                 if response.changes_made:
                     lines.append(f"**Changes made:** {', '.join(response.changes_made)}")
                     lines.append("")
 
-        lines.extend([
-            "=" * 60,
-            "SUMMARY OF CHANGES",
-            "=" * 60,
-            "",
-        ])
+        lines.extend(
+            [
+                "=" * 60,
+                "SUMMARY OF CHANGES",
+                "=" * 60,
+                "",
+            ]
+        )
         lines.extend(f"- {change}" for change in self.summary_of_changes)
 
         return "\n".join(lines)
@@ -228,24 +234,45 @@ class RebuttalGenerator:
 
     # Classification keywords
     MAJOR_KEYWORDS = [
-        "new experiment", "additional analysis", "major concern",
-        "fundamental", "significant", "substantial",
-        "must", "required", "essential",
+        "new experiment",
+        "additional analysis",
+        "major concern",
+        "fundamental",
+        "significant",
+        "substantial",
+        "must",
+        "required",
+        "essential",
     ]
 
     MINOR_KEYWORDS = [
-        "clarify", "explain", "minor", "suggest",
-        "could", "might", "consider",
+        "clarify",
+        "explain",
+        "minor",
+        "suggest",
+        "could",
+        "might",
+        "consider",
     ]
 
     TYPO_KEYWORDS = [
-        "typo", "grammar", "spelling", "formatting",
-        "reference", "citation", "figure",
+        "typo",
+        "grammar",
+        "spelling",
+        "formatting",
+        "reference",
+        "citation",
+        "figure",
     ]
 
     MISUNDERSTANDING_KEYWORDS = [
-        "unclear", "confusing", "not clear", "don't understand",
-        "missing", "where", "how",
+        "unclear",
+        "confusing",
+        "not clear",
+        "don't understand",
+        "missing",
+        "where",
+        "how",
     ]
 
     def __init__(self, llm_provider: Any | None = None):
@@ -304,10 +331,7 @@ class RebuttalGenerator:
 
         if len(comments) < 2:
             # Fall back to line breaks
-            comments = [
-                c.strip() for c in review_text.split("\n")
-                if c.strip() and len(c) > 20
-            ]
+            comments = [c.strip() for c in review_text.split("\n") if c.strip() and len(c) > 20]
 
         return comments[:20]  # Limit to 20 comments per review
 
@@ -415,9 +439,7 @@ class RebuttalGenerator:
 
         # Generate response
         if self.llm_provider:
-            response_text = await self._generate_llm_response(
-                comment, paper_text, strategy
-            )
+            response_text = await self._generate_llm_response(comment, paper_text, strategy)
         else:
             response_text = self._generate_template_response(comment, strategy)
 
@@ -628,16 +650,16 @@ Response:"""
             for response in reviewer_responses
         )
 
-        return f"""We are grateful for the opportunity to revise our manuscript. 
-We have carefully addressed all {total_comments} comments from the reviewers 
+        return f"""We are grateful for the opportunity to revise our manuscript.
+We have carefully addressed all {total_comments} comments from the reviewers
 and have made {total_changes} changes to the manuscript.
 
-The reviewers' comments have been invaluable in improving our paper. 
-We have clarified our methodology, strengthened our analysis, and 
+The reviewers' comments have been invaluable in improving our paper.
+We have clarified our methodology, strengthened our analysis, and
 better positioned our contributions in light of the feedback received.
 
-All changes are highlighted in the revised manuscript for your convenience. 
-We believe the paper is now significantly improved and hope it meets 
+All changes are highlighted in the revised manuscript for your convenience.
+We believe the paper is now significantly improved and hope it meets
 the standards of your journal."""
 
 
@@ -667,9 +689,7 @@ async def generate_review_responses(
     for reviewer_comments in classified:
         reviewer_responses = []
         for comment in reviewer_comments:
-            response = await generator.generate_response(
-                comment, paper_text
-            )
+            response = await generator.generate_response(comment, paper_text)
             reviewer_responses.append(response)
         all_responses.append(reviewer_responses)
 
@@ -695,11 +715,7 @@ async def create_rebuttal_letter(
     Returns:
         RebuttalLetter
     """
-    responses = await generate_review_responses(
-        reviews, paper_text, llm_provider
-    )
+    responses = await generate_review_responses(reviews, paper_text, llm_provider)
 
     generator = RebuttalGenerator(llm_provider)
-    return await generator.generate_rebuttal_letter(
-        responses, manuscript_id, authors
-    )
+    return await generator.generate_rebuttal_letter(responses, manuscript_id, authors)

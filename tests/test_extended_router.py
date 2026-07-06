@@ -12,12 +12,11 @@ Tests for:
 from __future__ import annotations
 
 import pytest
-from unittest.mock import patch, MagicMock
 
 from berb.llm.extended_router import (
-    ExtendedNadirClawRouter,
-    ROLE_COMPLEXITY,
     MODEL_ALTERNATIVES,
+    ROLE_COMPLEXITY,
+    ExtendedNadirClawRouter,
     create_extended_router_from_config,
 )
 from berb.metrics.reasoning_cost_tracker import Provider

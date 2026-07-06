@@ -10,7 +10,6 @@ from typing import Any
 
 from berb.adapters import AdapterBundle
 from berb.config import RCConfig
-from berb.adapters import LLMProvider
 from berb.llm.client import LLMClient
 from berb.pipeline._domain import _detect_domain
 from berb.pipeline._helpers import (
@@ -28,6 +27,7 @@ from berb.pipeline.contracts import StageContract
 from berb.pipeline.registry import register_stage
 from berb.pipeline.stages import Stage, StageStatus
 from berb.prompts import PromptManager
+from berb.writing.anti_ai import AntiAIEncoder
 
 logger = logging.getLogger(__name__)
 
@@ -389,11 +389,85 @@ def _write_paper_sections(
     except (KeyError, Exception):  # noqa: BLE001
         anti_repetition_rules = ""
 
+    # Cross-run writing style patterns (transitions, hedging phrases) mined
+    # from this run's own literature corpus abstracts and persisted across
+    # runs in .berb_cache/writing_patterns.json. Regex-based extraction only
+    # (no LLM provider passed in) — cheap, deterministic, non-blocking.
+    _style_patterns_block = ""
+    if run_dir is not None:
+        try:
+            import asyncio
+
+            from berb.writing.pattern_memory import (
+                WritingPatternMemoryConfig,
+                WritingPatternMiner,
+                WritingPatternRetriever,
+            )
+
+            _candidates_text = _read_prior_artifact(run_dir, "candidates.jsonl") or ""
+            _papers_for_mining = []
+            for _line in _candidates_text.strip().splitlines():
+                _row = _safe_json_loads(_line, {})
+                if isinstance(_row, dict) and _row.get("abstract"):
+                    _papers_for_mining.append(
+                        {"id": _row.get("cite_key", ""), "text": _row["abstract"]}
+                    )
+            if _papers_for_mining:
+                _pm_config = WritingPatternMemoryConfig(
+                    persistence_path=str(Path(".berb_cache") / "writing_patterns.json"),
+                    auto_save=True,
+                )
+                _miner = WritingPatternMiner(llm_provider=None, config=_pm_config)
+                _mined_memory = asyncio.run(
+                    _miner.mine_from_papers(_papers_for_mining[:30], domain="")
+                )
+                _retriever = WritingPatternRetriever(_mined_memory)
+                _style_patterns_block = _retriever.get_patterns_as_prompt_context()
+        except Exception:  # noqa: BLE001
+            pass
+
+    # Quantitative style fingerprint (sentence length, hedging/passive-voice
+    # ratio, vocabulary level) computed directly from this run's own
+    # literature abstracts — bypasses style_fingerprint.py's author-search
+    # path, which needs Semantic Scholar/OpenAlex client wrappers Berb
+    # doesn't currently expose in the shape it expects. The statistical
+    # extraction itself is pure regex and works fine on any text sample.
+    _style_fingerprint_block = ""
+    if run_dir is not None:
+        try:
+            import asyncio as _asyncio_sf
+
+            from berb.writing.style_fingerprint import AuthorProfile, StyleFingerprintEngine
+
+            _candidates_text_sf = _read_prior_artifact(run_dir, "candidates.jsonl") or ""
+            _abstracts: dict[str, str] = {}
+            for _line_sf in _candidates_text_sf.strip().splitlines():
+                _row_sf = _safe_json_loads(_line_sf, {})
+                if (
+                    isinstance(_row_sf, dict)
+                    and _row_sf.get("abstract")
+                    and _row_sf.get("cite_key")
+                ):
+                    _abstracts[_row_sf["cite_key"]] = _row_sf["abstract"]
+            if len(_abstracts) >= 3:
+                _sf_engine = StyleFingerprintEngine()
+                _corpus_profile = AuthorProfile(
+                    name="Literature corpus", top_papers=list(_abstracts)
+                )
+                _fingerprint = _asyncio_sf.run(
+                    _sf_engine.extract_style_from_authors([_corpus_profile], paper_texts=_abstracts)
+                )
+                _style_fingerprint_block = _fingerprint.to_prompt_context()
+        except Exception:  # noqa: BLE001
+            pass
+
     # --- Call 1: Title + Abstract + Introduction + Related Work ---
     call1_user = (
         f"{preamble}\n\n"
         f"{topic_constraint}"
         f"{citation_instruction}\n\n"
+        f"{_style_patterns_block}\n\n"
+        f"{_style_fingerprint_block}\n\n"
         f"{title_guidelines}\n\n"
         f"{academic_style_guide}\n"
         f"{narrative_writing_rules}\n"
@@ -428,7 +502,9 @@ def _write_paper_sections(
         part1 = resp1.content.strip()
     except Exception:  # noqa: BLE001
         logger.error("Stage 17: Part 1 LLM call failed after retry — using outline-based stub")
-        _topic_line = topic_constraint.strip().lstrip("TOPIC CONSTRAINT:").strip()
+        _topic_line = topic_constraint.strip()
+        if _topic_line.upper().startswith("TOPIC CONSTRAINT:"):
+            _topic_line = _topic_line[len("TOPIC CONSTRAINT:") :].strip()
         part1 = (
             f"## Title\n{_topic_line or 'Research Paper'}\n\n"
             "## Abstract\n"
@@ -848,107 +924,50 @@ def _validate_draft_quality(
             "and summarize values in tables, not inline text."
         )
 
-    # --- Writing quality lint ---
-    _weasel_words = re.compile(
-        r"\b(various|many|several|quite|fairly|really|very|rather|"
-        r"somewhat|relatively|arguably|interestingly|importantly|"
-        r"it is well known that|it is obvious that|clearly)\b",
-        re.IGNORECASE,
-    )
-    _duplicate_words = re.compile(r"\b(\w+)\s+\1\b", re.IGNORECASE)
-    weasel_count = len(_weasel_words.findall(draft))
-    dup_matches = _duplicate_words.findall(draft)
-    dup_count = len([d for d in dup_matches if d.lower() not in ("that", "had")])
-    if weasel_count > 20:
+    # --- AI-writing-slop detection ---
+    # Delegated entirely to AntiAIEncoder (berb/writing/anti_ai.py), the single
+    # source of truth for AI-phrase and mechanical/density-based detection.
+    # This used to be two separate inline implementations here; consolidated
+    # to avoid two uncoordinated, partially-overlapping phrase lists.
+    _anti_ai_encoder = AntiAIEncoder(sensitivity=0.7)
+    _anti_ai_result = _anti_ai_encoder.detect(draft)
+    if _anti_ai_result.recommendations:
         overall_warnings.append(
-            f"High weasel-word count: {weasel_count} instances "
-            f"(consider replacing vague words with precise language)"
+            f"AI-writing-slop detected: {len(_anti_ai_result.phrases)} flagged phrase(s) "
+            f"(ai_score={_anti_ai_result.ai_score:.2f})"
         )
-        revision_directives.append(
-            "Replace vague hedging words (various, several, quite, fairly, "
-            "rather, somewhat) with precise quantities or remove them."
-        )
-    if dup_count > 0:
-        overall_warnings.append(
-            f"Duplicate adjacent words found: {dup_count} instance(s) (e.g., 'the the', 'is is')"
-        )
-        revision_directives.append("Fix duplicate adjacent words (likely typos).")
+        revision_directives.extend(_anti_ai_result.recommendations)
+    _mechanical_warnings = _anti_ai_encoder.detect_mechanical(draft)
+    overall_warnings.extend(_mechanical_warnings)
+    revision_directives.extend(_mechanical_warnings)
 
-    # --- AI-slop / boilerplate detection ---
-    _BOILERPLATE_PHRASES = [
-        "delves into",
-        "delve into",
-        "it is worth noting",
-        "it should be noted",
-        "it is important to note",
-        "leverage the power of",
-        "leverages the power of",
-        "in this paper, we propose",
-        "in this work, we propose",
-        "to the best of our knowledge",
-        "in the realm of",
-        "in the landscape of",
-        "plays a crucial role",
-        "plays a pivotal role",
-        "groundbreaking",
-        "cutting-edge",
-        "state-of-the-art",
-        "game-changing",
-        "paradigm shift",
-        "a myriad of",
-        "a plethora of",
-        "aims to bridge the gap",
-        "bridge the gap",
-        "shed light on",
-        "sheds light on",
-        "pave the way",
-        "paves the way",
-        "the advent of",
-        "with the advent of",
-        "in recent years",
-        "in recent times",
-        "has gained significant attention",
-        "has attracted considerable interest",
-        "has emerged as a promising",
-        "a comprehensive overview",
-        "a holistic approach",
-        "holistic understanding",
-        "showcasing the efficacy",
-        "demonstrate the efficacy",
-        "multifaceted",
-        "underscores the importance",
-        "navigate the complexities",
-        "harness the potential",
-        "harnessing the power",
-        "it is imperative to",
-        "it is crucial to",
-        "a nuanced understanding",
-        "nuanced approach",
-        "robust and scalable",
-        "seamlessly integrates",
-        "the intricacies of",
-        "intricate interplay",
-        "facilitate a deeper understanding",
-        "a testament to",
-    ]
-    draft_lower = draft.lower()
-    boilerplate_hits: list[str] = []
-    for phrase in _BOILERPLATE_PHRASES:
-        count = draft_lower.count(phrase)
-        if count > 0:
-            boilerplate_hits.extend([phrase] * count)
-    if len(boilerplate_hits) > 5:
-        unique_phrases = sorted(set(boilerplate_hits))[:5]
-        overall_warnings.append(
-            f"AI boilerplate detected: {len(boilerplate_hits)} instances "
-            f"of generic LLM phrases (e.g., {', '.join(repr(p) for p in unique_phrases[:3])})"
-        )
-        revision_directives.append(
-            "REWRITE sentences containing AI-generated boilerplate phrases. "
-            "Replace generic language (e.g., 'delves into', 'it is worth noting', "
-            "'leverages the power of', 'plays a crucial role', 'paves the way') "
-            "with precise, specific academic language."
-        )
+    # --- Academic prose polish (word choice, formality, grammar, hedging) ---
+    try:
+        import asyncio
+
+        from berb.writing.academic_polisher import AcademicProsePolisher
+
+        _polisher = AcademicProsePolisher()
+        _polish_report = asyncio.run(_polisher.polish(draft))
+        _actionable = [
+            s for s in _polish_report.suggestions if s.severity.value in ("error", "warning")
+        ]
+        if len(_actionable) > 10:
+            _cat_counts: dict[str, int] = {}
+            for s in _actionable:
+                _cat_counts[s.category.value] = _cat_counts.get(s.category.value, 0) + 1
+            _top_cats = sorted(_cat_counts.items(), key=lambda kv: -kv[1])[:3]
+            overall_warnings.append(
+                f"Academic prose polish: {len(_actionable)} word-choice/grammar/formality "
+                f"issue(s) found ({', '.join(f'{n} {c}' for c, n in _top_cats)})"
+            )
+            revision_directives.append(
+                "Fix academic prose issues: replace informal word choices ('utilize'->'use', "
+                "'a lot of'->'many'), correct grammar ('data is'->'data are'), and tone down "
+                "sentence-initial informal transitions ('But'->'However', 'So'->'Therefore')."
+            )
+    except Exception:  # noqa: BLE001
+        pass
 
     # --- Related work depth check ---
     _rw_headings = {"related work", "related works", "background", "literature review"}
@@ -2127,18 +2146,55 @@ def _execute_paper_draft(
         _pm = prompts or PromptManager()
         topic_constraint = _pm.block("topic_constraint", topic=config.research.topic)
 
+        # EXPERIMENTAL, opt-in only (BERB_EXPERIMENTAL_PARALLEL_WRITER=1): an
+        # alternate drafting path (berb/writing/parallel_writer.py) that writes
+        # sections concurrently instead of the 3 sequential calls below. NOT
+        # the default: it plans a fixed 7-section structure regardless of the
+        # actual outline (no adapter exists to translate Berb's rich per-section
+        # word-count/citation instructions into its dict-outline format), so
+        # quality is lower than the sequential path. Any failure falls back
+        # to the sequential path below — this must never break the pipeline.
+        draft: str | None = None
+        import os as _os_pw
+
+        if _os_pw.environ.get("BERB_EXPERIMENTAL_PARALLEL_WRITER", "").strip() in ("1", "true"):
+            try:
+                import asyncio as _asyncio_pw
+
+                from berb.writing.parallel_writer import ParallelSectionWriter
+
+                logger.warning(
+                    "Stage 17: BERB_EXPERIMENTAL_PARALLEL_WRITER enabled — using "
+                    "experimental parallel drafting path (fixed 7-section structure, "
+                    "lower fidelity than the default sequential path)"
+                )
+                _parallel_writer = ParallelSectionWriter(llm_client=llm)
+                _parallel_paper = _asyncio_pw.run(
+                    _parallel_writer.write_sections_parallel({"outline_text": outline})
+                )
+                if _parallel_paper.sections:
+                    draft = _parallel_paper.to_markdown()
+            except Exception as _pw_exc:  # noqa: BLE001
+                logger.warning(
+                    "Stage 17: Experimental parallel writer failed (%s) — "
+                    "falling back to sequential drafting",
+                    _pw_exc,
+                )
+                draft = None
+
         # --- Section-by-section writing (3 calls) for conference-grade depth ---
-        draft = _write_paper_sections(
-            llm=llm,
-            pm=_pm,
-            run_dir=run_dir,
-            preamble=preamble,
-            topic_constraint=topic_constraint,
-            exp_metrics_instruction=exp_metrics_instruction,
-            citation_instruction=citation_instruction,
-            outline=outline,
-            model_name=config.llm.primary_model,
-        )
+        if draft is None:
+            draft = _write_paper_sections(
+                llm=llm,
+                pm=_pm,
+                run_dir=run_dir,
+                preamble=preamble,
+                topic_constraint=topic_constraint,
+                exp_metrics_instruction=exp_metrics_instruction,
+                citation_instruction=citation_instruction,
+                outline=outline,
+                model_name=config.llm.primary_model,
+            )
 
         # R7: Strip LLM-generated References section — it often fabricates arXiv IDs.
         import re as _re_r7

@@ -14,8 +14,6 @@ import re
 from pathlib import Path
 from typing import Any
 
-from berb.pipeline.stages import Stage
-
 logger = logging.getLogger(__name__)
 
 
@@ -89,7 +87,7 @@ def _extract_code_block(content: str) -> str:
     for i in range(1, len(parts), 2):
         block = parts[i]
         if block.startswith("python"):
-            return block[len("python"):].strip()
+            return block[len("python") :].strip()
         # Fallback: return first non-empty block
     for i in range(1, len(parts), 2):
         block = parts[i].strip()

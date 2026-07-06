@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -28,7 +28,7 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger(__name__)
 
 
-class AcademicPolishCategory(str, Enum):
+class AcademicPolishCategory(StrEnum):
     """Category of academic polish improvement.
 
     Attributes:
@@ -54,7 +54,7 @@ class AcademicPolishCategory(str, Enum):
     CITATION_INTEGRATION = "citation"
 
 
-class PolishSeverity(str, Enum):
+class PolishSeverity(StrEnum):
     """Severity of polish suggestion.
 
     Attributes:
@@ -481,6 +481,7 @@ class AcademicProsePolisher:
                 continue
 
             import re
+
             for match in re.finditer(rf"\b{pattern.pattern}\b", text, re.IGNORECASE):
                 suggestions.append(
                     PolishSuggestion(
@@ -510,6 +511,7 @@ class AcademicProsePolisher:
 
         for pattern in self.FORMALITY_PATTERNS:
             import re
+
             for match in re.finditer(rf"\b{pattern.pattern}\b", text, re.IGNORECASE):
                 suggestions.append(
                     PolishSuggestion(
@@ -539,6 +541,7 @@ class AcademicProsePolisher:
 
         for pattern in self.TRANSITION_PATTERNS:
             import re
+
             for match in re.finditer(rf"\b{pattern.pattern}\b", text):
                 suggestions.append(
                     PolishSuggestion(
@@ -568,6 +571,7 @@ class AcademicProsePolisher:
 
         for pattern in self.OVERGENERALIZED_PATTERNS:
             import re
+
             for match in re.finditer(rf"\b{pattern.pattern}\b", text, re.IGNORECASE):
                 suggestions.append(
                     PolishSuggestion(
@@ -597,6 +601,7 @@ class AcademicProsePolisher:
 
         for pattern in self.HEDGING_PATTERNS:
             import re
+
             for match in re.finditer(rf"\b{pattern.pattern}\b", text, re.IGNORECASE):
                 # Skip if pattern is empty (for "clearly" → "")
                 if match.group():
@@ -686,6 +691,7 @@ class AcademicProsePolisher:
         if self.domain != "physics":
             # Flag excessive passive voice
             import re
+
             passive_patterns = [
                 r"\b(is|are|was|were)\s+\w+ed\b",
             ]
@@ -727,7 +733,7 @@ class AcademicProsePolisher:
         for pattern, replacement, explanation in weak_phrases:
             for match in re.finditer(pattern, text, re.IGNORECASE):
                 # Check if near a citation
-                context = text[max(0, match.start()-50):min(len(text), match.end()+50)]
+                context = text[max(0, match.start() - 50) : min(len(text), match.end() + 50)]
                 if re.search(r"\[\d+\]|\([A-Z][a-z]+,\s*\d{4}\)", context):
                     suggestions.append(
                         PolishSuggestion(
@@ -773,7 +779,8 @@ class AcademicProsePolisher:
 
         # Sort suggestions by position (reverse order for replacement)
         applicable = [
-            s for s in report.suggestions
+            s
+            for s in report.suggestions
             if s.category in categories and s.confidence >= confidence_threshold
         ]
         applicable.sort(key=lambda s: s.start_pos, reverse=True)
@@ -783,9 +790,9 @@ class AcademicProsePolisher:
         for suggestion in applicable:
             if suggestion.start_pos < len(polished) and suggestion.end_pos <= len(polished):
                 polished = (
-                    polished[:suggestion.start_pos] +
-                    suggestion.suggested_replacement +
-                    polished[suggestion.end_pos:]
+                    polished[: suggestion.start_pos]
+                    + suggestion.suggested_replacement
+                    + polished[suggestion.end_pos :]
                 )
 
         return polished

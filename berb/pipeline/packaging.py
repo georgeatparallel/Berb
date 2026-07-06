@@ -198,8 +198,6 @@ def package_deliverables(
                     sorted(missing)[:10],
                 )
 
-                _filter_cite._missing = missing  # type: ignore[attr-defined]
-
                 def _do_filter(m: re.Match[str]) -> str:
                     keys = [k.strip() for k in m.group(1).split(",")]
                     kept = [k for k in keys if k not in missing]

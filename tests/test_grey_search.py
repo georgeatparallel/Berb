@@ -1,14 +1,15 @@
 """Unit tests for grey literature search."""
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
 
 from berb.literature.grey_search import (
-    GreyLiteratureSearch,
-    GreyLiteratureResult,
     BioRxivClient,
-    MedRxivClient,
     ClinicalTrialsClient,
+    GreyLiteratureResult,
+    GreyLiteratureSearch,
+    MedRxivClient,
     ZenodoClient,
 )
 
@@ -250,7 +251,7 @@ class TestGreyLiteratureSearch:
         search._clinical.search = AsyncMock(return_value=[])
         search._zenodo.search = AsyncMock(return_value=[])
 
-        results = await search.search("test query", domain="all", limit=100)
+        _results = await search.search("test query", domain="all", limit=100)
 
         # All clients should be called
         assert search._biorxiv.search.called
@@ -269,7 +270,7 @@ class TestGreyLiteratureSearch:
             mock_zenodo.return_value.search = AsyncMock(return_value=[])
 
             search = GreyLiteratureSearch()
-            results = await search.search("genetics", domain="biology")
+            _results = await search.search("genetics", domain="biology")
 
             # Only biology sources should be called
             assert mock_biorxiv.return_value.search.called
@@ -288,7 +289,7 @@ class TestGreyLiteratureSearch:
             mock_zenodo.return_value.search = AsyncMock(return_value=[])
 
             search = GreyLiteratureSearch()
-            results = await search.search("clinical trial", domain="medicine")
+            _results = await search.search("clinical trial", domain="medicine")
 
             # Only medicine sources should be called
             assert mock_medrxiv.return_value.search.called
@@ -306,7 +307,7 @@ class TestGreyLiteratureSearch:
             mock_medrxiv.return_value.search = AsyncMock(return_value=[])
 
             search = GreyLiteratureSearch()
-            results = await search.search(
+            _results = await search.search(
                 "test",
                 include_sources=["biorxiv", "medrxiv"],
             )

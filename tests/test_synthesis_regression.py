@@ -12,16 +12,16 @@ Test Types:
 
 from __future__ import annotations
 
-import pytest
 import asyncio
 import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch, Mock
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from berb.llm.client import LLMClient, LLMConfig, LLMResponse
-from berb.config import RCConfig
-from berb.pipeline.stages import Stage, StageStatus
+import pytest
+
 from berb.adapters import AdapterBundle
+from berb.llm.client import LLMClient, LLMConfig, LLMResponse
+from berb.pipeline.stages import Stage, StageStatus
 
 
 @pytest.fixture(autouse=True)
@@ -167,7 +167,7 @@ class TestEdgeCases:
 
     def test_empty_synthesis_context(self):
         """Test handling of empty synthesis context."""
-        from berb.pipeline.stage_impls._synthesis import _SimpleRouter, _LLMProviderWrapper
+        from berb.pipeline.stage_impls._synthesis import _LLMProviderWrapper, _SimpleRouter
 
         config = LLMConfig(
             base_url="https://api.openai.com/v1",
@@ -325,7 +325,7 @@ class TestFailureInjection:
         import json
         import urllib.request
 
-        from berb.pipeline.stage_impls._synthesis import _SimpleRouter, _LLMProviderWrapper
+        from berb.pipeline.stage_impls._synthesis import _LLMProviderWrapper
 
         class _DummyHTTPResponse:
             def __init__(self, payload):
@@ -359,7 +359,6 @@ class TestFailureInjection:
         wrapper = _LLMProviderWrapper(llm)
 
         # Should complete without hanging
-        import asyncio
 
         loop = asyncio.new_event_loop()
         try:
@@ -406,12 +405,12 @@ class TestIntegrationSmoke:
     def test_module_imports(self):
         """Test that all required imports work."""
         from berb.pipeline.stage_impls._synthesis import (
-            _execute_synthesis,
-            _execute_hypothesis_gen,
-            _SimpleRouter,
-            _LLMProviderWrapper,
-            _fallback_hypothesis_gen,
             MultiPerspectiveMethod,
+            _execute_hypothesis_gen,
+            _execute_synthesis,
+            _fallback_hypothesis_gen,
+            _LLMProviderWrapper,
+            _SimpleRouter,
         )
 
         # All imports successful

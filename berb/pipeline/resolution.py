@@ -93,11 +93,7 @@ def eligible_stages(
     Returns:
         Subset of *queue* where every dep is in *completed*.
     """
-    return {
-        s
-        for s in queue
-        if CONTRACTS[s].depends_on.issubset(completed)
-    }
+    return {s for s in queue if CONTRACTS[s].depends_on.issubset(completed)}
 
 
 def verify_acyclic() -> bool:

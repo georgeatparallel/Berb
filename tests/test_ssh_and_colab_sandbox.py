@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import gc
 import json
-import textwrap
 import time
 from pathlib import Path
 from unittest import mock
@@ -13,26 +12,25 @@ from unittest import mock
 import pytest
 
 from berb.config import (
+    BenchmarkAgentConfig,
+    CodeAgentConfig,
     ColabDriveConfig,
+    DockerSandboxConfig,
     ExperimentConfig,
+    FigureAgentConfig,
     SandboxConfig,
     SshRemoteConfig,
-    DockerSandboxConfig,
-    CodeAgentConfig,
-    BenchmarkAgentConfig,
-    FigureAgentConfig,
 )
+from berb.experiment.colab_sandbox import (
+    COLAB_WORKER_TEMPLATE,
+    ColabDriveSandbox,
+)
+from berb.experiment.factory import create_sandbox
 from berb.experiment.ssh_sandbox import (
     SshRemoteSandbox,
     _build_ssh_base,
     _ssh_target,
 )
-from berb.experiment.colab_sandbox import (
-    ColabDriveSandbox,
-    COLAB_WORKER_TEMPLATE,
-)
-from berb.experiment.factory import create_sandbox
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -40,15 +38,15 @@ from berb.experiment.factory import create_sandbox
 
 
 def _make_experiment_config(**overrides) -> ExperimentConfig:
-    defaults = dict(
-        sandbox=SandboxConfig(),
-        docker=DockerSandboxConfig(),
-        ssh_remote=SshRemoteConfig(),
-        colab_drive=ColabDriveConfig(),
-        code_agent=CodeAgentConfig(),
-        benchmark_agent=BenchmarkAgentConfig(),
-        figure_agent=FigureAgentConfig(),
-    )
+    defaults = {
+        "sandbox": SandboxConfig(),
+        "docker": DockerSandboxConfig(),
+        "ssh_remote": SshRemoteConfig(),
+        "colab_drive": ColabDriveConfig(),
+        "code_agent": CodeAgentConfig(),
+        "benchmark_agent": BenchmarkAgentConfig(),
+        "figure_agent": FigureAgentConfig(),
+    }
     defaults.update(overrides)
     return ExperimentConfig(**defaults)
 
@@ -431,8 +429,8 @@ class TestFactoryIntegration:
 
 class TestAcpTimeoutFix:
     def test_timeout_passed_from_config(self):
-        from berb.config import RCConfig, AcpConfig, LlmConfig
-        from berb.llm.acp_client import ACPClient, ACPConfig
+        from berb.config import AcpConfig, LlmConfig
+        from berb.llm.acp_client import ACPClient
 
         acp_cfg = AcpConfig(agent="codex", timeout_sec=1500)
         llm_cfg = LlmConfig(provider="acp", acp=acp_cfg)

@@ -1,7 +1,5 @@
 """Tests for skill feedback tracking module."""
 
-from pathlib import Path
-
 from berb.metaclaw_bridge.skill_feedback import (
     SkillEffectivenessRecord,
     SkillFeedbackStore,

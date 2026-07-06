@@ -5,13 +5,10 @@ from __future__ import annotations
 import sys
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from berb.web.agent import WebSearchAgent, WebSearchAgentResult
 from berb.web.crawler import CrawlResult
-from berb.web.search import SearchResult, WebSearchResponse
 from berb.web.scholar import ScholarPaper
-
+from berb.web.search import SearchResult
 
 # ---------------------------------------------------------------------------
 # WebSearchAgentResult
@@ -224,8 +221,9 @@ class TestWebSearchConfig:
         assert cfg.enable_scholar is True
 
     def test_config_in_rcconfig(self):
-        from berb.config import RCConfig
         import dataclasses
+
+        from berb.config import RCConfig
 
         field_names = [f.name for f in dataclasses.fields(RCConfig)]
         assert "web_search" in field_names

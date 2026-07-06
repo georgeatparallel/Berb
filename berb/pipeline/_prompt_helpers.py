@@ -25,7 +25,6 @@ def _build_fallback_queries(topic: str) -> list[str]:
 
     topic_lower = topic.lower()
     words = _re.findall(r"\b[a-zA-Z]{3,}\b", topic_lower)
-    from collections import Counter
 
     common = {"the", "and", "for", "with", "from", "that", "this", "are", "can"}
     significant = [w for w in words if w not in common]
@@ -55,8 +54,6 @@ def _get_evolution_overlay(run_dir: Path | None, stage_name: str) -> str:
     if not evo_path.exists():
         return ""
     try:
-        from pathlib import Path as _Path
-
         data = json.loads(evo_path.read_text(encoding="utf-8"))
         if not isinstance(data, list):
             return ""
@@ -86,11 +83,30 @@ def _ensure_sandbox_deps(code: str, python_path: str) -> list[str]:
 
     imports = _re.findall(r"^(?:from|import)\s+(\S+)", code, _re.MULTILINE)
     safe_packages = {
-        "numpy", "scipy", "torch", "sklearn", "pandas", "matplotlib",
-        "seaborn", "tqdm", "gymnasium", "networkx", "torchdiffeq",
-        "PIL", "Pillow", "timm", "einops", "torchmetrics",
-        "transformers", "datasets", "accelerate", "peft", "trl",
-        "sentencepiece", "tokenizers", "safetensors",
+        "numpy",
+        "scipy",
+        "torch",
+        "sklearn",
+        "pandas",
+        "matplotlib",
+        "seaborn",
+        "tqdm",
+        "gymnasium",
+        "networkx",
+        "torchdiffeq",
+        "PIL",
+        "Pillow",
+        "timm",
+        "einops",
+        "torchmetrics",
+        "transformers",
+        "datasets",
+        "accelerate",
+        "peft",
+        "trl",
+        "sentencepiece",
+        "tokenizers",
+        "safetensors",
     }
     needed: set[str] = set()
     for imp in imports:
@@ -217,10 +233,44 @@ def _extract_topic_keywords(topic: str, domains: tuple[str, ...] | list[str] = (
     import re as _re
 
     stop_words = {
-        "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for",
-        "of", "with", "by", "from", "that", "this", "is", "are", "was", "were",
-        "be", "been", "being", "have", "has", "had", "do", "does", "did",
-        "will", "would", "can", "could", "shall", "should", "may", "might",
+        "the",
+        "a",
+        "an",
+        "and",
+        "or",
+        "but",
+        "in",
+        "on",
+        "at",
+        "to",
+        "for",
+        "of",
+        "with",
+        "by",
+        "from",
+        "that",
+        "this",
+        "is",
+        "are",
+        "was",
+        "were",
+        "be",
+        "been",
+        "being",
+        "have",
+        "has",
+        "had",
+        "do",
+        "does",
+        "did",
+        "will",
+        "would",
+        "can",
+        "could",
+        "shall",
+        "should",
+        "may",
+        "might",
     }
     # Allow internal hyphens so compound terms like "agent-based" stay
     # a single keyword instead of splitting into "agent" + "based".

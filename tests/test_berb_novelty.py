@@ -18,7 +18,6 @@ from berb.literature.novelty import (
     check_novelty,
 )
 
-
 # ---------------------------------------------------------------------------
 # _extract_keywords
 # ---------------------------------------------------------------------------
@@ -518,9 +517,9 @@ class TestHypothesisGenNoveltyIntegration:
 
     def test_novelty_report_written_when_available(self, tmp_path: Path) -> None:
         """Hypothesis gen should write novelty_report.json when check succeeds."""
-        from berb.pipeline.executor import _execute_hypothesis_gen
         from berb.adapters import AdapterBundle
         from berb.config import RCConfig
+        from berb.pipeline.executor import _execute_hypothesis_gen
 
         # Set up minimal run directory
         run_dir = tmp_path / "run"
@@ -546,7 +545,9 @@ class TestHypothesisGenNoveltyIntegration:
                 "api_key_env": "RC_TEST_KEY",
             },
         }
-        config = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
+        config = RCConfig.from_dict(
+            data, project_root=tmp_path, check_paths=False, check_security=False
+        )
         adapters = AdapterBundle()
 
         with patch("berb.literature.search.search_papers_multi_query") as mock_search:
@@ -565,9 +566,9 @@ class TestHypothesisGenNoveltyIntegration:
 
     def test_novelty_failure_does_not_block(self, tmp_path: Path) -> None:
         """If novelty check crashes, hypothesis gen still succeeds."""
-        from berb.pipeline.executor import _execute_hypothesis_gen
         from berb.adapters import AdapterBundle
         from berb.config import RCConfig
+        from berb.pipeline.executor import _execute_hypothesis_gen
 
         run_dir = tmp_path / "run"
         run_dir.mkdir()
@@ -591,7 +592,9 @@ class TestHypothesisGenNoveltyIntegration:
                 "api_key_env": "RC_TEST_KEY",
             },
         }
-        config = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
+        config = RCConfig.from_dict(
+            data, project_root=tmp_path, check_paths=False, check_security=False
+        )
         adapters = AdapterBundle()
 
         with patch(

@@ -3,15 +3,10 @@
 from __future__ import annotations
 
 import json
-import os
-import sys
 import textwrap
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-from unittest import mock
-
-import pytest
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -579,7 +574,7 @@ class TestRendererAgent:
 
         agent = RendererAgent(_FakeLLM(), timeout_sec=5)
         output_dir = tmp_path / "charts"
-        result = agent.execute(
+        _result = agent.execute(
             {
                 "scripts": [
                     {

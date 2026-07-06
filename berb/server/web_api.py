@@ -201,7 +201,6 @@ async def run_real_pipeline(job_id: str, request: ResearchRequest):
 @app.get("/api/v1/research/{job_id}/stream")
 async def stream_progress(job_id: str):
     """Stream progress via SSE."""
-    import asyncio
 
     async def generate():
         while True:

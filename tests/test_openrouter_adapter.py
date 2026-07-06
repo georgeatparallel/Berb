@@ -3,15 +3,16 @@
 from __future__ import annotations
 
 import os
-import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import MagicMock, patch
 
-from berb.llm.openrouter_adapter import (
-    OpenRouterProvider,
-    OpenRouterModel,
-    OPENROUTER_MODELS,
-)
+import pytest
+
 from berb.llm.client import LLMResponse
+from berb.llm.openrouter_adapter import (
+    OPENROUTER_MODELS,
+    OpenRouterModel,
+    OpenRouterProvider,
+)
 
 
 class TestOpenRouterModel:

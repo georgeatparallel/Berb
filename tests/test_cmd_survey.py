@@ -54,9 +54,7 @@ def _args(config_path: Path, **overrides: object) -> argparse.Namespace:
     return argparse.Namespace(**defaults)
 
 
-def test_missing_config_returns_one(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
+def test_missing_config_returns_one(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     args = _args(tmp_path / "missing.yaml")
     code = rc_cli.cmd_survey(args)
     assert code == 1
@@ -155,9 +153,7 @@ def test_declining_confirmation_aborts(
     assert "Aborted" in capsys.readouterr().out
 
 
-def test_default_output_path_uses_run_id(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_default_output_path_uses_run_id(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """No --output given → falls back to artifacts/survey-<run_id>.md."""
     monkeypatch.setenv("PERPLEXITY_API_KEY", "fake-key")
     monkeypatch.chdir(tmp_path)
@@ -165,9 +161,7 @@ def test_default_output_path_uses_run_id(
     _write_config(config_path)
     args = _args(config_path, output=None)
 
-    fake_result = DeepQueryResult(
-        title="survey", content="Body.", url="", source="DeepQuery"
-    )
+    fake_result = DeepQueryResult(title="survey", content="Body.", url="", source="DeepQuery")
 
     with patch("berb.llm.deep_query_client.DeepQueryClient") as mock_cls:
         mock_cls.return_value.literature_review.return_value = fake_result

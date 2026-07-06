@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-import socket
 import urllib.error
 from pathlib import Path
 from typing import NamedTuple, cast
@@ -117,7 +116,7 @@ def test_check_llm_connectivity_pass() -> None:
 def test_check_llm_connectivity_timeout() -> None:
     with patch(
         "urllib.request.urlopen",
-        side_effect=urllib.error.URLError(socket.timeout("timed out")),
+        side_effect=urllib.error.URLError(TimeoutError("timed out")),
     ):
         result = health.check_llm_connectivity("https://api.example.com/v1")
     assert result.status == "fail"

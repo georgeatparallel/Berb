@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
-import pytest
 from datetime import datetime
+
+import pytest
 
 from berb.reasoning.base import (
     MethodType,
     ReasoningContext,
-    ReasoningResult,
     ReasoningMethod,
+    ReasoningResult,
     create_context,
 )
 

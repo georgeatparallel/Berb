@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from berb.domains.detector import DomainProfile, get_profile, get_generic_profile
+from berb.domains.detector import DomainProfile, get_generic_profile, get_profile
 from berb.domains.prompt_adapter import (
     GenericPromptAdapter,
     MLPromptAdapter,
@@ -13,7 +13,6 @@ from berb.domains.prompt_adapter import (
     get_adapter,
     register_adapter,
 )
-
 
 # ---------------------------------------------------------------------------
 # PromptBlocks tests

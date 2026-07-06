@@ -15,7 +15,6 @@ from berb.calendar.deadlines import Conference, ConferenceCalendar
 from berb.calendar.planner import SubmissionPlanner
 from berb.calendar.reminder import Reminder, ReminderCalculator
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------

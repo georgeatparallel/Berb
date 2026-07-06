@@ -31,22 +31,21 @@ class WritingIntegration:
     def __init__(
         self,
         max_parallel: int = 3,
-        model: str = "claude-3-sonnet",
+        llm_client: Any | None = None,
     ):
         """Initialize writing integration.
 
         Args:
             max_parallel: Maximum parallel writers
-            model: LLM model for writing
+            llm_client: LLM client (see ParallelSectionWriter)
         """
         self.max_parallel = max_parallel
-        self.model = model
         self.writer = ParallelSectionWriter(
             max_parallel=max_parallel,
-            model=model,
+            llm_client=llm_client,
         )
 
-        logger.info(f"Initialized WritingIntegration: parallel={max_parallel}, model={model}")
+        logger.info("Initialized WritingIntegration: parallel=%d", max_parallel)
 
     async def write_paper_parallel(
         self,
@@ -116,7 +115,7 @@ async def write_paper_parallel(
     results: dict[str, Any],
     literature_context: dict[str, Any],
     max_parallel: int = 3,
-    model: str = "claude-3-sonnet",
+    llm_client: Any | None = None,
 ) -> PaperSections:
     """Stage 17 integration: Write paper in parallel.
 
@@ -125,14 +124,14 @@ async def write_paper_parallel(
         results: Experimental results
         literature_context: Literature context
         max_parallel: Maximum parallel writers
-        model: LLM model
+        llm_client: LLM client (see ParallelSectionWriter)
 
     Returns:
         Paper sections
     """
     integration = WritingIntegration(
         max_parallel=max_parallel,
-        model=model,
+        llm_client=llm_client,
     )
 
     return await integration.write_paper_parallel(outline, results, literature_context)

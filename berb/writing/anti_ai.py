@@ -18,11 +18,11 @@ Usage:
     from berb.writing.anti_ai import AntiAIEncoder, AIPhraseDetector
 
     encoder = AntiAIEncoder()
-    
+
     # Detect AI phrases in text
     result = await encoder.analyze(text)
     print(f"Found {len(result.phrases)} AI-like phrases")
-    
+
     # Replace with human alternatives
     revised = await encoder.replace(text)
     print(revised)
@@ -33,41 +33,52 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-class Language(str, Enum):
+class Language(StrEnum):
     """Supported languages for AI detection."""
+
     ENGLISH = "en"
     CHINESE = "zh"
     AUTO = "auto"
 
 
-class PhraseCategory(str, Enum):
+class PhraseCategory(StrEnum):
     """Category of AI-generated phrase."""
+
     HEDGING = "hedging"
     """Overly cautious language (e.g., 'it is worth noting')"""
-    
+
     TRANSITION = "transition"
     """Mechanical transitions (e.g., 'furthermore', 'moreover')"""
-    
+
     SUMMARY = "summary"
     """Formulaic summaries (e.g., 'in conclusion', 'to summarize')"""
-    
+
     EMPHASIS = "emphasis"
     """Artificial emphasis (e.g., 'it is important to note')"""
-    
+
     STRUCTURE = "structure"
     """Formulaic structure markers (e.g., 'this paper presents')"""
-    
+
     CLICHE = "cliche"
     """AI cliches (e.g., 'delve into', 'shed light on')"""
-    
+
     REDUNDANCY = "redundancy"
     """Redundant phrases (e.g., 'comprehensive and thorough')"""
+
+    SIGNIFICANCE = "significance"
+    """Inflated significance/legacy claims (e.g., 'marks a pivotal moment')"""
+
+    ATTRIBUTION = "attribution"
+    """Vague, uncited authority (e.g., 'experts believe', 'industry reports')"""
+
+    COPULA = "copula"
+    """Avoidance of simple is/are (e.g., 'serves as', 'stands as', 'boasts')"""
 
 
 @dataclass
@@ -84,6 +95,7 @@ class AIPhrases:
         suggestion: Suggested replacement
         reason: Why this is flagged as AI-like
     """
+
     phrase: str
     confidence: float
     category: str
@@ -113,11 +125,13 @@ class DetectionResult:
         word_count: Total word count
         ai_word_percentage: Percentage of AI-like words
     """
+
     text: str
     ai_score: float
     word_count: int = 0
     ai_word_percentage: float = 0.0
     phrases: list[AIPhrases] = field(default_factory=list)
+    recommendations: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
@@ -126,6 +140,7 @@ class DetectionResult:
             "ai_score": self.ai_score,
             "word_count": self.word_count,
             "ai_word_percentage": self.ai_word_percentage,
+            "recommendations": self.recommendations,
             "phrases": [p.to_dict() for p in self.phrases],
         }
 
@@ -188,8 +203,12 @@ class AnalysisResult:
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
-            "original_text": self.original_text[:200] + "..." if len(self.original_text) > 200 else self.original_text,
-            "revised_text": self.revised_text[:200] + "..." if len(self.revised_text) > 200 else self.revised_text,
+            "original_text": self.original_text[:200] + "..."
+            if len(self.original_text) > 200
+            else self.original_text,
+            "revised_text": self.revised_text[:200] + "..."
+            if len(self.revised_text) > 200
+            else self.revised_text,
             "phrases": [p.to_dict() for p in self.phrases],
             "ai_score": self.ai_score,
             "language": self.language.value,
@@ -236,17 +255,47 @@ AI_PATTERNS_EN = {
         (r"\bas\s+follows\b", "Often unnecessary"),
     ],
     PhraseCategory.CLICHE: [
-        (r"\bdelve\s+into\b", "Overused AI cliche - use 'examine' or 'analyze'"),
-        (r"\bshed\s+light\s+on\b", "Cliche - use 'clarify' or 'explain'"),
-        (r"\bpave\s+the\s+way\b", "Cliche - use 'enable' or 'facilitate'"),
-        (r"\bplay\s+a\s+(?:key|crucial|vital)\s+role\b", "Cliche - be specific"),
+        (r"\bdelves?\s+into\b", "Overused AI cliche - use 'examine' or 'analyze'"),
+        (r"\bsheds?\s+light\s+on\b", "Cliche - use 'clarify' or 'explain'"),
+        (r"\bpaves?\s+the\s+way\b", "Cliche - use 'enable' or 'facilitate'"),
+        (r"\bplays?\s+a\s+(?:key|crucial|vital|pivotal)\s+role\b", "Cliche - be specific"),
         (r"\bgain\s+(?:insights|understanding)\b", "Awkward - use 'understand' or 'learn'"),
         (r"\bprovide\s+(?:insights|guidance)\b", "Often vague"),
-        (r"\bleverage\b", "Often pretentious - use 'use'"),
-        (r"\butilize\b", "Often pretentious - use 'use'"),
+        (r"\bleverages?\b", "Often pretentious - use 'use'"),
+        (r"\butilize[sd]?\b", "Often pretentious - use 'use'"),
         (r"\bmethodology\b", "Often just 'methods' is fine"),
         (r"\bparadigm\b", "Often just 'approach' or 'framework'"),
         (r"\ba\s+testament\s+to\b", "Cliche - use 'evidence of' or 'proof of'"),
+        (r"\bto\s+the\s+best\s+of\s+our\s+knowledge\b", "Overused hedge on novelty claims"),
+        (r"\bin\s+the\s+realm\s+of\b", "Vague abstract framing - name the specific field"),
+        (r"\bin\s+the\s+landscape\s+of\b", "Vague abstract-noun framing"),
+        (r"\bgroundbreaking\b", "Promotional language - state the specific contribution"),
+        (r"\bcutting-edge\b", "Promotional language - be specific"),
+        (r"\bgame-changing\b", "Promotional language - be specific"),
+        (r"\ba\s+myriad\s+of\b", "Vague quantity - use a specific number or 'many'"),
+        (r"\ba\s+plethora\s+of\b", "Vague quantity - use a specific number or 'many'"),
+        (r"\bbridge\s+the\s+gap\b", "Cliche - state the specific limitation being addressed"),
+        (r"\bthe\s+advent\s+of\b", "Cliche temporal framing - state the specific development"),
+        (
+            r"\bin\s+recent\s+(?:years|times)\b",
+            "Vague temporal framing - give a specific timeframe",
+        ),
+        (r"\bhas\s+gained\s+significant\s+attention\b", "Vague attribution of popularity"),
+        (r"\bhas\s+attracted\s+considerable\s+interest\b", "Vague attribution of popularity"),
+        (r"\bhas\s+emerged\s+as\s+a\s+promising\b", "Cliche framing"),
+        (r"\ba\s+comprehensive\s+overview\b", "Vague self-description"),
+        (r"\bholistic\s+(?:approach|understanding)\b", "Vague abstraction - be specific"),
+        (r"\bshowcasing\s+the\s+efficacy\b", "Superficial -ing analysis"),
+        (r"\bmultifaceted\b", "Vague abstraction"),
+        (r"\bunderscores?\s+the\s+(?:importance|significance)\b", "Inflated significance"),
+        (r"\bnavigate\s+the\s+complexities\b", "Vague abstraction"),
+        (r"\bharness(?:ing|es)?\s+the\s+(?:potential|power)\b", "Cliche - be specific"),
+        (r"\bnuanced\s+(?:understanding|approach)\b", "Vague qualifier"),
+        (r"\brobust\s+and\s+scalable\b", "Unsupported generic praise unless benchmarked"),
+        (r"\bseamlessly\s+integrates?\b", "Unsupported generic praise"),
+        (r"\bthe\s+intricacies\s+of\b", "Vague abstraction"),
+        (r"\bintricate\s+interplay\b", "Vague abstraction"),
+        (r"\bfacilitate\s+a\s+deeper\s+understanding\b", "Vague filler"),
     ],
     PhraseCategory.REDUNDANCY: [
         (r"\b(?:comprehensive|thorough)\s+and\s+(?:comprehensive|thorough)\b", "Redundant pairing"),
@@ -254,6 +303,27 @@ AI_PATTERNS_EN = {
         (r"\b(?:each|every)\s+and\s+every\b", "Redundant pairing"),
         (r"\b(?:first|initial)\s+and\s+(?:foremost|primary)\b", "Cliche pairing"),
         (r"\b(?:end|final)\s+result\b", "Redundant - just 'result'"),
+    ],
+    PhraseCategory.SIGNIFICANCE: [
+        (r"\bmarks?\s+a\s+pivotal\s+moment\b", "Inflated significance - state the fact plainly"),
+        (r"\bunderscores?\s+the\s+(?:importance|significance)\s+of\b", "Inflated significance"),
+        (r"\bsymboliz(?:es|ing)\s+its\s+(?:ongoing|enduring|lasting)\b", "Inflated significance"),
+        (r"\bsets?\s+the\s+stage\s+for\b", "Inflated significance cliche"),
+        (r"\bevolving\s+landscape\b", "Vague abstract-noun inflation"),
+        (r"\bindelible\s+mark\b", "Inflated significance cliche"),
+        (r"\bdeeply\s+rooted\b", "Inflated significance cliche"),
+    ],
+    PhraseCategory.ATTRIBUTION: [
+        (r"\bexperts?\s+believe\b", "Vague uncited authority - name the source or cite it"),
+        (r"\bindustry\s+reports?\b", "Vague uncited authority"),
+        (r"\bobservers?\s+have\s+(?:noted|stated)\b", "Vague uncited authority"),
+        (r"\bsome\s+critics?\s+argue\b", "Vague uncited authority"),
+    ],
+    PhraseCategory.COPULA: [
+        (r"\bserves?\s+as\s+an?\b", "Copula avoidance - use 'is'/'are'"),
+        (r"\bstands?\s+as\s+an?\b", "Copula avoidance - use 'is'/'are'"),
+        (r"\bfunctions?\s+as\s+an?\b", "Copula avoidance - use 'is'/'are'"),
+        (r"\bboasts?\s+(?:a|an|over)\b", "Copula avoidance - use 'has'"),
     ],
 }
 
@@ -292,6 +362,50 @@ AI_PATTERNS_ZH = {
         (r"利用", "Often just '用' is fine"),
     ],
 }
+
+
+# Mechanical/formatting AI-tells that are not phrase-level (counted or
+# substituted directly rather than matched as AIPhrase objects). Curly quotes
+# are a correctness issue, not just style, for LaTeX output: LaTeX expects
+# straight quotes (` ` / ' ') paired via `` and '', not literal U+201C/U+201D.
+_CURLY_DOUBLE_QUOTES = str.maketrans({"“": '"', "”": '"'})
+_CURLY_SINGLE_QUOTES = str.maketrans({"‘": "'", "’": "'"})
+_EMOJI_RE = re.compile(
+    "[\U0001f300-\U0001faff\U00002600-\U000027bf\U0001f1e6-\U0001f1ff]+",
+    flags=re.UNICODE,
+)
+_EM_DASH_RE = re.compile("—")
+
+# Generic single-word hedges: legitimate in normal use ("very high accuracy",
+# "many studies"), so these are density-gated (warn only above a whole-draft
+# threshold) rather than flagged as individual AIPhrase matches, which would
+# over-flag ordinary prose. Ported from the inline checker previously in
+# _paper_writing.py._validate_draft_quality.
+_WEASEL_WORDS_RE = re.compile(
+    r"\b(various|many|several|quite|fairly|really|very|rather|"
+    r"somewhat|relatively|arguably|interestingly|importantly|"
+    r"it is well known that|it is obvious that|clearly)\b",
+    re.IGNORECASE,
+)
+_DUPLICATE_WORDS_RE = re.compile(r"\b(\w+)\s+\1\b", re.IGNORECASE)
+_DUPLICATE_WORDS_ALLOWLIST = {"that", "had"}
+
+# Common word pairs that LLMs hyphenate with unusual consistency; humans
+# hyphenate these inconsistently or not at all. Deliberately a fixed list
+# (not a general hyphen regex) so technical compounds like "ResNet-50" or
+# domain-specific terms are never flagged.
+_HYPHENATED_PAIRS_EN = (
+    "third-party",
+    "cross-functional",
+    "client-facing",
+    "data-driven",
+    "decision-making",
+    "well-known",
+    "high-quality",
+    "real-time",
+    "long-term",
+    "end-to-end",
+)
 
 
 class AntiAIEncoder:
@@ -390,7 +504,12 @@ class AntiAIEncoder:
             for match in pattern.finditer(text):
                 # Apply sensitivity threshold
                 confidence = 0.8  # Base confidence
-                if category in (PhraseCategory.CLICHE, PhraseCategory.REDUNDANCY):
+                if category in (
+                    PhraseCategory.CLICHE,
+                    PhraseCategory.REDUNDANCY,
+                    PhraseCategory.SIGNIFICANCE,
+                    PhraseCategory.ATTRIBUTION,
+                ):
                     confidence = 0.9  # Higher confidence for obvious issues
                 elif category in (PhraseCategory.STRUCTURE, PhraseCategory.TRANSITION):
                     confidence = 0.6  # Lower confidence for acceptable patterns
@@ -399,15 +518,17 @@ class AntiAIEncoder:
                     # Get alternatives
                     alternatives = self._get_alternatives(match.group(), category, lang)
 
-                    phrases.append(AIPhrase(
-                        text=match.group(),
-                        category=category,
-                        start_pos=match.start(),
-                        end_pos=match.end(),
-                        confidence=confidence,
-                        alternatives=alternatives,
-                        explanation=explanation,
-                    ))
+                    phrases.append(
+                        AIPhrase(
+                            text=match.group(),
+                            category=category,
+                            start_pos=match.start(),
+                            end_pos=match.end(),
+                            confidence=confidence,
+                            alternatives=alternatives,
+                            explanation=explanation,
+                        )
+                    )
 
         # Sort by position
         phrases.sort(key=lambda p: p.start_pos)
@@ -468,6 +589,31 @@ class AntiAIEncoder:
                 "paradigm": ["approach", "framework", "model"],
                 "a testament to": ["evidence of", "proof of", "shows"],
             },
+            (PhraseCategory.SIGNIFICANCE, Language.ENGLISH): {
+                "marks a pivotal moment": ["[state the fact directly]"],
+                "underscores the importance of": ["shows", "indicates"],
+                "sets the stage for": ["enables", "leads to"],
+                "evolving landscape": ["[name the specific field or trend]"],
+                "indelible mark": ["[state the specific effect]"],
+                "deeply rooted": ["[state the specific origin]"],
+            },
+            (PhraseCategory.ATTRIBUTION, Language.ENGLISH): {
+                "experts believe": ["[cite the specific source]"],
+                "industry reports": ["[cite the specific report]"],
+                "observers have noted": ["[cite the specific source]"],
+                "some critics argue": ["[cite the specific critic]"],
+            },
+            (PhraseCategory.COPULA, Language.ENGLISH): {
+                "serves as a": ["is a"],
+                "serves as an": ["is an"],
+                "stands as a": ["is a"],
+                "stands as an": ["is an"],
+                "functions as a": ["is a"],
+                "functions as an": ["is an"],
+                "boasts a": ["has a"],
+                "boasts an": ["has an"],
+                "boasts over": ["has over"],
+            },
             # Chinese alternatives
             (PhraseCategory.CLICHE, Language.CHINESE): {
                 "深入探讨": ["分析", "研究", "探讨"],
@@ -516,7 +662,7 @@ class AntiAIEncoder:
             if phrase.alternatives:
                 # Use first alternative (or empty string if first is "")
                 replacement = phrase.alternatives[0]
-                result = result[:phrase.start_pos] + replacement + result[phrase.end_pos:]
+                result = result[: phrase.start_pos] + replacement + result[phrase.end_pos :]
         return result
 
     def _generate_suggestions(
@@ -557,6 +703,20 @@ class AntiAIEncoder:
             else:
                 suggestions.append("减少机械化的过渡词 - 让思路自然流畅")
 
+        if category_counts.get(PhraseCategory.SIGNIFICANCE, 0) > 1:
+            suggestions.append(
+                "Remove inflated significance language - state facts plainly instead of "
+                "claiming broader importance"
+            )
+
+        if category_counts.get(PhraseCategory.ATTRIBUTION, 0) > 0:
+            suggestions.append(
+                "Replace vague authority claims (e.g. 'experts believe') with a specific citation"
+            )
+
+        if category_counts.get(PhraseCategory.COPULA, 0) > 2:
+            suggestions.append("Replace 'serves as'/'stands as'/'boasts' with 'is'/'has'")
+
         return suggestions
 
     async def replace(self, text: str) -> str:
@@ -596,12 +756,14 @@ class AntiAIEncoder:
             )
             for p in result.phrases
         ]
+        recommendations = self._generate_recommendations(phrases, self.sensitivity)
         return DetectionResult(
             text=text,
             ai_score=result.ai_score,
             word_count=word_count,
             ai_word_percentage=ai_word_percentage,
             phrases=phrases,
+            recommendations=recommendations,
         )
 
     def rewrite(self, text: str) -> str:
@@ -627,6 +789,76 @@ class AntiAIEncoder:
             "sentence_count": sentence_count,
             "avg_sentence_length": avg_sentence_length,
         }
+
+    def detect_mechanical(self, text: str) -> list[str]:
+        """Detect formatting/density-level AI tells that aren't phrase matches.
+
+        Covers curly quotes (a LaTeX correctness issue), emoji, em-dash
+        overuse, mechanically-consistent hyphenated word pairs, whole-draft
+        weasel-word density, and duplicate adjacent words. These are
+        density/threshold-gated rather than per-match AIPhrase objects
+        because the underlying words (very, many, several, ...) are normal
+        in legitimate prose and only become a signal in aggregate.
+        Returns human-readable warnings.
+        """
+        warnings: list[str] = []
+        word_count = max(len(text.split()), 1)
+
+        curly_count = sum(text.count(c) for c in "“”‘’")
+        if curly_count:
+            warnings.append(
+                f"{curly_count} curly quote character(s) found — LaTeX expects straight "
+                "quotes (use fix_mechanical() to normalize)"
+            )
+
+        emoji_count = len(_EMOJI_RE.findall(text))
+        if emoji_count:
+            warnings.append(f"{emoji_count} emoji found — remove from academic prose")
+
+        em_dash_count = len(_EM_DASH_RE.findall(text))
+        em_dash_density = em_dash_count / word_count * 1000
+        if em_dash_count >= 3 and em_dash_density > 2.0:
+            warnings.append(
+                f"Em dash overuse: {em_dash_count} instance(s) "
+                f"({em_dash_density:.1f} per 1000 words) — prefer commas or periods"
+            )
+
+        hyphen_hits = [p for p in _HYPHENATED_PAIRS_EN if p in text.lower()]
+        if len(hyphen_hits) >= 3:
+            warnings.append(
+                f"Mechanically consistent hyphenation of common word pairs "
+                f"({', '.join(hyphen_hits[:5])}) — humans hyphenate these inconsistently"
+            )
+
+        weasel_count = len(_WEASEL_WORDS_RE.findall(text))
+        if weasel_count > 20:
+            warnings.append(
+                f"High weasel-word count: {weasel_count} instances "
+                "(various, several, quite, fairly, rather, somewhat) — "
+                "replace with precise quantities or remove"
+            )
+
+        dup_matches = _DUPLICATE_WORDS_RE.findall(text)
+        dup_count = len([d for d in dup_matches if d.lower() not in _DUPLICATE_WORDS_ALLOWLIST])
+        if dup_count > 0:
+            warnings.append(
+                f"Duplicate adjacent words found: {dup_count} instance(s) "
+                "(e.g., 'the the', 'is is') — likely typos"
+            )
+
+        return warnings
+
+    def fix_mechanical(self, text: str) -> str:
+        """Apply unambiguous, context-free mechanical fixes.
+
+        Only normalizes curly quotes to straight quotes and strips emoji —
+        both are safe character-level substitutions with no judgment call.
+        Em-dash density and hyphenation are reported by detect_mechanical()
+        but not auto-fixed, since blind substitution risks breaking sentences.
+        """
+        result = text.translate(_CURLY_DOUBLE_QUOTES).translate(_CURLY_SINGLE_QUOTES)
+        result = _EMOJI_RE.sub("", result)
+        return result
 
     def _categorize_en(self, phrase: str) -> str:
         """Categorize an English phrase by matching against known patterns."""
@@ -672,9 +904,7 @@ class AntiAIEncoder:
                 return category
         return "unknown"
 
-    def _generate_recommendations(
-        self, phrases: list[AIPhrases], threshold: float
-    ) -> list[str]:
+    def _generate_recommendations(self, phrases: list[AIPhrases], threshold: float) -> list[str]:
         """Generate human-readable recommendations from detected phrases."""
         _ = threshold
         counts: dict[str, int] = {}
@@ -690,6 +920,12 @@ class AntiAIEncoder:
             recommendations.append("Remove redundant word pairings")
         if counts.get("transition", 0) >= 4:
             recommendations.append("Reduce mechanical transitions")
+        if counts.get("significance", 0) >= 2:
+            recommendations.append("Remove inflated significance/legacy language")
+        if counts.get("attribution", 0) >= 1:
+            recommendations.append("Replace vague authority claims with specific citations")
+        if counts.get("copula", 0) >= 3:
+            recommendations.append("Replace 'serves as'/'stands as'/'boasts' with 'is'/'has'")
         if not recommendations and phrases:
             recommendations.append(f"Review {len(phrases)} flagged phrase(s) for clarity")
         return recommendations
@@ -746,6 +982,7 @@ class EncoderConfig:
         strictness: Detection strictness 0.0-1.0 (default: 0.7)
         preserve_meaning: Preserve original meaning when replacing (default: True)
     """
+
     language: list[str] = field(default_factory=lambda: ["en", "zh"])
     strictness: float = 0.7
     preserve_meaning: bool = True
@@ -761,8 +998,11 @@ def create_encoder_from_env() -> AntiAIEncoder:
         >>> encoder = create_encoder_from_env()
     """
     import os
+
     language = os.environ.get("ANTI_AI_LANGUAGE", "en,zh").split(",")
     strictness = float(os.environ.get("ANTI_AI_STRICTNESS", 0.7))
     preserve_meaning = os.environ.get("ANTI_AI_PRESERVE_MEANING", "true").lower() == "true"
-    config = EncoderConfig(language=language, strictness=strictness, preserve_meaning=preserve_meaning)
+    config = EncoderConfig(
+        language=language, strictness=strictness, preserve_meaning=preserve_meaning
+    )
     return AntiAIEncoder(config=config, sensitivity=strictness, auto_replace=False)

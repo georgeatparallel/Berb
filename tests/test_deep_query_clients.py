@@ -1,18 +1,16 @@
 """Unit tests for DeepQuery and DeepMind AI clients."""
 
 import json
-
-import pytest
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from berb.llm.deep_query_client import (
-    DeepQueryClient,
-    DeepQueryResult,
     DeepMindAIClient,
-    DeepMindAIResult,
-    create_deepquery_client,
-    create_deepmind_ai_client,
+    DeepQueryClient,
     _reset_circuit_breaker,
+    create_deepmind_ai_client,
+    create_deepquery_client,
 )
 
 
@@ -137,9 +135,7 @@ class TestDeepQueryClient:
         assert payload["search_domain_filter"] == ["arxiv.org", "openreview.net"]
         assert payload["search_recency_filter"] == "month"
 
-    def test_search_parses_search_results_citations(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_search_parses_search_results_citations(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Newer Perplexity responses use search_results, not citations."""
         mock_resp = _mock_urlopen(
             {

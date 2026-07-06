@@ -604,7 +604,6 @@ class AutomatedDebugger:
         context: dict[str, Any] | None,
     ) -> FixSuggestion:
         """Generate fix using LLM (fallback when rule-based fails)."""
-        # Build prompt
         prompt = f"""You are an expert Python debugger. Fix this error:
 
 ERROR: {diagnosis.error_message}
@@ -618,14 +617,11 @@ CODE:
 
 Provide the fixed code only, no explanation. Keep changes minimal."""
 
-        # In production, call LLM:
-        # response = await self._llm_client.chat(
-        #     messages=[{"role": "user", "content": prompt}]
-        # )
-        # fixed_code = response.content
-
-        # Placeholder
-        fixed_code = code  # No change in placeholder
+        if self._llm_client is not None:
+            response = await self._llm_client.chat(messages=[{"role": "user", "content": prompt}])
+            fixed_code = response.content
+        else:
+            fixed_code = code  # No LLM client configured — no change
 
         return FixSuggestion(
             diagnosis=diagnosis,

@@ -7,15 +7,10 @@ BUG-C: CascadingLLMClient.get_stats() — dict iteration without lock
 
 from __future__ import annotations
 
-import json
 import threading
 import time
 from pathlib import Path
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock
-
-import pytest
-
+from unittest.mock import MagicMock
 
 # ---------------------------------------------------------------------------
 # BUG-A — RateLimiter.wait_sync() race on _last_call
@@ -71,8 +66,9 @@ class TestRateLimiterWaitSyncThreadSafety:
 
     def test_sync_lock_attribute_exists(self):
         """BUG-A fix: _sync_lock must be present on RateLimiter instances."""
-        from berb.literature._rate_limiter import RateLimiter
         import threading as _threading
+
+        from berb.literature._rate_limiter import RateLimiter
 
         limiter = RateLimiter(min_interval_sec=1.0)
         assert hasattr(limiter, "_sync_lock"), "BUG-A: _sync_lock not added to RateLimiter"
@@ -91,7 +87,7 @@ class TestPutCacheAtomicWrite:
 
     def test_concurrent_writes_produce_valid_json(self, tmp_path: Path):
         """N threads writing to the same cache key must always leave valid JSON."""
-        from berb.literature.cache import put_cache, get_cached
+        from berb.literature.cache import get_cached, put_cache
 
         query, source, limit = "concurrent test", "arxiv", 10
         N = 20
@@ -115,7 +111,7 @@ class TestPutCacheAtomicWrite:
 
     def test_single_writer_still_works(self, tmp_path: Path):
         """Non-regression: single-threaded put/get round-trip."""
-        from berb.literature.cache import put_cache, get_cached
+        from berb.literature.cache import get_cached, put_cache
 
         papers = [{"title": "single", "id": "001"}]
         put_cache("q", "semantic_scholar", 5, papers, cache_base=tmp_path)
@@ -125,7 +121,7 @@ class TestPutCacheAtomicWrite:
 
     def test_put_cache_writes_to_cache_dir(self, tmp_path: Path):
         """put_cache must create the cache directory and write a .json file."""
-        from berb.literature.cache import put_cache, cache_key
+        from berb.literature.cache import cache_key, put_cache
 
         key = cache_key("my query", "openalex", 20)
         put_cache("my query", "openalex", 20, [], cache_base=tmp_path)
@@ -160,8 +156,8 @@ class TestPutCacheAtomicWrite:
 class TestGetStatsThreadSafety:
     """BUG-C: get_stats() must not raise RuntimeError when dict is concurrently modified."""
 
-    def _make_client(self) -> "CascadingLLMClient":  # noqa: F821
-        from berb.llm.model_cascade import CascadingLLMClient, CascadeConfig, CascadeStep
+    def _make_client(self) -> CascadingLLMClient:  # noqa: F821
+        from berb.llm.model_cascade import CascadeConfig, CascadeStep, CascadingLLMClient
 
         config = CascadeConfig(
             cascade=[
@@ -216,7 +212,7 @@ class TestGetStatsThreadSafety:
 
     def test_get_stats_snapshot_not_live_reference(self):
         """BUG-C fix: cascade_exits in the returned dict must be a copy, not a live reference."""
-        from berb.llm.model_cascade import CascadingLLMClient, CascadeConfig, CascadeStep
+        from berb.llm.model_cascade import CascadeConfig, CascadeStep, CascadingLLMClient
 
         config = CascadeConfig(cascade=[CascadeStep("m", min_score=0.0)])
         client = CascadingLLMClient(base_client=MagicMock(), config=config)

@@ -59,9 +59,7 @@ class GeneratedSection(BaseModel):
     def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
         # Calculate derived fields
-        self.total_sources = len(set(
-            sid for m in self.source_mappings for sid in m.source_ids
-        ))
+        self.total_sources = len({sid for m in self.source_mappings for sid in m.source_ids})
 
 
 class SourceBasedWriter:
@@ -134,9 +132,7 @@ class SourceBasedWriter:
         style = style or self.style_fingerprint
 
         # Extract claims from reading notes
-        claims_with_sources = self._extract_claims_from_notes(
-            reading_notes or []
-        )
+        claims_with_sources = self._extract_claims_from_notes(reading_notes or [])
 
         # Generate section content
         content, source_mappings = await self._generate_section_content(
@@ -147,9 +143,7 @@ class SourceBasedWriter:
         )
 
         # Identify unsupported claims
-        unsupported = self._find_unsupported_claims(
-            content, claims_with_sources
-        )
+        unsupported = self._find_unsupported_claims(content, claims_with_sources)
 
         return GeneratedSection(
             section_type=section_outline.split("\n")[0] if "\n" in section_outline else "section",
@@ -176,20 +170,24 @@ class SourceBasedWriter:
             # Extract from PaperReadingNote structure
             if hasattr(note, "key_findings"):
                 for finding in note.key_findings:
-                    claims.append({
-                        "claim": finding,
-                        "source_id": getattr(note, "paper_id", ""),
-                        "confidence": getattr(note, "quality_assessment", 5.0) / 10.0,
-                    })
+                    claims.append(
+                        {
+                            "claim": finding,
+                            "source_id": getattr(note, "paper_id", ""),
+                            "confidence": getattr(note, "quality_assessment", 5.0) / 10.0,
+                        }
+                    )
 
             # Extract from dict structure
             elif isinstance(note, dict):
                 for finding in note.get("key_findings", []):
-                    claims.append({
-                        "claim": finding,
-                        "source_id": note.get("paper_id", ""),
-                        "confidence": note.get("quality_assessment", 5.0) / 10.0,
-                    })
+                    claims.append(
+                        {
+                            "claim": finding,
+                            "source_id": note.get("paper_id", ""),
+                            "confidence": note.get("quality_assessment", 5.0) / 10.0,
+                        }
+                    )
 
         return claims
 
@@ -221,9 +219,7 @@ class SourceBasedWriter:
 
         for theme, theme_claims in themes.items():
             # Generate paragraph for theme
-            paragraph = self._generate_theme_paragraph(
-                theme, theme_claims, style
-            )
+            paragraph = self._generate_theme_paragraph(theme, theme_claims, style)
 
             # Create source mapping
             source_ids = [c["source_id"] for c in theme_claims]

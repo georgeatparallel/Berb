@@ -14,19 +14,18 @@ Supported Styles:
 
 from __future__ import annotations
 
-import json
 import logging
-from dataclasses import dataclass
-from enum import Enum
+import re
+from enum import StrEnum
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
 
-class CitationStyle(str, Enum):
+class CitationStyle(StrEnum):
     """Academic citation styles.
 
     Numeric Styles:
@@ -221,9 +220,7 @@ class CitationFormatter:
             author2 = ""
 
         # Get template based on author count and style
-        template = self._get_inline_template(
-            len(authors), page is not None, ref_number is not None
-        )
+        template = self._get_inline_template(len(authors), page is not None, ref_number is not None)
 
         # Format citation
         citation = template.format(
@@ -271,24 +268,18 @@ class CitationFormatter:
         # Author-year styles
         if num_authors == 0 or num_authors == 1:
             if has_page:
-                return self._rules.get(
-                    "inline_with_page", "({author}, {year}, p. {page})"
-                )
+                return self._rules.get("inline_with_page", "({author}, {year}, p. {page})")
             return self._rules.get("inline_one", "({author}, {year})")
 
         elif num_authors == 2:
-            return self._rules.get(
-                "inline_two", "({author1} & {author2}, {year})"
-            )
+            return self._rules.get("inline_two", "({author1} & {author2}, {year})")
 
         else:  # 3+ authors
             if has_page:
                 return self._rules.get(
                     "inline_with_page", "({first_author} {et_al}, {year}, p. {page})"
                 )
-            return self._rules.get(
-                "inline_three_plus", "({first_author} {et_al}, {year})"
-            )
+            return self._rules.get("inline_three_plus", "({first_author} {et_al}, {year})")
 
     def _format_author(
         self,
@@ -437,7 +428,7 @@ class CitationFormatter:
 
         elif style == CitationStyle.IEEE:
             ref_num = paper.get("reference_number", 1)
-            entry = f"[{ref_num}] {authors}, \"{title},\""
+            entry = f'[{ref_num}] {authors}, "{title},"'
             if venue:
                 entry += f" *{venue}*,"
             if year:
@@ -461,7 +452,7 @@ class CitationFormatter:
                 entry += f" doi:{doi}."
 
         elif style == CitationStyle.CHICAGO_AD:
-            entry = f"{authors}. {year}. \"{title}.\""
+            entry = f'{authors}. {year}. "{title}."'
             if venue:
                 entry += f" *{venue}*"
             if volume:
@@ -614,10 +605,6 @@ class CitationFormatter:
         entry += "\n}"
 
         return entry
-
-
-# Import re at module level for bibtex key generation
-import re
 
 
 # Convenience functions

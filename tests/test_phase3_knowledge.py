@@ -3,26 +3,26 @@
 Author: Georgios-Chrysovalantis Chatzivantsidis
 """
 
-import pytest
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
 import tempfile
 from pathlib import Path
+from unittest.mock import AsyncMock, patch
+
+import pytest
 
 from berb.knowledge.obsidian_export import (
-    ObsidianExporter,
-    ObsidianConfig,
     ExportResult,
+    ObsidianConfig,
+    ObsidianExporter,
     create_exporter_from_env,
 )
 from berb.literature.zotero_integration import (
-    ZoteroMCPClient,
-    ZoteroConfig,
-    ZoteroCollection,
-    ZoteroItem,
     ZoteroAnnotation,
+    ZoteroCollection,
+    ZoteroConfig,
+    ZoteroItem,
+    ZoteroMCPClient,
     create_zotero_client_from_env,
 )
-
 
 # ============== Obsidian Export Tests ==============
 
@@ -91,7 +91,7 @@ class TestObsidianExporter:
     def test_exporter_creates_folders(self, temp_vault):
         """Test folder creation."""
         config = ObsidianConfig(vault_path=str(temp_vault))
-        exporter = ObsidianExporter(config)
+        _exporter = ObsidianExporter(config)
 
         # Check folders exist
         assert (temp_vault / "Knowledge").exists()
@@ -501,14 +501,14 @@ class TestKnowledgeIntegration:
 
     def test_import_obsidian_exporter(self):
         """Test ObsidianExporter can be imported."""
-        from berb.knowledge import ObsidianExporter, ObsidianConfig
+        from berb.knowledge import ObsidianConfig, ObsidianExporter
 
         assert ObsidianExporter is not None
         assert ObsidianConfig is not None
 
     def test_import_zotero_client(self):
         """Test ZoteroMCPClient can be imported."""
-        from berb.literature.zotero_integration import ZoteroMCPClient, ZoteroConfig
+        from berb.literature.zotero_integration import ZoteroConfig, ZoteroMCPClient
 
         assert ZoteroMCPClient is not None
         assert ZoteroConfig is not None

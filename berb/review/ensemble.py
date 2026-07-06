@@ -23,13 +23,27 @@ Usage:
 
 from __future__ import annotations
 
+import json
 import logging
+import re
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+
+def _safe_json_loads(text: str, default: Any) -> Any:
+    """Parse JSON from an LLM response, tolerating markdown code fences."""
+    stripped = text.strip()
+    if stripped.startswith("```"):
+        stripped = re.sub(r"^```(?:json)?\n?", "", stripped)
+        stripped = re.sub(r"\n?```$", "", stripped)
+    try:
+        return json.loads(stripped)
+    except (json.JSONDecodeError, TypeError):
+        return default
 
 
 class ReviewDimension(StrEnum):
@@ -268,14 +282,19 @@ class AutomatedReviewerEnsemble:
         persona: ReviewerPersona,
         paper_text: str,
     ) -> Review:
-        """Generate single review from persona."""
+        """Generate single review from persona via a real LLM call.
+
+        Falls back to an honestly-marked "review unavailable" result (not a
+        fabricated score) if no LLM client is configured or the call fails —
+        this ensemble previously simulated plausible-looking scores with
+        random.uniform(), which is worse than no score at all.
+        """
         # Truncate paper if too long (LLM context limit)
         max_length = 50000  # Adjust based on model
         if len(paper_text) > max_length:
             paper_text = paper_text[:max_length] + "\n\n[... truncated ...]"
 
-        # Build review prompt
-        f"""{persona.system_prompt}
+        prompt = f"""{persona.system_prompt}
 
 PAPER TEXT:
 {paper_text}
@@ -299,82 +318,70 @@ OUTPUT FORMAT (JSON):
     "detailed_feedback": "<2-3 paragraphs of detailed review>"
 }}
 
-Focus on your assigned areas: {", ".join(persona.focus_areas)}
+Focus on your assigned areas: {", ".join(d.value for d in persona.focus_areas)}
+Return ONLY the JSON object, no other text.
 """
 
-        # Call LLM (placeholder - integrate with actual LLM client)
-        # In production:
-        # response = await self._llm_client.chat(
-        #     messages=[{"role": "user", "content": prompt}],
-        #     json_mode=True
-        # )
-        # review_data = json.loads(response.content)
+        review_data: dict[str, Any] | None = None
+        if self._llm_client is not None:
+            try:
+                response = self._llm_client.chat(
+                    messages=[{"role": "user", "content": prompt}],
+                    system=persona.system_prompt,
+                )
+                content = response.content if hasattr(response, "content") else str(response)
+                parsed = _safe_json_loads(content, None)
+                if isinstance(parsed, dict) and "scores" in parsed:
+                    review_data = parsed
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Reviewer '%s' LLM call failed: %s", persona.name, exc)
 
-        # Placeholder for now
-        review_data = self._generate_placeholder_review(persona)
+        if review_data is None:
+            review_data = self._generate_unavailable_review(persona)
+
+        try:
+            scores = {ReviewDimension(k): int(v) for k, v in review_data["scores"].items()}
+            decision = Decision(review_data["decision"])
+        except (KeyError, ValueError):
+            logger.warning("Reviewer '%s' returned malformed review data", persona.name)
+            review_data = self._generate_unavailable_review(persona)
+            scores = {ReviewDimension(k): int(v) for k, v in review_data["scores"].items()}
+            decision = Decision(review_data["decision"])
 
         return Review(
             reviewer_id=persona.id,
             reviewer_name=persona.name,
-            scores={ReviewDimension(k): v for k, v in review_data["scores"].items()},
-            overall_score=review_data["overall_score"],
-            decision=Decision(review_data["decision"]),
+            scores=scores,
+            overall_score=float(review_data["overall_score"]),
+            decision=decision,
             strengths=review_data["strengths"],
             weaknesses=review_data["weaknesses"],
             questions_for_authors=review_data["questions_for_authors"],
-            confidence=review_data["confidence"],
+            confidence=int(review_data["confidence"]),
             detailed_feedback=review_data["detailed_feedback"],
         )
 
-    def _generate_placeholder_review(self, persona: ReviewerPersona) -> dict:
-        """Generate placeholder review (replace with actual LLM call)."""
-        import random
+    def _generate_unavailable_review(self, persona: ReviewerPersona) -> dict[str, Any]:
+        """Honest fallback when no real review could be obtained.
 
-        # Simulate reviewer scores based on persona focus
-        random.uniform(5.5, 7.5)
-
-        scores = {}
-        for dim in ReviewDimension:
-            if dim in persona.focus_areas:
-                # Higher variance in focus areas
-                scores[dim.value] = int(random.uniform(4, 9))
-            else:
-                # Lower variance in non-focus areas
-                scores[dim.value] = int(random.uniform(5, 7))
-
-        overall = sum(scores.values()) / len(scores)
-
-        if overall >= 9:
-            decision = "strong_accept"
-        elif overall >= 7:
-            decision = "accept"
-        elif overall >= 6:
-            decision = "weak_accept"
-        elif overall >= 5:
-            decision = "weak_reject"
-        elif overall >= 3:
-            decision = "reject"
-        else:
-            decision = "strong_reject"
-
+        Returns a conservative, clearly-marked placeholder rather than a
+        fabricated plausible-looking score — this feeds into a report that
+        a human/downstream LLM may act on, so it must not look like a real
+        review.
+        """
+        scores = {dim.value: 5 for dim in ReviewDimension}
         return {
             "scores": scores,
-            "overall_score": round(overall, 2),
-            "decision": decision,
-            "strengths": [
-                f"Strong {persona.focus_areas[0].value} contribution",
-                "Well-motivated problem",
-            ],
-            "weaknesses": [
-                "Could benefit from additional baselines",
-                "Some claims need stronger evidence",
-            ],
-            "questions_for_authors": [
-                "How does this compare to [recent related work]?",
-                "What is the computational cost?",
-            ],
-            "confidence": random.randint(3, 5),
-            "detailed_feedback": f"As a {persona.name}, I find this paper ... [detailed review]",
+            "overall_score": 5.0,
+            "decision": "weak_reject",
+            "strengths": [],
+            "weaknesses": ["Review unavailable — no LLM client configured or call failed."],
+            "questions_for_authors": [],
+            "confidence": 1,
+            "detailed_feedback": (
+                f"[{persona.name}] Review could not be generated. This is a placeholder, "
+                "not an actual assessment — do not treat these scores as real signal."
+            ),
         }
 
     def area_chair_decision(self, reviews: list[Review]) -> MetaReview:
@@ -391,13 +398,25 @@ Focus on your assigned areas: {", ".join(persona.focus_areas)}
 
         # Calculate score statistics
         overall_scores = [r.overall_score for r in reviews]
-        avg_score = sum(overall_scores) / len(overall_scores)
 
-        # Weighted average (some reviewers have higher weight)
+        # Weighted average drives the actual decision — some reviewers
+        # (e.g. Novelty & Significance) carry more weight than others.
+        # Fall back to matching reviews by reviewer_id rather than assuming
+        # `reviews` is in the same order as self._personas.
+        persona_by_id = {p.id: p for p in self._personas}
         weighted_scores = [
-            r.overall_score * self._personas[i].weight for i, r in enumerate(reviews)
+            r.overall_score * persona_by_id[r.reviewer_id].weight
+            for r in reviews
+            if r.reviewer_id in persona_by_id
         ]
-        sum(weighted_scores) / sum(p.weight for p in self._personas)
+        total_weight = sum(
+            persona_by_id[r.reviewer_id].weight for r in reviews if r.reviewer_id in persona_by_id
+        )
+        avg_score = (
+            sum(weighted_scores) / total_weight
+            if total_weight > 0
+            else sum(overall_scores) / len(overall_scores)
+        )
 
         # Score distribution
         score_distribution = {}
@@ -438,9 +457,6 @@ Focus on your assigned areas: {", ".join(persona.focus_areas)}
             if max(dim_scores) - min(dim_scores) > 4:
                 conflicts.append(f"Disagreement on {dim.value}")
 
-        # Generate meta-review text
-        meta_review_text = self._generate_meta_review_text(reviews, avg_score, consensus, conflicts)
-
         # Acceptance recommendation
         if consensus in (Decision.STRONG_ACCEPT, Decision.ACCEPT):
             recommendation = "ACCEPT"
@@ -450,6 +466,13 @@ Focus on your assigned areas: {", ".join(persona.focus_areas)}
             recommendation = "BORDERLINE REJECT - Discuss at AC meeting"
         else:
             recommendation = "REJECT"
+
+        # Generate meta-review text (recommendation passed in, not
+        # recomputed via a recursive area_chair_decision() call — the
+        # original recursive call here caused unbounded recursion)
+        meta_review_text = self._generate_meta_review_text(
+            reviews, avg_score, consensus, conflicts, recommendation
+        )
 
         return MetaReview(
             reviews=reviews,
@@ -471,6 +494,7 @@ Focus on your assigned areas: {", ".join(persona.focus_areas)}
         avg_score: float,
         consensus: Decision,
         conflicts: list[str],
+        recommendation: str,
     ) -> str:
         """Generate Area Chair meta-review text."""
         lines = [
@@ -507,8 +531,7 @@ Focus on your assigned areas: {", ".join(persona.focus_areas)}
                 f"This paper receives an average score of {avg_score:.2f}/10 from 5 reviewers. ",
                 f"The reviews show {'strong agreement' if len(conflicts) == 0 else 'notable disagreement'}.",
                 "",
-                "**Recommendation:** "
-                + self.area_chair_decision(reviews).acceptance_recommendation,
+                "**Recommendation:** " + recommendation,
             ]
         )
 

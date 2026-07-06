@@ -19,8 +19,7 @@ from berb.adapters import AdapterBundle
 from berb.config import RCConfig
 from berb.evolution import EvolutionStore, extract_lessons
 from berb.knowledge.base import write_stage_to_kb
-from berb.pipeline.checkpoint import CheckpointManager
-from berb.pipeline.checkpoint import write_heartbeat
+from berb.pipeline.checkpoint import CheckpointManager, write_heartbeat
 from berb.pipeline.executor import StageResult, execute_stage
 from berb.pipeline.iterative import (
     _check_experiment_quality,
@@ -103,7 +102,6 @@ def _build_dag_levels(order: tuple[Stage, ...]) -> list[set[Stage]]:
     Each level is a set of stages that can run concurrently (all dependencies
     from earlier levels are satisfied). Levels are returned in topological order.
     """
-    from collections import defaultdict
 
     from berb.pipeline.contracts import CONTRACTS
 
@@ -163,9 +161,7 @@ async def _execute_single_stage(
 
     stage_num = int(stage)
     prefix = f"[{run_id}] Stage {stage_num:02d}/{total_stages}"
-    model_info = (
-        config.llm.primary_model.split("/")[-1] if config.llm.primary_model else "unknown"
-    )
+    model_info = config.llm.primary_model.split("/")[-1] if config.llm.primary_model else "unknown"
     print(f"{prefix} {stage.name} — running... [model: {model_info}]")
 
     start_event = StageTransitionEvent(
@@ -197,7 +193,9 @@ async def _execute_single_stage(
     if result.status == StageStatus.DONE:
         arts = ", ".join(result.artifacts) if result.artifacts else "none"
         if result.decision == "degraded":
-            print(f"{prefix} {stage.name} — DEGRADED ({elapsed:.1f}s) — continuing with sanitization -> {arts}")
+            print(
+                f"{prefix} {stage.name} — DEGRADED ({elapsed:.1f}s) — continuing with sanitization -> {arts}"
+            )
         else:
             print(f"{prefix} {stage.name} — done ({elapsed:.1f}s) -> {arts}")
     elif result.status == StageStatus.FAILED:
@@ -304,25 +302,9 @@ async def execute_pipeline(
         # Run all stages in this level — they're eligible by construction
         if len(level_stages) == 1:
             stage = next(iter(level_stages))
-            stage_results = [await _execute_single_stage(
-                stage,
-                run_dir=run_dir,
-                run_id=run_id,
-                config=config,
-                adapters=adapters,
-                checkpoint_mgr=checkpoint_mgr,
-                event_store=event_store,
-                previous_status=previous_status,
-                total_stages=total_stages,
-                kb_root=kb_root,
-                auto_approve_gates=auto_approve_gates,
-            )]
-        else:
-            names = ", ".join(s.name for s in level_stages)
-            logger.info("CONCURRENT: running %d stages: %s", len(level_stages), names)
-            stage_results = await asyncio.gather(*[
-                _execute_single_stage(
-                    s,
+            stage_results = [
+                await _execute_single_stage(
+                    stage,
                     run_dir=run_dir,
                     run_id=run_id,
                     config=config,
@@ -333,8 +315,29 @@ async def execute_pipeline(
                     total_stages=total_stages,
                     kb_root=kb_root,
                     auto_approve_gates=auto_approve_gates,
-                ) for s in level_stages
-            ])
+                )
+            ]
+        else:
+            names = ", ".join(s.name for s in level_stages)
+            logger.info("CONCURRENT: running %d stages: %s", len(level_stages), names)
+            stage_results = await asyncio.gather(
+                *[
+                    _execute_single_stage(
+                        s,
+                        run_dir=run_dir,
+                        run_id=run_id,
+                        config=config,
+                        adapters=adapters,
+                        checkpoint_mgr=checkpoint_mgr,
+                        event_store=event_store,
+                        previous_status=previous_status,
+                        total_stages=total_stages,
+                        kb_root=kb_root,
+                        auto_approve_gates=auto_approve_gates,
+                    )
+                    for s in level_stages
+                ]
+            )
 
         for result in stage_results:
             results.append(result)
@@ -529,8 +532,7 @@ async def _handle_pivot(
         _quality_ok, _quality_msg = _check_experiment_quality(run_dir, pivot_count)
         if not _quality_ok:
             logger.warning(
-                "Max pivot attempts (%d) reached — forcing PROCEED "
-                "with quality warning: %s",
+                "Max pivot attempts (%d) reached — forcing PROCEED with quality warning: %s",
                 MAX_DECISION_PIVOTS,
                 _quality_msg,
             )
@@ -594,9 +596,7 @@ async def _run_diagnosis_and_repair(
                             existing_score = _summary_quality_score(existing)
                         except (json.JSONDecodeError, OSError):
                             pass
-                    repair_score = _summary_quality_score(
-                        repair_result.best_experiment_summary
-                    )
+                    repair_score = _summary_quality_score(repair_result.best_experiment_summary)
                     if repair_score > existing_score:
                         best_path.write_text(
                             json.dumps(repair_result.best_experiment_summary, indent=2),

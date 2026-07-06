@@ -23,24 +23,20 @@ Coverage:
 # Author: Georgios-Chrysovalantis Chatzivantsidis
 # Date: 2026-04-03
 """
+
 from __future__ import annotations
 
 import json
-import os
-import sys
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from berb.adapters import AdapterBundle
 from berb.config import RCConfig
-from berb.pipeline.executor import StageResult, execute_stage
-from berb.pipeline.runner import execute_pipeline
+from berb.pipeline.executor import execute_stage
 from berb.pipeline.stages import Stage, StageStatus
-
 
 # ============================================================================
 # E2E Test Fixtures
@@ -280,12 +276,12 @@ def run_experiment():
     # Generate synthetic data
     X = np.random.randn(100, 10)
     y = np.random.randint(0, 2, 100)
-    
+
     # Train model
     from sklearn.ensemble import RandomForestClassifier
     model = RandomForestClassifier(n_estimators=10)
     model.fit(X, y)
-    
+
     # Evaluate
     accuracy = model.score(X, y)
     print(f'accuracy: {accuracy:.4f}')
@@ -414,7 +410,9 @@ class TestPhaseA_ResearchScoping:
     - Goal formulation
     """
 
-    def test_stage_01_topic_init(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_01_topic_init(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 1: Initialize research topic."""
         stage_dir = run_dir / f"stage-{Stage.TOPIC_INIT:02d}"
         stage_dir.mkdir(parents=True, exist_ok=True)
@@ -438,7 +436,9 @@ class TestPhaseA_ResearchScoping:
         assert "goal.md" in result.artifacts
         assert (stage_dir / "goal.md").exists()
 
-    def test_stage_02_problem_decompose(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_02_problem_decompose(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 2: Decompose problem into sub-problems."""
         # Setup: Create prior artifact from Stage 1
         stage1_dir = run_dir / f"stage-{Stage.TOPIC_INIT:02d}"
@@ -481,7 +481,9 @@ class TestPhaseB_LiteratureDiscovery:
     - Knowledge extraction
     """
 
-    def test_stage_03_search_strategy(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_03_search_strategy(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 3: Formulate search strategy."""
         # Setup prior artifacts
         for stage_num in [1, 2]:
@@ -508,7 +510,9 @@ class TestPhaseB_LiteratureDiscovery:
         assert result.status == StageStatus.DONE, f"Stage failed: {result.error}"
         assert "search_plan.yaml" in result.artifacts
 
-    def test_stage_04_literature_collect(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_04_literature_collect(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 4: Collect literature."""
         # Setup prior artifacts
         for stage_num in range(1, 4):
@@ -534,13 +538,17 @@ class TestPhaseB_LiteratureDiscovery:
         assert result.status == StageStatus.DONE, f"Stage failed: {result.error}"
         assert "candidates.jsonl" in result.artifacts
 
-    def test_stage_05_literature_screen(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_05_literature_screen(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 5: Screen literature (GATE)."""
         # Setup
         for stage_num in range(1, 5):
             stage_dir = run_dir / f"stage-{stage_num:02d}"
             stage_dir.mkdir(parents=True, exist_ok=True)
-        (run_dir / "stage-04" / "candidates.jsonl").write_text('{"title": "test"}\n', encoding="utf-8")
+        (run_dir / "stage-04" / "candidates.jsonl").write_text(
+            '{"title": "test"}\n', encoding="utf-8"
+        )
 
         stage_dir = run_dir / f"stage-{Stage.LITERATURE_SCREEN:02d}"
         stage_dir.mkdir(parents=True, exist_ok=True)
@@ -560,13 +568,17 @@ class TestPhaseB_LiteratureDiscovery:
         assert result.status == StageStatus.DONE, f"Stage failed: {result.error}"
         assert "shortlist.jsonl" in result.artifacts
 
-    def test_stage_06_knowledge_extract(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_06_knowledge_extract(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 6: Extract knowledge from papers."""
         # Setup
         for stage_num in range(1, 6):
             stage_dir = run_dir / f"stage-{stage_num:02d}"
             stage_dir.mkdir(parents=True, exist_ok=True)
-        (run_dir / "stage-05" / "shortlist.jsonl").write_text('{"title": "test"}\n', encoding="utf-8")
+        (run_dir / "stage-05" / "shortlist.jsonl").write_text(
+            '{"title": "test"}\n', encoding="utf-8"
+        )
 
         stage_dir = run_dir / f"stage-{Stage.KNOWLEDGE_EXTRACT:02d}"
         stage_dir.mkdir(parents=True, exist_ok=True)
@@ -600,7 +612,9 @@ class TestPhaseC_KnowledgeSynthesis:
     - Hypothesis generation
     """
 
-    def test_stage_07_synthesis(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_07_synthesis(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 7: Synthesize knowledge."""
         # Setup
         for stage_num in range(1, 7):
@@ -628,7 +642,9 @@ class TestPhaseC_KnowledgeSynthesis:
         assert result.status == StageStatus.DONE, f"Stage failed: {result.error}"
         assert "synthesis.md" in result.artifacts
 
-    def test_stage_08_hypothesis_gen(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_08_hypothesis_gen(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 8: Generate hypotheses."""
         # Setup
         for stage_num in range(1, 8):
@@ -672,7 +688,9 @@ class TestPhaseD_ExperimentDesign:
     - Resource planning
     """
 
-    def test_stage_09_experiment_design(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_09_experiment_design(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 9: Design experiment (GATE)."""
         # Setup
         for stage_num in range(1, 9):
@@ -698,7 +716,9 @@ class TestPhaseD_ExperimentDesign:
         assert result.status == StageStatus.DONE, f"Stage failed: {result.error}"
         assert "exp_plan.yaml" in result.artifacts
 
-    def test_stage_10_code_generation(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_10_code_generation(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 10: Generate experiment code."""
         # Setup
         for stage_num in range(1, 10):
@@ -724,7 +744,9 @@ class TestPhaseD_ExperimentDesign:
         assert result.status == StageStatus.DONE, f"Stage failed: {result.error}"
         assert "experiment/" in result.artifacts or "main.py" in result.artifacts
 
-    def test_stage_11_resource_planning(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_11_resource_planning(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 11: Plan resources."""
         # Setup
         for stage_num in range(1, 11):
@@ -763,7 +785,9 @@ class TestPhaseE_ExperimentExecution:
     - Iterative refinement
     """
 
-    def test_stage_12_experiment_run(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_12_experiment_run(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 12: Run experiment."""
         # Setup
         for stage_num in range(1, 12):
@@ -791,9 +815,13 @@ class TestPhaseE_ExperimentExecution:
             )
 
         # Stage 12 may succeed or need refinement
-        assert result.status in [StageStatus.DONE, StageStatus.BLOCKED_APPROVAL], f"Stage failed: {result.error}"
+        assert result.status in [StageStatus.DONE, StageStatus.BLOCKED_APPROVAL], (
+            f"Stage failed: {result.error}"
+        )
 
-    def test_stage_13_iterative_refine(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_13_iterative_refine(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 13: Iterative refinement."""
         # Setup
         for stage_num in range(1, 13):
@@ -822,7 +850,9 @@ class TestPhaseE_ExperimentExecution:
             )
 
         # May complete or need more iterations
-        assert result.status in [StageStatus.DONE, StageStatus.BLOCKED_APPROVAL], f"Stage failed: {result.error}"
+        assert result.status in [StageStatus.DONE, StageStatus.BLOCKED_APPROVAL], (
+            f"Stage failed: {result.error}"
+        )
 
 
 # ============================================================================
@@ -838,7 +868,9 @@ class TestPhaseF_AnalysisDecision:
     - Research decision
     """
 
-    def test_stage_14_result_analysis(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_14_result_analysis(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 14: Analyze results."""
         # Setup
         for stage_num in range(1, 14):
@@ -866,7 +898,9 @@ class TestPhaseF_AnalysisDecision:
         assert result.status == StageStatus.DONE, f"Stage failed: {result.error}"
         assert "analysis.md" in result.artifacts
 
-    def test_stage_15_research_decision(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_15_research_decision(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 15: Make research decision."""
         # Setup
         for stage_num in range(1, 15):
@@ -908,7 +942,9 @@ class TestPhaseG_PaperWriting:
     - Revision
     """
 
-    def test_stage_16_paper_outline(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_16_paper_outline(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 16: Create paper outline."""
         # Setup
         for stage_num in range(1, 16):
@@ -935,7 +971,9 @@ class TestPhaseG_PaperWriting:
         assert result.status == StageStatus.DONE, f"Stage failed: {result.error}"
         assert "outline.md" in result.artifacts
 
-    def test_stage_17_paper_draft(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_17_paper_draft(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 17: Write paper draft."""
         # Setup
         for stage_num in range(1, 17):
@@ -968,7 +1006,9 @@ class TestPhaseG_PaperWriting:
         assert result.status == StageStatus.DONE, f"Stage failed: {result.error}"
         assert "paper_draft.md" in result.artifacts
 
-    def test_stage_18_peer_review(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_18_peer_review(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 18: Peer review."""
         # Setup
         for stage_num in range(1, 18):
@@ -994,7 +1034,9 @@ class TestPhaseG_PaperWriting:
         assert result.status == StageStatus.DONE, f"Stage failed: {result.error}"
         assert "reviews.md" in result.artifacts
 
-    def test_stage_19_paper_revision(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_19_paper_revision(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 19: Revise paper."""
         # Setup
         for stage_num in range(1, 19):
@@ -1037,7 +1079,9 @@ class TestPhaseH_Finalization:
     - Citation verification
     """
 
-    def test_stage_20_quality_gate(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_20_quality_gate(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 20: Quality gate (GATE)."""
         # Setup
         for stage_num in range(1, 20):
@@ -1063,7 +1107,9 @@ class TestPhaseH_Finalization:
         assert result.status == StageStatus.DONE, f"Stage failed: {result.error}"
         assert "quality_report.json" in result.artifacts
 
-    def test_stage_21_knowledge_archive(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_21_knowledge_archive(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 21: Archive knowledge."""
         # Setup
         for stage_num in range(1, 21):
@@ -1088,7 +1134,9 @@ class TestPhaseH_Finalization:
 
         assert result.status == StageStatus.DONE, f"Stage failed: {result.error}"
 
-    def test_stage_22_export_publish(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_22_export_publish(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 22: Export and publish."""
         # Setup
         for stage_num in range(1, 22):
@@ -1117,7 +1165,9 @@ class TestPhaseH_Finalization:
         assert result.status == StageStatus.DONE, f"Stage failed: {result.error}"
         assert "paper_final.md" in result.artifacts
 
-    def test_stage_23_citation_verify(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_stage_23_citation_verify(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Stage 23: Verify citations."""
         # Setup
         for stage_num in range(1, 23):
@@ -1158,7 +1208,9 @@ class TestIntegration_FullPipeline:
     """
 
     @pytest.mark.slow
-    def test_full_pipeline_sequence(self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle) -> None:
+    def test_full_pipeline_sequence(
+        self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
         """Test complete 23-stage pipeline sequence."""
         # This test runs all stages in sequence
         # Using mocked LLM to avoid API costs
@@ -1217,14 +1269,14 @@ class TestRegression_BugFixes:
         from berb.pipeline import executor
 
         assert hasattr(executor, "_expand_search_queries")
-        assert callable(getattr(executor, "_expand_search_queries"))
+        assert callable(executor._expand_search_queries)
 
     def test_build_context_preamble_exported(self) -> None:
         """BUG #1b: Verify _build_context_preamble is exported."""
         from berb.pipeline import executor
 
         assert hasattr(executor, "_build_context_preamble")
-        assert callable(getattr(executor, "_build_context_preamble"))
+        assert callable(executor._build_context_preamble)
 
     def test_config_rejects_plaintext_api_key(self, e2e_test_dir: Path) -> None:
         """BUG #2: Verify config rejects plaintext API keys."""

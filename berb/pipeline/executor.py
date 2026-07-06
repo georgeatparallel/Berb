@@ -7,7 +7,6 @@ import inspect
 import json
 import logging
 import time as _time
-from collections.abc import Callable
 from pathlib import Path
 
 # ============================================================================
@@ -21,10 +20,16 @@ from berb.config import RCConfig
 from berb.llm import create_llm_client
 from berb.llm.client import LLMClient
 
+# Re-exported for backward compatibility: callers (e.g. packaging.py) import
+# _extract_paper_title from here rather than the _figure_helpers module it
+# actually lives in.
+from berb.pipeline._figure_helpers import _extract_paper_title  # noqa: F401
+
 # ============================================================================
 # Internal - Pipeline Core
 # ============================================================================
 from berb.pipeline.contracts import CONTRACTS, StageContract
+from berb.pipeline.registry import get_registration
 from berb.pipeline.stages import (
     Stage,
     StageStatus,
@@ -32,13 +37,7 @@ from berb.pipeline.stages import (
     advance,
     gate_required,
 )
-from berb.pipeline.registry import get_registration
 from berb.prompts import PromptManager
-
-# Re-exported for backward compatibility: callers (e.g. packaging.py) import
-# _extract_paper_title from here rather than the _figure_helpers module it
-# actually lives in.
-from berb.pipeline._figure_helpers import _extract_paper_title  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
@@ -53,49 +52,49 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 from berb.pipeline._helpers import (  # noqa: E402
     StageResult,
-    _build_context_preamble,
-    _detect_runtime_issues,
-    _extract_multi_file_blocks,
-    _extract_topic_keywords,
-    _extract_yaml_block,
-    _load_hardware_profile,
-    _multi_perspective_generate,
-    _parse_metrics_from_stdout,
+    _build_context_preamble,  # noqa: F401
+    _detect_runtime_issues,  # noqa: F401
+    _extract_multi_file_blocks,  # noqa: F401
+    _extract_topic_keywords,  # noqa: F401
+    _extract_yaml_block,  # noqa: F401
+    _load_hardware_profile,  # noqa: F401
+    _multi_perspective_generate,  # noqa: F401
+    _parse_metrics_from_stdout,  # noqa: F401
     _read_prior_artifact,
-    _safe_filename,
-    _safe_json_loads,
-    _synthesize_perspectives,
-    _topic_constraint_block,
+    _safe_filename,  # noqa: F401
+    _safe_json_loads,  # noqa: F401
+    _synthesize_perspectives,  # noqa: F401
+    _topic_constraint_block,  # noqa: F401
     _utcnow_iso,
     _write_stage_meta,
 )
 
 # Stages 14-15: Analysis & Decision
-from berb.pipeline.stage_impls._analysis import (  # noqa: E402
+from berb.pipeline.stage_impls._analysis import (  # noqa: E402,F401
     _execute_research_decision,
     _execute_result_analysis,
     _parse_decision,
 )
 
 # Stage 10: Code Generation
-from berb.pipeline.stage_impls._code_generation import (  # noqa: E402
+from berb.pipeline.stage_impls._code_generation import (  # noqa: E402,F401
     _execute_code_generation,
 )
 
 # Stages 11-13: Experiment Execution
-from berb.pipeline.stage_impls._execution import (  # noqa: E402
+from berb.pipeline.stage_impls._execution import (  # noqa: E402,F401
     _execute_experiment_run,
     _execute_iterative_refine,
     _execute_resource_planning,
 )
 
 # Stage 9: Experiment Design
-from berb.pipeline.stage_impls._experiment_design import (  # noqa: E402
+from berb.pipeline.stage_impls._experiment_design import (  # noqa: E402,F401
     _execute_experiment_design,
 )
 
 # Stages 3-6: Literature Search
-from berb.pipeline.stage_impls._literature import (  # noqa: E402
+from berb.pipeline.stage_impls._literature import (  # noqa: E402,F401
     _execute_knowledge_extract,
     _execute_literature_collect,
     _execute_literature_screen,
@@ -104,7 +103,7 @@ from berb.pipeline.stage_impls._literature import (  # noqa: E402
 )
 
 # Stages 16-17: Paper Writing
-from berb.pipeline.stage_impls._paper_writing import (  # noqa: E402
+from berb.pipeline.stage_impls._paper_writing import (  # noqa: E402,F401
     _collect_raw_experiment_metrics,
     _execute_paper_draft,
     _execute_paper_outline,
@@ -113,7 +112,7 @@ from berb.pipeline.stage_impls._paper_writing import (  # noqa: E402
 )
 
 # Stages 18-23: Review & Publishing
-from berb.pipeline.stage_impls._review_publish import (  # noqa: E402
+from berb.pipeline.stage_impls._review_publish import (  # noqa: E402,F401
     _collect_experiment_evidence,
     _execute_citation_verify,
     _execute_export_publish,
@@ -126,17 +125,18 @@ from berb.pipeline.stage_impls._review_publish import (  # noqa: E402
 )
 
 # Stages 7-8: Synthesis & Hypothesis
-from berb.pipeline.stage_impls._synthesis import (  # noqa: E402
+from berb.pipeline.stage_impls._synthesis import (  # noqa: E402,F401
     _execute_hypothesis_gen,
     _execute_synthesis,
 )
-from berb.pipeline.stage_impls._topic import (  # noqa: E402
+from berb.pipeline.stage_impls._topic import (  # noqa: E402,F401
     _execute_problem_decompose,
     _execute_topic_init,
 )
 
 # _STAGE_EXECUTORS removed in cleanup — registry is the sole source.
 # Stage _execute_* imports above trigger @register_stage decorators.
+
 
 def execute_stage(
     stage: Stage,

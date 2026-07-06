@@ -486,7 +486,9 @@ Be conservative with high scores. Most papers score 5-7."""
             else:
                 # desc is lowercased for matching only; use original-cased
                 # weakness.description for the human-readable message.
-                improvements_made.append(f"Fixed: {weakness.category} - {weakness.description[:50]}")
+                improvements_made.append(
+                    f"Fixed: {weakness.category} - {weakness.description[:50]}"
+                )
 
         for desc, weakness in current_weaknesses.items():
             if desc not in prior_weaknesses:

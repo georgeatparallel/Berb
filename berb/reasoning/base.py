@@ -274,9 +274,8 @@ class ReasoningMethod(ABC):
         """Async context manager entry."""
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:  # noqa: B027
         """Async context manager exit. Override in subclasses that hold resources."""
-        pass
 
     def validate_context(self, context: ReasoningContext) -> bool:
         """

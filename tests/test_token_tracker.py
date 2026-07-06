@@ -6,15 +6,14 @@ Pattern: Repository pattern testing
 
 from __future__ import annotations
 
-import pytest
+from dataclasses import FrozenInstanceError
 from pathlib import Path
-from datetime import datetime, timezone
+
+import pytest
 
 from berb.utils.token_tracker import (
     TokenTracker,
     TokenUsage,
-    TokenSummary,
-    DailyTokenStats,
 )
 
 
@@ -318,7 +317,7 @@ class TestTokenUsageDataclass:
             project_path="/test",
         )
 
-        with pytest.raises(Exception):  # frozen=True
+        with pytest.raises(FrozenInstanceError):
             usage.command = "modified"
 
 

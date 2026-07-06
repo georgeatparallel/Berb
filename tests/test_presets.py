@@ -7,15 +7,17 @@ Tests for PipelinePreset, PresetRegistry, and domain-specific presets.
 
 from __future__ import annotations
 
-import pytest
 from pathlib import Path
+
+import pytest
+from pydantic import ValidationError
 
 from berb.presets import (
     PipelinePreset,
     PresetRegistry,
     get_preset,
-    list_presets,
     get_registry,
+    list_presets,
     load_preset,
 )
 
@@ -55,7 +57,7 @@ class TestPipelinePreset:
     def test_preset_validation(self):
         """Test preset validation."""
         # Invalid experiment mode should fail
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             PipelinePreset(
                 name="invalid",
                 description="Invalid preset",

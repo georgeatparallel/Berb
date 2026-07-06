@@ -263,9 +263,7 @@ class CitationVerifier:
                 else:
                     result.layers_failed.append(VerificationLayer.WEB_GROUND)
                     if web_status == "inaccurate":
-                        result.errors.append(
-                            "Web-grounding check found the citation inaccurate"
-                        )
+                        result.errors.append("Web-grounding check found the citation inaccurate")
                     else:
                         result.warnings.append("Web-grounding check could not verify citation")
 

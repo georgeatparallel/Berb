@@ -112,11 +112,13 @@ class GoogleScholarClient:
 
     def search(self, query: str, *, limit: int = 10) -> list[ScholarPaper]:
         """Search Semantic Scholar for papers matching *query*."""
-        params = urllib.parse.urlencode({
-            "query": query,
-            "limit": min(limit, 100),
-            "fields": _S2_FIELDS,
-        })
+        params = urllib.parse.urlencode(
+            {
+                "query": query,
+                "limit": min(limit, 100),
+                "fields": _S2_FIELDS,
+            }
+        )
         url = f"{_S2_BASE}/paper/search?{params}"
         data = self._get(url)
         papers: list[ScholarPaper] = []
@@ -127,10 +129,12 @@ class GoogleScholarClient:
 
     def get_citations(self, scholar_id: str, *, limit: int = 20) -> list[ScholarPaper]:
         """Return papers that cite *scholar_id* (citation graph traversal)."""
-        params = urllib.parse.urlencode({
-            "limit": min(limit, 100),
-            "fields": _S2_FIELDS,
-        })
+        params = urllib.parse.urlencode(
+            {
+                "limit": min(limit, 100),
+                "fields": _S2_FIELDS,
+            }
+        )
         url = f"{_S2_BASE}/paper/{urllib.parse.quote(scholar_id)}/citations?{params}"
         data = self._get(url)
         papers: list[ScholarPaper] = []
@@ -142,23 +146,27 @@ class GoogleScholarClient:
 
     def search_author(self, name: str) -> list[dict[str, Any]]:
         """Search for an author on Semantic Scholar."""
-        params = urllib.parse.urlencode({
-            "query": name,
-            "limit": 5,
-            "fields": "name,affiliations,citationCount,paperCount,hIndex",
-        })
+        params = urllib.parse.urlencode(
+            {
+                "query": name,
+                "limit": 5,
+                "fields": "name,affiliations,citationCount,paperCount,hIndex",
+            }
+        )
         url = f"{_S2_BASE}/author/search?{params}"
         data = self._get(url)
         results = []
         for item in (data.get("data") or [])[:5]:
             affiliations = item.get("affiliations") or []
-            results.append({
-                "name": item.get("name", ""),
-                "affiliation": affiliations[0] if affiliations else "",
-                "scholar_id": str(item.get("authorId", "")),
-                "citedby": item.get("citationCount", 0),
-                "interests": [],
-            })
+            results.append(
+                {
+                    "name": item.get("name", ""),
+                    "affiliation": affiliations[0] if affiliations else "",
+                    "scholar_id": str(item.get("authorId", "")),
+                    "citedby": item.get("citationCount", 0),
+                    "interests": [],
+                }
+            )
         return results
 
     # ------------------------------------------------------------------
@@ -192,10 +200,7 @@ class GoogleScholarClient:
         authors = [a.get("name", "") for a in (item.get("authors") or [])]
         ext_ids = item.get("externalIds") or {}
         scholar_id = str(item.get("paperId") or "")
-        url = (
-            item.get("url")
-            or (f"https://doi.org/{ext_ids['DOI']}" if "DOI" in ext_ids else "")
-        )
+        url = item.get("url") or (f"https://doi.org/{ext_ids['DOI']}" if "DOI" in ext_ids else "")
         return ScholarPaper(
             title=item.get("title") or "",
             authors=authors,

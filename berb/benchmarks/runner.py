@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 from datetime import UTC, datetime
 from pathlib import Path
@@ -152,6 +151,7 @@ class BenchmarkRunner:
                 "Pass config=<RCConfig> to BenchmarkRunner()."
             )
         import dataclasses
+
         bench_config = dataclasses.replace(
             self._config,
             research=dataclasses.replace(
@@ -198,15 +198,20 @@ class BenchmarkRunner:
             output_tokens += int(m.get("output_tokens", 0))
             literature_count += int(m.get("papers_found", 0))
             repair_cycles += int(m.get("repair_cycles", 0))
-            if hasattr(sr, "status") and str(getattr(sr, "status", "")).lower() in ("failed", "error"):
+            if hasattr(sr, "status") and str(getattr(sr, "status", "")).lower() in (
+                "failed",
+                "error",
+            ):
                 failed_stages += 1
 
         # Quality score: fraction of stages that succeeded, scaled to 0–10.
         total_stages = max(len(stage_results), 1)
         quality_score = round(10.0 * (total_stages - failed_stages) / total_stages, 2)
 
-        overall_status = "failed" if failed_stages == total_stages else (
-            "partial" if failed_stages > 0 else "success"
+        overall_status = (
+            "failed"
+            if failed_stages == total_stages
+            else ("partial" if failed_stages > 0 else "success")
         )
 
         return BenchmarkResult(

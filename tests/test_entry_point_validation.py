@@ -11,7 +11,6 @@ from berb.experiment.sandbox import (
     validate_entry_point_resolved,
 )
 
-
 # ── Unit tests: validate_entry_point (syntax) ─────────────────────────
 
 

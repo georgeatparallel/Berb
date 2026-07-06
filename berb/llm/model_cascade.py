@@ -28,7 +28,6 @@ Usage:
 
 from __future__ import annotations
 
-import asyncio
 import hashlib
 import logging
 import time
@@ -132,6 +131,7 @@ class CascadingLLMClient:
         # occurs, and short critical sections (integer increment) never suspend
         # the event loop long enough to matter.
         import threading
+
         self._stats_lock = threading.Lock()
         self._total_requests = 0
         self._cascade_exits: dict[int, int] = {}  # step -> count
@@ -399,9 +399,7 @@ class CascadingLLMClient:
             score -= 0.15
 
         # ── 5. JSON structure when explicitly requested ───────────────────────
-        json_requested = any(
-            "json" in str(m.get("content", "")).lower() for m in messages
-        )
+        json_requested = any("json" in str(m.get("content", "")).lower() for m in messages)
         if json_requested:
             if content_stripped.startswith(("{", "[")):
                 try:

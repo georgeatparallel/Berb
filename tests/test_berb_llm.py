@@ -3,18 +3,19 @@ from __future__ import annotations
 import json
 import urllib.error
 import urllib.request
+from collections.abc import Mapping
 from http.client import HTTPMessage
 from types import SimpleNamespace
-from typing import Any, Mapping
+from typing import Any
 
 import pytest
 
 from berb.llm.client import (
+    _NEW_PARAM_MODELS,
+    _NO_TEMPERATURE_MODELS,
     LLMClient,
     LLMConfig,
     LLMResponse,
-    _NEW_PARAM_MODELS,
-    _NO_TEMPERATURE_MODELS,
 )
 
 
