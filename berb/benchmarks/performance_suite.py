@@ -219,7 +219,7 @@ class OptimizationBenchmarkSuite:
         Expected: 200-400 papers (vs 70-100 baseline)
         """
         from berb.literature.fs_processor import FileSystemLiteratureProcessor
-        from Berb.literature.models import Paper
+        from berb.literature.models import Paper
 
         logger.info("Running Literature FS Capacity benchmark")
 
@@ -270,7 +270,7 @@ class OptimizationBenchmarkSuite:
 
         Expected: +35-45% quality improvement
         """
-        from Berb.review.council_mode import CouncilMode
+        from berb.review.council_mode import CouncilMode
 
         logger.info("Running Council Decision Quality benchmark")
 
@@ -310,7 +310,7 @@ class OptimizationBenchmarkSuite:
 
         Expected: -50% code failures
         """
-        from Berb.experiment.physics_guards import PhysicsCodeGuard
+        from berb.experiment.physics_guards import PhysicsCodeGuard
 
         logger.info("Running Physics Guard Effectiveness benchmark")
 
@@ -359,7 +359,7 @@ result = arr * 2  # Vectorized
 
         Expected: 2-3× speedup
         """
-        from Berb.writing.parallel_writer import ParallelSectionWriter
+        from berb.writing.parallel_writer import ParallelSectionWriter
 
         logger.info("Running Parallel Writing Speed benchmark")
 
