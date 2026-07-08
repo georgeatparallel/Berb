@@ -9,7 +9,7 @@ Supported Providers (80+ notable models declared):
 - Google (Gemini 2.5/3.0/3.5 Pro/Flash/Lite, Gemma 4)
 - DeepSeek (V3.1/V3.2/V4-Pro/V4-Flash, R1)
 - Qwen (Qwen3/3.5/3.6/3.7 Max/Plus/Flash, Qwen3-Coder)
-- xAI (Grok 4.20, Grok 4.3)
+- xAI (Grok 4.5, Grok 4.3)
 - Xiaomi (MIMO v2.5/v2.5-Pro)
 - MoonshotAI (Kimi K2/K2.5/K2.6/K2.7)
 - MiniMax (MiniMax M2.5/M2.7/M3)
@@ -842,22 +842,12 @@ OPENROUTER_MODELS: dict[str, OpenRouterModel] = {
     # =========================================================================
     # XAI (Grok)
     # =========================================================================
-    "x-ai/grok-4.20": OpenRouterModel(
-        id="x-ai/grok-4.20",
-        name="Grok 4.20",
+    "x-ai/grok-4.5": OpenRouterModel(
+        id="x-ai/grok-4.5",
+        name="Grok 4.5",
         provider="xai",
-        input_price=1.25,
-        output_price=2.50,
-        context_length=2_000_000,
-        supports_vision=True,
-        tier="mid",
-    ),
-    "x-ai/grok-4.20-multi-agent": OpenRouterModel(
-        id="x-ai/grok-4.20-multi-agent",
-        name="Grok 4.20 Multi-Agent",
-        provider="xai",
-        input_price=1.25,
-        output_price=2.50,
+        input_price=2.00,
+        output_price=4.00,
         context_length=2_000_000,
         supports_vision=True,
         tier="mid",

@@ -131,7 +131,7 @@ reasoning:
     debate:
       pro: "qwen/qwen3.5-397b-a17b"               # Elite value ($0.39/$2.34)
       con: "qwen/qwen3-max-thinking"              # Complex reasoning ($0.78/$3.90)
-      judge: "x-ai/grok-4.20-beta"                # Low hallucination ($2/$6)
+      judge: "x-ai/grok-4.5"                      # Flagship ($2/$4)
     
     # Dialectical Method (3 roles)
     dialectical:
@@ -164,7 +164,7 @@ reasoning:
     
     # Jury Method (3 roles)
     jury:
-      juror: "x-ai/grok-4.20-multi-agent-beta"    # Multi-agent ($2/$6)
+      juror: "x-ai/grok-4.5"                      # Flagship ($2/$4)
       foreman: "qwen/qwen3.5-plus-02-15"           # Balanced ($0.26/$1.56)
       verdict: "z-ai/glm-5"                       # Agent flagship ($0.72/$2.30)
 

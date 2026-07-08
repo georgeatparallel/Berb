@@ -84,7 +84,7 @@ reasoning:
     debate:
       pro: "deepseek/deepseek-chat-v3"
       con: "deepseek/deepseek-r1"
-      judge: "x-ai/grok-4.20-beta"
+      judge: "x-ai/grok-4.5"
 
     dialectical:
       thesis: "z-ai/glm-5"
@@ -112,7 +112,7 @@ reasoning:
       analysis: "minimax/minimax-m2.5:free"
 
     jury:
-      juror: "x-ai/grok-4.20-multi-agent-beta"
+      juror: "x-ai/grok-4.5"
       foreman: "deepseek/deepseek-chat-v3"
       verdict: "z-ai/glm-5"
 

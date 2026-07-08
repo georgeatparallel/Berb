@@ -249,7 +249,7 @@ class TestProviderSelection:
             ("xiaomi/mimo-v2-pro", Provider.MIMO),
             ("moonshotai/kimi-k2.5", Provider.KIMI),
             ("perplexity/sonar-pro", Provider.PERPLEXITY),
-            ("x-ai/grok-4.20", Provider.XAI),
+            ("x-ai/grok-4.5", Provider.XAI),
             ("deepseek/deepseek-v3.2", Provider.DEEPSEEK),
             ("google/gemini-3-flash-preview", Provider.GOOGLE),
             ("anthropic/claude-sonnet", Provider.ANTHROPIC),

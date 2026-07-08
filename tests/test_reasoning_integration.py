@@ -112,7 +112,7 @@ def mock_router():
         "query": "perplexity/sonar-pro-search",
         "clarification": "z-ai/glm-4.5-air:free",
         "hypothesis": "qwen/qwen3-max-thinking",
-        "juror": "x-ai/grok-4.20-multi-agent-beta",
+        "juror": "x-ai/grok-4.5",
     }
     router.mid_model = "qwen/qwen3.5-flash"
     router.complex_model = "xiaomi/mimo-v2-pro"

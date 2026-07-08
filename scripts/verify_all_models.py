@@ -103,15 +103,15 @@ MODELS_TO_VERIFY = {
     # =========================================================================
     # SPECIALIZED - P0 Priority
     # =========================================================================
-    "x-ai/grok-4.20-multi-agent-beta": {
+    "x-ai/grok-4.5": {
         "provider": "xAI",
         "priority": "P0",
-        "use_case": "Multi-agent Jury (2M context, $2/$6)",
+        "use_case": "Flagship reasoning (2M context, $2/$4)",
     },
-    "x-ai/grok-4.20-beta": {
+    "x-ai/grok-4.3": {
         "provider": "xAI",
         "priority": "P0",
-        "use_case": "Low hallucination ($2/$6)",
+        "use_case": "Fast reasoning (1M context, $1.25/$2.50)",
     },
     "perplexity/sonar-pro-search": {
         "provider": "Perplexity",
