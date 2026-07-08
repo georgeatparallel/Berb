@@ -306,7 +306,7 @@ class TestDeepMindAIClient:
             )
 
         assert result.content != ""
-        assert result.model == "grok-4.20"
+        assert result.model == "grok-4.5"
         assert result.total_tokens == 600
 
     @pytest.mark.asyncio
@@ -324,7 +324,7 @@ class TestDeepMindAIClient:
             # Test flagship model
             await client.chat([{"role": "user", "content": "test"}], model="flagship")
             call_args = mock_post.call_args[1]["json"]
-            assert call_args["model"] == "grok-4.20"
+            assert call_args["model"] == "grok-4.5"
 
             # Test mini model
             await client.chat([{"role": "user", "content": "test"}], model="mini")
@@ -408,12 +408,11 @@ class TestDeepMindAIClient:
 
         assert info["provider"] == "DeepMind AI (xAI)"
         assert "models" in info
-        assert "grok-4.20" in info["models"]
-        assert "grok-4" in info["models"]
+        assert "grok-4.5" in info["models"]
         assert "grok-3-mini" in info["models"]
 
         # Check 2M context feature
-        assert info["models"]["grok-4.20"]["context_window"] == "2M tokens"
+        assert info["models"]["grok-4.5"]["context_window"] == "2M tokens"
 
 
 class TestFactoryFunctions:
