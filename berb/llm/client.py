@@ -518,6 +518,7 @@ class LLMClient:
             fallback_models=model_chain_fallbacks,
             fallback_url=fallback_url,
             fallback_api_key=fallback_api_key,
+            max_retries=getattr(rc_config.llm, "max_retries", 3),
             rate_limit_enabled=False,  # Disable rate limiter for faster response
         )
         client = cls(config, circuit_breaker_enabled=circuit_breaker_enabled)
@@ -1042,6 +1043,7 @@ def create_client_from_yaml(yaml_path: str | None = None) -> LLMClient:
             wire_api=llm_section.get("wire_api", "chat_completions"),
             primary_model=llm_section.get("primary_model", "gpt-4o"),
             fallback_models=llm_section.get("fallback_models", ["gpt-4.1", "gpt-4o-mini"]),
+            max_retries=int(llm_section.get("max_retries", 3)),
         )
     )
 

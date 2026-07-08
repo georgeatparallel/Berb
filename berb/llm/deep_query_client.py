@@ -13,8 +13,7 @@ DeepQuery (Perplexity) Models:
 - sonar-deep-research: Comprehensive literature reviews
 
 DeepMind AI (xAI) Models:
-- grok-4.5: 2M context, flagship model
-- grok-4: 2M context, reasoning model
+- grok-4.5: 2M context, flagship/reasoning model
 - grok-3-mini: 128K context, cost-effective
 
 Usage:
@@ -869,15 +868,10 @@ Output structured findings.""",
             "provider": "DeepMind AI (xAI)",
             "models": {
                 "grok-4.5": {
-                    "description": "Flagship model with 2M context",
+                    "description": "Flagship/reasoning model with 2M context",
                     "context_window": "2M tokens",
-                    "best_for": "Full paper analysis, cross-paper synthesis",
+                    "best_for": "Full paper analysis, cross-paper synthesis, complex reasoning, experiment design",
                     "speed": "Fastest",
-                },
-                "grok-4": {
-                    "description": "Reasoning model with 2M context",
-                    "context_window": "2M tokens",
-                    "best_for": "Complex reasoning, experiment design",
                 },
                 "grok-3-mini": {
                     "description": "Cost-effective model",

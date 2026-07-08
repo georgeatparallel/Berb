@@ -242,6 +242,45 @@ def test_from_rc_config_wires_fallback_models_for_same_provider_chain():
     assert client.config.fallback_models == ["o3-mini", "gpt-4o"]
 
 
+def test_from_rc_config_wires_max_retries_from_config():
+    # Regression: config.yaml's llm.max_retries was silently ignored because
+    # from_rc_config never read it — the client always used the hardcoded
+    # default of 3, no matter what the config said (Tier 1.3 fix).
+    rc_config = SimpleNamespace(
+        llm=SimpleNamespace(
+            provider="openai",
+            base_url="https://api.openai.com/v1",
+            api_key="inline-key",
+            api_key_env="OPENAI_API_KEY",
+            wire_api="chat_completions",
+            primary_model="gpt-4o",
+            fallback_models=(),
+            max_retries=5,
+        )
+    )
+    client = LLMClient.from_rc_config(rc_config)
+    assert client.config.max_retries == 5
+
+
+def test_from_rc_config_defaults_max_retries_when_absent():
+    # RCConfig.llm always carries max_retries (default 3) after the Tier 1.3
+    # fix, but from_rc_config must not crash for a bare-bones rc_config
+    # missing the attribute entirely (e.g. an older config object).
+    rc_config = SimpleNamespace(
+        llm=SimpleNamespace(
+            provider="openai",
+            base_url="https://api.openai.com/v1",
+            api_key="inline-key",
+            api_key_env="OPENAI_API_KEY",
+            wire_api="chat_completions",
+            primary_model="gpt-4o",
+            fallback_models=(),
+        )
+    )
+    client = LLMClient.from_rc_config(rc_config)
+    assert client.config.max_retries == 3
+
+
 def test_responses_wire_api_uses_responses_endpoint(monkeypatch: pytest.MonkeyPatch):
     captured: dict[str, object] = {}
 
