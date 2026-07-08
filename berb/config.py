@@ -207,6 +207,7 @@ class LlmConfig:
     # are not portable across providers (e.g. "deepseek-chat" vs
     # "deepseek/deepseek-v3.2" OpenRouter-style IDs).
     fallback_provider_models: tuple[tuple[str, str], ...] = ()
+    max_retries: int = 3  # Number of retries for failed LLM API calls
     s2_api_key: str = ""
     notes: str = ""
     acp: AcpConfig = field(default_factory=AcpConfig)
@@ -1115,6 +1116,7 @@ def _parse_llm_config(data: dict[str, Any]) -> LlmConfig:
         fallback_provider_models=tuple(
             (str(k), str(v)) for k, v in (data.get("fallback_provider_models") or {}).items()
         ),
+        max_retries=_safe_int(data.get("max_retries"), 3),
         s2_api_key=data.get("s2_api_key", ""),
         notes=data.get("notes", ""),
         acp=AcpConfig(
