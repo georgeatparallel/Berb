@@ -5,18 +5,25 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-HEARTBEAT_FILE="${SCRIPT_DIR}/heartbeat.json"
-TIMEOUT_SEC=${1:-300}
+RUN_DIR="${1:-.}"
+TIMEOUT_SEC="${2:-300}"
 
 usage() {
-    echo "Usage: $0 [timeout_seconds]"
+    echo "Usage: $0 [run_dir] [timeout_seconds]"
+    echo "  run_dir: Run directory containing heartbeat.json (default: current dir)"
     echo "  timeout_seconds: Seconds to wait before considering run stalled (default: 300)"
+    echo ""
+    echo "Examples:"
+    echo "  $0 artifacts/rc-2026-07-09-123456 300"
+    echo "  $0 . 600"
     exit 1
 }
 
 if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
     usage
 fi
+
+HEARTBEAT_FILE="${RUN_DIR}/heartbeat.json"
 
 check_heartbeat() {
     if [ ! -f "$HEARTBEAT_FILE" ]; then
@@ -42,7 +49,7 @@ check_heartbeat() {
 }
 
 main() {
-    echo "Sentinel watchdog monitoring (timeout: ${TIMEOUT_SEC}s)"
+    echo "Sentinel watchdog monitoring (run_dir: ${RUN_DIR}, timeout: ${TIMEOUT_SEC}s)"
     check_heartbeat
 }
 

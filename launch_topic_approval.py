@@ -7,9 +7,20 @@ import subprocess
 import webbrowser
 import threading
 import requests
+from dotenv import load_dotenv
 
-# Set API key
-os.environ['OPENROUTER_API_KEY'] = '***REMOVED-OPENROUTER-KEY***'
+# Load environment variables from .env file if present
+load_dotenv()
+
+# Verify OPENROUTER_API_KEY is set (do not hardcode it)
+if 'OPENROUTER_API_KEY' not in os.environ:
+    print("WARNING: OPENROUTER_API_KEY not set in environment.")
+    print("Please set it before running this script:")
+    print("  set OPENROUTER_API_KEY=your-key-here")
+    print("Or ensure it is in your .env file.")
+    print()
+    print("Attempting to continue - API calls will fail if key is not set.")
+    print()
 
 def start_ui_server():
     """Start simple HTTP server for UI on port 8080."""
