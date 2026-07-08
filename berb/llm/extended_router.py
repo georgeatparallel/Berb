@@ -100,7 +100,7 @@ MODEL_ALTERNATIVES = {
         Provider.MINIMAX: "minimax/minimax-m2.5",
         Provider.GLM: "z-ai/glm-4.5-air",
         Provider.QWEN: "qwen/qwen3.5-9b",
-        Provider.XAI: "x-ai/grok-4.3",
+        Provider.XAI: "x-ai/grok-4.5",
         Provider.DEEPSEEK: "deepseek/deepseek-chat-v3.1",
     },
     "mid": {
@@ -114,7 +114,7 @@ MODEL_ALTERNATIVES = {
     "complex": {
         Provider.QWEN: "qwen/qwen3.5-plus-20260420",
         Provider.MIMO: "xiaomi/mimo-v2.5-pro",
-        Provider.XAI: "x-ai/grok-4.20",
+        Provider.XAI: "x-ai/grok-4.5",
         Provider.KIMI: "moonshotai/kimi-k2.6",
         Provider.ANTHROPIC: "anthropic/claude-sonnet-4.6",
         Provider.MINIMAX: "minimax/minimax-m2.7",  # Added for coverage

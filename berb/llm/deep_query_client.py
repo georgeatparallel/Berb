@@ -13,7 +13,7 @@ DeepQuery (Perplexity) Models:
 - sonar-deep-research: Comprehensive literature reviews
 
 DeepMind AI (xAI) Models:
-- grok-4.20: 2M context, flagship model
+- grok-4.5: 2M context, flagship model
 - grok-4: 2M context, reasoning model
 - grok-3-mini: 128K context, cost-effective
 
@@ -580,8 +580,8 @@ class DeepMindAIClient:
 
     # Model mapping
     MODELS = {
-        "flagship": "grok-4.20",
-        "reasoning": "grok-4",
+        "flagship": "grok-4.5",
+        "reasoning": "grok-4.5",
         "mini": "grok-3-mini",
     }
 
@@ -868,7 +868,7 @@ Output structured findings.""",
         return {
             "provider": "DeepMind AI (xAI)",
             "models": {
-                "grok-4.20": {
+                "grok-4.5": {
                     "description": "Flagship model with 2M context",
                     "context_window": "2M tokens",
                     "best_for": "Full paper analysis, cross-paper synthesis",

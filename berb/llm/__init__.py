@@ -55,11 +55,11 @@ PROVIDER_PRESETS = {
     },
     "deepseek": {
         "base_url": "https://api.deepseek.com/v1",
-        "default_model": "deepseek-chat",
+        "default_model": "deepseek-v4-flash",
     },
     "xai": {
         "base_url": "https://api.x.ai/v1",
-        "default_model": "grok-4",
+        "default_model": "grok-4.5",
     },
     "perplexity": {
         "base_url": "https://api.perplexity.ai",
