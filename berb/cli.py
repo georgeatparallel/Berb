@@ -664,14 +664,12 @@ def cmd_init(args: argparse.Namespace) -> int:
         # NOTE: must match configs/config.arc.example.yaml's actual fallback
         # block, otherwise this replace() silently no-ops.
         old_fallbacks = (
-            '  fallback_models:\n'
+            "  fallback_models:\n"
             '    - "openai/gpt-4.1"\n'
             '    - "anthropic/claude-sonnet-4-5-20250929"\n'
             '    - "openai/gpt-4o-mini"'
         )
-        new_fallbacks = "  fallback_models:\n" + "".join(
-            f'    - "{m}"\n' for m in fallbacks
-        )
+        new_fallbacks = "  fallback_models:\n" + "".join(f'    - "{m}"\n' for m in fallbacks)
         content = content.replace(old_fallbacks, new_fallbacks.rstrip("\n"))
 
     dest.write_text(content, encoding="utf-8")
@@ -847,10 +845,10 @@ def cmd_literature(args: argparse.Namespace) -> int:
     import sys
 
     from berb import __version__
+    from berb.adapters import create_adapters
     from berb.config import load_config
     from berb.pipeline.runner import execute_pipeline
     from berb.pipeline.stages import Stage
-    from berb.adapters import create_adapters
 
     # Resolve config
     config_path = args.config or "config.berb.yaml"
@@ -878,7 +876,7 @@ def cmd_literature(args: argparse.Namespace) -> int:
     print(f"  Run ID:  {run_id}")
     print(f"  Topic:   {config.research.topic}")
     print(f"  Output:  {run_dir}")
-    print(f"  Stages:  1-8 (TOPIC_INIT -> KNOWLEDGE_EXTRACT)")
+    print("  Stages:  1-8 (TOPIC_INIT -> KNOWLEDGE_EXTRACT)")
     print()
 
     # Execute pipeline

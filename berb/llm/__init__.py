@@ -84,12 +84,12 @@ PROVIDER_PRESETS = {
 
 # Re-export OpenRouter variant routing API
 from berb.llm.openrouter_adapter import (  # noqa: E402
-    ModelVariant,
-    OpenRouterProvider,
-    ProviderRouting,
     ROUTING_ANTHROPIC_DIRECT,
     ROUTING_EXACT,
     ROUTING_NITRO,
+    ModelVariant,
+    OpenRouterProvider,
+    ProviderRouting,
     strip_variant,
 )
 
