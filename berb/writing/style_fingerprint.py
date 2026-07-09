@@ -167,17 +167,19 @@ class StyleFingerprint(BaseModel):
         for author in self.source_authors[:3]:
             lines.append(f"  - {author.name} ({author.affiliation or 'Unknown'})")
 
-        lines.extend([
-            "\n**Sentence Structure:**",
-            f"  - Average sentence length: {self.avg_sentence_length:.1f} words (±{self.sentence_length_std:.1f})",
-            f"  - Average paragraph: {self.avg_paragraph_sentences:.1f} sentences",
-            "\n**Style Characteristics:**",
-            f"  - Vocabulary level: {self.vocabulary_level.value}",
-            f"  - Hedging frequency: {self.hedging_frequency:.0%}",
-            f"  - Passive voice ratio: {self.passive_voice_ratio:.0%}",
-            f"  - First person usage: {self.first_person_usage.value}",
-            "\n**Paper Structure:**",
-        ])
+        lines.extend(
+            [
+                "\n**Sentence Structure:**",
+                f"  - Average sentence length: {self.avg_sentence_length:.1f} words (±{self.sentence_length_std:.1f})",
+                f"  - Average paragraph: {self.avg_paragraph_sentences:.1f} sentences",
+                "\n**Style Characteristics:**",
+                f"  - Vocabulary level: {self.vocabulary_level.value}",
+                f"  - Hedging frequency: {self.hedging_frequency:.0%}",
+                f"  - Passive voice ratio: {self.passive_voice_ratio:.0%}",
+                f"  - First person usage: {self.first_person_usage.value}",
+                "\n**Paper Structure:**",
+            ]
+        )
 
         for section, ratio in self.section_ratios.items():
             lines.append(f"  - {section.replace('_', ' ').title()}: {ratio:.0%}")
