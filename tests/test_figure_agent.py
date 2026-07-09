@@ -574,7 +574,7 @@ class TestRendererAgent:
 
         agent = RendererAgent(_FakeLLM(), timeout_sec=5)
         output_dir = tmp_path / "charts"
-        _result = agent.execute(
+        agent.execute(
             {
                 "scripts": [
                     {

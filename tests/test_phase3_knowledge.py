@@ -91,7 +91,7 @@ class TestObsidianExporter:
     def test_exporter_creates_folders(self, temp_vault):
         """Test folder creation."""
         config = ObsidianConfig(vault_path=str(temp_vault))
-        _exporter = ObsidianExporter(config)
+        ObsidianExporter(config)
 
         # Check folders exist
         assert (temp_vault / "Knowledge").exists()

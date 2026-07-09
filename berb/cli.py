@@ -634,7 +634,7 @@ _PROVIDER_MODELS = {
         "openai/gpt-4o",
         ["openai/gpt-4.1", "anthropic/claude-sonnet-4-5-20250929", "openai/gpt-4o-mini"],
     ),
-    "deepseek": ("deepseek-chat", ["deepseek-reasoner"]),
+    "deepseek": ("deepseek-v4-flash", ["deepseek-v4-pro"]),
     "minimax": ("MiniMax-M2.5", ["MiniMax-M2.5-highspeed"]),
 }
 

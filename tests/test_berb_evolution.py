@@ -290,7 +290,7 @@ class TestEvolutionStore:
 
     def test_creates_directory_if_not_exists(self, tmp_path: Path) -> None:
         store_dir = tmp_path / "nested" / "evo"
-        _store = EvolutionStore(store_dir)
+        EvolutionStore(store_dir)
         assert store_dir.exists()
 
 

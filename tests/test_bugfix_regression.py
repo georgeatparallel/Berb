@@ -285,7 +285,7 @@ class TestCombinedBugFixVerification:
                 "api_key_env": "INTEGRATION_TEST_KEY",
             },
         }
-        _config = RCConfig.from_dict(config_data, project_root=tmp_path, check_paths=False)
+        RCConfig.from_dict(config_data, project_root=tmp_path, check_paths=False)
 
         # 2. All stage executors should be available
         from berb.pipeline.stages import Stage

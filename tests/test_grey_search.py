@@ -251,7 +251,7 @@ class TestGreyLiteratureSearch:
         search._clinical.search = AsyncMock(return_value=[])
         search._zenodo.search = AsyncMock(return_value=[])
 
-        _results = await search.search("test query", domain="all", limit=100)
+        await search.search("test query", domain="all", limit=100)
 
         # All clients should be called
         assert search._biorxiv.search.called
@@ -270,7 +270,7 @@ class TestGreyLiteratureSearch:
             mock_zenodo.return_value.search = AsyncMock(return_value=[])
 
             search = GreyLiteratureSearch()
-            _results = await search.search("genetics", domain="biology")
+            await search.search("genetics", domain="biology")
 
             # Only biology sources should be called
             assert mock_biorxiv.return_value.search.called
@@ -289,7 +289,7 @@ class TestGreyLiteratureSearch:
             mock_zenodo.return_value.search = AsyncMock(return_value=[])
 
             search = GreyLiteratureSearch()
-            _results = await search.search("clinical trial", domain="medicine")
+            await search.search("clinical trial", domain="medicine")
 
             # Only medicine sources should be called
             assert mock_medrxiv.return_value.search.called
@@ -307,7 +307,7 @@ class TestGreyLiteratureSearch:
             mock_medrxiv.return_value.search = AsyncMock(return_value=[])
 
             search = GreyLiteratureSearch()
-            _results = await search.search(
+            await search.search(
                 "test",
                 include_sources=["biorxiv", "medrxiv"],
             )

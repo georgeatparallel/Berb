@@ -499,7 +499,7 @@ class TestSyncAsyncMixingWarning:
         import logging
 
         with caplog.at_level(logging.WARNING):
-            _result = get_reasoner("bayesian", llm_client=None)
+            get_reasoner("bayesian", llm_client=None)
 
         # Should have warning about async context
         assert "async context" in caplog.text.lower() or "get_async" in caplog.text.lower()
@@ -519,7 +519,7 @@ class TestSyncAsyncMixingWarning:
         import logging
 
         with caplog.at_level(logging.WARNING):
-            _result = await ReasonerRegistry.get_async("bayesian", llm_client=None)
+            await ReasonerRegistry.get_async("bayesian", llm_client=None)
 
         # Should NOT have warning
         assert "async context" not in caplog.text.lower()

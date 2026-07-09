@@ -134,7 +134,7 @@ class TestHyperagentState:
 class TestHyperagent:
     def test_init_creates_storage_dir(self, tmp_path):
         cfg = MagicMock()
-        _agent = Hyperagent(cfg, storage_path=tmp_path / "ha")
+        Hyperagent(cfg, storage_path=tmp_path / "ha")
         assert (tmp_path / "ha").is_dir()
 
     def test_initial_state_is_init_phase(self, tmp_path):
@@ -201,7 +201,7 @@ class TestHyperagent:
 
 class TestPersistentMemory:
     def test_init_creates_storage(self, tmp_path):
-        _mem = PersistentMemory(tmp_path / "mem")
+        PersistentMemory(tmp_path / "mem")
         assert (tmp_path / "mem").is_dir()
 
     def test_init_empty(self, tmp_path):
@@ -437,7 +437,7 @@ def test_tracing_span_captures_error(tmp_path):
     tracing.configure(tmp_path)
     trace_id = tracing.new_trace()
     try:
-        with tracing.span(trace_id, "failing.op") as _s:
+        with tracing.span(trace_id, "failing.op"):
             raise ValueError("intentional")
     except ValueError:
         pass

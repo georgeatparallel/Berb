@@ -629,7 +629,7 @@ class TestBerbBenchmarkFramework:
 
     def test_initialization(self):
         """Test benchmark framework initialization."""
-        _framework = BerbBenchmarkFramework()
+        BerbBenchmarkFramework()
 
     def test_parse_draco_scores_valid(self):
         """Test DRACO score parsing from valid JSON."""

@@ -86,9 +86,8 @@ class TestSandboxPathTraversal:
         # validate_entry_point_resolved should catch this
         result = validate_entry_point_resolved(staging, "entry.py")
 
-        assert result is not None, (
+        assert result is not None, \
             "BUG: validate_entry_point_resolved should detect symlink-based path traversal"
-        )
 
 
 class TestSelfCorrectingResourceLeak:
@@ -111,7 +110,7 @@ class TestSelfCorrectingResourceLeak:
         async def run_test():
             return await executor.execute("raise ValueError('test error')", timeout_sec=1)
 
-        _result = asyncio.run(run_test())
+        asyncio.run(run_test())
 
         # Check temp files after
         final_files = set(Path(tempfile.gettempdir()).glob("*.py"))

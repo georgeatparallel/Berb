@@ -436,7 +436,7 @@ class TestSecurity:
 
         # Check config file doesn't have real API key pattern
         with open("config.berb.yaml") as f:
-            _content = f.read()
+            f.read()
 
         # API key in config should be a placeholder or from env
         # This is OK for testing, but should be from env in production

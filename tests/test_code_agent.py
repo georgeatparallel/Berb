@@ -550,7 +550,7 @@ class TestFullPipeline:
             sandbox_factory=lambda cfg, wd: sandbox,
             experiment_config=None,
         )
-        _result = agent.generate(
+        agent.generate(
             topic="t",
             exp_plan="p",
             metric="x",

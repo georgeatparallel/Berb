@@ -2127,7 +2127,7 @@ class TestDataIntegrityBlock:
         stage_dir.mkdir(parents=True, exist_ok=True)
 
         llm = FakeLLMClient("# Paper Title\n## Abstract\nSome abstract text.")
-        _result = rc_executor._execute_paper_draft(stage_dir, run_dir, rc_config, adapters, llm=llm)
+        rc_executor._execute_paper_draft(stage_dir, run_dir, rc_config, adapters, llm=llm)
 
         # Should proceed (LLM was called)
         assert len(llm.calls) >= 1
@@ -2655,7 +2655,7 @@ class TestNoImproveStreakFix:
 
         # LLM returns code that won't produce metrics in simulated mode
         llm = FakeLLMClient("```python\nprint('no metrics here')\n```")
-        _result = rc_executor._execute_iterative_refine(stage_dir, run_dir, cfg, adapters, llm=llm)
+        rc_executor._execute_iterative_refine(stage_dir, run_dir, cfg, adapters, llm=llm)
 
         # Should abort after 3 consecutive no-metrics iterations
         log_path = stage_dir / "refinement_log.json"
@@ -2732,7 +2732,7 @@ class TestStdoutFailureDetection:
         )
         adapters = AdapterBundle()
 
-        _result = _execute_experiment_run(stage_dir, run_dir, cfg, adapters)
+        _execute_experiment_run(stage_dir, run_dir, cfg, adapters)
 
         # Check the run payload
         runs_dir = stage_dir / "runs"
@@ -2801,7 +2801,7 @@ class TestStdoutFailureDetection:
         )
         adapters = AdapterBundle()
 
-        _result = _execute_experiment_run(stage_dir, run_dir, cfg, adapters)
+        _execute_experiment_run(stage_dir, run_dir, cfg, adapters)
 
         runs_dir = stage_dir / "runs"
         payload = json.loads((runs_dir / "run-1.json").read_text())
