@@ -3,15 +3,17 @@
 Test that datetime utilities properly handle UTC timezones.
 """
 
+from datetime import UTC, datetime, timedelta, timezone
+
 import pytest
-from datetime import datetime, timezone, timedelta
+
 from berb.utils.time import (
+    duration_seconds,
+    ensure_utc,
+    utc_timestamp,
     utcnow,
     utcnow_iso,
-    utc_timestamp,
     utcnow_str,
-    ensure_utc,
-    duration_seconds,
 )
 
 
@@ -24,7 +26,7 @@ class TestUTCTimeUtilities:
 
         assert isinstance(result, datetime)
         assert result.tzinfo is not None
-        assert result.tzinfo == timezone.utc
+        assert result.tzinfo == UTC
 
     def test_utcnow_always_utc(self):
         """Verify utcnow() always returns UTC regardless of system timezone."""
@@ -66,7 +68,7 @@ class TestUTCTimeUtilities:
         result = utcnow_str("%Y-%m-%d")
 
         # Should match current UTC date
-        expected = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        expected = datetime.now(UTC).strftime("%Y-%m-%d")
         assert result == expected
 
     def test_ensure_utc_naive_datetime(self):
@@ -74,7 +76,7 @@ class TestUTCTimeUtilities:
         naive = datetime(2026, 3, 29, 12, 0, 0)
         result = ensure_utc(naive)
 
-        assert result.tzinfo == timezone.utc
+        assert result.tzinfo == UTC
         assert result.hour == 12  # Same hour, just made aware
 
     def test_ensure_utc_aware_datetime(self):
@@ -85,7 +87,7 @@ class TestUTCTimeUtilities:
 
         result = ensure_utc(aware)
 
-        assert result.tzinfo == timezone.utc
+        assert result.tzinfo == UTC
         assert result.hour == 7  # 12:00 UTC+5 = 07:00 UTC
 
     def test_ensure_utc_invalid_type(self):
@@ -106,8 +108,8 @@ class TestUTCTimeUtilities:
 
     def test_duration_seconds_with_end(self):
         """Test duration_seconds() with explicit end time."""
-        start = datetime(2026, 3, 29, 12, 0, 0, tzinfo=timezone.utc)
-        end = datetime(2026, 3, 29, 12, 1, 0, tzinfo=timezone.utc)
+        start = datetime(2026, 3, 29, 12, 0, 0, tzinfo=UTC)
+        end = datetime(2026, 3, 29, 12, 1, 0, tzinfo=UTC)
 
         elapsed = duration_seconds(start, end)
 
@@ -116,7 +118,7 @@ class TestUTCTimeUtilities:
     def test_duration_seconds_mixed_timezones(self):
         """Test duration_seconds() handles mixed timezones correctly."""
         # Start in UTC
-        start = datetime(2026, 3, 29, 12, 0, 0, tzinfo=timezone.utc)
+        start = datetime(2026, 3, 29, 12, 0, 0, tzinfo=UTC)
 
         # End in UTC+2
         tz_plus2 = timezone(timedelta(hours=2))
@@ -134,12 +136,11 @@ class TestDatetimeConsistency:
     def test_self_correcting_uses_utc(self):
         """BUG-001: Verify self_correcting.py uses UTC timestamps."""
         # Import here to check the module
-        from berb.experiment.self_correcting import SelfCorrectingExecutor
-        from berb.utils.time import utc_timestamp
-
         # The module should import utc_timestamp
         # This is a compile-time check - if the import fails, the fix wasn't applied
         import inspect
+
+        from berb.experiment.self_correcting import SelfCorrectingExecutor
 
         source = inspect.getsource(SelfCorrectingExecutor)
 
@@ -159,7 +160,6 @@ class TestDatetimeConsistency:
 
     def test_serialization_compatibility(self):
         """Test that UTC datetimes serialize/deserialize correctly."""
-        import json
 
         dt = utcnow()
         iso_str = dt.isoformat()

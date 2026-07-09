@@ -9,14 +9,14 @@ from __future__ import annotations
 import json
 import os
 import urllib.request
+from collections.abc import Mapping
 from types import SimpleNamespace
-from typing import Any, Mapping
+from typing import Any
 
 import pytest
 
 from berb.llm import PROVIDER_PRESETS, create_llm_client
 from berb.llm.client import LLMClient, LLMConfig, LLMResponse
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -317,7 +317,6 @@ class TestMiniMaxFactory:
     """Verify create_llm_client dispatches correctly for MiniMax."""
 
     def test_create_llm_client_returns_llm_client(self):
-        from berb.config import LlmConfig, RCConfig
 
         rc_config = SimpleNamespace(
             llm=SimpleNamespace(

@@ -1,7 +1,8 @@
 """Unit tests for diff-based revisions."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 from berb.pipeline.diff_revisions import (
     DiffBasedReviser,

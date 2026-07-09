@@ -1,12 +1,13 @@
 """Unit tests for TDD-first generation."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 
+import pytest
+
 from berb.pipeline.tdd_generation import (
+    PytestRunner,
     TDDCodeGenerator,
     TDDResult,
-    PytestRunner,
     get_tdd_generator,
 )
 

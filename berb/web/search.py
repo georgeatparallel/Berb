@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import logging
 import os
-import re
 import time
 from dataclasses import dataclass, field
 from typing import Any
@@ -426,7 +425,10 @@ class WebSearchClient:
         in DuckDuckGo's page structure.
         """
         from html.parser import HTMLParser
-        from urllib.parse import urlparse as _urlparse, parse_qs as _parse_qs, unquote as _unquote
+        from urllib.parse import parse_qs as _parse_qs
+        from urllib.parse import unquote as _unquote
+        from urllib.parse import urlparse as _urlparse
+
         from berb.web._ssrf import is_safe_url
 
         class _DDGParser(HTMLParser):

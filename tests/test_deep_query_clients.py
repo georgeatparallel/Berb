@@ -1,18 +1,16 @@
 """Unit tests for DeepQuery and DeepMind AI clients."""
 
 import json
-
-import pytest
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from berb.llm.deep_query_client import (
-    DeepQueryClient,
-    DeepQueryResult,
     DeepMindAIClient,
-    DeepMindAIResult,
-    create_deepquery_client,
-    create_deepmind_ai_client,
+    DeepQueryClient,
     _reset_circuit_breaker,
+    create_deepmind_ai_client,
+    create_deepquery_client,
 )
 
 

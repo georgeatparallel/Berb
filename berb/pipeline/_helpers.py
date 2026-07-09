@@ -16,15 +16,11 @@ from __future__ import annotations
 
 import json
 import logging
-import math
-import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from berb.config import RCConfig
-from berb.llm.client import LLMClient
 from berb.pipeline._figure_helpers import (
     _default_hypotheses,
     _default_paper_outline,
@@ -64,7 +60,6 @@ from berb.pipeline._prompt_helpers import (
     _topic_constraint_block,
 )
 from berb.pipeline.stages import Stage, StageStatus
-from berb.prompts import PromptManager
 
 logger = logging.getLogger(__name__)
 

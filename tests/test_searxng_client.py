@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
 
 from berb.web.searxng_client import (
     SearXNGClient,
     SearXNGConfig,
-    create_searxng_client_from_env,
     _parse_csv_env,
+    create_searxng_client_from_env,
 )
 
 

@@ -2,14 +2,13 @@
 
 import pytest
 from pydantic import ValidationError
+
 from berb.llm.structured_outputs import (
     DecompositionOutput,
-    HypothesisOutput,
     ExperimentDesignOutput,
-    CodeGenerationOutput,
-    ResearchDecisionOutput,
+    HypothesisOutput,
     PeerReviewOutput,
-    CitationVerificationOutput,
+    ResearchDecisionOutput,
     get_output_model,
     validate_output,
 )

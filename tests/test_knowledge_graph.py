@@ -15,16 +15,15 @@ from pathlib import Path
 
 import pytest
 
-from berb.knowledge.graph.entities import Entity, EntityType
-from berb.knowledge.graph.relations import Relation, RelationType
 from berb.knowledge.graph.builder import KnowledgeGraphBuilder
+from berb.knowledge.graph.entities import Entity, EntityType
 from berb.knowledge.graph.query import KnowledgeGraphQuery
+from berb.knowledge.graph.relations import Relation, RelationType
 from berb.knowledge.graph.visualizer import (
     export_to_dot,
     export_to_json_cytoscape,
     graph_summary,
 )
-
 
 # ── Fixtures ─────────────────────────────────────────────────────────
 

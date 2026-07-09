@@ -1,17 +1,17 @@
 """Unit tests for SelfEvolve self-improving system."""
 
-import pytest
-import json
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 from berb.self_evolve import (
-    SelfEvolveOrchestrator,
-    ExperienceCollector,
-    ExperienceAnalyzer,
-    PolicyUpdater,
     Experience,
+    ExperienceAnalyzer,
+    ExperienceCollector,
     ExperienceType,
+    PolicyUpdater,
+    SelfEvolveOrchestrator,
 )
 
 

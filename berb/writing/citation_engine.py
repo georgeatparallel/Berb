@@ -17,18 +17,16 @@ from __future__ import annotations
 
 import logging
 import re
-from dataclasses import dataclass, field
-from enum import Enum
-from pathlib import Path
+from enum import StrEnum
 from typing import Any, Literal
 
 import httpx
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
 
-class CitationLevel(str, Enum):
+class CitationLevel(StrEnum):
     """Citation specificity level.
 
     Attributes:
@@ -40,7 +38,7 @@ class CitationLevel(str, Enum):
     PAGE = "page"
 
 
-class CitationStyle(str, Enum):
+class CitationStyle(StrEnum):
     """Citation style for formatting.
 
     Attributes:
@@ -352,7 +350,7 @@ class CitationEngine:
             return "Anonymous"
 
         formatted = []
-        for i, author in enumerate(authors):
+        for _i, author in enumerate(authors):
             parts = author.split()
             if len(parts) >= 2:
                 # Last, F. format

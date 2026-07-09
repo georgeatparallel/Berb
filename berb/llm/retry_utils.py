@@ -13,7 +13,8 @@ import functools
 import http.client
 import logging
 import time
-from typing import Callable, ParamSpec, TypeVar
+from collections.abc import Callable
+from typing import ParamSpec, TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -29,17 +30,17 @@ def with_retry(
     backoff_factor: float = 2.0,
 ) -> Callable[[Callable[P, T]], Callable[P, T]]:
     """Decorator for retry logic with exponential backoff.
-    
+
     Args:
         exceptions: Tuple of exception types to catch and retry
         max_retries: Maximum number of retry attempts
         base_delay: Initial delay between retries (seconds)
         max_delay: Maximum delay between retries (seconds)
         backoff_factor: Multiply delay by this factor after each retry
-    
+
     Returns:
         Decorated function with retry logic
-    
+
     Example:
         @with_retry(
             exceptions=(http.client.IncompleteRead, ConnectionError),
@@ -54,7 +55,7 @@ def with_retry(
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
             delay = base_delay
             last_exception: Exception | None = None
-            
+
             for attempt in range(max_retries + 1):
                 try:
                     return func(*args, **kwargs)
@@ -66,17 +67,17 @@ def with_retry(
                             func.__name__, max_retries + 1, e
                         )
                         raise
-                    
+
                     logger.warning(
                         "%s attempt %d/%d failed: %s. Retrying in %.1fs...",
                         func.__name__, attempt + 1, max_retries + 1, e, delay
                     )
                     time.sleep(delay)
                     delay = min(delay * backoff_factor, max_delay)
-            
+
             # Should never reach here
             raise last_exception or RuntimeError("Unexpected retry loop exit")
-        
+
         return wrapper
     return decorator
 

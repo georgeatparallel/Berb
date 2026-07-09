@@ -18,11 +18,11 @@ Usage:
     from berb.writing.anti_ai import AntiAIEncoder, AIPhraseDetector
 
     encoder = AntiAIEncoder()
-    
+
     # Detect AI phrases in text
     result = await encoder.analyze(text)
     print(f"Found {len(result.phrases)} AI-like phrases")
-    
+
     # Replace with human alternatives
     revised = await encoder.replace(text)
     print(revised)
@@ -33,39 +33,39 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-class Language(str, Enum):
+class Language(StrEnum):
     """Supported languages for AI detection."""
     ENGLISH = "en"
     CHINESE = "zh"
     AUTO = "auto"
 
 
-class PhraseCategory(str, Enum):
+class PhraseCategory(StrEnum):
     """Category of AI-generated phrase."""
     HEDGING = "hedging"
     """Overly cautious language (e.g., 'it is worth noting')"""
-    
+
     TRANSITION = "transition"
     """Mechanical transitions (e.g., 'furthermore', 'moreover')"""
-    
+
     SUMMARY = "summary"
     """Formulaic summaries (e.g., 'in conclusion', 'to summarize')"""
-    
+
     EMPHASIS = "emphasis"
     """Artificial emphasis (e.g., 'it is important to note')"""
-    
+
     STRUCTURE = "structure"
     """Formulaic structure markers (e.g., 'this paper presents')"""
-    
+
     CLICHE = "cliche"
     """AI cliches (e.g., 'delve into', 'shed light on')"""
-    
+
     REDUNDANCY = "redundancy"
     """Redundant phrases (e.g., 'comprehensive and thorough')"""
 

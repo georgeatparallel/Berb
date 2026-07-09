@@ -3,21 +3,20 @@
 Author: Georgios-Chrysovalantis Chatzivantsidis
 """
 
-import pytest
 import numpy as np
+import pytest
 
 from berb.domains.physics.hamiltonian import (
+    HarmonicOscillator,
+    HenonHeiles,
+    IntegrationResult,
+    Pendulum,
+    PhaseSpaceAnalyzer,
     VerletIntegrator,
     YoshidaIntegrator,
-    HarmonicOscillator,
-    Pendulum,
-    HenonHeiles,
-    PhaseSpaceAnalyzer,
     create_integrator,
     create_system,
-    IntegrationResult,
 )
-
 
 # ============== Integrator Tests ==============
 
@@ -355,9 +354,9 @@ class TestPhysicsIntegration:
     def test_import_physics_module(self):
         """Test physics module can be imported."""
         from berb.domains.physics import (
-            VerletIntegrator,
             HarmonicOscillator,
             PhaseSpaceAnalyzer,
+            VerletIntegrator,
         )
 
         assert VerletIntegrator is not None

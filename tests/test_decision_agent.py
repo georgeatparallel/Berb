@@ -18,12 +18,10 @@ import json
 import os
 import subprocess
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 from unittest import mock
 
 import pytest
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -753,7 +751,7 @@ class TestChatStripThinking:
 
     def test_strip_thinking_false_by_default(self):
         """Default chat() should NOT strip <think> tags."""
-        from berb.llm.client import LLMClient, LLMConfig, LLMResponse
+        from berb.llm.client import LLMClient, LLMConfig
 
         config = LLMConfig(
             base_url="http://fake",
@@ -902,8 +900,9 @@ class TestChatWithPromptStripThinking:
     def test_default_strips_thinking(self):
         """_chat_with_prompt should forward the default strip_thinking=False."""
         from unittest.mock import MagicMock
-        from berb.pipeline._prompt_helpers import _chat_with_prompt
+
         from berb.llm.client import LLMResponse
+        from berb.pipeline._prompt_helpers import _chat_with_prompt
 
         mock_llm = MagicMock()
         mock_llm.chat.return_value = LLMResponse(
@@ -920,8 +919,9 @@ class TestChatWithPromptStripThinking:
     def test_can_disable_stripping(self):
         """_chat_with_prompt(strip_thinking=True) should forward the flag."""
         from unittest.mock import MagicMock
-        from berb.pipeline._prompt_helpers import _chat_with_prompt
+
         from berb.llm.client import LLMResponse
+        from berb.pipeline._prompt_helpers import _chat_with_prompt
 
         mock_llm = MagicMock()
         mock_llm.chat.return_value = LLMResponse(

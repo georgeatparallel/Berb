@@ -17,21 +17,20 @@ from pathlib import Path
 
 import pytest
 
-from berb.skills.schema import Skill, STAGE_NAME_TO_NUMBER
 from berb.skills.loader import (
     load_skill_file,
     load_skill_from_skillmd,
     load_skillmd_from_directory,
     load_skills_from_directory,
 )
-from berb.skills.registry import SkillRegistry
 from berb.skills.matcher import (
-    match_skills,
-    format_skills_for_prompt,
-    _tokenize,
     _resolve_stage,
+    _tokenize,
+    format_skills_for_prompt,
+    match_skills,
 )
-
+from berb.skills.registry import SkillRegistry
+from berb.skills.schema import STAGE_NAME_TO_NUMBER, Skill
 
 # ── Fixtures ─────────────────────────────────────────────────────────
 

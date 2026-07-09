@@ -9,7 +9,6 @@ from pathlib import Path
 from berb.adapters import AdapterBundle
 from berb.config import RCConfig
 from berb.hardware import detect_hardware, ensure_torch_available
-from berb.adapters import LLMProvider
 from berb.llm.client import LLMClient  # kept for backward compat
 from berb.pipeline._domain import _detect_domain
 from berb.pipeline._helpers import (

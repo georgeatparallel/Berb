@@ -269,7 +269,7 @@ def execute_task(task: str, **kwargs) -> dict:
 
         # Build a self-contained runner that embeds the agent code and calls
         # execute_task(), then emits a JSON result line on stdout.
-        agent_code_escaped = self.code.replace("\\", "\\\\").replace('"""', '\\"\\"\\"')
+        self.code.replace("\\", "\\\\").replace('"""', '\\"\\"\\"')
         runner = (
             "import json, sys\n"
             "\n"
@@ -356,6 +356,7 @@ def execute_task(task: str, **kwargs) -> dict:
         without real code execution.  Must NOT be used in production.
         """
         import asyncio
+
         from berb.hyperagent.base import TaskResult
 
         logger.debug("Simulated execution: task=%r timeout=%d", task, timeout)

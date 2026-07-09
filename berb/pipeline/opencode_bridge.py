@@ -99,28 +99,28 @@ OPENCODE_MODEL_ADAPTER: dict[str, str] = {
     "deepseek/deepseek-chat": "openrouter/anthropic/claude-sonnet-4.6",
     "deepseek/deepseek-v3": "openrouter/anthropic/claude-sonnet-4.6",
     "deepseek/deepseek-coder": "openrouter/anthropic/claude-sonnet-4.6",
-    
+
     # Meta models → Claude via OpenRouter
     "meta-llama/llama-3.3-70b-instruct:free": "openrouter/anthropic/claude-sonnet-4.6",
     "meta-llama/llama-3.3-70b-instruct": "openrouter/anthropic/claude-sonnet-4.6",
     "meta-llama/llama-3.1-70b-instruct": "openrouter/anthropic/claude-sonnet-4.6",
     "meta-llama/llama-3.1-405b-instruct": "openrouter/anthropic/claude-opus-4.6",
-    
+
     # Google models → Claude via OpenRouter
     "google/gemma-3-4b-it:free": "openrouter/anthropic/claude-sonnet-4.6",
     "google/gemma-3-27b-it": "openrouter/anthropic/claude-sonnet-4.6",
     "google/gemini-2.5-flash-lite": "openrouter/anthropic/claude-sonnet-4.6",
-    
+
     # Qwen models → Claude via OpenRouter
     "qwen/qwen3.5-flash": "openrouter/anthropic/claude-sonnet-4.6",
     "qwen/qwen3.6-plus": "openrouter/anthropic/claude-sonnet-4.6",
     "qwen/qwen3.6-max": "openrouter/anthropic/claude-opus-4.6",
     "qwen/qwen3.6-plus:free": "openrouter/anthropic/claude-sonnet-4.6",
-    
+
     # GLM models → Claude via OpenRouter
     "glm/glm-4.5": "openrouter/anthropic/claude-sonnet-4.6",
     "glm/glm-4": "openrouter/anthropic/claude-sonnet-4.6",
-    
+
     # Anthropic models via OpenRouter
     "anthropic/claude-opus-4.6": "openrouter/anthropic/claude-opus-4.6",
     "anthropic/claude-opus-4.5": "openrouter/anthropic/claude-opus-4.5",
@@ -129,7 +129,7 @@ OPENCODE_MODEL_ADAPTER: dict[str, str] = {
     "anthropic/claude-sonnet-4.5": "openrouter/anthropic/claude-sonnet-4.5",
     "anthropic/claude-sonnet-4": "openrouter/anthropic/claude-sonnet-4",
     "anthropic/claude-haiku-4.5": "openrouter/anthropic/claude-haiku-4.5",
-    
+
     # OpenAI models via OpenRouter
     "openai/gpt-5": "openrouter/openai/gpt-5",
     "openai/gpt-5.4": "openrouter/openai/gpt-5.4",
@@ -449,7 +449,7 @@ class OpenCodeBridge:
 
     def _build_opencode_config(self) -> dict[str, Any]:
         """Build the opencode.json configuration.
-        
+
         P0 2026-04-06: Updated to use OpenRouter-compatible configuration.
         OpenRouter provides an OpenAI-compatible endpoint that works with
         any model, so we always use the "openai" provider configuration.
@@ -457,11 +457,11 @@ class OpenCodeBridge:
         cfg: dict[str, Any] = {
             "$schema": "https://opencode.ai/config.json",
         }
-        
+
         # Resolve model (maps to OpenCode-compatible identifier)
         resolved_model = self._resolve_opencode_model()
         model_name = resolved_model.split("/")[-1]
-        
+
         cfg["model"] = resolved_model
 
         if self._llm_base_url:
@@ -492,36 +492,36 @@ class OpenCodeBridge:
 
     def _resolve_opencode_model(self) -> str:
         """Resolve model identifier for OpenCode CLI compatibility.
-        
-        Uses Adapter Pattern to map OpenRouter model identifiers to 
+
+        Uses Adapter Pattern to map OpenRouter model identifiers to
         OpenCode CLI-compatible models.
-        
+
         Resolution order:
         1. Check adapter registry for mapped model
         2. If model contains "/", use as-is (may work with newer OpenCode)
         3. Otherwise prefix with "openai/"
-        
+
         Note: Azure AI Services now supports the Responses API with Bearer
         token auth via the OpenAI-compatible endpoint, so we use the "openai"
         provider universally — no Anthropic fallback needed.
-        
+
         Returns:
             OpenCode-compatible model identifier
         """
         if not self._model:
             return OPENCODE_DEFAULT_MODEL
-        
+
         # Check adapter registry first
         if self._model in OPENCODE_MODEL_ADAPTER:
             mapped = OPENCODE_MODEL_ADAPTER[self._model]
             logger.debug("OpenCode adapter: %s → %s", self._model, mapped)
             return mapped
-        
+
         # If contains "/", try using as-is (for newer OpenCode versions)
         if "/" in self._model:
             logger.debug("OpenCode using model as-is: %s", self._model)
             return self._model
-        
+
         # Default: prefix with openai/
         return f"openai/{self._model}"
 
@@ -534,10 +534,10 @@ class OpenCodeBridge:
     ) -> tuple[bool, str, float]:
         """Run ``opencode run`` in the workspace. Returns (success, log, elapsed)."""
         env = os.environ.copy()
-        
+
         # Resolve model (maps to OpenCode-compatible identifier)
         resolved_model = self._resolve_opencode_model()
-        
+
         # Pass API key via environment
         # OpenRouter uses OPENROUTER_API_KEY, but OpenCode expects OPENAI_API_KEY
         # for its OpenAI-compatible provider

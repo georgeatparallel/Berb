@@ -6,18 +6,15 @@
 from __future__ import annotations
 
 import asyncio
-import json
 from pathlib import Path
 from typing import Any
-from unittest.mock import AsyncMock
 
 import pytest
 
+from berb.assessor.comparator import HistoryComparator
 from berb.assessor.rubrics import RUBRICS, Rubric
 from berb.assessor.scorer import PaperScorer
 from berb.assessor.venue_recommender import VenueRecommender
-from berb.assessor.comparator import HistoryComparator
-
 
 # ---------------------------------------------------------------------------
 # Fixtures

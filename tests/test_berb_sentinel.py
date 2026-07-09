@@ -14,7 +14,6 @@ import pytest
 from berb.pipeline import runner as rc_runner
 from berb.pipeline.stages import Stage
 
-
 # ── Heartbeat writing tests ──
 
 

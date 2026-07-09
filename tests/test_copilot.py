@@ -6,25 +6,20 @@
 from __future__ import annotations
 
 import json
-import shutil
 import time
-from datetime import date, timedelta
 from pathlib import Path
-from typing import Any
-from unittest.mock import patch
 
 import pytest
 
-from berb.copilot.modes import ResearchMode
+from berb.config import CoPilotConfig
+from berb.copilot.branching import BranchManager
+from berb.copilot.controller import CoPilotController
 from berb.copilot.feedback import (
     FEEDBACK_ACTIONS,
     Feedback,
     FeedbackHandler,
 )
-from berb.copilot.branching import BranchManager
-from berb.copilot.controller import CoPilotController
-from berb.config import CoPilotConfig
-
+from berb.copilot.modes import ResearchMode
 
 # ===================================================================
 # ResearchMode tests

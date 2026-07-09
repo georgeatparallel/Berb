@@ -9,11 +9,9 @@ from __future__ import annotations
 
 import inspect
 import threading
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
-
 
 # ---------------------------------------------------------------------------
 # BUG-001 — get_shared_memory() global singleton race
@@ -107,7 +105,7 @@ class TestGetSharedMemorySingleton:
 class TestMessageCountersThreadSafety:
     """BUG-002: messages_sent and messages_received must be exact under concurrency."""
 
-    def _make_memory(self) -> "SharedResearchMemory":  # noqa: F821
+    def _make_memory(self) -> SharedResearchMemory:  # noqa: F821
         from berb.memory.shared_memory import SharedResearchMemory
 
         mem = SharedResearchMemory(project_id="test_counters")
@@ -231,8 +229,6 @@ class TestExecuteStageSignatureIntrospection:
 
     def test_real_typeerror_from_executor_propagates(self):
         """A TypeError raised inside the executor body must propagate — not be swallowed."""
-        from berb.pipeline.stages import Stage, StageStatus
-        from berb.pipeline._helpers import StageResult
 
         def buggy_executor(stage_dir, run_dir, config, adapters, *, llm=None, prompts=None):
             # This TypeError has nothing to do with 'prompts'
@@ -247,9 +243,8 @@ class TestExecuteStageSignatureIntrospection:
 
     def test_inspect_signature_used_not_exception_catch(self):
         """The executor dispatch path must use inspect, not try/except TypeError."""
+
         from berb.pipeline import executor as exec_module
-        import ast
-        import textwrap
 
         src = inspect.getsource(exec_module.execute_stage)
         # The old fragile pattern must not exist

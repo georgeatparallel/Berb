@@ -14,8 +14,6 @@ import re
 from pathlib import Path
 from typing import Any
 
-from berb.pipeline.stages import Stage
-
 logger = logging.getLogger(__name__)
 
 

@@ -6,12 +6,13 @@ Test that checkpoint writes are durable against power failure/crashes.
 import json
 import os
 import tempfile
-import pytest
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
-from berb.pipeline.checkpoint import write_checkpoint as _write_checkpoint
+import pytest
+
 from berb.pipeline.checkpoint import validate_checkpoint_checksum as _validate_checkpoint_checksum
+from berb.pipeline.checkpoint import write_checkpoint as _write_checkpoint
 from berb.pipeline.stages import Stage
 
 
@@ -54,7 +55,6 @@ class TestCheckpointDurability:
 
             # Track file operations
             flush_called = False
-            original_flush = None
 
             class TrackedFile:
                 def __init__(self, f):

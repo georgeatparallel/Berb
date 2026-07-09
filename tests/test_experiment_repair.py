@@ -3,30 +3,26 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from berb.pipeline.experiment_diagnosis import (
-    DeficiencyType,
     Deficiency,
+    DeficiencyType,
     ExperimentDiagnosis,
     PaperMode,
 )
 from berb.pipeline.experiment_repair import (
     ExperimentRepairResult,
     RepairCycleResult,
-    build_repair_prompt,
-    run_repair_loop,
-    select_best_results,
-    _extract_code_blocks,
     _build_experiment_summary_from_run,
+    _extract_code_blocks,
     _load_experiment_code,
     _load_experiment_summary,
     _summary_quality_score,
+    build_repair_prompt,
+    run_repair_loop,
+    select_best_results,
 )
-
 
 # ---------------------------------------------------------------------------
 # build_repair_prompt tests
@@ -400,7 +396,7 @@ class TestRunRepairLoop:
         }
         (s14 / "experiment_summary.json").write_text(json.dumps(summary))
 
-        from berb.config import ExperimentConfig, ExperimentRepairConfig
+        from berb.config import ExperimentRepairConfig
 
         class FakeConfig:
             class experiment:
@@ -446,7 +442,7 @@ class TestRunRepairLoop:
         """Test full repair loop with mocked LLM and sandbox."""
         run_dir = self._make_run_dir(tmp_path, n_conditions=1)
 
-        from berb.config import ExperimentRepairConfig, ExperimentConfig, OpenCodeConfig
+        from berb.config import ExperimentRepairConfig, OpenCodeConfig
 
         class FakeConfig:
             class experiment:

@@ -6,10 +6,9 @@ Tests for:
 - Worker implementation
 """
 
-import asyncio
-import pytest
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from berb.experiment.async_pool import (
     AsyncExperimentPool,
@@ -18,8 +17,8 @@ from berb.experiment.async_pool import (
 )
 from berb.experiment.isolation import (
     DockerIsolation,
-    WorktreeIsolation,
     SandboxIsolation,
+    WorktreeIsolation,
     create_isolation,
 )
 from berb.experiment.worker import ExperimentWorkerImpl

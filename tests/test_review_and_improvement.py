@@ -11,33 +11,29 @@ Tests for:
 
 from __future__ import annotations
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
-from berb.review.cross_model_reviewer import (
-    CrossModelReviewer,
-    CrossModelReviewConfig,
-    CrossModelReviewConfigPreset,
-    ReviewVerdict,
-    WeaknessSeverity,
-    Weakness,
-    ReviewResult,
-    ImprovementDelta,
-    get_review_config_for_generation,
-)
+import pytest
 
 from berb.pipeline.improvement_loop import (
     AutonomousImprovementLoop,
-    ImprovementLoopConfig,
-    ImprovementResult,
-    ScoreProgression,
-    RoundResult,
     ClaimTracker,
-    ClaimRecord,
     ClaimVerdict,
-    FixType,
     ClassifiedWeakness,
     ComputeGuard,
+    FixType,
+    ImprovementLoopConfig,
+)
+from berb.review.cross_model_reviewer import (
+    CrossModelReviewConfig,
+    CrossModelReviewConfigPreset,
+    CrossModelReviewer,
+    ImprovementDelta,
+    ReviewResult,
+    ReviewVerdict,
+    Weakness,
+    WeaknessSeverity,
+    get_review_config_for_generation,
 )
 
 

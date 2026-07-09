@@ -2,17 +2,14 @@
 
 from __future__ import annotations
 
-import json
-from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
 
-from berb.project.models import Idea, Project
-from berb.project.manager import ProjectManager
-from berb.project.scheduler import ProjectScheduler
 from berb.project.idea_pool import IdeaPool
-
+from berb.project.manager import ProjectManager
+from berb.project.models import Idea, Project
+from berb.project.scheduler import ProjectScheduler
 
 # ── fixtures ──────────────────────────────────────────────────────
 

@@ -3,17 +3,16 @@
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from berb.servers.registry import ServerEntry, ServerRegistry
-from berb.servers.monitor import ServerMonitor, _parse_status_output
-from berb.servers.dispatcher import TaskDispatcher
-from berb.servers.ssh_executor import SSHExecutor
-from berb.servers.slurm_executor import SlurmExecutor
 from berb.servers.cloud_executor import CloudExecutor
-
+from berb.servers.dispatcher import TaskDispatcher
+from berb.servers.monitor import ServerMonitor, _parse_status_output
+from berb.servers.registry import ServerEntry, ServerRegistry
+from berb.servers.slurm_executor import SlurmExecutor
+from berb.servers.ssh_executor import SSHExecutor
 
 # ── fixtures ──────────────────────────────────────────────────────
 
@@ -188,7 +187,7 @@ class TestServerMonitor:
         with patch("berb.servers.monitor._ssh_command", side_effect=RuntimeError("unreachable")):
             results = asyncio.run(monitor.check_all())
         assert len(results) == 3
-        for name, status in results.items():
+        for _name, status in results.items():
             assert status["reachable"] is False
 
 

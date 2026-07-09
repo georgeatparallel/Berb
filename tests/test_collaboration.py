@@ -14,11 +14,10 @@ from pathlib import Path
 
 import pytest
 
-from berb.collaboration.repository import ResearchRepository
-from berb.collaboration.publisher import ArtifactPublisher
-from berb.collaboration.subscriber import ArtifactSubscriber
 from berb.collaboration.dedup import content_hash, deduplicate_artifacts
-
+from berb.collaboration.publisher import ArtifactPublisher
+from berb.collaboration.repository import ResearchRepository
+from berb.collaboration.subscriber import ArtifactSubscriber
 
 # ── Fixtures ─────────────────────────────────────────────────────────
 

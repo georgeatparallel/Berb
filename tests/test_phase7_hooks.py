@@ -3,20 +3,20 @@
 Author: Georgios-Chrysovalantis Chatzivantsidis
 """
 
+from unittest.mock import Mock
+
 import pytest
-from unittest.mock import Mock, AsyncMock, patch
 
 from berb.hooks import (
-    HookResult,
     BaseHook,
+    HookManager,
+    HookResult,
+    SecurityGuardHook,
+    SessionEndHook,
     SessionStartHook,
     SkillEvaluationHook,
-    SessionEndHook,
-    SecurityGuardHook,
-    HookManager,
     create_default_hook_manager,
 )
-
 
 # ============== Hook Result Tests ==============
 
@@ -432,10 +432,10 @@ class TestHooksIntegration:
     def test_import_hooks(self):
         """Test hooks can be imported."""
         from berb.hooks import (
+            SecurityGuardHook,
+            SessionEndHook,
             SessionStartHook,
             SkillEvaluationHook,
-            SessionEndHook,
-            SecurityGuardHook,
         )
 
         assert SessionStartHook is not None

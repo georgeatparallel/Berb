@@ -13,10 +13,7 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-import pytest
-
 from berb.literature.models import Author, Paper
-
 
 # ---------------------------------------------------------------------------
 # Helpers to build mock Paper objects

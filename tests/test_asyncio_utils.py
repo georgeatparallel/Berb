@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 from pathlib import Path
 
 import pytest
@@ -32,9 +31,9 @@ async def test_checkpoint_manager_write_does_not_block_event_loop() -> None:
 @pytest.mark.asyncio
 async def test_gather_stages_empty_returns_empty() -> None:
     """Gathering zero stages returns empty list."""
-    from berb.pipeline.asyncio_utils import gather_stages
-
     from unittest.mock import MagicMock
+
+    from berb.pipeline.asyncio_utils import gather_stages
 
     config = MagicMock()
     adapters = MagicMock()
@@ -52,8 +51,8 @@ async def test_gather_stages_empty_returns_empty() -> None:
 @pytest.mark.asyncio
 async def test_checkpoint_manager_read_serialization() -> None:
     """Concurrent reads from CheckpointManager don't raise."""
-    import tempfile
     import json
+    import tempfile
 
     cm = CheckpointManager()
 

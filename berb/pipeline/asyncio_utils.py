@@ -126,7 +126,7 @@ async def _run_and_checkpoint(
         adapters=adapters,
         auto_approve_gates=auto_approve_gates,
     )
-    elapsed = _time.monotonic() - t0
+    _time.monotonic() - t0
 
     if result.status == StageStatus.DONE:
         if checkpoint_mgr:

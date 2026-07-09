@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import importlib
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 from berb.literature.models import Author, Paper
 from berb.literature.search import search_papers
@@ -179,7 +180,7 @@ class TestAtomicCacheWrite:
 
     def test_no_tmp_file_left_on_success(self, tmp_path):
         """REGRESSION BUG-006: temp file must be cleaned up after success."""
-        from berb.literature.cache import put_cache, cache_key
+        from berb.literature.cache import cache_key, put_cache
 
         put_cache("q", "arxiv", 5, [{"id": "p1"}], cache_base=tmp_path)
 
@@ -190,7 +191,8 @@ class TestAtomicCacheWrite:
     def test_final_file_is_valid_json(self, tmp_path):
         """REGRESSION BUG-006: final cache file must be complete valid JSON."""
         import json
-        from berb.literature.cache import put_cache, cache_key
+
+        from berb.literature.cache import cache_key, put_cache
 
         papers = [{"id": f"p{i}", "title": f"Paper {i}"} for i in range(10)]
         put_cache("atomic_test", "semantic_scholar", 10, papers, cache_base=tmp_path)
@@ -212,9 +214,9 @@ class TestAtomicCacheWrite:
         original cache file is untouched.  A PermissionError is not a
         corruption — it is a clean failure.
         """
-        import json
         import threading
-        from berb.literature.cache import put_cache, get_cached
+
+        from berb.literature.cache import get_cached, put_cache
 
         non_permission_errors: list[Exception] = []
 
@@ -257,8 +259,7 @@ class TestAtomicCacheWrite:
 
     def test_cleanup_on_replace_failure(self, tmp_path):
         """REGRESSION BUG-006: temp file is removed when os.replace() fails."""
-        import os as _os
-        from berb.literature.cache import put_cache, cache_key
+        from berb.literature.cache import put_cache
 
         def failing_replace(src, dst):
             raise OSError("Simulated rename failure")

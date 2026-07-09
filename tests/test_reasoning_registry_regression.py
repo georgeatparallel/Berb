@@ -13,18 +13,17 @@ Tests for:
 
 import asyncio
 import threading
-import pytest
-from datetime import datetime, timezone
-from unittest.mock import patch, MagicMock
+from datetime import UTC
+from unittest.mock import patch
 
-from berb.reasoning.base import ReasoningContext, MethodType
+import pytest
+
+from berb.reasoning.base import MethodType, ReasoningContext
 from berb.reasoning.registry import (
     ReasonerRegistry,
-    get_reasoner,
-    create_reasoner,
     auto_register_all,
+    get_reasoner,
 )
-
 
 # =============================================================================
 # BUG-R001: Thread-safe Singleton Creation Tests
@@ -311,7 +310,7 @@ class TestTimezoneNormalization:
         ctx = ReasoningContext.from_dict(data)
 
         assert ctx.created_at.tzinfo is not None
-        assert ctx.created_at.tzinfo == timezone.utc
+        assert ctx.created_at.tzinfo == UTC
         assert ctx.created_at.hour == 12  # Preserves time
 
     def test_from_dict_with_different_timezone(self):
@@ -339,7 +338,7 @@ class TestTimezoneNormalization:
         ctx = ReasoningContext.from_dict(data)
 
         assert ctx.created_at.tzinfo is not None
-        assert ctx.created_at.tzinfo == timezone.utc
+        assert ctx.created_at.tzinfo == UTC
 
     def test_from_dict_with_missing_created_at(self):
         """BUG-R003: Uses current time when created_at is missing."""
@@ -351,7 +350,7 @@ class TestTimezoneNormalization:
         ctx = ReasoningContext.from_dict(data)
 
         assert ctx.created_at.tzinfo is not None
-        assert ctx.created_at.tzinfo == timezone.utc
+        assert ctx.created_at.tzinfo == UTC
 
     def test_from_dict_with_invalid_format(self, caplog):
         """BUG-R003: Handles invalid datetime format gracefully."""
@@ -385,16 +384,16 @@ class TestTimezoneNormalization:
         """Test _parse_datetime helper directly."""
         # Test with None
         dt = ReasoningContext._parse_datetime(None)
-        assert dt.tzinfo == timezone.utc
+        assert dt.tzinfo == UTC
 
         # Test with naive datetime string
         dt = ReasoningContext._parse_datetime("2026-03-29T12:00:00")
-        assert dt.tzinfo == timezone.utc
+        assert dt.tzinfo == UTC
         assert dt.hour == 12
 
         # Test with timezone-aware string
         dt = ReasoningContext._parse_datetime("2026-03-29T12:00:00+05:00")
-        assert dt.tzinfo == timezone.utc
+        assert dt.tzinfo == UTC
         assert dt.hour == 7  # Converted from UTC+5 to UTC
 
 
@@ -444,12 +443,12 @@ class TestIntegration:
             stage_name="Test",
             input_data={"key": "value"},
         )
-        assert ctx.created_at.tzinfo == timezone.utc
+        assert ctx.created_at.tzinfo == UTC
 
         # 5. Serialize and deserialize context (BUG-R003)
         ctx_dict = ctx.to_dict()
         ctx_restored = ReasoningContext.from_dict(ctx_dict)
-        assert ctx_restored.created_at.tzinfo == timezone.utc
+        assert ctx_restored.created_at.tzinfo == UTC
 
     def test_error_recovery_workflow(self):
         """Integration test: Error recovery with BUG-R002 fix."""
@@ -500,7 +499,7 @@ class TestSyncAsyncMixingWarning:
         import logging
 
         with caplog.at_level(logging.WARNING):
-            result = get_reasoner("bayesian", llm_client=None)
+            get_reasoner("bayesian", llm_client=None)
 
         # Should have warning about async context
         assert "async context" in caplog.text.lower() or "get_async" in caplog.text.lower()
@@ -520,7 +519,7 @@ class TestSyncAsyncMixingWarning:
         import logging
 
         with caplog.at_level(logging.WARNING):
-            result = await ReasonerRegistry.get_async("bayesian", llm_client=None)
+            await ReasonerRegistry.get_async("bayesian", llm_client=None)
 
         # Should NOT have warning
         assert "async context" not in caplog.text.lower()
@@ -564,11 +563,10 @@ class TestAutoRegisterIdempotency:
 
     def test_auto_register_after_clear(self, caplog):
         """BUG-NEW-002: Can re-register after clear_singletons()."""
-        import logging
 
         # First registration
         auto_register_all()
-        count_after_first = len(ReasonerRegistry.list_available())
+        len(ReasonerRegistry.list_available())
 
         # Clear (should reset flag)
         ReasonerRegistry.clear_singletons()
@@ -596,7 +594,7 @@ class TestFallbackDatetimeParsing:
         """BUG-NEW-003: Parses '2026-03-29 12:00:00' format."""
         dt = ReasoningContext._parse_datetime("2026-03-29 12:00:00")
 
-        assert dt.tzinfo == timezone.utc
+        assert dt.tzinfo == UTC
         assert dt.hour == 12
         assert dt.minute == 0
 
@@ -604,7 +602,7 @@ class TestFallbackDatetimeParsing:
         """BUG-NEW-003: Parses '2026-03-29 12:00:00+05:30' format."""
         dt = ReasoningContext._parse_datetime("2026-03-29 12:00:00+05:30")
 
-        assert dt.tzinfo == timezone.utc
+        assert dt.tzinfo == UTC
         # 12:00 UTC+5:30 = 06:30 UTC
         assert dt.hour == 6
         assert dt.minute == 30
@@ -613,7 +611,7 @@ class TestFallbackDatetimeParsing:
         """BUG-NEW-003: Still parses standard ISO format correctly."""
         dt = ReasoningContext._parse_datetime("2026-03-29T12:00:00+00:00")
 
-        assert dt.tzinfo == timezone.utc
+        assert dt.tzinfo == UTC
         assert dt.hour == 12
 
     def test_parse_invalid_format(self, caplog):
@@ -624,7 +622,7 @@ class TestFallbackDatetimeParsing:
             dt = ReasoningContext._parse_datetime("not-a-date-at-all")
 
         # Should return current time (within reason)
-        assert dt.tzinfo == timezone.utc
+        assert dt.tzinfo == UTC
         assert "unable to parse" in caplog.text.lower() or "invalid" in caplog.text.lower()
 
     def test_from_dict_with_space_separator(self):
@@ -637,5 +635,5 @@ class TestFallbackDatetimeParsing:
 
         ctx = ReasoningContext.from_dict(data)
 
-        assert ctx.created_at.tzinfo == timezone.utc
+        assert ctx.created_at.tzinfo == UTC
         assert ctx.created_at.hour == 12

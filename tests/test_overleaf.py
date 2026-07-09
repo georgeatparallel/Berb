@@ -8,11 +8,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from berb.overleaf.sync import OverleafSync
 from berb.overleaf.conflict import ConflictResolver, _extract_conflicts, _resolve_content
-from berb.overleaf.watcher import FileWatcher
 from berb.overleaf.formatter import LatexFormatter
-
+from berb.overleaf.sync import OverleafSync
+from berb.overleaf.watcher import FileWatcher
 
 # ══════════════════════════════════════════════════════════════════
 # ConflictResolver tests

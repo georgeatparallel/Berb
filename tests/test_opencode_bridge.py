@@ -4,20 +4,14 @@ from __future__ import annotations
 
 import json
 import subprocess
-from pathlib import Path
 from unittest.mock import MagicMock, patch
-
-import pytest
 
 from berb.config import OpenCodeConfig, _parse_opencode_config
 from berb.pipeline.opencode_bridge import (
-    ComplexityScore,
     OpenCodeBridge,
-    OpenCodeResult,
     count_historical_failures,
     score_complexity,
 )
-
 
 # ============================================================
 # TestComplexityScorer

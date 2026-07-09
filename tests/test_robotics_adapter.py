@@ -9,16 +9,14 @@ from __future__ import annotations
 import pytest
 
 from berb.domains.detector import (
-    get_profile,
     _keyword_detect,
     _profile_cache,
+    get_profile,
 )
 from berb.domains.prompt_adapter import (
     MLPromptAdapter,
-    GenericPromptAdapter,
     get_adapter,
 )
-
 
 # ---------------------------------------------------------------------------
 # Profile sanity

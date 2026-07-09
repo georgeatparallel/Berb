@@ -7,19 +7,14 @@ bibtex from running and leaving all citations as [?].
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from berb.templates.compiler import (
-    CompileResult,
     _is_fatal_error,
     _sanitize_tex_unicode,
     fix_common_latex_errors,
 )
-
 
 # ---------------------------------------------------------------------------
 # _is_fatal_error

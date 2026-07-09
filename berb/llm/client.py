@@ -689,7 +689,7 @@ class LLMClient:
         P0 2026-04-06: Added IncompleteRead retry for network stability.
         """
         import http.client
-        
+
         for attempt in range(self.config.max_retries):
             try:
                 # P0 2026-04-02: Wrap call with circuit breaker

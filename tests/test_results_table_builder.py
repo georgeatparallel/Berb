@@ -9,7 +9,6 @@ import pytest
 
 from berb.pipeline.verified_registry import VerifiedRegistry
 from berb.templates.results_table_builder import (
-    LatexTable,
     build_condition_whitelist,
     build_results_tables,
 )

@@ -221,7 +221,6 @@ async def stream_research_progress(job_id: str):
         raise HTTPException(status_code=404, detail="Job not found")
 
     async def generate():
-        import asyncio
 
         while True:
             job = _jobs.get(job_id)
@@ -366,7 +365,6 @@ async def websocket_endpoint(websocket, job_id: str):
         await websocket.close()
         return
 
-    import asyncio
 
     while True:
         job = _jobs.get(job_id)

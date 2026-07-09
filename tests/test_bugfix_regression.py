@@ -21,7 +21,6 @@ from berb.config import RCConfig
 from berb.pipeline import executor as rc_executor
 from berb.pipeline.registry import get_all_registrations, get_registration
 
-
 # ============================================================================
 # BUG #1 Regression: _expand_search_queries Export
 # ============================================================================
@@ -47,7 +46,7 @@ class TestBugFix1ExpandSearchQueriesExport:
     def test_expand_search_queries_is_exported(self) -> None:
         """Verify _expand_search_queries is accessible from executor module."""
         assert hasattr(rc_executor, "_expand_search_queries")
-        assert callable(getattr(rc_executor, "_expand_search_queries"))
+        assert callable(rc_executor._expand_search_queries)
 
     def test_expand_search_queries_deduplicates(self) -> None:
         """Verify _expand_search_queries removes duplicate queries."""
@@ -149,7 +148,6 @@ class TestBugFix2SecurityValidation:
         but the config is still accepted. The warning is logged to help
         users avoid misconfiguration.
         """
-        import logging
 
         data = {
             "project": {"name": "test-wrong-env", "mode": "docs-first"},
@@ -286,7 +284,7 @@ class TestCombinedBugFixVerification:
                 "api_key_env": "INTEGRATION_TEST_KEY",
             },
         }
-        config = RCConfig.from_dict(config_data, project_root=tmp_path, check_paths=False)
+        RCConfig.from_dict(config_data, project_root=tmp_path, check_paths=False)
 
         # 2. All stage executors should be available
         from berb.pipeline.stages import Stage

@@ -605,7 +605,7 @@ class AutomatedDebugger:
     ) -> FixSuggestion:
         """Generate fix using LLM (fallback when rule-based fails)."""
         # Build prompt
-        prompt = f"""You are an expert Python debugger. Fix this error:
+        f"""You are an expert Python debugger. Fix this error:
 
 ERROR: {diagnosis.error_message}
 CATEGORY: {diagnosis.category.value}

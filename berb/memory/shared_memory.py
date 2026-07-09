@@ -117,14 +117,14 @@ class SharedResearchMemory:
         self._error_fix_mappings: dict[str, str] = {}  # error_pattern → fix
         self._clarifications: dict[str, Any] = {}  # question → answer
         self._execution_traces: list[dict] = []
-        
+
         # Load from persistent storage if available.  The lock is not strictly
         # required here because __init__ runs before the object is shared with
         # any other thread, but acquiring it keeps all disk-read paths uniform.
         if self._storage_path and self._storage_path.exists():
             with self._sync_lock:
                 self._load_from_disk()
-        
+
         logger.info(f"Initialized shared memory for project {project_id}")
 
     def _get_async_lock(self) -> asyncio.Lock:
@@ -394,7 +394,7 @@ class SharedResearchMemory:
             state.status = status
             state.current_task = task
             state.last_update = datetime.now(UTC)
-    
+
     def _update_agent_activity(self, agent_id: str) -> None:
         """Update agent activity timestamp."""
         if agent_id in self._agent_states:
@@ -458,7 +458,7 @@ class SharedResearchMemory:
             if agent_id in self._agent_states:
                 self._agent_states[agent_id].messages_received += len(messages)
             return messages
-    
+
     # ========== Trajectory & Analytics ==========
 
     def get_trajectory(
