@@ -4,13 +4,9 @@ from __future__ import annotations
 
 import json
 import time
-from io import BytesIO
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from berb.web.scholar import GoogleScholarClient, ScholarPaper
-
 
 # ---------------------------------------------------------------------------
 # ScholarPaper dataclass

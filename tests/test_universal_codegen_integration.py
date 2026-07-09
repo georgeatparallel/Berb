@@ -9,10 +9,13 @@ they verify the infrastructure wiring.
 from __future__ import annotations
 
 import json
-import pytest
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
+import pytest
+
+from berb.agents.code_searcher.agent import CodeSearchResult
+from berb.agents.code_searcher.pattern_extractor import CodePatterns
 from berb.domains.detector import (
     DomainProfile,
     detect_domain,
@@ -20,20 +23,15 @@ from berb.domains.detector import (
     is_ml_domain,
     load_all_profiles,
 )
-from berb.domains.prompt_adapter import get_adapter, PromptBlocks
 from berb.domains.experiment_schema import (
     Condition,
-    ConditionRole,
     EvaluationSpec,
     MetricSpec,
     UniversalExperimentPlan,
-    from_legacy_exp_plan,
 )
-from berb.experiment.metrics import UniversalMetricParser
+from berb.domains.prompt_adapter import get_adapter
 from berb.experiment.evaluators.convergence import analyze_convergence
-from berb.agents.code_searcher.agent import CodeSearchAgent, CodeSearchResult
-from berb.agents.code_searcher.pattern_extractor import CodePatterns
-
+from berb.experiment.metrics import UniversalMetricParser
 
 # ---------------------------------------------------------------------------
 # Cross-domain domain detection integration

@@ -59,9 +59,9 @@ class GeneratedSection(BaseModel):
     def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
         # Calculate derived fields
-        self.total_sources = len(set(
+        self.total_sources = len({
             sid for m in self.source_mappings for sid in m.source_ids
-        ))
+        })
 
 
 class SourceBasedWriter:

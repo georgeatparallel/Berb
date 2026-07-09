@@ -1,12 +1,12 @@
 """Unit tests for model cascading."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 
+import pytest
+
 from berb.llm.model_cascade import (
-    CascadeStep,
     CascadeConfig,
-    CascadeStats,
+    CascadeStep,
     CascadingLLMClient,
     get_cascade_for_stage,
 )
@@ -257,7 +257,8 @@ class TestCascadingLLMClientLockFix:
     def _make_client(self, base_client=None):
         """Helper: create a minimal CascadingLLMClient for testing."""
         from unittest.mock import MagicMock
-        from berb.llm.model_cascade import CascadingLLMClient, CascadeConfig, CascadeStep
+
+        from berb.llm.model_cascade import CascadeConfig, CascadeStep, CascadingLLMClient
 
         cfg = CascadeConfig(
             cascade=[CascadeStep(model="test-model", min_score=0.0)],
@@ -270,8 +271,8 @@ class TestCascadingLLMClientLockFix:
 
     def test_stats_lock_is_threading_lock(self):
         """REGRESSION BUG-005: _stats_lock must be a threading.Lock, not asyncio.Lock."""
-        import threading
         import asyncio
+        import threading
 
         client = self._make_client()
 

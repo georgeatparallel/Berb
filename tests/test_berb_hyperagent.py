@@ -2,25 +2,23 @@
 
 from __future__ import annotations
 
-import asyncio
 import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from berb.hyperagent.base import (
     AgentPhase,
     Hyperagent,
+    HyperagentState,
     Improvement,
     ImprovementResult,
-    HyperagentState,
     TaskResult,
 )
-from berb.hyperagent.memory import PerformanceRecord, PersistentMemory
-from berb.hyperagent.task_agent import TaskAgent, TaskAgentConfig, TaskAgentState
+from berb.hyperagent.memory import PersistentMemory
 from berb.hyperagent.meta_agent import MetaAgent, MetaAgentState, ModificationResult
-
+from berb.hyperagent.task_agent import TaskAgent, TaskAgentConfig, TaskAgentState
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -136,7 +134,7 @@ class TestHyperagentState:
 class TestHyperagent:
     def test_init_creates_storage_dir(self, tmp_path):
         cfg = MagicMock()
-        agent = Hyperagent(cfg, storage_path=tmp_path / "ha")
+        Hyperagent(cfg, storage_path=tmp_path / "ha")
         assert (tmp_path / "ha").is_dir()
 
     def test_initial_state_is_init_phase(self, tmp_path):
@@ -203,7 +201,7 @@ class TestHyperagent:
 
 class TestPersistentMemory:
     def test_init_creates_storage(self, tmp_path):
-        mem = PersistentMemory(tmp_path / "mem")
+        PersistentMemory(tmp_path / "mem")
         assert (tmp_path / "mem").is_dir()
 
     def test_init_empty(self, tmp_path):
@@ -439,7 +437,7 @@ def test_tracing_span_captures_error(tmp_path):
     tracing.configure(tmp_path)
     trace_id = tracing.new_trace()
     try:
-        with tracing.span(trace_id, "failing.op") as s:
+        with tracing.span(trace_id, "failing.op"):
             raise ValueError("intentional")
     except ValueError:
         pass
@@ -450,6 +448,7 @@ def test_tracing_span_captures_error(tmp_path):
 
 def test_tracing_writes_jsonl(tmp_path):
     import json
+
     from berb.pipeline import tracing
 
     tracing.configure(tmp_path)

@@ -5,11 +5,8 @@ from __future__ import annotations
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-
-from berb.web.crawler import CrawlResult, WebCrawler
 from berb.web import check_url_ssrf
-
+from berb.web.crawler import CrawlResult, WebCrawler
 
 # ---------------------------------------------------------------------------
 # CrawlResult dataclass

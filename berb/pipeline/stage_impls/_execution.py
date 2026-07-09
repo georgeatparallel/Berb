@@ -15,7 +15,6 @@ from berb.experiment.validator import (
     format_issues_for_llm,
     validate_code,
 )
-from berb.adapters import LLMProvider
 from berb.llm.client import LLMClient
 from berb.pipeline._helpers import (
     StageResult,

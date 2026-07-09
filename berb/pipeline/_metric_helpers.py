@@ -75,7 +75,6 @@ def _collect_experiment_results(
     metric_direction: str = "minimize",
 ) -> dict[str, Any]:
     """Collect experiment results from the latest stage-14 iteration."""
-    import os
 
     if metric_key and metric_key not in metric_keys:
         metric_keys = (metric_key, *metric_keys)

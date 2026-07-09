@@ -1,6 +1,5 @@
 """Unit tests for dependency context injection."""
 
-import pytest
 from berb.pipeline.dependency_context import (
     CompletedTask,
     DependencyContextBuilder,

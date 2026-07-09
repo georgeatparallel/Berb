@@ -26,21 +26,16 @@ Coverage:
 from __future__ import annotations
 
 import json
-import os
-import sys
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from berb.adapters import AdapterBundle
 from berb.config import RCConfig
-from berb.pipeline.executor import StageResult, execute_stage
-from berb.pipeline.runner import execute_pipeline
+from berb.pipeline.executor import execute_stage
 from berb.pipeline.stages import Stage, StageStatus
-
 
 # ============================================================================
 # E2E Test Fixtures
@@ -280,12 +275,12 @@ def run_experiment():
     # Generate synthetic data
     X = np.random.randn(100, 10)
     y = np.random.randint(0, 2, 100)
-    
+
     # Train model
     from sklearn.ensemble import RandomForestClassifier
     model = RandomForestClassifier(n_estimators=10)
     model.fit(X, y)
-    
+
     # Evaluate
     accuracy = model.score(X, y)
     print(f'accuracy: {accuracy:.4f}')
@@ -1217,14 +1212,14 @@ class TestRegression_BugFixes:
         from berb.pipeline import executor
 
         assert hasattr(executor, "_expand_search_queries")
-        assert callable(getattr(executor, "_expand_search_queries"))
+        assert callable(executor._expand_search_queries)
 
     def test_build_context_preamble_exported(self) -> None:
         """BUG #1b: Verify _build_context_preamble is exported."""
         from berb.pipeline import executor
 
         assert hasattr(executor, "_build_context_preamble")
-        assert callable(getattr(executor, "_build_context_preamble"))
+        assert callable(executor._build_context_preamble)
 
     def test_config_rejects_plaintext_api_key(self, e2e_test_dir: Path) -> None:
         """BUG #2: Verify config rejects plaintext API keys."""

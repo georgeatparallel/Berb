@@ -466,7 +466,7 @@ class FirecrawlClient:
         max_poll_time: float = 600.0,  # BUG-004 fix: 10 minute timeout
     ) -> CrawlResult:
         """Poll crawl job until completion.
-        
+
         Args:
             job_id: The crawl job ID to poll
             start_time: Timestamp when polling started

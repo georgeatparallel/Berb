@@ -10,27 +10,26 @@ Coverage:
 # Author: Georgios-Chrysovalantis Chatzivantsidis
 """
 
-import pytest
 import numpy as np
+import pytest
 
 from berb.domains.physics.integrators import (
-    VerletIntegrator,
-    YoshidaIntegrator,
     AdaptiveVerletIntegrator,
     IntegrationState,
-    IntegrationStats,
+    VerletIntegrator,
+    YoshidaIntegrator,
 )
 from berb.domains.physics.templates import (
-    HarmonicOscillator,
-    SimplePendulum,
-    HenonHeiles,
-    DoublePendulum,
-    KeplerProblem,
+    TEMPLATES,
     CoupledOscillators,
+    DoublePendulum,
     DuffingOscillator,
+    HarmonicOscillator,
+    HenonHeiles,
+    KeplerProblem,
+    SimplePendulum,
     StandardMap,
     get_template,
-    TEMPLATES,
 )
 
 
@@ -220,7 +219,7 @@ class TestHarmonicOscillator:
     def test_not_chaotic(self):
         """Test harmonic oscillator is not chaotic."""
         osc = HarmonicOscillator()
-        assert osc.is_chaotic() == False
+        assert not osc.is_chaotic()
 
 
 class TestSimplePendulum:
@@ -253,10 +252,10 @@ class TestHenonHeiles:
         hh = HenonHeiles()
 
         # Below transition
-        assert hh.is_chaotic(energy=0.1) == False
+        assert not hh.is_chaotic(energy=0.1)
 
         # Above transition
-        assert hh.is_chaotic(energy=0.2) == True
+        assert hh.is_chaotic(energy=0.2)
 
 
 class TestDoublePendulum:
@@ -265,7 +264,7 @@ class TestDoublePendulum:
     def test_is_chaotic(self):
         """Test double pendulum is chaotic."""
         dp = DoublePendulum()
-        assert dp.is_chaotic() == True
+        assert dp.is_chaotic()
 
 
 class TestKeplerProblem:
@@ -346,10 +345,10 @@ class TestStandardMap:
     def test_chaotic_threshold(self):
         """Test chaos threshold at K ≈ 0.9716."""
         sm_sub = StandardMap(K=0.5)
-        assert sm_sub.is_chaotic() == False
+        assert not sm_sub.is_chaotic()
 
         sm_chaotic = StandardMap(K=1.0)
-        assert sm_chaotic.is_chaotic() == True
+        assert sm_chaotic.is_chaotic()
 
     def test_iterate(self):
         """Test map iteration."""

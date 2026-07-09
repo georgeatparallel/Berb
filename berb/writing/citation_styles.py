@@ -14,19 +14,17 @@ Supported Styles:
 
 from __future__ import annotations
 
-import json
 import logging
-from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
 
-class CitationStyle(str, Enum):
+class CitationStyle(StrEnum):
     """Academic citation styles.
 
     Numeric Styles:

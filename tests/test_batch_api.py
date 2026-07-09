@@ -1,15 +1,16 @@
 """Unit tests for batch API."""
 
-import pytest
 import asyncio
 import time
+
+import pytest
+
 from berb.llm.batch_api import (
     BatchClient,
-    BatchJob,
+    BatchPipelineIntegration,
+    BatchPriority,
     BatchRequest,
     BatchStatus,
-    BatchPriority,
-    BatchPipelineIntegration,
     is_batch_compatible,
 )
 

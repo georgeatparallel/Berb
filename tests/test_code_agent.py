@@ -13,12 +13,10 @@ from berb.llm.client import LLMResponse
 from berb.pipeline.code_agent import (
     CodeAgent,
     CodeAgentConfig,
-    CodeAgentResult,
     SolutionNode,
     _SimpleResult,
 )
 from berb.prompts import PromptManager
-
 
 # ---------------------------------------------------------------------------
 # Test fixtures
@@ -552,7 +550,7 @@ class TestFullPipeline:
             sandbox_factory=lambda cfg, wd: sandbox,
             experiment_config=None,
         )
-        result = agent.generate(
+        agent.generate(
             topic="t",
             exp_plan="p",
             metric="x",

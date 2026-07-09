@@ -25,7 +25,6 @@ def _build_fallback_queries(topic: str) -> list[str]:
 
     topic_lower = topic.lower()
     words = _re.findall(r"\b[a-zA-Z]{3,}\b", topic_lower)
-    from collections import Counter
 
     common = {"the", "and", "for", "with", "from", "that", "this", "are", "can"}
     significant = [w for w in words if w not in common]
@@ -55,7 +54,6 @@ def _get_evolution_overlay(run_dir: Path | None, stage_name: str) -> str:
     if not evo_path.exists():
         return ""
     try:
-        from pathlib import Path as _Path
 
         data = json.loads(evo_path.read_text(encoding="utf-8"))
         if not isinstance(data, list):

@@ -13,17 +13,17 @@ These tests verify that modules work together correctly.
 
 from __future__ import annotations
 
-import pytest
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
-from berb.utils.token_tracker import TokenTracker, TokenUsage
-from berb.llm.nadirclaw_router import NadirClawRouter, ModelSelection
-from berb.llm.smart_client import SmartLLMClient, SmartLLMResponse
-from berb.mnemo_bridge import MnemoBridge, ContextChunk
-from berb.reasoner_bridge import ReasonerBridge, HypothesisCandidate, PerspectiveType
+import pytest
+
 from berb.literature.searxng_client import SearXNGClient, SearXNGConfig, SearXNGResult
-
+from berb.llm.nadirclaw_router import NadirClawRouter
+from berb.llm.smart_client import SmartLLMClient, SmartLLMResponse
+from berb.mnemo_bridge import ContextChunk, MnemoBridge
+from berb.reasoner_bridge import ReasonerBridge
+from berb.utils.token_tracker import TokenTracker
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Fixtures

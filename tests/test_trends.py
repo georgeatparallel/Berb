@@ -7,20 +7,16 @@ daily_digest, auto_topic, and literature/trends.
 from __future__ import annotations
 
 import asyncio
-from datetime import date
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-import pytest
-
-from berb.trends.feeds import FeedManager
-from berb.trends.trend_analyzer import TrendAnalyzer, _STOPWORDS
-from berb.trends.opportunity_finder import OpportunityFinder
-from berb.trends.daily_digest import DailyDigest
-from berb.trends.auto_topic import AutoTopicGenerator
 from berb.literature.trends import LiteratureTrendAnalyzer
-
+from berb.trends.auto_topic import AutoTopicGenerator
+from berb.trends.daily_digest import DailyDigest
+from berb.trends.feeds import FeedManager
+from berb.trends.opportunity_finder import OpportunityFinder
+from berb.trends.trend_analyzer import _STOPWORDS, TrendAnalyzer
 
 # ---------------------------------------------------------------------------
 # Fixtures

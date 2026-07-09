@@ -10,7 +10,6 @@ from typing import Any
 import pytest
 import yaml
 
-
 # ---------------------------------------------------------------------------
 # Fake LLM client (same pattern as test_code_agent.py)
 # ---------------------------------------------------------------------------

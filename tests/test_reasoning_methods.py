@@ -14,26 +14,25 @@ This module tests all 9 reasoning methods:
 Author: Georgios-Chrysovalantis Chatzivantsidis
 """
 
-import asyncio
+from unittest.mock import AsyncMock, Mock
+
 import pytest
-from unittest.mock import Mock, AsyncMock, patch
 
 from berb.reasoning.base import (
+    MethodType,
     ReasoningContext,
     ReasoningResult,
-    MethodType,
     create_context,
 )
-from berb.reasoning.multi_perspective import MultiPerspectiveMethod
-from berb.reasoning.pre_mortem import PreMortemMethod
 from berb.reasoning.bayesian import BayesianMethod
 from berb.reasoning.debate import DebateMethod
 from berb.reasoning.dialectical import DialecticalMethod
-from berb.reasoning.research import ResearchMethod
-from berb.reasoning.socratic import SocraticMethod
-from berb.reasoning.scientific import ScientificMethod
 from berb.reasoning.jury import JuryMethod
-
+from berb.reasoning.multi_perspective import MultiPerspectiveMethod
+from berb.reasoning.pre_mortem import PreMortemMethod
+from berb.reasoning.research import ResearchMethod
+from berb.reasoning.scientific import ScientificMethod
+from berb.reasoning.socratic import SocraticMethod
 
 # ============== Fixtures ==============
 

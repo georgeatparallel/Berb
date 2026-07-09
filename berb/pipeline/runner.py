@@ -19,8 +19,7 @@ from berb.adapters import AdapterBundle
 from berb.config import RCConfig
 from berb.evolution import EvolutionStore, extract_lessons
 from berb.knowledge.base import write_stage_to_kb
-from berb.pipeline.checkpoint import CheckpointManager
-from berb.pipeline.checkpoint import write_heartbeat
+from berb.pipeline.checkpoint import CheckpointManager, write_heartbeat
 from berb.pipeline.executor import StageResult, execute_stage
 from berb.pipeline.iterative import (
     _check_experiment_quality,
@@ -103,7 +102,6 @@ def _build_dag_levels(order: tuple[Stage, ...]) -> list[set[Stage]]:
     Each level is a set of stages that can run concurrently (all dependencies
     from earlier levels are satisfied). Levels are returned in topological order.
     """
-    from collections import defaultdict
 
     from berb.pipeline.contracts import CONTRACTS
 

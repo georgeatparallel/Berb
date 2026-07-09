@@ -113,7 +113,7 @@ def _generate_neurips_checklist(paper_text: str, topic: str) -> str:
     # Lazy import to avoid circular dependency
     import textwrap
 
-    return textwrap.dedent(f"""\
+    return textwrap.dedent("""\
         # NeurIPS Paper Checklist
 
         1. **Claims**: Question: Do the main claims made in the abstract and introduction accurately reflect the paper's contributions and scope?
@@ -193,7 +193,7 @@ def _synthesize_perspectives(
 def reconcile_figure_refs(
     text: str,
 ) -> str:
-    """Reconcile figure references in paper text.
+    r"""Reconcile figure references in paper text.
 
     Ensures that all \Fig{{ref}} and \Figure{{ref}} tags are consistent.
     """

@@ -18,9 +18,8 @@ import logging
 import re
 import statistics
 from dataclasses import dataclass, field
-from enum import Enum
-from pathlib import Path
-from typing import Any, Literal
+from enum import StrEnum
+from typing import Any
 
 import httpx
 from pydantic import BaseModel, Field
@@ -28,7 +27,7 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger(__name__)
 
 
-class VocabularyLevel(str, Enum):
+class VocabularyLevel(StrEnum):
     """Vocabulary complexity levels."""
 
     ACCESSIBLE = "accessible"
@@ -37,7 +36,7 @@ class VocabularyLevel(str, Enum):
     EXPERT = "expert"
 
 
-class FirstPersonUsage(str, Enum):
+class FirstPersonUsage(StrEnum):
     """First person usage frequency."""
 
     NEVER = "never"
@@ -169,15 +168,15 @@ class StyleFingerprint(BaseModel):
             lines.append(f"  - {author.name} ({author.affiliation or 'Unknown'})")
 
         lines.extend([
-            f"\n**Sentence Structure:**",
+            "\n**Sentence Structure:**",
             f"  - Average sentence length: {self.avg_sentence_length:.1f} words (±{self.sentence_length_std:.1f})",
             f"  - Average paragraph: {self.avg_paragraph_sentences:.1f} sentences",
-            f"\n**Style Characteristics:**",
+            "\n**Style Characteristics:**",
             f"  - Vocabulary level: {self.vocabulary_level.value}",
             f"  - Hedging frequency: {self.hedging_frequency:.0%}",
             f"  - Passive voice ratio: {self.passive_voice_ratio:.0%}",
             f"  - First person usage: {self.first_person_usage.value}",
-            f"\n**Paper Structure:**",
+            "\n**Paper Structure:**",
         ])
 
         for section, ratio in self.section_ratios.items():
@@ -189,7 +188,7 @@ class StyleFingerprint(BaseModel):
             lines.append(f"\n**Common Transitions:** {', '.join(self.transition_patterns[:5])}")
 
         if self.sample_paragraphs:
-            lines.append(f"\n**Example Paragraphs for Reference:**")
+            lines.append("\n**Example Paragraphs for Reference:**")
             for i, para in enumerate(self.sample_paragraphs[:3], 1):
                 lines.append(f"  Example {i}: {para[:100]}...")
 

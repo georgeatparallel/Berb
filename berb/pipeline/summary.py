@@ -31,7 +31,6 @@ def build_pipeline_summary(
     run_dir: Path | None = None,
 ) -> dict[str, object]:
     """Aggregate stage results into a pipeline summary dict."""
-    from berb.pipeline.executor import StageResult
 
     summary: dict[str, object] = {
         "run_id": run_id,

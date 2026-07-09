@@ -4,10 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from berb.web.search import SearchResult, WebSearchClient, WebSearchResponse
-
 
 # ---------------------------------------------------------------------------
 # SearchResult dataclass

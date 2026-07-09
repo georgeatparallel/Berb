@@ -14,8 +14,8 @@ Inspired by Claude Scholar's review-response skill.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
-from enum import Enum
+from datetime import UTC, datetime
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -23,7 +23,7 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger(__name__)
 
 
-class ReviewCommentType(str, Enum):
+class ReviewCommentType(StrEnum):
     """Review comment type.
 
     Attributes:
@@ -39,7 +39,7 @@ class ReviewCommentType(str, Enum):
     MISUNDERSTANDING = "misunderstanding"
 
 
-class ResponseStrategy(str, Enum):
+class ResponseStrategy(StrEnum):
     """Response strategy for review comment.
 
     Attributes:
@@ -132,7 +132,7 @@ class RebuttalLetter(BaseModel):
 
     manuscript_id: str
     authors: list[str] = Field(default_factory=list)
-    date: str = Field(default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d"))
+    date: str = Field(default_factory=lambda: datetime.now(UTC).strftime("%Y-%m-%d"))
     editor_response: str = ""
     reviewer_responses: dict[str, list[RebuttalResponse]] = Field(default_factory=dict)
     summary_of_changes: list[str] = Field(default_factory=list)
@@ -628,16 +628,16 @@ Response:"""
             for response in reviewer_responses
         )
 
-        return f"""We are grateful for the opportunity to revise our manuscript. 
-We have carefully addressed all {total_comments} comments from the reviewers 
+        return f"""We are grateful for the opportunity to revise our manuscript.
+We have carefully addressed all {total_comments} comments from the reviewers
 and have made {total_changes} changes to the manuscript.
 
-The reviewers' comments have been invaluable in improving our paper. 
-We have clarified our methodology, strengthened our analysis, and 
+The reviewers' comments have been invaluable in improving our paper.
+We have clarified our methodology, strengthened our analysis, and
 better positioned our contributions in light of the feedback received.
 
-All changes are highlighted in the revised manuscript for your convenience. 
-We believe the paper is now significantly improved and hope it meets 
+All changes are highlighted in the revised manuscript for your convenience.
+We believe the paper is now significantly improved and hope it meets
 the standards of your journal."""
 
 

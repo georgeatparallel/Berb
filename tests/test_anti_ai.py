@@ -10,13 +10,14 @@ Coverage:
 # Author: Georgios-Chrysovalantis Chatzivantsidis
 """
 
-import pytest
 import asyncio
 
+import pytest
+
 from berb.writing.anti_ai import (
-    AntiAIEncoder,
     AIPhrase,
     AnalysisResult,
+    AntiAIEncoder,
     Language,
     PhraseCategory,
     analyze_for_ai,
@@ -155,9 +156,9 @@ class TestAIScore:
         """Test high AI score for AI-like text."""
         encoder = AntiAIEncoder(sensitivity=0.5)
         text = """
-        In conclusion, it is worth noting that this paper delves into 
-        the comprehensive and thorough methodology. Furthermore, it is 
-        important to note that we leverage the framework to shed light 
+        In conclusion, it is worth noting that this paper delves into
+        the comprehensive and thorough methodology. Furthermore, it is
+        important to note that we leverage the framework to shed light
         on the problem.
         """
         result = asyncio.run(encoder.analyze(text))
@@ -168,8 +169,8 @@ class TestAIScore:
         """Test low AI score for human-like text."""
         encoder = AntiAIEncoder(sensitivity=0.5)
         text = """
-        We trained ResNet-50 on ImageNet for 90 epochs using SGD with 
-        momentum 0.9. Learning rate: 0.01, batch size: 256. Results: 
+        We trained ResNet-50 on ImageNet for 90 epochs using SGD with
+        momentum 0.9. Learning rate: 0.01, batch size: 256. Results:
         76.3% top-1 accuracy.
         """
         result = asyncio.run(encoder.analyze(text))

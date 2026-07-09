@@ -6,12 +6,11 @@ import asyncio
 
 import pytest
 
-from berb.mcp.tools import TOOL_DEFINITIONS, get_tool_schema, list_tool_names
-from berb.mcp.server import BerbMCPServer
 from berb.mcp.client import MCPClient
 from berb.mcp.registry import MCPServerRegistry
+from berb.mcp.server import BerbMCPServer
+from berb.mcp.tools import TOOL_DEFINITIONS, get_tool_schema, list_tool_names
 from berb.mcp.transport import SSETransport
-
 
 # ══════════════════════════════════════════════════════════════════
 # MCP Tools tests

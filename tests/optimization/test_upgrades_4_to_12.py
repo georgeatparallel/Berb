@@ -1,12 +1,19 @@
 """Tests for remaining optimization upgrades (4-12)."""
 
-import pytest
-from pathlib import Path
-from unittest.mock import AsyncMock, patch, MagicMock
 
+import pytest
+
+from berb.benchmarks.evaluation_framework import (
+    BerbBenchmarkFramework,
+    DRACOScore,
+)
+from berb.experiment.evolutionary_search import (
+    EvolutionaryExperimentSearch,
+    ExperimentVariant,
+)
 from berb.experiment.physics_guards import (
-    PhysicsCodeGuard,
     CodeQualityIssue,
+    PhysicsCodeGuard,
 )
 from berb.literature.fs_processor import (
     FileSystemLiteratureProcessor,
@@ -20,24 +27,15 @@ from berb.math.verification import (
     VerifiableMathContent,
     VerifiedTheorem,
 )
-from berb.experiment.evolutionary_search import (
-    EvolutionaryExperimentSearch,
-    ExperimentVariant,
-)
 from berb.writing.impact_assessment import (
-    HumanitarianImpactAssessment,
     ContributionType,
+    HumanitarianImpactAssessment,
 )
 from berb.writing.parallel_writer import (
     ParallelSectionWriter,
-    SectionPlan,
     SectionDependency,
+    SectionPlan,
 )
-from berb.benchmarks.evaluation_framework import (
-    BerbBenchmarkFramework,
-    DRACOScore,
-)
-
 
 # =============================================================================
 # Upgrade 5: Physics Code Guards
@@ -332,7 +330,6 @@ class TestVerifiableMathContent:
         """Test expression evaluation with numpy functions."""
         verifier = VerifiableMathContent()
 
-        import numpy as np
 
         result = verifier._evaluate_expression(
             "sin(pi/2)",
@@ -633,7 +630,7 @@ class TestBerbBenchmarkFramework:
 
     def test_initialization(self):
         """Test benchmark framework initialization."""
-        framework = BerbBenchmarkFramework()
+        BerbBenchmarkFramework()
 
     def test_parse_draco_scores_valid(self):
         """Test DRACO score parsing from valid JSON."""
@@ -704,24 +701,6 @@ class TestOptimizationIntegration:
 
     def test_all_upgrades_importable(self):
         """Test that all upgrade modules are importable."""
-        from berb.experiment import (
-            AsyncExperimentPool,
-            PhysicsCodeGuard,
-            EvolutionaryExperimentSearch,
-            ExperimentReActAgent,
-        )
-        from berb.validation import HiddenConsistentEvaluation
-        from berb.review import CouncilMode
-        from berb.literature import (
-            FileSystemLiteratureProcessor,
-            FileSystemQueryEngine,
-        )
-        from berb.math import VerifiableMathContent
-        from berb.writing import (
-            HumanitarianImpactAssessment,
-            ParallelSectionWriter,
-        )
-        from berb.benchmarks import BerbBenchmarkFramework
 
         # All imports successful
         assert True

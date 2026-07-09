@@ -785,7 +785,6 @@ def run_experiment_diagnosis(run_dir: Path, config: RCConfig, run_id: str) -> No
 
     import yaml as _yaml_diag
 
-    from berb.config import RCConfig
     from berb.pipeline.checkpoint import _utcnow_iso
     from berb.pipeline.experiment_repair import build_repair_prompt
 

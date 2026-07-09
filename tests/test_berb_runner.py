@@ -492,7 +492,7 @@ async def test_pivot_decision_triggers_rollback_to_hypothesis_gen(
         return _done(stage)
 
     monkeypatch.setattr(rc_runner, "execute_stage", mock_execute_stage)
-    results = await rc_runner.execute_pipeline(
+    await rc_runner.execute_pipeline(
         run_dir=run_dir,
         run_id="run-pivot",
         config=rc_config,
@@ -528,7 +528,7 @@ async def test_refine_decision_triggers_rollback_to_iterative_refine(
         return _done(stage)
 
     monkeypatch.setattr(rc_runner, "execute_stage", mock_execute_stage)
-    results = await rc_runner.execute_pipeline(
+    await rc_runner.execute_pipeline(
         run_dir=run_dir,
         run_id="run-refine",
         config=rc_config,
@@ -556,7 +556,7 @@ async def test_max_pivot_count_prevents_infinite_loop(
         return _done(stage)
 
     monkeypatch.setattr(rc_runner, "execute_stage", mock_execute_stage)
-    results = await rc_runner.execute_pipeline(
+    await rc_runner.execute_pipeline(
         run_dir=run_dir,
         run_id="run-max-pivot",
         config=rc_config,
@@ -583,7 +583,7 @@ async def test_proceed_decision_does_not_trigger_rollback(
         return _done(stage)
 
     monkeypatch.setattr(rc_runner, "execute_stage", mock_execute_stage)
-    results = await rc_runner.execute_pipeline(
+    await rc_runner.execute_pipeline(
         run_dir=run_dir,
         run_id="run-proceed",
         config=rc_config,

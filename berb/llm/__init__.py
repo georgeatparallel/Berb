@@ -55,11 +55,11 @@ PROVIDER_PRESETS = {
     },
     "deepseek": {
         "base_url": "https://api.deepseek.com/v1",
-        "default_model": "deepseek-chat",
+        "default_model": "deepseek-v4-flash",
     },
     "xai": {
         "base_url": "https://api.x.ai/v1",
-        "default_model": "grok-4",
+        "default_model": "grok-4.3",
     },
     "perplexity": {
         "base_url": "https://api.perplexity.ai",
@@ -84,12 +84,12 @@ PROVIDER_PRESETS = {
 
 # Re-export OpenRouter variant routing API
 from berb.llm.openrouter_adapter import (  # noqa: E402
-    ModelVariant,
-    OpenRouterProvider,
-    ProviderRouting,
     ROUTING_ANTHROPIC_DIRECT,
     ROUTING_EXACT,
     ROUTING_NITRO,
+    ModelVariant,
+    OpenRouterProvider,
+    ProviderRouting,
     strip_variant,
 )
 

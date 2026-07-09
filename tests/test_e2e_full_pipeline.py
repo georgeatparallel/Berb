@@ -26,7 +26,6 @@ Coverage:
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -39,7 +38,6 @@ from berb.config import RCConfig
 from berb.pipeline.contracts import CONTRACTS
 from berb.pipeline.executor import execute_stage
 from berb.pipeline.stages import Stage, StageStatus
-
 
 # ============================================================================
 # E2E Test Fixtures

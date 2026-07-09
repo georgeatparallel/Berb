@@ -31,7 +31,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from berb.llm.nadirclaw_router import NadirClawRouter
-from berb.llm.openrouter_adapter import ModelVariant, ProviderRouting
+from berb.llm.openrouter_adapter import ModelVariant
 from berb.metrics.reasoning_cost_tracker import (
     Provider,
     get_cost_tracker,

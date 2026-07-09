@@ -1,14 +1,14 @@
 """Unit tests for adaptive temperature."""
 
-import pytest
 from unittest.mock import AsyncMock
 
+import pytest
+
 from berb.llm.adaptive_temp import (
+    DEFAULT_STRATEGY,
+    TASK_STRATEGIES,
     AdaptiveTemperatureClient,
     TemperatureStrategy,
-    RetryStage,
-    TASK_STRATEGIES,
-    DEFAULT_STRATEGY,
     get_temperature_for_stage,
 )
 

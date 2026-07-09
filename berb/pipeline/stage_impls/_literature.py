@@ -13,7 +13,6 @@ import yaml
 
 from berb.adapters import AdapterBundle
 from berb.config import RCConfig
-from berb.adapters import LLMProvider
 from berb.llm.client import LLMClient
 from berb.pipeline._helpers import (
     StageResult,
@@ -796,35 +795,35 @@ def _execute_knowledge_extract(
     prompts: PromptManager | None = None,
 ) -> StageResult:
     """Extract knowledge cards with batching for efficiency.
-    
+
     P0 2026-04-06: Added batching (5 papers/batch) and fast model fallback
     to prevent timeouts on large shortlists.
     """
     import json
-    
+
     shortlist_text = _read_prior_artifact(run_dir, "shortlist.jsonl") or ""
-    
+
     # Parse papers into individual rows
     rows = _parse_jsonl_rows(shortlist_text)
     if not rows:
         logger.warning("Stage 6: No papers in shortlist, using template cards")
         rows = []
-    
+
     # Get web context
     web_context = _read_prior_artifact(run_dir, "web_context.md") or ""
-    
+
     cards_dir = stage_dir / "cards"
     cards_dir.mkdir(parents=True, exist_ok=True)
     all_cards: list[dict[str, Any]] = []
-    
+
     # P0 2026-04-06: Process in batches of 5 with fast model
     BATCH_SIZE = 5
     FAST_MODEL = "qwen/qwen3.5-flash"  # 5x faster than DeepSeek V3.2
-    
+
     if llm is not None:
         _pm = prompts or PromptManager()
         _overlay = _get_evolution_overlay(run_dir, "knowledge_extract")
-        
+
         # Try to use fast model by creating a temporary config.
         # FAST_MODEL is an OpenRouter-catalog model ID ("qwen/..."); it only
         # resolves against OpenRouter's own routing. Sending it to a direct
@@ -852,28 +851,28 @@ def _execute_knowledge_extract(
                 "Stage 6: Non-OpenRouter endpoint (%s), skipping fast-model switch",
                 llm.config.base_url,
             )
-        
+
         # Process papers in batches
         for batch_idx in range(0, len(rows), BATCH_SIZE):
             batch_rows = rows[batch_idx:batch_idx + BATCH_SIZE]
             batch_num = batch_idx // BATCH_SIZE + 1
             total_batches = (len(rows) + BATCH_SIZE - 1) // BATCH_SIZE
-            
-            logger.info("Stage 6: Processing batch %d/%d (%d papers)", 
+
+            logger.info("Stage 6: Processing batch %d/%d (%d papers)",
                        batch_num, total_batches, len(batch_rows))
-            
+
             # Format batch as JSONL
             batch_jsonl = "\n".join(json.dumps(row, ensure_ascii=False) for row in batch_rows)
-            
+
             # Add web context only to first batch
             batch_shortlist = batch_jsonl
             if batch_idx == 0 and web_context:
                 batch_shortlist = batch_shortlist + "\n\n--- Web Search Context ---\n" + web_context[:2_000]
-            
+
             try:
                 sp = _pm.for_stage(
-                    "knowledge_extract", 
-                    evolution_overlay=_overlay, 
+                    "knowledge_extract",
+                    evolution_overlay=_overlay,
                     shortlist=batch_shortlist
                 )
                 resp = _chat_with_prompt(
@@ -895,7 +894,7 @@ def _execute_knowledge_extract(
                 logger.error("Stage 6: Batch %d failed: %s", batch_num, e)
                 # Continue with next batch instead of failing entirely
                 continue
-    
+
     # Deduplicate cards by title
     seen_titles = set()
     cards = []
@@ -904,9 +903,9 @@ def _execute_knowledge_extract(
         if title and title not in seen_titles:
             cards.append(card)
             seen_titles.add(title)
-    
+
     logger.info("Stage 6: Total unique cards extracted: %d", len(cards))
-    
+
     # If no cards extracted, use template fallback
     if not cards:
         # Fallback: generate template cards for all papers in shortlist

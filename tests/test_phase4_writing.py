@@ -3,8 +3,9 @@
 Author: Georgios-Chrysovalantis Chatzivantsidis
 """
 
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import Mock, AsyncMock, patch
 
 berb_writing = pytest.importorskip(
     "berb.writing.anti_ai",
@@ -17,13 +18,12 @@ DetectionResult = berb_writing.DetectionResult
 create_encoder_from_env = berb_writing.create_encoder_from_env
 
 from berb.pipeline.citation_verification import (  # noqa: E402
-    CitationVerifier,
-    VerifierConfig,
-    VerificationLayer,
     CitationVerificationResult,
+    CitationVerifier,
+    VerificationLayer,
+    VerifierConfig,
     create_verifier_from_env,
 )
-
 
 # ============== Anti-AI Encoder Tests ==============
 
@@ -289,9 +289,7 @@ class TestCitationVerifier:
         """Test DOI format validation."""
         verifier = CitationVerifier()
 
-        citation = {"doi": "10.1038/s41586-021-03819-2"}
         # Note: This is async, but we'll test the pattern directly
-        import re
 
         pattern = verifier.DOI_PATTERN
         assert pattern.match("10.1038/s41586-021-03819-2")

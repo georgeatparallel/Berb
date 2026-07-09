@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from berb.pipeline.contracts import StageContract
 from berb.pipeline.registry import (
-    StageRegistration,
     clear_registry,
     get_all_registrations,
     get_registration,

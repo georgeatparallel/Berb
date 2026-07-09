@@ -7,14 +7,14 @@ parallel section writing, and humanitarian impact assessment.
 """
 
 from .impact_assessment import (
-    HumanitarianImpactAssessment,
     ContributionAssessment,
+    HumanitarianImpactAssessment,
     assess_contribution_type,
 )
 from .parallel_writer import (
+    PaperSections,
     ParallelSectionWriter,
     SectionPlan,
-    PaperSections,
     write_paper_parallel,
 )
 

@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -28,7 +28,7 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger(__name__)
 
 
-class AcademicPolishCategory(str, Enum):
+class AcademicPolishCategory(StrEnum):
     """Category of academic polish improvement.
 
     Attributes:
@@ -54,7 +54,7 @@ class AcademicPolishCategory(str, Enum):
     CITATION_INTEGRATION = "citation"
 
 
-class PolishSeverity(str, Enum):
+class PolishSeverity(StrEnum):
     """Severity of polish suggestion.
 
     Attributes:

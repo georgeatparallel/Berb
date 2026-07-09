@@ -3,23 +3,23 @@
 Author: Georgios-Chrysovalantis Chatzivantsidis
 """
 
-import pytest
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
-from berb.web.firecrawl_client import (
-    FirecrawlClient,
-    FirecrawlConfig,
-    ScrapeFormat,
-    ScrapeResult,
-    CrawlResult,
-    MapResult,
-)
+import pytest
+
 from berb.literature.full_text import (
-    FullTextExtractor,
     ExtractorConfig,
+    FullTextExtractor,
     FullTextResult,
 )
-
+from berb.web.firecrawl_client import (
+    CrawlResult,
+    FirecrawlClient,
+    FirecrawlConfig,
+    MapResult,
+    ScrapeFormat,
+    ScrapeResult,
+)
 
 # ============== Firecrawl Client Tests ==============
 

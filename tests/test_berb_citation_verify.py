@@ -6,8 +6,7 @@ import textwrap
 from typing import Any
 from unittest.mock import MagicMock, patch
 
-import pytest
-
+from berb.literature.models import Author, Paper
 from berb.literature.verify import (
     CitationResult,
     VerificationReport,
@@ -21,8 +20,6 @@ from berb.literature.verify import (
     verify_by_title_search,
     verify_citations,
 )
-from berb.literature.models import Author, Paper
-
 
 SAMPLE_BIB = textwrap.dedent("""\
     @article{vaswani2017attention,
