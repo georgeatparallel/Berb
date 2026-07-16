@@ -21,6 +21,8 @@ from berb.commands import (
     cmd_obsidian_init,
     cmd_rebuttal_enhanced,
     cmd_research_init,
+    cmd_run_orchestrator,
+    cmd_run_reasoner,
     cmd_verify_citations,
     cmd_zotero_notes,
     cmd_zotero_review,
@@ -1226,6 +1228,40 @@ def main(argv: list[str] | None = None) -> int:
     wiz_p = sub.add_parser("wizard", help="Run the setup wizard")
     _ = wiz_p.add_argument("--output", "-o", help="Write config to file")
 
+    # Headless runners for external apps
+    reasoner_p = sub.add_parser("run-reasoner", help="Run the Reasoner application headlessly")
+    _ = reasoner_p.add_argument("--problem", "-p", required=True, help="Problem statement to solve")
+    _ = reasoner_p.add_argument(
+        "--preset", default="multi-perspective-budget", help="Routing preset to run"
+    )
+    _ = reasoner_p.add_argument("--output", "-o", help="Output JSON path for pipeline state")
+    _ = reasoner_p.add_argument(
+        "--path", default=r"E:\Documents\Vibe-Coding\Reasoner", help="Path to Reasoner repository"
+    )
+    _ = reasoner_p.add_argument(
+        "--sequential", action="store_true", help="Run perspectives sequentially"
+    )
+    _ = reasoner_p.add_argument(
+        "--quiet", action="store_true", help="Suppress phase-by-phase logging"
+    )
+
+    orchestrator_p = sub.add_parser("run-orchestrator", help="Run the AI Orchestrator headlessly")
+    _ = orchestrator_p.add_argument("--project", "-p", required=True, help="Project description")
+    _ = orchestrator_p.add_argument(
+        "--budget", "-b", type=float, default=8.0, help="Max budget in USD"
+    )
+    _ = orchestrator_p.add_argument(
+        "--output-dir", "-o", help="Output directory for generated files"
+    )
+    _ = orchestrator_p.add_argument(
+        "--path",
+        default=r"E:\Documents\Vibe-Coding\Ai Orchestrator",
+        help="Path to AI Orchestrator repository",
+    )
+    _ = orchestrator_p.add_argument(
+        "--quiet", action="store_true", help="Suppress progress outputs"
+    )
+
     # C1: Multi-project management
     proj_p = sub.add_parser("project", help="Multi-project management")
     _ = proj_p.add_argument(
@@ -1315,6 +1351,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if command == "run":
         return cmd_run(args)
+    elif command == "run-reasoner":
+        return cmd_run_reasoner(args)
+    elif command == "run-orchestrator":
+        return cmd_run_orchestrator(args)
     elif command == "validate":
         return cmd_validate(args)
     elif command == "doctor":

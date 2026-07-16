@@ -28,6 +28,10 @@ from berb.commands.claude_scholar import (
     cmd_zotero_review,
     setup_claude_scholar_commands,
 )
+from berb.commands.external_runners import (
+    cmd_run_orchestrator,
+    cmd_run_reasoner,
+)
 
 __all__ = [
     # Command handlers
@@ -41,6 +45,8 @@ __all__ = [
     "cmd_verify_citations",
     "cmd_anti_ai_editing",
     "cmd_obsidian_init",
+    "cmd_run_reasoner",
+    "cmd_run_orchestrator",
     # Setup function
     "setup_claude_scholar_commands",
 ]
