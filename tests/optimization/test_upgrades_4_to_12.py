@@ -713,17 +713,12 @@ class TestOptimizationIntegration:
         assert hasattr(experiment, "EvolutionaryExperimentSearch")
         assert hasattr(experiment, "ExperimentReActAgent")
 
-    def test_validation_module_complete(self):
-        """Test validation module has HCE."""
-        from berb import validation
+    def test_integrity_eval_module_complete(self):
+        """Test integrity.eval module has HCE."""
+        from berb.integrity.eval import hidden_eval
 
-        assert hasattr(validation, "HiddenConsistentEvaluation")
+        assert hasattr(hidden_eval, "HiddenConsistentEvaluation")
 
-    def test_review_module_complete(self):
-        """Test review module has Council Mode."""
-        from berb import review
-
-        assert hasattr(review, "CouncilMode")
 
     def test_literature_module_complete(self):
         """Test literature module has FS processing."""

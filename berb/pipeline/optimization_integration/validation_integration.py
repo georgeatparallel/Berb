@@ -13,7 +13,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
-from berb.validation.hidden_eval import (
+from berb.integrity.eval.hidden_eval import (
     EvaluationResult,
     HiddenConsistentEvaluation,
     PaperDocument,

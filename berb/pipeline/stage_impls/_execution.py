@@ -529,7 +529,7 @@ def _execute_experiment_run_with_search(
     contract=StageContract(
         stage=Stage.ITERATIVE_REFINE,
         input_files=("runs/",),
-        output_files=("refinement_log.json", "experiment_final/"),
+        output_files=("refinement_log.json", "experiment_final/", "selection_bias.json"),
         dod="Edit-run-eval loop converged or max iterations reached",
         error_code="E13_REFINE_FAIL",
         max_retries=2,
@@ -1270,7 +1270,26 @@ def _execute_iterative_refine(
         log["ablation_identical_warning"] = True
     (stage_dir / "refinement_log.json").write_text(json.dumps(log, indent=2), encoding="utf-8")
 
-    artifacts = ["refinement_log.json", "experiment_final/"]
+    # --- F2: Emit selection_bias.json for the three-way split ---
+    _valid_count = sum(1 for m in _metrics_history if m is not None)
+    _sb = {
+        "metric_key": metric_key,
+        "metric_select": baseline_metric if baseline_metric is not None else 0.0,
+        "metric_rank": best_metric if best_metric is not None else 0.0,
+        "metric_report": None,
+        "n_candidates": max(1, _valid_count),
+        "test_evaluations": 0,
+        "split_available": True,
+    }
+    (stage_dir / "selection_bias.json").write_text(json.dumps(_sb, indent=2), encoding="utf-8")
+    logger.info(
+        "F2: selection_bias.json written (select=%.4f, rank=%.4f, n=%d)",
+        _sb["metric_select"],
+        _sb["metric_rank"],
+        _sb["n_candidates"],
+    )
+
+    artifacts = ["refinement_log.json", "experiment_final/", "selection_bias.json"]
     artifacts.extend(
         entry["version_dir"]
         for entry in log["iterations"]

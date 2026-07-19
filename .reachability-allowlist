@@ -1,0 +1,20 @@
+# .reachability-allowlist — modules that are intentionally unreachable
+# Each entry must be a dotted module name followed by a # justification.
+# Parked modules are acknowledged debt; revisit each within 2 quarters.
+
+# D-01: Parked domains (physics + chaos). No active roadmap.
+berb.domains.physics    # Parked — 2026-07-19; revisit Q1 2027
+berb.domains.chaos      # Parked — 2026-07-19; revisit Q1 2027
+
+# D-03: Parked modules. No active roadmap evidence.
+berb.hyperagent         # Parked — 2026-07-19; revisit Q1 2027
+berb.i18n               # Parked — 2026-07-19; revisit Q1 2027
+berb.experimental       # Parked — 2026-07-19; revisit Q1 2027
+
+# D-04: Parked finding reproduction. Needs curated known-findings corpus.
+berb.integrity.eval.finding_reproduction  # Parked — 2026-07-19; revisit when corpus exists
+
+# Other naturally unreachable or infrastructure modules.
+# These are reachable as tools/utilities but not called from pipeline entry points.
+berb.hardware           # Hardware detection; health.py may call this
+berb.writing_guide      # Documentation aid, not pipeline-reachable

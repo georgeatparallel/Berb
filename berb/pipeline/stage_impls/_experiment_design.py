@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
     depends_on=frozenset({Stage.HYPOTHESIS_GEN}),
     contract=StageContract(
         stage=Stage.EXPERIMENT_DESIGN,
-        input_files=("hypotheses.md",),
+        input_files=("hypotheses.md", "hypothesis_state.json"),
         output_files=("exp_plan.yaml",),
         dod="Experiment plan with baselines, ablations, metrics approved",
         error_code="E09_GATE_REJECT",
@@ -54,6 +54,30 @@ def _execute_experiment_design(
 ) -> StageResult:
     hypotheses = _read_prior_artifact(run_dir, "hypotheses.md") or ""
     preamble = _build_context_preamble(config, run_dir, include_goal=True, include_hypotheses=True)
+
+    # --- E1: Falsification gate check ---
+    _hs_text = _read_prior_artifact(run_dir, "hypothesis_state.json")
+    if _hs_text:
+        try:
+            _hs = json.loads(_hs_text) if isinstance(_hs_text, str) else _hs_text
+            if not _hs.get("gate_passed", True):
+                logger.warning(
+                    "E1: Falsification gate BLOCKED — hypotheses failed scrutiny. "
+                    "Returning to Stage 8 for revision."
+                )
+                return StageResult(
+                    stage=Stage.EXPERIMENT_DESIGN,
+                    status=StageStatus.FAILED,
+                    artifacts=(),
+                    evidence_refs=(),
+                    error_code="E09_GATE_REJECT",
+                    error_detail=f"Falsification gate blocked: {_hs.get('critic_transcript', 'No transcript')[:500]}",
+                )
+        except (json.JSONDecodeError, AttributeError) as _hs_err:
+            logger.warning("E1: Could not parse hypothesis_state.json, gate passes open: %s", _hs_err)
+    else:
+        logger.info("E1: No hypothesis_state.json found, gate passes open (backward compat)")
+
     plan: dict[str, Any] | None = None
 
     # ── Domain detection ──────────────────────────────────────────────────

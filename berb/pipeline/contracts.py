@@ -55,6 +55,89 @@ class SeedValidity:
 
 
 @dataclass(frozen=True)
+class SplitEvidence:
+    """Three-way split evidence for a reported metric.
+
+    Produced by Stage 13 (ITERATIVE_REFINE), consumed by Stage 14
+    (RESULT_ANALYSIS) and Stage 17 (PAPER_DRAFT).
+    Written to selection_bias.json.
+
+    The three-way split decouples:
+    - metric_select (train) — used during the edit-run-eval loop to tune
+    - metric_rank (validation) — used to pick the best-of-N candidate
+    - metric_report (test) — touched at most once; the honest estimate
+
+    When no split is possible (small dataset), split_available=False
+    and the limitation must be disclosed in the paper text.
+    """
+
+    metric_key: str
+    """Name of the metric being tracked (e.g. 'accuracy', 'loss')."""
+
+    metric_select: float
+    """Score on the train/selection split — the value optimised during search."""
+
+    metric_rank: float
+    """Score on the validation/rank split — used for best-of-N selection."""
+
+    metric_report: float | None = None
+    """Score on the test/holdout split — touched at most once.
+    None if the test split has not yet been evaluated."""
+
+    n_candidates: int = 1
+    """N in best-of-N selection. Bias grows with this number."""
+
+    test_evaluations: int = 0
+    """How many times the test split has been read. MUST be <= 1;
+    a second read invalidates the statistical contract and sets
+    split_available=False."""
+
+    split_available: bool = True
+    """True if a three-way split was feasible. False when the dataset
+    was too small to partition, or test_evaluations exceeded 1."""
+
+
+@dataclass(frozen=True)
+class Assumption:
+    """An explicit assumption underlying a hypothesis.
+
+    Each assumption is classified as either testable (can be verified
+    experimentally) or untested (cannot currently be tested).  The
+    falsification gate requires that all critical assumptions are
+    surfaced before a hypothesis passes to experiment design.
+    """
+
+    statement: str
+    """The assumption text."""
+
+    is_testable: bool = True
+    """Whether this assumption can be experimentally verified."""
+
+    test_suggestion: str = ""
+    """How this assumption could be tested (empty if untestable)."""
+
+
+@dataclass(frozen=True)
+class Threshold:
+    """A machine-checkable rejection threshold for a hypothesis.
+
+    Used in ``rejection_conditions`` to define, upfront, what empirical
+    result would refute the hypothesis — addressing the falsifiability
+    requirement from Popperian scientific method.
+    """
+
+    metric_key: str
+    """The metric this threshold applies to (e.g. 'accuracy', 'loss')."""
+
+    comparator: str = "lt"
+    """Comparison operator: 'lt' (less than), 'gt' (greater than),
+    'lte' (≤), 'gte' (≥), 'eq' (==)."""
+
+    value: float = 0.0
+    """The threshold value to compare against."""
+
+
+@dataclass(frozen=True)
 class StageContract:
     stage: Stage
     input_files: tuple[str, ...]
@@ -177,7 +260,7 @@ CONTRACTS: dict[Stage, StageContract] = {
     Stage.ITERATIVE_REFINE: StageContract(
         stage=Stage.ITERATIVE_REFINE,
         input_files=("runs/",),
-        output_files=("refinement_log.json", "experiment_final/"),
+        output_files=("refinement_log.json", "experiment_final/", "selection_bias.json"),
         dod="Edit-run-eval loop converged or max iterations reached",
         error_code="E13_REFINE_FAIL",
         max_retries=2,
@@ -186,8 +269,8 @@ CONTRACTS: dict[Stage, StageContract] = {
     # Phase F: Analysis & Decision
     Stage.RESULT_ANALYSIS: StageContract(
         stage=Stage.RESULT_ANALYSIS,
-        input_files=("runs/",),
-        output_files=("analysis.md",),
+        input_files=("runs/", "selection_bias.json"),
+        output_files=("analysis.md", "experiment_summary.json"),
         dod="Metrics analyzed with statistical tests and conclusions",
         error_code="E14_ANALYSIS_ERR",
         depends_on=frozenset({Stage.EXPERIMENT_RUN}),

@@ -1353,7 +1353,7 @@ def _detect_result_contradictions(
     depends_on=frozenset({Stage.PAPER_OUTLINE}),
     contract=StageContract(
         stage=Stage.PAPER_DRAFT,
-        input_files=("outline.md",),
+        input_files=("outline.md", "selection_bias.json"),
         output_files=("paper_draft.md",),
         dod="Full paper draft with all sections written",
         error_code="E17_DRAFT_FAIL",

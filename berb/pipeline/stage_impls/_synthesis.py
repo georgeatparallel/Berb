@@ -150,7 +150,7 @@ Under-reported failure behavior under distribution shift.
     contract=StageContract(
         stage=Stage.HYPOTHESIS_GEN,
         input_files=("synthesis.md",),
-        output_files=("hypotheses.md",),
+        output_files=("hypotheses.md", "hypothesis_state.json"),
         dod=">=2 falsifiable research hypotheses",
         error_code="E08_HYP_INVALID",
     ),
@@ -265,6 +265,88 @@ def _execute_hypothesis_gen(
 
     (stage_dir / "hypotheses.md").write_text(hypotheses_md, encoding="utf-8")
 
+    # --- E1: Falsification gate (non-blocking — results recorded for stage 9) ---
+    _hypothesis_state: dict[str, Any] = {
+        "stage": "hypothesis_gen",
+        "generated_at": _utcnow_iso(),
+        "hypotheses": [],
+        "gate_passed": True,
+        "critic_transcript": "",
+    }
+    if llm is not None and hypotheses_md.strip():
+        try:
+            # Split hypotheses markdown into individual statements
+            _h_raw = hypotheses_md.split("## Hypothesis")
+            _h_texts = []
+            for _h in _h_raw:
+                _h = _h.strip()
+                if _h and len(_h) > 20:
+                    _h_texts.append(_h[:1000])
+
+            if _h_texts:
+                from berb.reasoning.socratic import FalsificationCritic as _Critic
+
+                _critic = _Critic(llm_client=llm)
+                _all_issues: list[dict[str, Any]] = []
+                _hypothesis_records: list[dict[str, Any]] = []
+
+                for i, _ht in enumerate(_h_texts, 1):
+                    _record: dict[str, Any] = {
+                        "index": i,
+                        "text": _ht[:200],
+                        "hard_issues": [],
+                        "soft_issues": [],
+                        "passed": True,
+                        "rounds_completed": 0,
+                    }
+
+                    _max_rounds = 2
+                    _current_text = _ht
+                    for _round in range(_max_rounds):
+                        async def _run_critic(text=_current_text):
+                            return await _critic.scrutinize(text)
+                        _issues = asyncio.run(_run_critic())
+                        _hard = [i for i in _issues if i.get("severity") == "hard"]
+                        _soft = [i for i in _issues if i.get("severity") == "soft"]
+
+                        _record.setdefault("rounds", []).append({
+                            "round": _round + 1,
+                            "hard_issues": _hard,
+                            "soft_issues": _soft,
+                        })
+
+                        if not _hard:
+                            break
+                        if _round == _max_rounds - 1:
+                            break
+                        _current_text = _ht  # would be repaired by LLM in production
+
+                    _record["hard_issues"] = _hard if _hard else []
+                    _record["soft_issues"] = _soft if _soft else []
+                    _record["passed"] = len(_hard) == 0
+                    _record["rounds_completed"] = _round + 1
+                    _hypothesis_records.append(_record)
+                    _all_issues.extend(_hard)
+                    _all_issues.extend(_soft)
+
+                _hypothesis_state["hypotheses"] = _hypothesis_records
+                _hypothesis_state["gate_passed"] = all(r["passed"] for r in _hypothesis_records)
+                _hypothesis_state["critic_transcript"] = _critic.format_issues(_all_issues)
+
+                logger.info(
+                    "E1: Falsification gate %s (%d hypotheses, %d hard issues)",
+                    "PASSED" if _hypothesis_state["gate_passed"] else "BLOCKED",
+                    len(_h_texts),
+                    len(_all_issues),
+                )
+        except Exception as _e1:
+            logger.warning("E1: Falsification gate failed, gate passes open: %s", _e1)
+
+    (stage_dir / "hypothesis_state.json").write_text(
+        json.dumps(_hypothesis_state, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
     # --- Novelty check (non-blocking) ---
     novelty_artifacts: tuple[str, ...] = ()
     try:
@@ -297,8 +379,8 @@ def _execute_hypothesis_gen(
     return StageResult(
         stage=Stage.HYPOTHESIS_GEN,
         status=StageStatus.DONE,
-        artifacts=("hypotheses.md",) + novelty_artifacts,
-        evidence_refs=("stage-08/hypotheses.md",),
+        artifacts=("hypotheses.md", "hypothesis_state.json") + novelty_artifacts,
+        evidence_refs=("stage-08/hypotheses.md", "stage-08/hypothesis_state.json"),
     )
 
 

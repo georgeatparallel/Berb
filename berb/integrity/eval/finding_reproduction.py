@@ -15,7 +15,7 @@ Features:
 # Author: Georgios-Chrysovalantis Chatzivantsidis
 
 Usage:
-    from berb.validation.finding_reproduction import FindingReproducer
+    from berb.integrity.eval.finding_reproduction import FindingReproducer
 
     reproducer = FindingReproducer()
     result = await reproducer.reproduce("KRAS mutations in pancreatic cancer")

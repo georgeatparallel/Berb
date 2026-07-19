@@ -130,7 +130,6 @@ class OptimizationBenchmarkSuite:
         # Run individual benchmarks
         await self.benchmark_async_pool()
         await self.benchmark_literature_fs()
-        await self.benchmark_council_mode()
         await self.benchmark_physics_guards()
         await self.benchmark_parallel_writing()
 
@@ -263,46 +262,6 @@ class OptimizationBenchmarkSuite:
 
         logger.info(
             f"Literature FS: Processed {stats['total_papers']} papers in {process_time:.2f}s"
-        )
-
-    async def benchmark_council_mode(self) -> None:
-        """Benchmark 3: Council Decision Quality (Upgrade 3).
-
-        Expected: +35-45% quality improvement
-        """
-        from berb.review.council_mode import CouncilMode
-
-        logger.info("Running Council Decision Quality benchmark")
-
-        council = CouncilMode()
-
-        # Simulated task
-        task = "Evaluate the novelty of graph neural networks for drug discovery"
-
-        start = time.time()
-        synthesis = await council.run_council(
-            task=task,
-            models=["claude-3-sonnet"],  # Single model for speed
-            judge_model="claude-3-sonnet",
-        )
-        time.time() - start
-
-        # Quality proxy: consensus score
-        quality_score = synthesis.consensus_score * 10
-
-        self.metrics.append(
-            BenchmarkMetric(
-                name="Council Decision Quality",
-                baseline=6.0,  # Single-model baseline
-                optimized=quality_score,
-                improvement=(quality_score - 6.0) / 6.0 * 100,
-                unit="quality_score",
-            )
-        )
-
-        logger.info(
-            f"Council Mode: Quality={quality_score:.1f}/10, "
-            f"Consensus={synthesis.consensus_score:.2f}"
         )
 
     async def benchmark_physics_guards(self) -> None:

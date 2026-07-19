@@ -186,7 +186,7 @@ class TestValidationModules:
 
     def test_hidden_eval_initialization(self):
         """Test hidden eval initialization with configurable models."""
-        from berb.validation.hidden_eval import HiddenConsistentEvaluation
+        from berb.integrity.eval.hidden_eval import HiddenConsistentEvaluation
 
         hce = HiddenConsistentEvaluation(
             search_model="test-search",

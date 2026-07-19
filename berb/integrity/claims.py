@@ -66,6 +66,14 @@ class ClaimVerdict(str, Enum):
     NOT_CHECKED = "not_checked"
     """Verdict not yet computed (best-effort manifest)."""
 
+    INCONCLUSIVE = "inconclusive"
+    """Underpowered test or split instability — absence of evidence is NOT
+    evidence of absence.  Never assign REFUTED from an underpowered test."""
+
+    UNSPLITTABLE = "unsplittable"
+    """Effect size cannot be checked against a held-out test split because
+    the dataset was too small to partition.  Disclosed in limitations."""
+
 
 @dataclass
 class ClaimRecord:
@@ -115,15 +123,23 @@ class ClaimRecord:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ClaimRecord:
         """Deserialise from a dict."""
+        try:
+            claim_type = ClaimType(data.get("claim_type", "unknown"))
+        except ValueError:
+            claim_type = ClaimType.UNKNOWN
+        try:
+            verdict = ClaimVerdict(data.get("verdict", "not_checked"))
+        except ValueError:
+            verdict = ClaimVerdict.NOT_CHECKED
         return cls(
             claim_id=data["claim_id"],
             text=data["text"],
-            claim_type=ClaimType(data.get("claim_type", "unknown")),
+            claim_type=claim_type,
             section=data.get("section", ""),
             line_number=int(data.get("line_number", 0)),
             evidence_ids=list(data.get("evidence_ids", [])),
             confidence=str(data.get("confidence", "medium")),
-            verdict=ClaimVerdict(data.get("verdict", "not_checked")),
+            verdict=verdict,
             metadata=dict(data.get("metadata", {})),
         )
 

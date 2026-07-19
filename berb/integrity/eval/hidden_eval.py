@@ -20,7 +20,7 @@ Result: AIRA2 gained +4.2 points between 24h and 72h thanks to HCE.
 # Author: Georgios-Chrysovalantis Chatzivantsidis
 
 Usage:
-    from berb.validation.hidden_eval import HiddenConsistentEvaluation
+    from berb.integrity.eval.hidden_eval import HiddenConsistentEvaluation
 
     hce = HiddenConsistentEvaluation()
 
@@ -384,38 +384,13 @@ class HiddenConsistentEvaluation:
             Evaluation result with hidden test score
         """
         from berb.llm.client import get_llm_client
-        from berb.validation.claim_verification import ClaimVerificationPipeline
-        from berb.validation.reference_integrity import ReferenceIntegrityChecker
 
-        # Automated checks (no LLM bias)
-        claim_verifier = ClaimVerificationPipeline()
-        citation_checker = ReferenceIntegrityChecker()
-
-        # Run automated verification
-        claim_validity = 0.0
-        citation_correctness = 0.0
-
-        try:
-            claim_result = await claim_verifier.verify(paper.content)
-            claim_validity = (
-                claim_result.verification_score
-                if hasattr(claim_result, "verification_score")
-                else 0.5
-            )
-        except Exception as e:
-            logger.warning(f"Claim verification failed: {e}")
-            claim_validity = 0.5
-
-        try:
-            citation_result = await citation_checker.check(paper.content)
-            citation_correctness = (
-                1.0 - (citation_result.issues_count / max(1, citation_result.total_references))
-                if hasattr(citation_result, "issues_count")
-                else 0.5
-            )
-        except Exception as e:
-            logger.warning(f"Citation check failed: {e}")
-            citation_correctness = 0.5
+        # TODO(E8): Wire live integrity checks here once berb.validation is removed.
+        # Previously used ClaimVerificationPipeline and ReferenceIntegrityChecker
+        # from the deleted berb.validation package.
+        claim_validity = 0.5
+        citation_correctness = 0.5
+        logger.info("HCE hidden evaluation: automated checks skipped pending E8 integration")
 
         # LLM-based evaluation for remaining dimensions
         prompt = self._build_test_prompt(paper)

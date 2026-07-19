@@ -22,7 +22,6 @@ from berb.llm.client import LLMProvider
 from berb.reasoning.base import ReasoningContext
 from berb.reasoning.multi_perspective import (
     MultiPerspectiveMethod,
-    PerspectiveResult,
     PerspectiveType,
 )
 

@@ -300,13 +300,13 @@ class DesignProposalEvolver:
         """
         if fitness_fn is None:
             # Use HCE for evaluation
-            from berb.validation.hidden_eval import HiddenConsistentEvaluation
+            from berb.integrity.eval.hidden_eval import HiddenConsistentEvaluation
 
             hce = HiddenConsistentEvaluation(search_model=self.hce_search_model)
 
             for variant in population:
                 # Create dummy paper for evaluation
-                from berb.validation.hidden_eval import PaperDocument
+                from berb.integrity.eval.hidden_eval import PaperDocument
 
                 paper = PaperDocument(
                     id=variant.id,

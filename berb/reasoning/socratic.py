@@ -379,3 +379,137 @@ ReasonerRegistry.register(
     MethodType.SOCRATIC,
     SocraticMethod,
 )
+
+
+class FalsificationCritic:
+    """Interrogate-only critic for the falsification gate (E1).
+
+    The critic is CONSTRAINED to the following operations only:
+    - Clarify vague or underspecified language
+    - Expose hidden or unstated assumptions
+    - Check logical, physical, or resource constraints
+    - Generate counterexamples to the hypothesis
+    - Demand specific, measurable falsification criteria
+
+    The critic MUST NOT propose alternative hypotheses, methods, or designs
+    — that is the hypothesis generator's role.  This separation is the
+    mechanism per AHOIS (Agent-based Hypothesis Optimization via
+    Interrogative Scrutiny).
+
+    Usage::
+
+        critic = FalsificationCritic(llm_client)
+        issues = await critic.scrutinize(hypothesis_statement)
+        passed = len(issues) == 0
+    """
+
+    ALLOWED_ACTIONS = (
+        "clarify",
+        "expose_assumption",
+        "check_constraint",
+        "counterexample",
+        "demand_falsification",
+    )
+
+    def __init__(self, llm_client: Any = None, router: Any = None):
+        self.llm_client = llm_client
+        self.router = router
+
+    async def scrutinize(
+        self,
+        hypothesis_statement: str,
+        context: dict[str, Any] | None = None,
+    ) -> list[dict[str, str]]:
+        """Run the interrogate-only critic over a hypothesis.
+
+        Args:
+            hypothesis_statement: The hypothesis text to scrutinise.
+            context: Optional additional context (domain, constraints, etc.).
+
+        Returns:
+            List of issues found.  Each issue has ``action`` (one of
+            ALLOWED_ACTIONS), ``question``, and ``severity`` (``hard``
+            or ``soft``).  Empty list means the hypothesis passed.
+        """
+        if not self.llm_client and not self.router:
+            logger.warning("FalsificationCritic: no LLM client available — gate passes")
+            return []
+
+        client = self.llm_client or getattr(self.router, "llm_client", None)
+        if client is None:
+            return []
+
+        ctx_str = ""
+        if context:
+            ctx_str = "\nContext:\n" + "\n".join(
+                f"  {k}: {v}" for k, v in context.items()
+            )
+
+        prompt = f"""You are an interrogative critic.  Your ONLY job is to find flaws in the
+hypothesis below.  You MUST NOT propose alternatives, improvements, or
+new hypotheses — that is not your role.
+
+For each issue you find, respond with one of these action types:
+- "clarify" — the hypothesis is vague or underspecified
+- "expose_assumption" — a hidden or unstated assumption exists
+- "check_constraint" — a logical, physical, or resource constraint may be violated
+- "counterexample" — a concrete counterexample exists
+- "demand_falsification" — the hypothesis lacks specific, measurable falsification criteria
+
+Hypothesis:
+{hypothesis_statement}{ctx_str}
+
+Respond with a JSON list of issues (empty list if none found):
+[
+  {{
+    "action": "clarify",
+    "question": "What exactly does 'improves' mean in this context?",
+    "severity": "soft"
+  }},
+  ...
+]
+
+Severity: "hard" = blocks the hypothesis, "soft" = needs clarification.
+"""
+
+        try:
+            import inspect as _ins
+
+            # Try async chat pattern first
+            if hasattr(client, "chat") and callable(client.chat):
+                if _ins.iscoroutinefunction(client.chat):
+                    response = await client.chat(
+                        [{"role": "user", "content": prompt}],
+                        json_mode=True,
+                    )
+                else:
+                    response = client.chat(
+                        [{"role": "user", "content": prompt}],
+                        json_mode=True,
+                    )
+            else:
+                response = client([{"role": "user", "content": prompt}])
+
+            import json
+
+            content = response.content if hasattr(response, "content") else str(response)
+            issues = json.loads(content)
+            if isinstance(issues, list):
+                return issues
+            return []
+        except Exception as e:
+            logger.warning("FalsificationCritic scrutiny failed: %s", e)
+            return []
+
+    def format_issues(self, issues: list[dict[str, str]]) -> str:
+        """Format a list of issues as a human-readable critic transcript."""
+        if not issues:
+            return "No issues found — hypothesis passes falsification gate."
+        lines = ["Falsification critic transcript:"]
+        for i, issue in enumerate(issues, 1):
+            action = issue.get("action", "unknown")
+            question = issue.get("question", "")
+            severity = issue.get("severity", "soft")
+            marker = "🛑" if severity == "hard" else "⚠️"
+            lines.append(f"  {i}. {marker} [{action}] {question}")
+        return "\n".join(lines)

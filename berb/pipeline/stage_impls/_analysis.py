@@ -35,8 +35,8 @@ logger = logging.getLogger(__name__)
     depends_on=frozenset({Stage.EXPERIMENT_RUN}),
     contract=StageContract(
         stage=Stage.RESULT_ANALYSIS,
-        input_files=("runs/",),
-        output_files=("analysis.md",),
+        input_files=("runs/", "selection_bias.json"),
+        output_files=("analysis.md", "experiment_summary.json"),
         dod="Metrics analyzed with statistical tests and conclusions",
         error_code="E14_ANALYSIS_ERR",
     ),

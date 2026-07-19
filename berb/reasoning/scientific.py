@@ -35,7 +35,10 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from berb.pipeline.contracts import Assumption, Threshold
 
 from .base import (
     MethodType,
@@ -50,13 +53,56 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Hypothesis:
-    """A scientific hypothesis."""
+    """A scientific hypothesis.
+
+    Extended with falsification gate fields (E1).  ``falsifiability_criteria``
+    is a deprecated free-text field; new code should use ``rejection_conditions``
+    which carries machine-checkable ``Threshold`` entries.
+    """
 
     statement: str
+    """The hypothesis statement."""
+
     null_hypothesis: str = ""
+    """Null hypothesis counterpart."""
+
     testable_predictions: list[str] = field(default_factory=list)
+    """Predictions that can be empirically tested."""
+
     falsifiability_criteria: str = ""
+    """Deprecated — free-text falsifiability description.
+    Prefer ``rejection_conditions``.  Legacy values are parsed on a
+    best-effort basis and surfaced to the HITL gate on failure."""
+
     confidence: float = 0.5
+    """Confidence in this hypothesis (0.0-1.0)."""
+
+    mechanism: str = ""
+    """The proposed mechanism — *why* the effect occurs, not just *what*
+    it is.  Required by the falsification gate."""
+
+    assumptions: tuple[Assumption, ...] = ()
+    """Explicit assumptions underlying the hypothesis.  Each may be
+    testable or untested.  All critical assumptions must be surfaced
+    before the gate passes."""
+
+    competing_explanations: tuple[str, ...] = ()
+    """Alternative explanations that could account for the same
+    observation.  At least one is required at the gate."""
+
+    discriminating_experiment: str = ""
+    """An experiment whose outcome would distinguish this hypothesis
+    from its competitors.  Part of the falsification gate criteria."""
+
+    rejection_conditions: tuple[Threshold, ...] = ()
+    """Machine-checkable thresholds — if the experiment result meets
+    any of these, the hypothesis is considered refuted.  Replaces the
+    free-text ``falsifiability_criteria``."""
+
+    predicted_effect_size: float | None = None
+    """Predicted effect size (signed).  Recording this before execution
+    makes calibration scoring measurable afterward — the only honest
+    operationalisation of 'scientific taste'."""
 
 
 @dataclass

@@ -101,6 +101,7 @@ from berb.reasoning.socratic import (
     SocraticMethod,
     SocraticQuestion,
     SocraticResult,
+    FalsificationCritic,
 )
 
 __all__ = [
@@ -144,6 +145,7 @@ __all__ = [
     "ResearchResult",
     # Socratic
     "SocraticMethod",
+    "FalsificationCritic",
     "SocraticQuestion",
     "SocraticResult",
     # Scientific
