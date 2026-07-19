@@ -18,7 +18,7 @@ from typing import Any
 
 from berb.experiment.async_pool import AsyncExperimentPool, PoolConfig
 from berb.experiment.evolutionary_search import (
-    EvolutionaryExperimentSearch,
+    DesignProposalEvolver,
     EvolutionResult,
 )
 from berb.experiment.physics_guards import (

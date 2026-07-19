@@ -1,0 +1,129 @@
+# Berb LLM Pricing Table
+# Version: 1.0
+# Source: OpenRouter API /models endpoint, provider pricing pages
+# Format: model_name: {input: price_per_1M_input_tokens, output: price_per_1M_output_tokens}
+
+version: "1.0"
+
+models:
+  # ===========================================================================
+  # ANTHROPIC
+  # ===========================================================================
+  anthropic/claude-sonnet-4.6:
+    input: 3.00
+    output: 15.00
+  anthropic/claude-sonnet-4.5:
+    input: 3.00
+    output: 15.00
+  anthropic/claude-opus-4.6:
+    input: 5.00
+    output: 25.00
+  anthropic/claude-opus-4.7:
+    input: 5.00
+    output: 25.00
+  anthropic/claude-haiku-4.5:
+    input: 1.00
+    output: 5.00
+  anthropic/claude-fable-5:
+    input: 0.01
+    output: 0.05
+
+  # ===========================================================================
+  # OPENAI
+  # ===========================================================================
+  openai/gpt-5.5:
+    input: 5.00
+    output: 30.00
+  openai/gpt-5.5-pro:
+    input: 30.00
+    output: 180.00
+  openai/gpt-5.4:
+    input: 2.50
+    output: 15.00
+  openai/gpt-5.4-mini:
+    input: 0.75
+    output: 4.50
+  openai/gpt-5.4-nano:
+    input: 0.20
+    output: 1.25
+  openai/gpt-4o:
+    input: 2.50
+    output: 10.00
+  openai/gpt-4o-mini:
+    input: 0.15
+    output: 0.60
+  openai/o3-mini:
+    input: 1.10
+    output: 4.40
+  openai/o4-mini:
+    input: 1.10
+    output: 4.40
+
+  # ===========================================================================
+  # GOOGLE
+  # ===========================================================================
+  google/gemini-2.5-pro:
+    input: 1.25
+    output: 10.00
+  google/gemini-2.5-flash:
+    input: 0.30
+    output: 2.50
+  google/gemini-2.5-flash-lite:
+    input: 0.10
+    output: 0.40
+
+  # ===========================================================================
+  # DEEPSEEK
+  # ===========================================================================
+  deepseek/deepseek-v3.2:
+    input: 0.23
+    output: 0.34
+  deepseek/deepseek-chat-v3.1:
+    input: 0.21
+    output: 0.79
+  deepseek/deepseek-r1:
+    input: 0.70
+    output: 2.50
+
+  # ===========================================================================
+  # QWEN
+  # ===========================================================================
+  qwen/qwen3-max:
+    input: 0.78
+    output: 3.90
+  qwen/qwen3.5-plus-20260420:
+    input: 0.30
+    output: 1.80
+  qwen/qwen3.5-flash-02-23:
+    input: 0.065
+    output: 0.26
+
+  # ===========================================================================
+  # XAI (Grok)
+  # ===========================================================================
+  x-ai/grok-4.5:
+    input: 2.00
+    output: 4.00
+  x-ai/grok-4.3:
+    input: 1.25
+    output: 2.50
+
+  # ===========================================================================
+  # XIAOMI (MIMO)
+  # ===========================================================================
+  xiaomi/mimo-v2.5:
+    input: 0.14
+    output: 0.28
+  xiaomi/mimo-v2.5-pro:
+    input: 0.44
+    output: 0.87
+
+  # ===========================================================================
+  # PERPLEXITY
+  # ===========================================================================
+  perplexity/sonar-pro:
+    input: 5.00
+    output: 5.00
+  perplexity/sonar-deep-research:
+    input: 10.00
+    output: 10.00

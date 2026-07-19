@@ -1,6 +1,5 @@
 """Research exploration module for Berb.
 
-Parallelized agentic tree search for exploring multiple research directions.
 Open-ended discovery for template-free exploration.
 Research gap analysis with multi-perspective reasoning.
 
@@ -33,25 +32,8 @@ from .open_ended_discovery import (
     OpenEndedDiscoveryAgent,
     run_open_ended_discovery,
 )
-from .tree_search import (
-    BranchNode,
-    BranchStatus,
-    DecisionPoint,
-    ParallelizedTreeSearch,
-    SearchConfig,
-    SearchPath,
-    explore_research_space,
-)
 
 __all__ = [
-    # Tree search
-    "ParallelizedTreeSearch",
-    "SearchConfig",
-    "SearchPath",
-    "BranchNode",
-    "BranchStatus",
-    "DecisionPoint",
-    "explore_research_space",
     # Idea scoring
     "IdeaQualityScorer",
     "ScoringConfig",

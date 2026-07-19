@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from berb.pipeline.tdd_generation import (
+from berb.experimental.tdd_generation import (
     PytestRunner,
     TDDCodeGenerator,
     TDDResult,

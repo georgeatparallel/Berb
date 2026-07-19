@@ -1,22 +1,33 @@
-"""Evolutionary Experiment Search.
+"""Design Proposal Evolver.
+
+Design-space generator using LLM-judged fitness (NOT execution-grounded).
+
+UNLIKE the tree search or sandbox-backed execution, this module:
+- Generates design variants through mutation/crossover
+- Scores them using LLM/HCE judgment, NOT sandbox execution
+- The default fitness of 5.0 is used as a fallback when evaluation fails
+
+This is a DESIGN-SPACE GENERATOR feeding candidate seeds to
+E2's search (berb/experiment/search/). It does NOT perform
+empirical search.
 
 Based on AIRA2 (Meta FAIR) + Hive (arXiv:2603.26359):
 "Maintain population of experiment variants, evolve toward better results."
 
 Key Features:
-- Population-based experiment search
+- Population-based experiment variant generation
 - Temperature-scaled rank selection
 - Mutation and crossover operations
 - Multi-generation evolution
-- HCE-guided selection
+- LLM/HCE-guided fitness scoring (not execution-grounded)
 
 # Author: Georgios-Chrysovalantis Chatzivantsidis
 
 Usage:
-    from berb.experiment.evolutionary_search import EvolutionaryExperimentSearch
+    from berb.experiment.evolutionary_search import DesignProposalEvolver
 
-    searcher = EvolutionaryExperimentSearch()
-    result = await searcher.search(
+    evolver = DesignProposalEvolver()
+    result = await evolver.search(
         base_experiment=design,
         population_size=8,
         max_generations=4,
@@ -27,7 +38,9 @@ from __future__ import annotations
 
 import logging
 import random
+import warnings
 from dataclasses import dataclass, field
+from typing import Any
 
 from berb.reasoning.scientific import ExperimentDesign
 
@@ -48,6 +61,7 @@ class ExperimentVariant:
 
     design: ExperimentDesign
     fitness: float = 0.0
+    fitness_source: str = "unset"  # "llm", "hce", "default_fallback", or "custom"
     generation: int = 0
     parent_ids: list[str] = field(default_factory=list)
     mutations: list[str] = field(default_factory=list)
@@ -75,19 +89,26 @@ class EvolutionResult:
     fitness_history: list[float] = field(default_factory=list)
 
 
-class EvolutionaryExperimentSearch:
-    """AIRA2/Hive-inspired evolutionary experiment search.
+class DesignProposalEvolver:
+    """Design-space generator with LLM-judged fitness (NOT execution-grounded).
+
+    Generates design variants through mutation/crossover and scores them using
+    LLM/HCE judgment. Fitness is an OPINION, not a measurement — no sandbox
+    execution occurs during scoring.
+
+    Use this to generate diverse candidate seeds for E2's sandbox-backed search
+    (berb.experiment.search), not as a stand-alone experiment optimizer.
 
     Features:
-    - Population-based search over experiment variants
+    - Population-based variant generation
     - Temperature-scaled rank selection (AIRA2 Eq. 1)
     - Mutation and crossover operations
-    - HCE-guided fitness evaluation
+    - HCE-guided fitness evaluation (LLM-judged)
     - Parallel evaluation (uses AsyncExperimentPool)
 
     Usage:
-        searcher = EvolutionaryExperimentSearch()
-        result = await searcher.search(
+        evolver = DesignProposalEvolver()
+        result = await evolver.search(
             base_experiment=design,
             population_size=8,
             max_generations=4,
@@ -103,7 +124,7 @@ class EvolutionaryExperimentSearch:
         temperature: float = 1.5,
         hce_search_model: str = "claude-3-sonnet",
     ):
-        """Initialize evolutionary search.
+        """Initialize design proposal evolver.
 
         Args:
             population_size: Population size
@@ -112,6 +133,10 @@ class EvolutionaryExperimentSearch:
             crossover_rate: Probability of crossover
             temperature: Selection temperature (AIRA2 Eq. 1)
             hce_search_model: Model for HCE search evaluation
+
+        Note:
+            Fitness is LLM/HCE-judged, not execution-grounded.
+            Use this as a DESIGN-SPACE GENERATOR, not as empirical search.
         """
         self.population_size = population_size
         self.max_generations = max_generations
@@ -121,7 +146,7 @@ class EvolutionaryExperimentSearch:
         self.hce_search_model = hce_search_model
 
         logger.info(
-            f"Initialized EvolutionaryExperimentSearch "
+            f"Initialized DesignProposalEvolver "
             f"(pop={population_size}, gen={max_generations}, T={temperature})"
         )
 
@@ -293,21 +318,25 @@ class EvolutionaryExperimentSearch:
                 try:
                     result = await hce.evaluate_for_search(paper)
                     variant.fitness = result.overall_score
+                    variant.fitness_source = "hce"
                 except Exception as e:
                     logger.warning(
                         f"HCE evaluation failed for {variant.id}: {e}. Using default fitness=5.0"
                     )
                     variant.fitness = 5.0  # Default neutral fitness
+                    variant.fitness_source = "default_fallback"
         else:
             # Use custom fitness function
             for variant in population:
                 try:
                     variant.fitness = await fitness_fn(variant)
+                    variant.fitness_source = "custom"
                 except Exception as e:
                     logger.warning(
                         f"Fitness function failed for {variant.id}: {e}. Using default fitness=5.0"
                     )
                     variant.fitness = 5.0
+                    variant.fitness_source = "default_fallback"
 
         # Log fitness stats
         fitnesses = [v.fitness for v in population]
@@ -477,8 +506,35 @@ class EvolutionaryExperimentSearch:
         return False
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Deprecation alias
+# ─────────────────────────────────────────────────────────────────────────────
+
+import warnings
+
+
+class EvolutionaryExperimentSearch(DesignProposalEvolver):
+    """Deprecated alias for DesignProposalEvolver.
+
+    Warnings:
+        Deprecated since Phase 0 (F6). Use DesignProposalEvolver instead.
+        The old name "EvolutionaryExperimentSearch" suggested execution-grounded
+        search, but fitness is LLM/HCE-judged, not sandbox-evaluated.
+    """
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        warnings.warn(
+            "EvolutionaryExperimentSearch is deprecated. Use DesignProposalEvolver instead. "
+            "The class has been renamed to reflect that fitness is LLM-judged, "
+            "not execution-grounded (see Phase 0, F6).",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        super().__init__(*args, **kwargs)
+
+
 __all__ = [
-    "EvolutionaryExperimentSearch",
+    "DesignProposalEvolver",
     "ExperimentVariant",
     "EvolutionResult",
 ]

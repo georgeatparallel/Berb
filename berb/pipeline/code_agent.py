@@ -45,8 +45,11 @@ class CodeAgentConfig:
     All phases are independently toggleable.  The default profile enables
     Phases 1 (blueprint), 2 (sequential generation + exec-fix), and 5
     (review), which gives a large quality boost at moderate extra cost.
-    Phase 4 (tree search) is opt-in because it multiplies both LLM and
-    sandbox usage.
+
+    NOTE: Tree search (Phase 4) has been promoted to Stage 12 via
+    berb.experiment.search.SearchRunner (E2). The tree_search_* fields
+    below are DEPRECATED and retained only for backward compatibility.
+    Use SearchConfig in the experiment config for new deployments.
     """
 
     enabled: bool = True
@@ -66,7 +69,7 @@ class CodeAgentConfig:
     exec_fix_max_iterations: int = 3
     exec_fix_timeout_sec: int = 60
 
-    # Phase 4: Solution tree search (off by default)
+    # Phase 4: Solution tree search (DEPRECATED — promoted to Stage 12 via SearchRunner)
     tree_search_enabled: bool = False
     tree_search_candidates: int = 3
     tree_search_max_depth: int = 2
@@ -212,17 +215,12 @@ class CodeAgent:
             )
 
         # Phase 2: Code generation
+        # NOTE: Tree search (formerly _phase3_tree_search) has been promoted
+        # to Stage 12 via berb.experiment.search.SearchRunner (E2).
+        # CodeAgent now focuses solely on code GENERATION;
+        # search/selection/evaluation is the SearchRunner's responsibility.
         nodes_explored = 0
-        if self._cfg.tree_search_enabled and self._sandbox_factory:
-            best, nodes_explored = self._phase3_tree_search(
-                topic,
-                exp_plan,
-                metric,
-                pkg_hint,
-                arch_spec,
-                max_tokens,
-            )
-        elif (
+        if (
             self._cfg.sequential_generation
             and blueprint is not None
             and self._is_valid_blueprint(blueprint)
@@ -1223,119 +1221,91 @@ class CodeAgent:
         arch_spec: str,
         max_tokens: int,
     ) -> tuple[SolutionNode, int]:
-        """Explore multiple candidate solutions via tree search."""
-        self._log_event("Phase 3: Solution tree search")
-        all_nodes: list[SolutionNode] = []
+        """Deprecated: Tree search promoted to Stage 12 via SearchRunner (E2).
 
-        # Generate initial candidates
-        n_cand = max(self._cfg.tree_search_candidates, 1)
-        for k in range(n_cand):
-            self._log_event(f"  Generating candidate {k + 1}/{n_cand}")
-            files = self._generate_code(
-                topic,
-                exp_plan,
-                metric,
-                pkg_hint,
-                arch_spec,
-                max_tokens,
-            )
-            node = SolutionNode(
-                node_id=f"gen-{k}",
-                files=files,
-                depth=0,
-                generation_method="initial",
-            )
-            all_nodes.append(node)
+        This method now delegates to sequential generation and exists only
+        for backward compatibility during the Phase 1->Phase 2 transition.
+        """
+        import warnings
 
-        # Iterative evaluate-fix-branch loop
-        for depth in range(self._cfg.tree_search_max_depth):
-            # Evaluate unevaluated nodes
-            for node in all_nodes:
-                if not node.evaluated:
-                    self._evaluate_node(node, metric)
-
-            # Sort by score
-            all_nodes.sort(key=lambda n: n.score, reverse=True)
-
-            self._log_event(
-                f"  Depth {depth}: {len(all_nodes)} nodes, "
-                f"best={all_nodes[0].node_id} score={all_nodes[0].score:.2f}"
-            )
-
-            # If best runs OK, we're done
-            if all_nodes[0].runs_ok:
-                break
-
-            # Generate fix variants for top-2 crashing candidates
-            new_nodes: list[SolutionNode] = []
-            for node in all_nodes[:2]:
-                if not node.runs_ok:
-                    fixed_files = self._fix_runtime_error(
-                        node.files,
-                        _SimpleResult(
-                            returncode=node.returncode,
-                            stdout=node.stdout,
-                            stderr=node.stderr,
-                        ),
-                    )
-                    new_node = SolutionNode(
-                        node_id=f"{node.node_id}-fix{depth}",
-                        files=fixed_files,
-                        parent_id=node.node_id,
-                        depth=depth + 1,
-                        generation_method="fix",
-                    )
-                    new_nodes.append(new_node)
-
-            all_nodes.extend(new_nodes)
-
-        # Final evaluation of any remaining unevaluated nodes
-        for node in all_nodes:
-            if node.returncode == -1:
-                self._evaluate_node(node, metric)
-
-        all_nodes.sort(key=lambda n: n.score, reverse=True)
-        best = all_nodes[0]
-        self._log_event(
-            f"  Tree search complete: best={best.node_id} "
-            f"score={best.score:.2f}, explored {len(all_nodes)} nodes"
+        warnings.warn(
+            "_phase3_tree_search is deprecated. Tree search has been promoted "
+            "to Stage 12 via berb.experiment.search.SearchRunner (E2). "
+            "CodeAgent now focuses solely on code generation.",
+            DeprecationWarning,
+            stacklevel=2,
         )
 
-        return best, len(all_nodes)
+        # Fall back to sequential generation
+        if not self._cfg.sequential_generation or not hasattr(self, '_phase2_sequential_generate'):
+            self._log_event(
+                "  Tree search deprecated — falling back to single-shot generation"
+            )
+            files = self._phase2_generate_and_fix(
+                topic, exp_plan, metric, pkg_hint, arch_spec, max_tokens,
+            )
+        else:
+            files = self._phase2_sequential_generate(
+                topic, exp_plan, metric, pkg_hint, arch_spec, None,
+            )
+            files = self._hard_validate_and_repair(
+                files, topic, exp_plan, metric, pkg_hint, arch_spec,
+            )
+            files = self._exec_fix_loop(files)
+
+        node = SolutionNode(
+            node_id="deprecated-tree-search",
+            files=files,
+            runs_ok=bool(files),
+            score=1.0 if files else 0.0,
+        )
+        return node, 1
 
     def _evaluate_node(self, node: SolutionNode, metric_key: str) -> None:
-        """Run a node's code in sandbox and update its score."""
-        if not node.files:
-            node.score = 0.0
-            return
+        """Deprecated: Evaluation promoted to SearchRunner (E2).
 
-        result = self._run_in_sandbox(
-            node.files,
-            timeout_sec=self._cfg.tree_search_eval_timeout_sec,
+        This stub exists only for backward compatibility. The actual
+        sandbox evaluation is now handled by SearchRunner._evaluate_node
+        in berb.experiment.search.runner.
+        """
+        import warnings
+
+        warnings.warn(
+            "CodeAgent._evaluate_node is deprecated. Evaluation is now "
+            "handled by SearchRunner (berb.experiment.search.runner).",
+            DeprecationWarning,
+            stacklevel=2,
         )
+        # Set a neutral score; the new SearchRunner does real evaluation
         node.evaluated = True
-        node.returncode = result.returncode
-        node.stdout = result.stdout
-        node.stderr = result.stderr
-        node.runs_ok = result.returncode == 0
-        node.metrics = dict(result.metrics) if result.metrics else {}
-        node.score = self._score_node(node, metric_key)
+        node.score = 0.0
 
     @staticmethod
     def _score_node(node: SolutionNode, metric_key: str) -> float:
-        """Score a solution node based on execution results."""
-        score = 0.0
-        if node.runs_ok:
-            score += 1.0
-        if node.stdout and len(node.stdout) > 100:
-            score += 0.3  # produces meaningful output
-        if node.metrics:
-            score += 0.5
-            if metric_key in node.metrics:
-                score += 0.5
-        if node.stderr and "Error" in node.stderr:
-            score -= 0.2
-        return max(score, 0.0)
+        """Score a solution node based on execution results.
+
+        Deprecated: Use berb.experiment.search.scoring.score_node instead.
+        This shim delegates to the new metric-grounded scorer and exists
+        only for backward compatibility during the Phase 0->Phase 1 transition.
+        """
+        import warnings
+
+        warnings.warn(
+            "CodeAgent._score_node is deprecated. Use "
+            "berb.experiment.search.scoring.score_node instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
+        # Delegate to the new pure function
+        from berb.experiment.search.scoring import score_node as new_score_node
+
+        breakdown = new_score_node(
+            node,
+            metric_key,
+            maximize=True,  # Default: higher is better
+        )
+        return breakdown.total
 
     # ── Phase 5: Multi-Agent Review Dialog ────────────────────────────────
 

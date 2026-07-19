@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from berb.pipeline.diff_revisions import (
+from berb.experimental.diff_revisions import (
     DiffBasedReviser,
     DiffRevisionResult,
     is_diff_worthwhile,

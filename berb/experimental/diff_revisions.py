@@ -1,5 +1,7 @@
 """Diff-based code revisions for token efficiency.
 
+QUARANTINED — Unwired / Not integrated into the pipeline.
+
 This module implements diff-based code generation - generating patches
 instead of full file rewrites, achieving 60-80% token reduction on
 revisions and eliminating "forgot existing code" errors.
@@ -7,8 +9,11 @@ revisions and eliminating "forgot existing code" errors.
 Architecture: Patch generation with validation
 Paradigm: Unified diff format with smart application
 
-Usage:
-    from berb.pipeline.diff_revisions import DiffBasedReviser
+Status: Unwired — no production code imports this module.
+Moved to berb/experimental/ as part of Phase 0 (truthful surface).
+
+Usage (if reactivated):
+    from berb.experimental.diff_revisions import DiffBasedReviser
 
     reviser = DiffBasedReviser(base_client=llm_client)
 

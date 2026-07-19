@@ -1,5 +1,7 @@
 """TDD-First generation for code quality improvement.
 
+QUARANTINED — Unwired / Not integrated into the pipeline.
+
 This module implements Test-Driven Development for AI code generation -
 generating tests FIRST, then generating code to pass those tests,
 achieving +18% quality improvement and -35% repair cycles.
@@ -7,8 +9,11 @@ achieving +18% quality improvement and -35% repair cycles.
 Architecture: Two-phase generation (tests → implementation)
 Paradigm: TDD workflow with automated test execution
 
-Usage:
-    from berb.pipeline.tdd_generation import TDDCodeGenerator
+Status: Unwired — no production code imports this module.
+Moved to berb/experimental/ as part of Phase 0 (truthful surface).
+
+Usage (if reactivated):
+    from berb.experimental.tdd_generation import TDDCodeGenerator
 
     generator = TDDCodeGenerator(
         test_runner=test_runner,

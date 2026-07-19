@@ -24,8 +24,9 @@ from .compute_guard import (
     check_experiment_affordability,
 )
 from .evolutionary_search import (
-    EvolutionaryExperimentSearch,
+    DesignProposalEvolver,
     EvolutionResult,
+    EvolutionaryExperimentSearch,  # deprecated alias
     ExperimentVariant,
 )
 from .isolation import (
@@ -68,8 +69,9 @@ __all__ = [
     "ExperimentResults",
     "ExperimentStatus",
     "check_experiment_affordability",
-    # Evolutionary Search
-    "EvolutionaryExperimentSearch",
+    # Evolutionary Search (Design Proposal Evolver)
+    "DesignProposalEvolver",
+    "EvolutionaryExperimentSearch",  # deprecated alias
     "ExperimentVariant",
     "EvolutionResult",
     # Isolation
