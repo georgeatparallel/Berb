@@ -267,6 +267,44 @@ class SecurityConfig:
 
 
 @dataclass(frozen=True)
+class IntegrityConfig:
+    """Research integrity verification settings.
+
+    Controls how strictly the pipeline enforces fact-checking of claims
+    against registered evidence before publication.
+    """
+
+    mode: str = "draft"
+    """Verification strictness: ``draft`` (warn only), ``submission`` (fail
+    on critical issues), or ``strict`` (fail closed)."""
+
+    fail_on_unsupported_claims: bool = False
+    """In submission/strict mode, fail if empirical/comparative claims lack
+    supporting evidence records."""
+
+    fail_on_unverified_statistics: bool = False
+    """Fail if p-values, confidence intervals, or significance claims are
+    not backed by registered statistical tests."""
+
+    fail_on_citation_fallback: bool = False
+    """Fail if citation verification falls back to metadata-only checks
+    instead of full-text support confirmation."""
+
+    require_source_snippets: bool = False
+    """Require literature source snippets to be stored for citation
+    support verification."""
+
+    auto_strict_domains: tuple[str, ...] = (
+        "biomedical",
+        "clinical",
+        "legal",
+        "finance",
+        "policy",
+    )
+    """Domains that automatically default to strict mode."""
+
+
+@dataclass(frozen=True)
 class SandboxConfig:
     python_path: str = DEFAULT_PYTHON_PATH
     gpu_required: bool = False
@@ -371,11 +409,13 @@ class CodeAgentConfig:
     # Phase 3: Execution-in-the-loop (run -> parse error -> fix)
     exec_fix_max_iterations: int = 3
     exec_fix_timeout_sec: int = 60
-    # Phase 4: Solution tree search (off by default — higher cost)
+
+    # Phase 4: Solution tree search (DEPRECATED — promoted to Stage 12 via SearchRunner)
     tree_search_enabled: bool = False
     tree_search_candidates: int = 3
     tree_search_max_depth: int = 2
     tree_search_eval_timeout_sec: int = 120
+
     # Phase 5: Multi-agent review dialog
     review_max_rounds: int = 2
 
@@ -484,6 +524,28 @@ class CliAgentConfig:
 
 
 @dataclass(frozen=True)
+class ExperimentSearchConfig:
+    """Configuration for tree-diverse experiment search (E2).
+
+    Controls the SearchRunner which replaces single-shot execution with
+    parallel, metric-grounded search over candidate implementations.
+
+    When enabled=False, the legacy single-run path is used.
+    """
+
+    enabled: bool = False
+    num_workers: int = 3
+    num_roots: int = 3
+    max_nodes: int = 12
+    max_depth: int = 3
+    debug_probability: float = 0.5
+    max_debug_depth: int = 3
+    eval_timeout_sec: int = 300
+    budget_usd: float = 5.0
+    budget_wallclock_sec: int = 3600
+
+
+@dataclass(frozen=True)
 class ExperimentConfig:
     mode: str = "docker"  # "simulated" produces fake results — only for unit tests
     time_budget_sec: int = 300
@@ -501,6 +563,7 @@ class ExperimentConfig:
     opencode: OpenCodeConfig = field(default_factory=OpenCodeConfig)
     benchmark_agent: BenchmarkAgentConfig = field(default_factory=BenchmarkAgentConfig)
     figure_agent: FigureAgentConfig = field(default_factory=FigureAgentConfig)
+    search: ExperimentSearchConfig = field(default_factory=ExperimentSearchConfig)
     repair: ExperimentRepairConfig = field(default_factory=ExperimentRepairConfig)
     cli_agent: CliAgentConfig = field(default_factory=CliAgentConfig)
 
@@ -790,6 +853,7 @@ class RCConfig:
     openclaw_bridge: OpenClawBridgeConfig
     llm: LlmConfig
     security: SecurityConfig = field(default_factory=SecurityConfig)
+    integrity: IntegrityConfig = field(default_factory=IntegrityConfig)
     experiment: ExperimentConfig = field(default_factory=ExperimentConfig)
     export: ExportConfig = field(default_factory=ExportConfig)
     prompts: PromptsConfig = field(default_factory=PromptsConfig)
@@ -843,6 +907,7 @@ class RCConfig:
         bridge = data.get("openclaw_bridge") or {}
         llm = data["llm"]
         security = data.get("security") or {}
+        integrity = data.get("integrity") or {}
         experiment = data.get("experiment") or {}
         export = data.get("export") or {}
         prompts = data.get("prompts") or {}
@@ -907,6 +972,25 @@ class RCConfig:
                     security.get("allow_publish_without_approval", False)
                 ),
                 redact_sensitive_logs=bool(security.get("redact_sensitive_logs", True)),
+            ),
+            integrity=IntegrityConfig(
+                mode=str(integrity.get("mode", "draft")),
+                fail_on_unsupported_claims=bool(
+                    integrity.get("fail_on_unsupported_claims", False)
+                ),
+                fail_on_unverified_statistics=bool(
+                    integrity.get("fail_on_unverified_statistics", False)
+                ),
+                fail_on_citation_fallback=bool(
+                    integrity.get("fail_on_citation_fallback", False)
+                ),
+                require_source_snippets=bool(
+                    integrity.get("require_source_snippets", False)
+                ),
+                auto_strict_domains=tuple(
+                    integrity.get("auto_strict_domains",
+                        ("biomedical", "clinical", "legal", "finance", "policy"))
+                ),
             ),
             experiment=_parse_experiment_config(experiment),
             export=ExportConfig(
@@ -1216,8 +1300,26 @@ def _parse_experiment_config(data: dict[str, Any]) -> ExperimentConfig:
         opencode=_parse_opencode_config(data.get("opencode") or {}),
         benchmark_agent=_parse_benchmark_agent_config(data.get("benchmark_agent") or {}),
         figure_agent=_parse_figure_agent_config(data.get("figure_agent") or {}),
+        search=_parse_search_config(data.get("search") or {}),
         repair=_parse_experiment_repair_config(data.get("repair") or {}),
         cli_agent=_parse_cli_agent_config(data.get("cli_agent") or {}),
+    )
+
+
+def _parse_search_config(data: dict[str, Any]) -> ExperimentSearchConfig:
+    if not data:
+        return ExperimentSearchConfig()
+    return ExperimentSearchConfig(
+        enabled=bool(data.get("enabled", False)),
+        num_workers=_safe_int(data.get("num_workers"), 3),
+        num_roots=_safe_int(data.get("num_roots"), 3),
+        max_nodes=_safe_int(data.get("max_nodes"), 12),
+        max_depth=_safe_int(data.get("max_depth"), 3),
+        debug_probability=_safe_float(data.get("debug_probability"), 0.5),
+        max_debug_depth=_safe_int(data.get("max_debug_depth"), 3),
+        eval_timeout_sec=_safe_int(data.get("eval_timeout_sec"), 300),
+        budget_usd=_safe_float(data.get("budget_usd"), 5.0),
+        budget_wallclock_sec=_safe_int(data.get("budget_wallclock_sec"), 3600),
     )
 
 

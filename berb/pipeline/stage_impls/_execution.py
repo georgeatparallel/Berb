@@ -148,6 +148,15 @@ def _execute_experiment_run(
     runs_dir = stage_dir / "runs"
     runs_dir.mkdir(parents=True, exist_ok=True)
     mode = config.experiment.mode
+
+    # ── Search-enabled path (E2) ──────────────────────────────────────
+    if config.experiment.search.enabled:
+        return _execute_experiment_run_with_search(
+            stage_dir, run_dir, config, adapters,
+            llm=llm, prompts=prompts,
+        )
+
+    # ── Legacy single-run path ────────────────────────────────────────
     if mode in ("sandbox", "docker"):
         # P7: Auto-install missing dependencies before subprocess sandbox
         if mode == "sandbox":
@@ -346,6 +355,151 @@ def _execute_experiment_run(
         status=StageStatus.DONE,
         artifacts=("runs/",),
         evidence_refs=("stage-12/runs/",),
+    )
+
+
+def _execute_experiment_run_with_search(
+    stage_dir: Path,
+    run_dir: Path,
+    config: RCConfig,
+    adapters: AdapterBundle,
+    *,
+    llm: LLMClient | None = None,
+    prompts: PromptManager | None = None,
+) -> StageResult:
+    """Run Stage 12 with SearchRunner (E2) instead of single-shot execution.
+
+    Wraps the experiment code in a SearchRunner that evaluates candidates
+    with metric-grounded scoring, budget governance, and journaling.
+    """
+    from berb.experiment.factory import create_sandbox
+    from berb.experiment.search import (
+        BestFirstDiversePolicy,
+        SearchConfig,
+        SearchRunner,
+    )
+    from berb.llm.cost_tracker import get_cost_tracker
+
+    runs_dir = stage_dir / "runs"
+    runs_dir.mkdir(parents=True, exist_ok=True)
+
+    # Read experiment code from prior stage
+    exp_dir_path = _read_prior_artifact(run_dir, "experiment/")
+    code_text = ""
+    if exp_dir_path and Path(exp_dir_path).is_dir():
+        main_path = Path(exp_dir_path) / "main.py"
+        if main_path.exists():
+            try:
+                code_text = main_path.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                code_text = ""
+    if not code_text:
+        code_text = _read_prior_artifact(run_dir, "experiment.py") or ""
+
+    # Build SearchConfig from experiment config
+    ec = config.experiment
+    sc = ec.search
+    search_cfg = SearchConfig(
+        enabled=True,
+        num_workers=sc.num_workers,
+        num_roots=sc.num_roots,
+        max_nodes=sc.max_nodes,
+        max_depth=sc.max_depth,
+        debug_probability=sc.debug_probability,
+        max_debug_depth=sc.max_debug_depth,
+        eval_timeout_sec=sc.eval_timeout_sec or ec.time_budget_sec,
+        budget_usd=sc.budget_usd,
+        budget_wallclock_sec=sc.budget_wallclock_sec,
+    )
+
+    maximize = ec.metric_direction != "minimize"
+    cost_tracker = get_cost_tracker()
+    policy = BestFirstDiversePolicy()
+
+    def _sandbox_factory():
+        """Create a fresh sandbox for each candidate evaluation."""
+        return create_sandbox(config.experiment, runs_dir / "sandbox")
+
+    def _candidate_generator(**kwargs: Any) -> list[dict[str, Any]]:
+        """Generate candidate implementations from existing experiment code."""
+        origin = kwargs.get("origin", "draft")
+        return [
+            {
+                "files": {"main.py": code_text} if code_text else {},
+                "plan": "",
+                "origin": origin,
+            }
+        ]
+
+    import asyncio
+
+    runner = SearchRunner(
+        config=search_cfg,
+        policy=policy,
+        sandbox_factory=_sandbox_factory,
+        generator=_candidate_generator,
+        cost_tracker=cost_tracker,
+        metric_key=ec.metric_key,
+        metric_maximize=maximize,
+    )
+
+    # Run the search
+    result = asyncio.run(
+        runner.run(
+            topic=str(prompts.metadata.get("topic", "")) if prompts else "",
+            context={"phase": "baseline"},
+        )
+    )
+
+    # Write outputs
+    journal_path = stage_dir / "journal.json"
+    result.journal.write(journal_path)
+
+    search_summary = {
+        "termination_reason": result.termination_reason,
+        "nodes_explored": result.nodes_explored,
+        "total_cost_usd": round(result.total_cost_usd, 6),
+        "total_wallclock_sec": round(result.total_wallclock_sec, 2),
+        "best_node_id": result.best_node.node_id if result.best_node else None,
+        "best_metrics": result.best_node.metrics if result.best_node else {},
+        "best_score": round(result.best_node.score.total, 4) if result.best_node and result.best_node.score else 0.0,
+    }
+    (stage_dir / "search_summary.json").write_text(
+        json.dumps(search_summary, indent=2), encoding="utf-8"
+    )
+
+    # Also write a run-1.json for downstream compatibility
+    for idx, node in enumerate(result.journal.good_nodes()[:3]):
+        run_payload = {
+            "run_id": f"run-{idx + 1}",
+            "node_id": node.node_id,
+            "status": "completed" if node.is_buggy is False else "failed",
+            "metrics": node.metrics,
+            "score": node.score.total if node.score else 0.0,
+            "elapsed_sec": node.elapsed_sec,
+            "completed_at": _utcnow_iso(),
+        }
+        (runs_dir / f"run-{idx + 1}.json").write_text(
+            json.dumps(run_payload, indent=2), encoding="utf-8"
+        )
+
+    logger.info(
+        "Stage 12 (search): explored %d nodes, best=%s, reason=%s, cost=$%.4f",
+        result.nodes_explored,
+        result.best_node.node_id[:8] if result.best_node else "none",
+        result.termination_reason,
+        result.total_cost_usd,
+    )
+
+    return StageResult(
+        stage=Stage.EXPERIMENT_RUN,
+        status=StageStatus.DONE,
+        artifacts=("runs/", "journal.json", "search_summary.json"),
+        evidence_refs=(
+            "stage-12/runs/",
+            "stage-12/journal.json",
+            "stage-12/search_summary.json",
+        ),
     )
 
 
