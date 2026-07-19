@@ -15,8 +15,43 @@ editing this module — the registry's decorator carries the contract inline.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Literal
 
 from berb.pipeline.stages import Stage
+
+
+@dataclass(frozen=True)
+class ExecutionFeedback:
+    """Carrier for execution-time signals consumed at refinement time.
+
+    Produced by Stage 12 (EXPERIMENT_RUN) at detection sites such as
+    trivial runtime, timeout, or budget underuse. Consumed by Stage 13
+    (ITERATIVE_REFINE) to inform the refinement prompt.
+
+    Written to execution_feedback.json.
+    """
+
+    kind: Literal["trivial_runtime", "timeout", "budget_underuse", "no_metrics"]
+    severity: Literal["info", "warn", "block"]
+    message: str
+    suggested_action: str
+
+
+@dataclass(frozen=True)
+class SeedValidity:
+    """Statistical validity status for experiment results.
+
+    Produced by Stage 12 and consumed by Stage 14 (RESULT_ANALYSIS)
+    to emit a limitations paragraph when seeds are insufficient.
+
+    Written to seed_validity.json.
+    """
+
+    seeds_run: int = 0
+    seeds_required: int = 3
+    conditions_affected: tuple[str, ...] = ()
+    remediation_attempted: str = "none"
+    disclosed: bool = False
 
 
 @dataclass(frozen=True)

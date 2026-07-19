@@ -227,6 +227,13 @@ def _execute_experiment_run(
                 "Consider increasing task difficulty.",
                 result.elapsed_sec,
             )
+            _write_execution_feedback(
+                stage_dir,
+                kind="trivial_runtime",
+                severity="warn",
+                message=f"Experiment completed in {result.elapsed_sec:.2f}s — benchmark may be trivially easy.",
+                suggested_action="Scale up the task: increase epochs, model size, dataset size, or add complexity.",
+            )
 
         run_payload: dict[str, Any] = {
             "run_id": "run-1",
@@ -287,6 +294,8 @@ def _execute_experiment_run(
             )
 
         # FIX-8: Validate seed count from structured results
+        _seed_conditions: list[str] = []
+        _min_seeds_run = 999
         if structured_results and isinstance(structured_results, dict):
             _sr_conditions = structured_results.get(
                 "conditions", structured_results.get("per_condition", {})
@@ -295,6 +304,7 @@ def _execute_experiment_run(
                 for _cname, _cdata in _sr_conditions.items():
                     if isinstance(_cdata, dict):
                         _seeds_run = _cdata.get("seeds_run", _cdata.get("n_seeds", 0))
+                        _min_seeds_run = min(_min_seeds_run, int(_seeds_run))
                         if isinstance(_seeds_run, (int, float)) and 0 < _seeds_run < 3:
                             logger.warning(
                                 "Stage 12: Condition '%s' ran only %d seed(s) — "
@@ -302,6 +312,16 @@ def _execute_experiment_run(
                                 _cname,
                                 int(_seeds_run),
                             )
+                            _seed_conditions.append(_cname)
+
+        # Write seed_validity.json for downstream consumption
+        if _seed_conditions:
+            _write_seed_validity(
+                stage_dir,
+                seeds_run=_min_seeds_run,
+                conditions_affected=tuple(_seed_conditions),
+                disclosed=True,
+            )
 
     elif mode == "simulated":
         schedule = _safe_json_loads(schedule_text, {})
@@ -1261,4 +1281,50 @@ def _execute_iterative_refine(
         status=StageStatus.DONE,
         artifacts=tuple(artifacts),
         evidence_refs=tuple(f"stage-13/{a}" for a in artifacts),
+    )
+
+
+def _write_execution_feedback(
+    stage_dir: Path,
+    kind: str,
+    severity: str,
+    message: str,
+    suggested_action: str,
+) -> None:
+    """Write execution_feedback.json for consumption by Stage 13."""
+    import json as _j
+    feedback: dict[str, str] = {
+        "kind": kind,
+        "severity": severity,
+        "message": message,
+        "suggested_action": suggested_action,
+    }
+    (stage_dir / "execution_feedback.json").write_text(
+        _j.dumps(feedback, indent=2), encoding="utf-8"
+    )
+    logger.info("Execution feedback written: [%s] %s", severity, message)
+
+
+def _write_seed_validity(
+    stage_dir: Path,
+    seeds_run: int,
+    conditions_affected: tuple[str, ...],
+    disclosed: bool = True,
+) -> None:
+    """Write seed_validity.json for consumption by Stage 14."""
+    import json as _j
+    validity: dict[str, Any] = {
+        "seeds_run": seeds_run,
+        "seeds_required": 3,
+        "conditions_affected": list(conditions_affected),
+        "remediation_attempted": "none",
+        "disclosed": disclosed,
+    }
+    (stage_dir / "seed_validity.json").write_text(
+        _j.dumps(validity, indent=2), encoding="utf-8"
+    )
+    logger.info(
+        "Seed validity written: %d seeds across %d conditions",
+        seeds_run,
+        len(conditions_affected),
     )
