@@ -294,6 +294,7 @@ class TestPhase2ExecFix:
 
 
 class TestPhase3TreeSearch:
+    @pytest.mark.skip(reason="Tree search moved to SearchRunner (E2) in Stage 12")
     def test_tree_search_generates_multiple_candidates(
         self,
         stage_dir: Path,
@@ -334,6 +335,7 @@ class TestPhase3TreeSearch:
         assert result.tree_nodes_explored >= 2
         assert result.files
 
+    @pytest.mark.skip(reason="Tree search moved to SearchRunner (E2) in Stage 12")
     def test_tree_search_fixes_crashing_candidates(
         self,
         stage_dir: Path,
@@ -598,7 +600,7 @@ class TestSolutionNodeScoring:
             metrics={},
         )
         score = CodeAgent._score_node(node, "metric")
-        assert score == 1.0  # only runs_ok
+        assert score == 0.0  # runs_ok but no metrics -> 0.0 under metric-grounded rules
 
 
 # ---------------------------------------------------------------------------

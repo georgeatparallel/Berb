@@ -155,7 +155,7 @@ class BestFirstDiversePolicy:
                 l
                 for l in leaves
                 if l.is_buggy is True
-                and _debug_depth(l) < config.max_debug_depth
+                and _debug_depth(l, journal) < config.max_debug_depth
             ]
             if buggy_leaves:
                 selected = self._rng.choice(buggy_leaves)
@@ -209,14 +209,15 @@ class BestFirstDiversePolicy:
         return node.node_id
 
 
-def _debug_depth(node: JournalNode) -> int:
-    """Count how many times this node has been debugged/repaired."""
+def _debug_depth(node: JournalNode, journal: ExperimentJournal) -> int:
+    """Count how many times this node or its ancestors have been repaired."""
     debug_count = 0
-    current = node
+    current: JournalNode | None = node
     while current is not None:
         if current.origin == "debug":
             debug_count += 1
-        # For depth counting, we just look at the node's own depth
-        # and how many ancestors have origin=debug
-        break
+        if current.parent_id is not None:
+            current = journal.get_node(current.parent_id)
+        else:
+            current = None
     return debug_count

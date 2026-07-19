@@ -26,9 +26,10 @@ import logging
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
-from berb.experiment.search.scoring import ScoreBreakdown
+if TYPE_CHECKING:
+    from berb.experiment.search.scoring import ScoreBreakdown
 
 logger = logging.getLogger(__name__)
 
@@ -166,6 +167,7 @@ class JournalNode:
         score_raw = d.get("score")
         score: ScoreBreakdown | None = None
         if score_raw is not None and isinstance(score_raw, dict):
+            from berb.experiment.search.scoring import ScoreBreakdown
             score = ScoreBreakdown(
                 total=score_raw.get("total", 0.0),
                 runs_ok=score_raw.get("runs_ok", False),
@@ -205,6 +207,11 @@ class JournalNode:
             result_source=d.get("result_source", "structured"),
             created_at=created_at,
         )
+
+    @property
+    def runs_ok(self) -> bool:
+        """Check if this run completed successfully (exit code 0)."""
+        return self.returncode == 0
 
 
 class ExperimentJournal:

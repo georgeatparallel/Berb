@@ -97,7 +97,7 @@ class ExperimentPoolIntegration:
             )
         )
 
-        self.evolutionary_search = EvolutionaryExperimentSearch() if use_evolution else None
+        self.evolutionary_search = DesignProposalEvolver() if use_evolution else None
         self.react_agent = ExperimentReActAgent(model=react_agent_model) if use_react else None
         self.physics_guard = (
             PhysicsCodeGuard(model=physics_guard_model) if use_physics_guards else None
