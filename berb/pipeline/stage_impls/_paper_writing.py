@@ -10,6 +10,8 @@ from typing import Any
 
 from berb.adapters import AdapterBundle
 from berb.config import RCConfig
+from berb.integrity import ClaimRecord, ClaimType, ClaimVerdict
+from berb.integrity import VerifiedEvidenceRegistry as _IntegrityRegistry  # noqa: N814
 from berb.llm.client import LLMClient
 from berb.pipeline._domain import _detect_domain
 from berb.pipeline._helpers import (
@@ -2252,6 +2254,12 @@ Generated: {_utcnow_iso()}
 """
     (stage_dir / "paper_draft.md").write_text(draft, encoding="utf-8")
 
+    # --- Research Integrity: best-effort claim manifest (Phase 1) ---
+    try:
+        _build_draft_claim_manifest(draft, run_dir, stage_dir)
+    except Exception:
+        logger.debug("Could not build draft claim manifest", exc_info=True)
+
     # Validate draft quality (section balance + bullet density)
     _validate_draft_quality(draft, stage_dir=stage_dir)
 
@@ -2261,3 +2269,245 @@ Generated: {_utcnow_iso()}
         artifacts=("paper_draft.md",),
         evidence_refs=("stage-17/paper_draft.md",),
     )
+
+
+# ---------------------------------------------------------------------------
+# Research Integrity: best-effort claim manifest builder (Phase 1)
+# ---------------------------------------------------------------------------
+
+
+def _build_draft_claim_manifest(
+    draft: str,
+    run_dir: Path,
+    stage_dir: Path,
+) -> None:
+    """Build and save a best-effort claim manifest from the paper draft.
+
+    Extracts numeric claims and simple comparative / dataset / methodological
+    claims deterministically.  Links numeric claims to evidence registry
+    records when available.  Writes ``claim_manifest.json`` to *stage_dir*.
+
+    This is intentionally simple — Phase 2+ will add LLM-backed claim
+    classification and richer extraction.
+    """
+    manifest = ClaimManifest(paper_stage="draft")
+
+    # 1. Load evidence registry if available
+    evidence_reg = _IntegrityRegistry.load(run_dir / "evidence_registry.json")
+    metric_values = {
+        r.value for r in evidence_reg.records.values()
+        if hasattr(r, "value") and isinstance(r.value, (int, float))
+    }
+
+    # 2. Parse sections
+    sections = _parse_draft_sections(draft)
+
+    # 3. Extract numeric claims
+    _extract_numeric_claims(draft, sections, manifest, metric_values)
+
+    # 4. Extract dataset claims (heuristic: "we use X dataset")
+    _extract_dataset_claims(draft, sections, manifest)
+
+    # 5. Save
+    manifest.save(stage_dir / "claim_manifest.json")
+    logger.info(
+        "Draft claim manifest: %d claims (%d supported, %d unsupported)",
+        manifest.total_claims,
+        manifest.supported_claims,
+        manifest.unsupported_claims,
+    )
+
+
+def _parse_draft_sections(text: str) -> dict[str, tuple[int, int]]:
+    """Parse markdown section headings.
+
+    Returns ``{section_name: (start_line, end_line)}``.
+    """
+    sections: dict[str, tuple[int, int]] = {}
+    lines = text.split("\n")
+    current_section = "(preamble)"
+    current_start = 0
+
+    for i, line in enumerate(lines):
+        m = re.match(r"^#{1,3}\s+(.+)$", line.strip())
+        if m:
+            sections[current_section] = (current_start, i - 1)
+            current_section = m.group(1).strip()
+            current_start = i
+
+    sections[current_section] = (current_start, len(lines) - 1)
+    return sections
+
+
+def _extract_numeric_claims(
+    text: str,
+    sections: dict[str, tuple[int, int]],
+    manifest: ClaimManifest,
+    known_values: set,
+) -> None:
+    """Extract sentences containing numbers as empirical/comparative claims."""
+    lines = text.split("\n")
+    _section_for_line = _build_line_section_map(sections, len(lines))
+
+    # Simple number pattern (paper numbers, not LaTeX commands)
+    _NUM_PATTERN = re.compile(r"(?<![a-zA-Z_\\])(\d+\.?\d*)(?![a-zA-Z_])")
+
+    seen_claims: set[str] = set()
+
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or stripped.startswith(">"):
+            continue
+        # Skip lines that are just citations or references
+        if stripped.startswith("[") and "]" in stripped[:10]:
+            continue
+
+        numbers = _NUM_PATTERN.findall(stripped)
+        if not numbers:
+            continue
+
+        # Filter out year-like numbers (1900-2100) and very common small ints
+        meaningful = [
+            n for n in numbers
+            if not (1900 <= float(n) <= 2100)  # not a year
+        ]
+        # Also skip lines with only single-digit numbers (indexes, counts)
+        if not meaningful:
+            continue
+        # If the ONLY numbers are <= 5, skip unless comparative language is present
+        has_small_only = all(float(n) <= 5.0 for n in meaningful)
+        is_comparative = any(w in stripped.lower() for w in (
+            "outperform", "improve", "better", "worse", "higher",
+            "lower", "faster", "vs.", "versus", "compared", "gain",
+            "superior", "advantage", "outperformed",
+        ))
+        if has_small_only and not is_comparative:
+            continue
+
+        section = _section_for_line[i]
+        claim_text = stripped[:200]
+
+        # Deduplicate similar claims
+        claim_key = claim_text.lower().strip()
+        if claim_key in seen_claims:
+            continue
+        seen_claims.add(claim_key)
+
+        # Classify and create claim
+        claim_type = _classify_numeric_claim(stripped, section)
+
+        # Check known values
+        evidence_ids: list[str] = []
+        verdict = ClaimVerdict.NOT_CHECKED
+        for num_str in meaningful:
+            try:
+                val = float(num_str)
+                if _value_matches_evidence(val, known_values):
+                    evidence_ids.append(str(val))
+            except ValueError:
+                pass
+
+        if evidence_ids:
+            verdict = ClaimVerdict.SUPPORTED
+        elif claim_type in (ClaimType.EMPIRICAL, ClaimType.COMPARATIVE):
+            verdict = ClaimVerdict.UNSUPPORTED
+
+        record = ClaimRecord(
+            claim_id="",
+            text=claim_text,
+            claim_type=claim_type,
+            section=section,
+            line_number=i + 1,
+            evidence_ids=evidence_ids,
+            confidence="medium",
+            verdict=verdict,
+            metadata={"extracted_numbers": meaningful},
+        )
+        manifest.add_claim(record)
+
+
+def _classify_numeric_claim(text: str, section: str) -> ClaimType:
+    """Simple heuristic classification of numeric claims."""
+    text_lower = text.lower()
+    section_lower = section.lower()
+
+    # Comparative language
+    if any(w in text_lower for w in (
+        "outperform", "improve", "better", "worse", "higher",
+        "lower", "faster", "vs.", "versus", "compared", "gain",
+        "superior", "advantage", "outperformed",
+    )):
+        return ClaimType.COMPARATIVE
+
+    # Dataset claims
+    if any(w in text_lower for w in ("dataset", "corpus", "collection", "benchmark")):
+        return ClaimType.DATASET
+
+    # Results / Experiments sections -> empirical
+    if any(s in section_lower for s in ("result", "experiment", "evaluation", "ablation")):
+        return ClaimType.EMPIRICAL
+
+    return ClaimType.EMPIRICAL
+
+
+def _extract_dataset_claims(
+    text: str,
+    sections: dict[str, tuple[int, int]],
+    manifest: ClaimManifest,
+) -> None:
+    """Extract dataset mentions as dataset-type claims."""
+    _DATASET_PAT = re.compile(
+        r"(?:we\s+(?:use|employ|adopt|evaluate\s+on|train\s+on|test\s+on)\s+)"
+        r"([A-Z][A-Za-z0-9-]+(?:\s+[A-Z][A-Za-z0-9-]+){0,3})"
+        r"(?:\s+dataset|\s+benchmark|\s+corpus)?",
+        re.IGNORECASE,
+    )
+    lines = text.split("\n")
+    _section_for_line = _build_line_section_map(sections, len(lines))
+
+    for i, line in enumerate(lines):
+        for m in _DATASET_PAT.finditer(line):
+            ds_name = m.group(1).strip()
+            if len(ds_name) < 3:
+                continue
+            record = ClaimRecord(
+                claim_id="",
+                text=line.strip()[:200],
+                claim_type=ClaimType.DATASET,
+                section=_section_for_line[i],
+                line_number=i + 1,
+                verdict=ClaimVerdict.NOT_CHECKED,
+                confidence="low",
+                metadata={"dataset_name": ds_name},
+            )
+            manifest.add_claim(record)
+
+
+def _build_line_section_map(
+    sections: dict[str, tuple[int, int]],
+    total_lines: int,
+) -> list[str]:
+    """Build a per-line section name lookup."""
+    section_map = ["(preamble)"] * total_lines
+    for sec_name, (start, end) in sections.items():
+        for i in range(start, min(end + 1, total_lines)):
+            section_map[i] = sec_name
+    return section_map
+
+
+def _value_matches_evidence(
+    value: float,
+    known_values: set,
+    tolerance: float = 0.01,
+) -> bool:
+    """Check if *value* matches any known evidence value within relative tolerance.
+
+    Consistent with ``VerifiedRegistry.is_verified(tolerance=0.01)``.
+    """
+    for known in known_values:
+        if known == 0.0:
+            if abs(value) < 1e-6:
+                return True
+        elif abs(value - known) / max(abs(known), 1e-9) <= tolerance:
+            return True
+    return False

@@ -1,0 +1,16 @@
+[
+  {
+    "fingerprint": "all-fixes-verified-now-finalizing",
+    "summary": "All fixes verified. Now finalizing.",
+    "first_seen_iteration": 1,
+    "last_seen_iteration": 1,
+    "count": 1
+  },
+  {
+    "fingerprint": "all-evidence-is-fresh-and-verified-129-tests-pass-3-fixe",
+    "summary": "All evidence is fresh and verified. 129 tests pass, 3 fixes confirmed in source, V7 protocol complete with final coverage statement.",
+    "first_seen_iteration": 2,
+    "last_seen_iteration": 2,
+    "count": 1
+  }
+]

@@ -1,0 +1,23 @@
+[
+  {
+    "fingerprint": "the-audit-is-complete-let-me-register-the-evidence-for-b",
+    "summary": "The audit is complete. Let me register the evidence for both success criteria.",
+    "first_seen_iteration": 1,
+    "last_seen_iteration": 1,
+    "count": 1
+  },
+  {
+    "fingerprint": "audit-report-verified-129-tests-pass-8-skipped-missing-r",
+    "summary": "Audit report verified — 129 tests pass, 8 skipped (missing real artifacts), report covers all 8 required deliverables with 9 specific findings. The goal is co",
+    "first_seen_iteration": 2,
+    "last_seen_iteration": 2,
+    "count": 1
+  },
+  {
+    "fingerprint": "both-verification-checks-pass-the-report-is-complete-wit",
+    "summary": "Both verification checks pass. The report is complete with all 8 deliverables, 9 findings, and the correct verdict. Evidence is fresh.",
+    "first_seen_iteration": 3,
+    "last_seen_iteration": 3,
+    "count": 1
+  }
+]

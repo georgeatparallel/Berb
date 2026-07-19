@@ -638,6 +638,16 @@ def _execute_quality_gate(
         json.dumps(_fabrication_info, indent=2), encoding="utf-8"
     )
 
+    # --- Research Integrity: emit evidence_registry.json (Phase 1) ---
+    try:
+        from berb.integrity import VerifiedEvidenceRegistry as _VER  # noqa: N814
+
+        _evidence_reg = _VER.from_run_dir(run_dir)
+        if _evidence_reg.records:
+            _evidence_reg.save(run_dir / "evidence_registry.json")
+    except Exception:
+        logger.debug("Could not build evidence registry", exc_info=True)
+
     if isinstance(score, (int, float)) and score < threshold:
         if config.research.graceful_degradation:
             logger.warning(

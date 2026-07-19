@@ -240,6 +240,38 @@ prompts:
   custom_file: ""  # Path to custom prompts YAML (empty = use defaults)
 
 # =============================================================================
+# Research Integrity (NEW!)
+# =============================================================================
+
+integrity:
+  # Verification strictness: draft | submission | strict
+  #   draft:      warn and annotate, never block
+  #   submission: fail on critical integrity issues
+  #   strict:     fail closed — no unverified empirical/comparative claims
+  mode: "draft"
+
+  # Fail if empirical/comparative claims lack supporting evidence records
+  fail_on_unsupported_claims: false
+
+  # Fail if p-values, CIs, or significance claims are not backed by
+  # registered statistical tests
+  fail_on_unverified_statistics: false
+
+  # Fail if citation verification uses metadata-only fallback
+  fail_on_citation_fallback: false
+
+  # Require literature source snippets for citation support verification
+  require_source_snippets: false
+
+  # Domains that automatically default to strict mode
+  auto_strict_domains:
+    - "biomedical"
+    - "clinical"
+    - "legal"
+    - "finance"
+    - "policy"
+
+# =============================================================================
 # Quick Start Guide
 # =============================================================================
 #
