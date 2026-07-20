@@ -185,6 +185,41 @@ def _resolve_config_or_exit(args: argparse.Namespace) -> Path | None:
     return path
 
 
+# ---------------------------------------------------------------------------
+# Upload argument resolution
+# ---------------------------------------------------------------------------
+
+
+def _resolve_upload_args(args: argparse.Namespace) -> list[Path]:
+    """Resolve ``--upload`` and ``--upload-dir`` CLI args to existing file paths.
+
+    Checks each path for existence and filters to only existing files.
+    Non-PDF files are included (the pipeline handles filtering).
+    """
+    uploaded: list[Path] = []
+    raw_paths: list[str] = []
+
+    raw_paths.extend(getattr(args, "upload", []) or [])
+    upload_dir = getattr(args, "upload_dir", None)
+    if upload_dir:
+        d = Path(upload_dir)
+        if d.is_dir():
+            raw_paths.extend(
+                str(p.resolve()) for p in d.iterdir() if p.is_file()
+            )
+        else:
+            print(f"Warning: --upload-dir not found: {upload_dir}", file=sys.stderr)
+
+    for p in raw_paths:
+        resolved = Path(p).resolve()
+        if resolved.exists():
+            uploaded.append(resolved)
+        else:
+            print(f"Warning: uploaded file not found, skipping: {p}", file=sys.stderr)
+
+    return uploaded
+
+
 def _generate_run_id(topic: str) -> str:
     ts = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
     topic_hash = hashlib.sha256(topic.encode()).hexdigest()[:6]
@@ -232,6 +267,15 @@ def cmd_run(args: argparse.Namespace) -> int:
 
         new_research = dataclasses.replace(config.research, topic=topic)
         config = dataclasses.replace(config, research=new_research)
+
+    # Resolve uploaded files
+    uploaded = _resolve_upload_args(args)
+    if uploaded:
+        import dataclasses as _dc_ul
+
+        new_research = _dc_ul.replace(config.research, uploaded_file_paths=tuple(str(p) for p in uploaded))
+        config = _dc_ul.replace(config, research=new_research)
+        print(f"Including {len(uploaded)} uploaded file(s) in pipeline.")
 
     # --- LLM Preflight ---
     if not skip_preflight:
@@ -908,6 +952,18 @@ def cmd_literature(args: argparse.Namespace) -> int:
     # Override topic
     config.research.topic = args.topic
 
+    # Resolve uploaded files
+    uploaded = _resolve_upload_args(args)
+    if uploaded:
+        import dataclasses
+
+        new_research = dataclasses.replace(
+            config.research,
+            uploaded_file_paths=tuple(str(p) for p in uploaded),
+        )
+        config = dataclasses.replace(config, research=new_research)
+        print(f"Including {len(uploaded)} uploaded file(s) in literature search.")
+
     # Generate run ID and directory
     run_id = _generate_run_id(config.research.topic)
     run_dir = Path(f"artifacts/{run_id}")
@@ -1181,6 +1237,8 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Disable graceful degradation: fail pipeline on quality gate failure",
     )
+    _ = run_p.add_argument("--upload", nargs="+", help="Upload PDFs/data files for inclusion")
+    _ = run_p.add_argument("--upload-dir", help="Upload directory of PDFs/data files")
     val_p = sub.add_parser("validate", help="Validate config file")
     _ = val_p.add_argument(
         "--config",

@@ -84,6 +84,11 @@ export function WizardView() {
   const [preset, setPreset] = useState('humanities');
   const [mode, setMode] = useState<'autonomous' | 'collaborative'>('autonomous');
 
+  // File upload state
+  const [uploadingFiles, setUploadingFiles] = useState(false);
+  const [uploadedPaths, setUploadedPaths] = useState<string[]>([]);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
   // Use research hook
   const { job, isLoading, error, submitResearch, cancelJob } = useResearch();
 
@@ -99,6 +104,7 @@ export function WizardView() {
             preset,
             mode,
             budget_usd: 2.0,
+            uploaded_pdfs: uploadedPaths.length > 0 ? uploadedPaths : undefined,
           });
           // Don't navigate - stay on this step to show progress
         } catch (err) {
@@ -165,6 +171,65 @@ export function WizardView() {
           <p className="text-xs text-textTertiary mt-2">
             Be specific and focused for better results
           </p>
+        </div>
+
+        {/* File Upload */}
+        <div className="card mt-4">
+          <label className="block text-sm font-medium text-textSecondary mb-2">
+            Upload PDFs (optional)
+          </label>
+          <p className="text-xs text-textTertiary mb-3">
+            Upload papers or data files to include in the literature search
+          </p>
+          <div className="flex items-center gap-3">
+            <input
+              type="file"
+              multiple
+              accept=".pdf,.csv,.json,.txt,.md"
+              onChange={async (e) => {
+                const files = e.target.files;
+                if (!files || files.length === 0) return;
+                setUploadingFiles(true);
+                setUploadError(null);
+                try {
+                  const formData = new FormData();
+                  for (let i = 0; i < files.length; i++) {
+                    formData.append('files', files[i]);
+                  }
+                  const res = await fetch('/api/uploads', {
+                    method: 'POST',
+                    body: formData,
+                  });
+                  if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || 'Upload failed');
+                  }
+                  const data = await res.json();
+                  const paths = data.files.map((f: any) => f.path);
+                  setUploadedPaths(prev => [...prev, ...paths]);
+                  console.log('Uploaded files:', paths);
+                } catch (err: any) {
+                  setUploadError(err.message || 'Upload failed');
+                } finally {
+                  setUploadingFiles(false);
+                  // Reset input so the same file can be re-selected
+                  e.target.value = '';
+                }
+              }}
+              className="text-sm text-textSecondary file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-accent file:text-textInverse hover:file:bg-accentHover"
+            />
+            {uploadingFiles && (
+              <Loader2 className="w-5 h-5 text-accent animate-spin flex-shrink-0" />
+            )}
+          </div>
+          {uploadError && (
+            <p className="text-xs text-error mt-2">{uploadError}</p>
+          )}
+          {uploadedPaths.length > 0 && (
+            <div className="mt-3 text-xs text-textTertiary">
+              <span className="font-medium text-textSecondary">{uploadedPaths.length}</span> file(s) uploaded
+            </div>
+          )}
         </div>
         
         <div className="mt-6 flex justify-between">

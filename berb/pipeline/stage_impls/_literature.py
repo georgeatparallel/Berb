@@ -437,6 +437,33 @@ def _execute_literature_collect(
             exc_info=True,
         )
 
+    # --- Ingest uploaded PDFs (tier 0 — always included) ---
+    uploaded_paths: tuple[str, ...] = config.research.uploaded_file_paths
+    if uploaded_paths:
+        from berb.literature.pdf_ingestor import ingest_pdfs as _ingest_pdfs
+
+        uploaded_path_objs = [Path(p) for p in uploaded_paths]
+        logger.info(
+            "Stage 4: Ingesting %d uploaded PDF(s)…",
+            len(uploaded_path_objs),
+        )
+        uploaded_papers = _ingest_pdfs(uploaded_path_objs, llm=adapters.llm)
+        if uploaded_papers:
+            _existing_titles = {c.get("title", "").lower() for c in candidates}
+            _added = 0
+            for up in uploaded_papers:
+                if up.get("title", "").lower() not in _existing_titles:
+                    up["collected_at"] = _utcnow_iso()
+                    candidates.append(up)
+                    _existing_titles.add(up.get("title", "").lower())
+                    _added += 1
+            logger.info(
+                "Stage 4: Added %d papers from %d uploaded PDF(s) (skipped %d duplicates)",
+                _added,
+                len(uploaded_path_objs),
+                len(uploaded_papers) - _added,
+            )
+
     # --- Inject foundational/seminal papers ---
     try:
         from berb.data import load_seminal_papers

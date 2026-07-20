@@ -137,6 +137,8 @@ class ResearchConfig:
     daily_paper_count: int = 0
     quality_threshold: float = 0.0
     graceful_degradation: bool = True
+    uploaded_file_paths: tuple[str, ...] = ()
+    """Absolute paths to user-uploaded PDFs/data files for ingestion."""
 
 
 @dataclass(frozen=True)
@@ -936,6 +938,7 @@ class RCConfig:
                 daily_paper_count=int(research.get("daily_paper_count", 0)),
                 quality_threshold=float(research.get("quality_threshold", 0.0)),
                 graceful_degradation=bool(research.get("graceful_degradation", True)),
+                uploaded_file_paths=tuple(research.get("uploaded_file_paths") or ()),
             ),
             runtime=RuntimeConfig(
                 timezone=runtime["timezone"],

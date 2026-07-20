@@ -93,9 +93,11 @@ def create_app(
     # --- Routes ---
     from berb.server.routes.pipeline import router as pipeline_router
     from berb.server.routes.projects import router as projects_router
+    from berb.server.routes.uploads import router as uploads_router
 
     app.include_router(pipeline_router)
     app.include_router(projects_router)
+    app.include_router(uploads_router)
 
     if not dashboard_only:
         from berb.server.routes.chat import router as chat_router

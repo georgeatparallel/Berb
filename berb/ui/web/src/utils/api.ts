@@ -27,6 +27,7 @@ export interface CreateResearchRequest {
   preset?: string;
   mode?: 'autonomous' | 'collaborative';
   budget_usd?: number;
+  uploaded_pdfs?: string[];
 }
 
 export interface CreateResearchResponse {
@@ -65,6 +66,7 @@ export class BerbApiClient {
           preset: request.preset || 'humanities',
           mode: request.mode || 'autonomous',
           budget_usd: request.budget_usd || 1.0,
+          uploaded_pdfs: request.uploaded_pdfs || [],
         }),
       });
 

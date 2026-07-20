@@ -38,6 +38,8 @@ class PipelineStartRequest(BaseModel):
     topic: str | None = None
     config_overrides: dict[str, Any] | None = None
     auto_approve: bool = True
+    uploaded_file_paths: list[str] = []
+    """Path(s) to uploaded PDFs/data files to include in the pipeline."""
 
 
 class PipelineStartResponse(BaseModel):
@@ -76,6 +78,19 @@ async def start_pipeline(req: PipelineStartRequest) -> PipelineStartResponse:
 
         new_research = dataclasses.replace(config.research, topic=req.topic)
         config = dataclasses.replace(config, research=new_research)
+
+    if req.uploaded_file_paths:
+        import dataclasses
+
+        new_research = dataclasses.replace(
+            config.research,
+            uploaded_file_paths=tuple(req.uploaded_file_paths),
+        )
+        config = dataclasses.replace(config, research=new_research)
+        logger.info(
+            "Pipeline start: including %d uploaded file(s)",
+            len(req.uploaded_file_paths),
+        )
 
     import hashlib
     from datetime import datetime
