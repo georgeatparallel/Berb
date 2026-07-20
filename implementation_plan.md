@@ -1,671 +1,310 @@
-# Berb Research Integrity Implementation Plan
+# Berb — Implementation Plan
+
+**Generated:** 2026-07-20  
+**Source:** Architecture review, file upload feature implementation, post-review fixes  
+**Version:** 1.0
+
+---
 
 ## 1. Executive Summary
 
-Berb already contains several strong anti-fabrication primitives: a 23-stage event-sourced research pipeline, deterministic numeric verification through `VerifiedRegistry` and `paper_verifier.py`, citation verification at Stage 23, manuscript self-checking, claim confidence checks, source alignment checks, sandboxed experiment execution, and reproducibility artifacts. The current architecture is therefore a good base for preventing AI-generated research fabrication.
+Berb is a 23-stage autonomous research pipeline that turns a research topic into
+a publication-ready paper. This document covers the architecture of the
+recently-implemented **file upload & ingestion subsystem** and the next-priority
+enhancements.
 
-The main gap is that integrity controls are not yet unified around a single provenance contract. Numeric values are strongly protected, but prose claims, dataset-access claims, citation-support claims, statistical claims, figure references, and rewrite drift are handled by a mix of prompts, heuristics, and late-stage checks. The planned upgrade moves Berb from "prompt the model not to fabricate" to "only publish facts that can be traced to registered evidence."
+The upload feature enables users to supply PDFs and data files alongside
+natural-language instructions. Uploaded PDFs are ingested into the literature
+pipeline at Stage 4 (LITERATURE_COLLECT), treated as first-class candidates
+alongside API-sourced papers (arXiv, Semantic Scholar, OpenAlex).
 
-The recommended implementation is an evidence-first integrity subsystem:
+**Status:** Core feature implemented and reviewed. Six review findings fixed.
+All 16 unit tests pass, no regressions in existing suite (68 tests).
 
-- Add a `VerifiedEvidenceRegistry` and per-run `evidence_registry.json`.
-- Require claim-level provenance through a `claim_manifest.json`.
-- Extend `paper_verifier.py` from numeric verification to full claim, dataset, method, statistic, figure, and citation-support verification.
-- Make strict research-integrity mode fail closed for high-risk domains and submission outputs.
-- Run verification after every write or rewrite stage.
-- Improve source grounding from metadata and keyword overlap to snippet-backed claim-citation alignment.
-- Add targeted regression tests for fake datasets, fake p-values, fake baselines, unsupported citations, and rewrite drift.
-
-The plan below is phased to preserve backward compatibility. Draft mode remains permissive while submission/strict mode becomes fail-closed.
+---
 
 ## 2. Current Architecture Assessment
 
-### 2.1 Pipeline Architecture
+### 2.1 Upload Feature Architecture
 
-Berb is organized around a 23-stage research pipeline defined in `berb/pipeline/stages.py` and `berb/pipeline/contracts.py`. Stage implementations live under `berb/pipeline/stage_impls/`. The pipeline spans scoping, literature discovery, synthesis, experiment design, code generation, experiment execution, analysis, paper drafting, peer review, revision, quality gate, export, and citation verification.
-
-Current strengths:
-
-- Explicit stage contracts with input/output artifacts and definitions of done.
-- Event-sourced state machine and checkpoint/resume support.
-- Modular stage registration through decorators.
-- Separate modules for literature, experiment, writing, validation, export, audit, and web integrations.
-- Critical final citation verification stage.
-- Deterministic numeric verification through `VerifiedRegistry` and `paper_verifier.py`.
-- Existing tests for paper verifier, citation verification, checkpoint behavior, and stage ordering.
-
-Current limitations:
-
-- Integrity evidence is distributed across artifacts rather than normalized into one registry.
-- Stage 17 paper drafting consumes evidence mostly through prompt context, not through a strict machine-readable claim contract.
-- Claim extraction and source alignment are mostly heuristic and can miss or misclassify claims.
-- Citation verification proves source existence better than source support for each sentence.
-- Some fallback paths preserve unverified content to avoid breaking output.
-- Verification is strongest after export, but rewrites and polishing can alter claims before final checks.
+```
+User/Frontend
+  │  POST /api/uploads (multipart)  →  berb/server/routes/uploads.py
+  │  POST /api/v1/research (JSON)   →  berb/server/api.py
+  │           OR
+  │  POST /api/pipeline/start (JSON)→  berb/server/routes/pipeline.py
+  ▼
+RCConfig.research.uploaded_file_paths: tuple[str, ...]   (frozen dataclass)
+  │
+  ▼
+execute_pipeline()
+  │  Stage 4: LITERATURE_COLLECT
+  │    ├─ API search (OpenAlex → S2 → arXiv → Perplexity)
+  │    ├─ Upload ingestion (tier 0: PdfIngestor.ingest_pdfs)
+  │    ├─ Seminal paper injection
+  │    └─ candidates.jsonl (merged, deduplicated)
+  ▼
+Stage 5: LITERATURE_SCREEN → shortlist.jsonl
+Stage 6: KNOWLEDGE_EXTRACT → cards/
+Stage 7: SYNTHESIS → synthesis.md
+  … rest of pipeline unchanged
+```
 
 ### 2.2 Module Boundaries
 
-Relevant modules and boundaries:
-
-- `berb/pipeline/`: orchestration, stage implementations, verification gates, artifacts, pipeline state.
-- `berb/pipeline/verified_registry.py`: verified numeric values, condition names, training configuration.
-- `berb/pipeline/paper_verifier.py`: deterministic post-generation numeric and condition checks.
-- `berb/pipeline/citation_verification.py`: layered citation format/API/info/content/web checks.
-- `berb/pipeline/hallucination_detector.py`: final paper hallucination scan.
-- `berb/validation/`: claim confidence, source alignment, manuscript self-check, reference integrity.
-- `berb/literature/`: candidate collection, citation verification, source search.
-- `berb/writing/`: drafting, source writing, citation engine, style and anti-AI polishing.
-- `berb/experiment/`: execution and sandboxing.
-- `berb/audit/`: reproducibility bundle and audit trail.
-
-Recommended boundary adjustment:
-
-- Add an integrity service layer under `berb/integrity/` or `berb/validation/integrity/`.
-- Keep deterministic registries free of LLM dependencies.
-- Keep LLM-based claim classification behind replaceable interfaces.
-- Make stage implementations call a small set of integrity APIs instead of embedding verification logic directly.
+| Module | Responsibility | Pattern |
+|--------|---------------|---------|
+| `berb/literature/pdf_ingestor.py` | PDF → Paper dict extraction (3 tiers) | Strategy |
+| `berb/server/routes/uploads.py` | Multipart file validation & storage | APIRouter |
+| `berb/config.py` | Immutable config via frozen dataclasses | Value Object |
+| `berb/pipeline/stage_impls/_literature.py` | Stage integration, upload merge | Chain of Resp. |
+| `berb/cli.py` | CLI argument resolution | Command |
 
 ### 2.3 Data Flow
 
-Current data flow:
-
-1. Literature stages collect candidates and knowledge cards.
-2. Experiment stages generate code, execute runs, and produce summaries/refinement logs.
-3. Analysis stages produce conclusions.
-4. Writing stages draft/revise the paper from prompts and artifacts.
-5. Export/finalization stages verify citations and package outputs.
-
-Target data flow:
-
-1. Evidence-producing stages append structured evidence records.
-2. Writing stages consume only approved evidence records for empirical claims.
-3. Drafting emits `claim_manifest.json` alongside prose.
-4. Verification gates compare the manuscript against evidence and claim manifests.
-5. Exported outputs include integrity reports and provenance appendix artifacts.
-
-### 2.4 Dependencies
-
-Runtime dependencies are mainly Python libraries such as Pydantic, httpx, numpy, rich, PyYAML, optional LLM SDKs, PyMuPDF, search/crawl libraries, and scientific tooling. The proposed plan can be implemented mostly with existing dependencies.
-
-Potential new dependencies should be avoided initially. If semantic sentence classification requires model assistance, use the existing LLM abstraction. For deterministic parsing, use standard library regex, Pydantic models, and existing artifact formats.
-
-### 2.5 Scalability and Maintainability
-
-Scalability risks:
-
-- Verifying every claim against every source can become expensive.
-- Full-text citation alignment may require many API calls.
-- Re-verification after every rewrite can duplicate work.
-
-Mitigations:
-
-- Cache evidence IDs and claim-verification results by content hash.
-- Verify changed claims only after rewrites.
-- Batch LLM checks.
-- Use deterministic checks first and LLM checks only for ambiguous support.
-- Store normalized source snippets during literature collection to avoid repeated fetches.
-
-Maintainability risks:
-
-- Integrity logic is currently spread across several modules.
-- Stage implementations are already long and complex.
-
-Mitigations:
-
-- Add a cohesive integrity API with stable Pydantic schemas.
-- Keep stage code limited to loading artifacts, invoking integrity services, and writing reports.
-- Add focused unit tests for each verifier.
-
-### 2.6 Security and Technical Debt
-
-Security considerations:
-
-- Source fetching must continue to respect SSRF protections and existing web client safeguards.
-- Evidence registries must not leak API keys, tokens, proprietary data, or patient data.
-- Dataset-access records should store metadata/provenance, not raw sensitive records.
-- Strict mode should refuse to publish unsupported biomedical/clinical/legal/financial claims.
-
-Technical debt addressed:
-
-- Prompt-only data integrity instructions.
-- Heuristic claim extraction.
-- Late-stage-only verification.
-- Citation existence checks not always tied to claim support.
-- Fallback paths that prioritize output continuity over integrity.
-
-## 3. Target Architecture
-
-### 3.1 New Integrity Subsystem
-
-Add a new package:
-
-```text
-berb/integrity/
-  __init__.py
-  evidence.py
-  claims.py
-  registry.py
-  verifier.py
-  gates.py
-  drift.py
-  reports.py
-  source_support.py
-```
-
-Responsibilities:
-
-- `evidence.py`: Pydantic models for evidence records.
-- `claims.py`: claim models, claim type classifier interface, extraction helpers.
-- `registry.py`: `VerifiedEvidenceRegistry`, load/save/merge APIs.
-- `verifier.py`: deterministic and hybrid claim verification.
-- `gates.py`: strict/draft/submission gate policy.
-- `drift.py`: rewrite drift detection.
-- `reports.py`: integrity score and provenance appendix generation.
-- `source_support.py`: source snippet alignment and citation-support verdicts.
-
-### 3.2 Core Artifacts
-
-Add these run artifacts:
-
-- `evidence_registry.json`: all verified evidence records.
-- `claim_manifest.json`: claims in the paper and their evidence links.
-- `integrity_report.json`: pass/fail, issue list, scores, and recommendations.
-- `provenance_appendix.md`: human-readable provenance appendix.
-- `source_snippets.jsonl`: normalized support snippets from literature sources.
-- `rewrite_drift_report.json`: changes introduced during revision/polishing/export.
-
-### 3.3 Evidence Types
-
-Initial evidence types:
-
-- `metric`: numeric result from experiment artifacts.
-- `statistical_test`: p-value, confidence interval, test name, effect size.
-- `dataset_access`: dataset/database acquisition and access metadata.
-- `method_implementation`: methods/baselines/ablations actually implemented.
-- `run_config`: seeds, trial count, hyperparameters, hardware, training config.
-- `figure`: generated figure/table with data/script provenance.
-- `source_snippet`: literature excerpt supporting a claim.
-- `analysis_finding`: derived finding from Stage 14 analysis.
-- `limitation`: explicitly registered limitation or negative result.
-
-### 3.4 Gate Policy
-
-Add config:
-
-```yaml
-integrity:
-  mode: draft        # draft | submission | strict
-  fail_on_unsupported_claims: true
-  fail_on_unverified_statistics: true
-  fail_on_citation_fallback: true
-  require_source_snippets: true
-  auto_strict_domains:
-    - biomedical
-    - clinical
-    - legal
-    - finance
-    - policy
-```
-
-Mode behavior:
-
-- `draft`: warn and annotate.
-- `submission`: fail on critical integrity issues.
-- `strict`: fail closed; no unverified empirical/comparative/causal/novelty claims.
-
-## 4. Detailed Implementation Plan
-
-### Phase 0: Baseline and Safety Net
-
-Milestone: establish current behavior and regression fixtures before changing gates.
-
-Tasks:
-
-- Inventory current integrity checks and artifact paths.
-- Add fixtures for fabricated datasets, fake p-values, fake baselines, unsupported citations, and rewrite drift.
-- Snapshot current Stage 17, Stage 20, Stage 22, and Stage 23 behavior.
-- Add `integrity.mode` config parsing with no behavior change initially.
-
-Dependencies:
-
-- Existing tests under `tests/test_paper_verifier.py`, `tests/test_berb_citation_verify.py`, and `tests/test_berb_executor.py`.
-
-Acceptance criteria:
-
-- New config loads with defaults.
-- Existing tests remain green.
-- Negative fixtures exist but may initially be marked xfail where functionality is not implemented.
-
-### Phase 1: Evidence Registry Foundation
-
-Milestone: create a machine-readable registry for all non-numeric provenance.
-
-Tasks:
-
-- Add Pydantic models for `EvidenceRecord`, `EvidenceType`, `EvidenceSource`, and `EvidenceRegistryReport`.
-- Add `VerifiedEvidenceRegistry` with `add_record`, `lookup`, `verify`, `save`, `load`, `merge`, and `from_run_dir`.
-- Extend `VerifiedRegistry` or add adapters so numeric values can be exposed as evidence records.
-- Emit `evidence_registry.json` from experiment, literature, analysis, and figure stages.
-
-Acceptance criteria:
-
-- A full run produces `evidence_registry.json`.
-- Numeric values in `VerifiedRegistry` are mirrored with source artifact paths.
-- No LLM dependency is required to build the registry.
-
-### Phase 2: Claim Manifest and Drafting Contract
-
-Milestone: Stage 17 emits claims linked to evidence.
-
-Tasks:
-
-- Add `ClaimRecord` and `ClaimManifest` models.
-- Implement deterministic sentence extraction and claim classification.
-- Add optional LLM classifier behind the existing LLM client for ambiguous claim types.
-- Modify Stage 17 to write `claim_manifest.json`.
-- Modify paper-writing prompts to require evidence IDs for empirical/comparative/causal/novelty claims.
-- Validate that every generated result sentence can be traced to registry evidence.
-
-Acceptance criteria:
-
-- Stage 17 outputs `paper_draft.md` and `claim_manifest.json`.
-- Claims with numbers reference verified numeric evidence.
-- Claims about methods/baselines/datasets reference non-numeric evidence.
-
-### Phase 3: Deterministic Integrity Gate Expansion
-
-Milestone: extend `paper_verifier.py` into a broader deterministic verifier.
-
-Tasks:
-
-- Add checks for dataset/database claims.
-- Add checks for baselines, ablations, methods, sample sizes, trial counts, seeds, hardware, and training claims.
-- Add checks for statistical tests, p-values, confidence intervals, and significance language.
-- Add checks for invented figures and tables.
-- Add strict/draft/submission policy handling.
-
-Acceptance criteria:
-
-- Fake p-values fail in submission/strict mode.
-- Fake dataset-access claims fail in submission/strict mode.
-- Fake baseline and ablation claims fail in submission/strict mode.
-- Draft mode annotates issues without blocking.
-
-### Phase 4: Citation and Source Support Grounding
-
-Milestone: citations prove sentence support, not just source existence.
-
-Tasks:
-
-- Store source snippets during literature collection and knowledge extraction.
-- Link source snippets to evidence records.
-- Replace source-alignment keyword overlap with a snippet-backed support verdict.
-- Add citation-use records for each in-text citation.
-- Make Stage 23 fail closed in strict mode when verification strips too many citations.
-- Remove or gate the bibliography restoration fallback.
-
-Acceptance criteria:
-
-- A real citation that does not support the sentence is flagged.
-- A missing or hallucinated citation blocks strict/submission finalization.
-- `references_verified.bib` never silently restores unverified entries in strict mode.
-
-### Phase 5: Rewrite Drift and Multi-Pass Verification
-
-Milestone: verification runs after every transformation that can alter claims.
-
-Tasks:
-
-- Add rewrite drift detection for numbers, method names, comparisons, significance claims, limitations, citations, and dataset references.
-- Run integrity checks after draft, revision, anti-AI/style polishing, LaTeX conversion, export, and final citation verification.
-- Cache claim hashes so unchanged claims are not rechecked.
-- Write `rewrite_drift_report.json`.
-
-Acceptance criteria:
-
-- If revision changes "A outperforms B" to "B outperforms A" without evidence, the run fails in strict/submission mode.
-- If style polishing changes a number, the run fails in strict/submission mode.
-- Drift reports identify the source and target stages.
-
-### Phase 6: Observability, CLI/API, and Reports
-
-Milestone: integrity failures are visible and actionable.
-
-Tasks:
-
-- Add integrity metrics to run summary.
-- Add CLI output for failed claims and missing evidence.
-- Add API fields for integrity status and report artifacts.
-- Generate `provenance_appendix.md`.
-- Update docs and example configs.
-
-Acceptance criteria:
-
-- Users can see which claim failed, where it appears, and what evidence is missing.
-- Run summary includes claim counts, citation alignment rate, unverified numbers, fabricated condition count, and integrity pass/fail.
-
-### Phase 7: Strict Domain Defaults and CI Hardening
-
-Milestone: high-risk domains get safer defaults.
-
-Tasks:
-
-- Auto-enable strict mode for biomedical, clinical, legal, financial, and policy topics.
-- Prevent `--skip-noncritical-stage` from bypassing integrity-critical stages in strict mode.
-- Add CI jobs for integrity tests.
-- Add documentation for draft vs submission vs strict mode.
-
-Acceptance criteria:
-
-- Biomedical topics default to strict mode.
-- Integrity-critical failures cannot be skipped in strict mode.
-- CI rejects regressions in anti-fabrication tests.
-
-## 5. Impact Assessment
-
-| Area | Impact | Affected Components |
+1. **Upload:** Files arrive via `POST /api/uploads` → validated for extension, size,
+   checksummed with SHA-256 → saved to `uploads/{sha256_prefix}_{original_name}`
+2. **Job creation:** Frontend sends `uploaded_pdfs: [path, ...]` in JSON body →
+   server writes to `RCConfig.research.uploaded_file_paths`
+3. **Pipeline:** `_execute_literature_collect` reads `config.research.uploaded_file_paths` →
+   calls `PdfIngestor.ingest_pdfs(paths, llm=…)` → appends Paper dicts to
+   `candidates.jsonl` with `source: "upload"`, `is_uploaded: true`
+4. **Downstream:** Stages 5–6 process uploaded papers identically to API-sourced
+   papers (keyword screening, LLM relevance scoring, knowledge extraction)
+
+### 2.4 Design Patterns
+
+| Pattern | Where | Why |
 |---|---|---|
-| Pipeline contracts | New artifacts and possible new stage outputs | `berb/pipeline/contracts.py`, stage decorators |
-| Stage 4-6 literature | Source snippets and evidence records | `berb/literature/*`, `berb/pipeline/stage_impls/_literature.py` |
-| Stage 12-14 experiments | Metrics, config, statistics, figure provenance | `berb/experiment/*`, `berb/pipeline/stage_impls/_execution.py`, `_analysis.py` |
-| Stage 17 writing | Claim manifest and evidence ID constraints | `berb/pipeline/stage_impls/_paper_writing.py`, `prompts.default.yaml` |
-| Stage 19 revision | Rewrite drift and re-verification | `berb/pipeline/stage_impls/_review_publish.py` |
-| Stage 20 quality | Integrity score and hard fail policy | `berb/pipeline/stage_impls/_review_publish.py` |
-| Stage 22 export | Final paper, figure/table provenance, LaTeX checks | `berb/export/*`, `berb/templates/*`, `_review_publish.py` |
-| Stage 23 citation verify | Fail-closed citation and support checks | `berb/pipeline/citation_verification.py`, `berb/literature/verify.py` |
-| Validation modules | Claim classification, source support verdicts | `berb/validation/*`, new `berb/integrity/*` |
-| CLI/API | Integrity config and report exposure | `berb/cli.py`, `berb/api/server.py`, `berb/config.py` |
-| Tests | New negative and integration tests | `tests/test_*integrity*.py`, existing verifier tests |
-| Deployment | No infrastructure migration required initially | CI config, docs, optional API fields |
-
-## 6. Task Breakdown Structure
-
-The rows below map the requested additions, enhancements, and fixes to implementation work. "Rollback" means the lowest-risk fallback if the change causes regressions.
-
-| ID | Objective | Affected Components | Design and Implementation Tasks | Testing Strategy | Acceptance Criteria | Rollback Strategy |
-|---|---|---|---|---|---|---|
-| 1 | Add `VerifiedEvidenceRegistry` | New `berb/integrity/registry.py`, validation modules | Define evidence models, load/save/merge APIs, source artifact references | Unit tests for add/load/merge/lookup | Registry persists and reloads records deterministically | Feature flag registry writes off |
-| 2 | Extend numeric registry metadata | `verified_registry.py` | Add metric name, condition, run ID, seed, artifact path, source kind | Unit tests with experiment summaries and refinement logs | Lookup returns value and provenance | Keep existing `values` map as compatibility path |
-| 3 | Create `evidence_registry.json` per run | Stage 4-23 implementations | Add append/merge helper and stage calls | Integration test synthetic run | Run directory contains valid registry JSON | Stop writing registry but preserve stage behavior |
-| 4 | Require claim-level provenance in drafting | Stage 17, prompts, new claims module | Draft emits evidence IDs for supported claims | Stage 17 tests with fake LLM output | Claims without IDs are flagged | Disable hard gate, keep manifest as warning |
-| 5 | Add `claim_manifest.json` | Stage 17, Stage 19, Stage 22 | Define schema and writer/loader | Schema and integration tests | Manifest exists for drafts and final papers | Keep manifest optional in draft mode |
-| 6 | Upgrade claim extraction | `claims.py`, `claim_confidence.py` | Sentence parser, claim type classifier, optional LLM classifier | Unit tests by claim type | Empirical/comparative/causal/novelty claims are detected | Fall back to existing keyword extractor |
-| 7 | Hard gate unsupported claims | `gates.py`, Stage 20/22/23 | Add gate policy and failure result | Negative integration tests | Unsupported critical claims fail strict/submission mode | Config downgrade to draft mode |
-| 8 | Extend `paper_verifier.py` | `paper_verifier.py`, new registry adapters | Add dataset, baseline, statistic, figure, hardware checks | Negative tests for each fake claim category | Fabricated non-numeric claims are rejected | Disable individual verifier rules by config |
-| 9 | Verify statistical claims | Stage 14, verifier | Register tests, p-values, CIs, effect sizes from analysis artifacts | Tests for fake and real p-values | Significance claims require registered statistic evidence | Warn-only in draft mode |
-| 10 | Dataset-access verification | Literature/data acquisition, verifier | Register dataset/database access records and license notes | Tests for MarketScan-style fake claim | Dataset claim fails without access record | Allow "planned dataset" label in draft mode |
-| 11 | Make citation fallback fail closed | Stage 23 | Replace bibliography restore with mode-aware fail/quarantine | Stage 23 tests for mass stripping | Strict mode never restores unverified bib silently | Keep old fallback only in draft mode |
-| 12 | Verify citation support using snippets | Literature, source support, citation verifier | Store snippets and align each citation use | Tests for real citation/unsupported sentence | Topical but unsupported citation is flagged | Fall back to metadata-only with warning |
-| 13 | Store source snippets | Literature collect/extract | Persist `source_snippets.jsonl` with section/page/source URL | Fixture tests for snippet schema | Snippets load into evidence registry | Store abstracts only if full text unavailable |
-| 14 | Add citation-claim alignment scoring | Source support module | Verdict enum: direct, partial, background, contradicts, unrelated, unknown | Unit tests for verdict thresholds | Each citation use has a support verdict | Report only, no gate in draft mode |
-| 15 | Block mismatched citations | Stage 20/23 gates | Fail or rewrite sentence when citation is unrelated/contradictory | Negative citation tests | Mismatched citations cannot pass strict mode | Allow manual override artifact |
-| 16 | Verify after every rewrite | Stage 17/19/22/23 | Add verification hook after draft, revision, polish, export | Integration tests with altered claim | Final report shows each verification pass | Run only final verification if disabled |
-| 17 | Protect against rewrite drift | `drift.py`, Stage 19/22 | Semantic and deterministic diff of claims, numbers, citation placement | Tests for number and direction changes | Unsupported drift fails strict mode | Drift check warn-only |
-| 18 | Add strict integrity mode | Config, gates, CLI | Add config schema and policy resolution | Config tests | `integrity.mode: strict` changes gates to fail closed | Default remains draft/submission as configured |
-| 19 | Auto-strict high-risk domains | Domain detector, config | Map detected domains to strict mode | Domain tests | Biomedical/clinical/legal/finance/policy topics strict by default | Allow explicit config override |
-| 20 | Improve manuscript self-check | `manuscript_self_check.py` | Consume claim manifest and evidence registry | Unit tests comparing manifest-based checks | Self-check no longer relies only on text patterns | Keep heuristic path if manifest missing |
-| 21 | Improve source alignment | `source_alignment.py`, `source_support.py` | Replace overlap-only scoring with snippet and verdict pipeline | Alignment fixtures | Conservative `cannot_determine` on weak evidence | Existing overlap checker remains fallback |
-| 22 | Add provenance appendix | Reports, export | Generate markdown appendix from registries and reports | Snapshot tests | Appendix lists claims, metrics, sources, hashes | Generate as optional artifact only |
-| 23 | Figure/table provenance | Figure agent, export, verifier | Register data file, script, source metrics, timestamp | Tests with generated and missing figures | Each figure/table has provenance | Warn if missing in draft mode |
-| 24 | Detect invented figure references | Export verifier | Parse Figure/Table refs and validate artifacts | Tests for missing Figure 3/Table 2 | Invented refs fail strict mode | Convert to warning in draft mode |
-| 25 | Add negative regression tests | Tests | Add fake p-value, fake dataset, fake baseline, fake citation, rewrite drift tests | CI test suite | All anti-fabrication regressions are covered | Mark slow LLM tests optional |
-| 26 | Add integrity score to summary | `summary.py`, API, CLI | Aggregate claim/citation/number/condition metrics | Summary tests | Run summary exposes integrity pass/fail and counts | Keep old summary fields unchanged |
-| 27 | Expose clear failures | CLI/API/logging | Add issue formatting with claim, location, evidence gap | CLI/API tests | Failure messages identify exact claim and missing evidence | Write report artifact even if CLI formatting fails |
-| 28 | Separate draft/submission modes | Config, gates, CLI | Add policy matrix for warnings vs failures | Config and integration tests | Draft allows warnings, submission blocks critical issues | Default to draft for backward compatibility |
-| 29 | Prevent LLM-generated references everywhere | Stage 17/19/22 | Strip generated references after draft/revision/export | Tests with generated References section | LLM cannot add final references outside verified bib | Keep stripped content in internal notes |
-| 30 | Audit fallback paths | Stage impls, verifiers | Identify fallbacks and make integrity-sensitive fallbacks mode-aware | Regression tests for fallbacks | Strict mode fails/quarantines instead of silently preserving unverified content | Keep old behavior in draft mode |
-
-## 7. Risk and Mitigation Matrix
-
-| Risk | Likelihood | Impact | Mitigation |
-|---|---:|---:|---|
-| False positives block valid papers | Medium | High | Start with draft warnings, add strict mode opt-in, allow documented manual overrides |
-| Source snippets unavailable for paywalled literature | High | Medium | Use abstracts as weaker evidence, mark support as partial/cannot-determine, do not fabricate full-text support |
-| LLM-based claim classifier is inconsistent | Medium | Medium | Deterministic extraction first, cache classifier results by hash, keep conservative defaults |
-| Runtime and API cost increase | Medium | Medium | Batch checks, cache by claim/source hash, skip unchanged claims after rewrites |
-| Backward compatibility breaks existing runs | Medium | High | Add new artifacts without changing old outputs first, gate strict behavior by config |
-| Stage implementations become more complex | High | Medium | Centralize logic in `berb/integrity/`, keep stages as orchestration adapters |
-| Sensitive data leaks into provenance appendix | Low | High | Store metadata and hashes, redact secrets/PHI, use existing sanitization utilities |
-| Citation verification rate limits cause failures | Medium | Medium | Cache API results, support skipped/unavailable statuses, only fail strict mode on true hallucination or unsupported claim |
-| Strict defaults surprise users | Medium | Medium | Log mode selection clearly, document overrides, show domain detection rationale |
-| Manual overrides are abused | Medium | High | Require override reason, author, timestamp, and affected claim IDs in audit trail |
-
-## 8. Testing and Quality Assurance Strategy
-
-### 8.1 Unit Tests
-
-Add focused tests for:
-
-- Evidence registry model validation and merge behavior.
-- Numeric registry provenance metadata.
-- Claim type extraction and classification.
-- Dataset/database claim detection.
-- Baseline and ablation verification.
-- Statistical claim verification.
-- Figure/table reference detection.
-- Source snippet support verdicts.
-- Gate policy behavior across draft/submission/strict modes.
-
-### 8.2 Integration Tests
-
-Add synthetic run directories with:
-
-- Valid experiment metrics and matching paper claims.
-- Fake trial counts.
-- Fake p-values and fake confidence intervals.
-- Fake baselines not present in run artifacts.
-- Fake dataset/database claims.
-- Real citation with unsupported claim.
-- Rewritten number after polishing.
-- Missing figure/table reference.
-
-### 8.3 Regression Tests
-
-Promote the most important negative cases into CI:
-
-- `test_integrity_fake_p_value_rejected`
-- `test_integrity_fake_dataset_rejected`
-- `test_integrity_fake_baseline_rejected`
-- `test_integrity_unsupported_citation_rejected`
-- `test_integrity_rewrite_drift_rejected`
-- `test_integrity_draft_mode_warns`
-- `test_integrity_strict_mode_fails_closed`
+| **Strategy** | `PdfIngestor` — metadata → heuristic → LLM tiers | Degrades gracefully; selectable extraction quality |
+| **Chain of Responsibility** | Pipeline stages 3→4→5 | Each stage enriches/filters candidates; uploads enter at the collect stage |
+| **Adapter** | `PdfIngestor` adapts PDF bytes → `Paper`-like dict | Same contract as API search results (`candidates.jsonl` format) |
+| **Factory** | `pdf_to_paper(path, llm=None) -> dict` | Encapsulates the multi-tier creation logic |
+| **Repository** | File-based stage artifacts (`stage-NN/*.jsonl`) | Consistent with existing stage I/O contract |
+| **Observer** | WebSocket event broadcasting (future) | Existing `ConnectionManager` can emit upload progress |
+
+---
+
+## 3. Detailed Implementation Plan
+
+### Phase A: File Upload & Ingestion ✅ COMPLETED
+
+**Objective:** Enable users to upload PDFs/data files and have the pipeline
+consume them as first-class literature inputs.
+
+**Completed steps:**
+
+| Step | Description | Files |
+|------|-------------|-------|
+| A1 | PDF ingestor with 3-tier extraction | `berb/literature/pdf_ingestor.py` |
+| A2 | `ResearchConfig.uploaded_file_paths` field | `berb/config.py` |
+| A3 | Stage 4 integration (upload merge) | `berb/pipeline/stage_impls/_literature.py` |
+| A4 | `POST /api/uploads` multipart endpoint | `berb/server/routes/uploads.py` |
+| A5 | Router registration in `create_app()` | `berb/server/app.py` |
+| A6 | PipelineStartRequest field | `berb/server/routes/pipeline.py` |
+| A7 | CLI `--upload`/`--upload-dir` on `run` and `literature` | `berb/cli.py` |
+| A8 | Frontend file picker in Wizard | `berb/ui/web/src/views/Wizard.tsx` |
+| A9 | API client `uploaded_pdfs` field | `berb/ui/web/src/utils/api.ts` |
+| A10 | Unit tests (16 tests, all passing) | `tests/test_berb_pdf_ingestor.py` |
+
+**Review fixes applied:**
+
+| Fix | Severity | Description |
+|-----|----------|-------------|
+| Server models missing `uploaded_pdfs` | **Blocking** | Added to `api.py`, `web_api.py`, `web_api_real.py` Pydantic models; wired into config construction |
+| LLM interface mismatch | **Should-fix** | `_llm_extract_metadata` now tries `chat()` first (real LLMClient), then `chat_completion`, then `__call__` |
+| SHA-256 truncated to 64 bits | **NIT** | Upload file naming uses full 64 hex chars; paper ID uses 16 hex chars (128 bits) |
+| Password-protected PDFs silently swallowed | **Should-fix** | Explicit `doc.is_encrypted` check with clear warning log |
+
+**Acceptance criteria:**
+- [x] `POST /api/uploads` accepts PDF/CSV/JSON/TXT → returns saved paths
+- [x] Uploaded PDF appears in `candidates.jsonl` with `source: "upload"`
+- [x] CLI `--upload paper.pdf` resolves and passes paths to config
+- [x] Frontend file picker uploads, stores paths, sends in job creation
+- [x] 16/16 unit tests pass, 0 regressions
+
+---
+
+### Phase B: Integration Test Coverage 🔜 PRIORITY
+
+**Objective:** Close the test gap between unit and end-to-end. The upload
+feature has solid unit coverage (pdf_ingestor) but no integration tests for
+the API endpoint, pipeline stage integration, or CLI flow.
+
+**Work breakdown:**
+
+| Task | Description | Effort |
+|------|-------------|--------|
+| B1 | `POST /api/uploads` integration test | Test extension validation, size rejection, empty file, concurrent uploads | S |
+| B2 | LITERATURE_COLLECT integration test | Create a minimal PDF, run Stage 4 with `uploaded_file_paths`, assert paper appears in `candidates.jsonl` | M |
+| B3 | Full pipeline smoke test with upload | Run stages 3→4→5→6 with an uploaded PDF, verify it survives screening and extraction | M |
+| B4 | CLI `--upload` integration test | Mock `cmd_literature` with `--upload ./test.pdf`, assert `config.research.uploaded_file_paths` is set | S |
+| B5 | Frontend Wizard upload e2e (Playwright) | Simulate file selection, upload, job submission in browser | L |
+
+**Refactoring requirements:** None — tests are additive.
+
+---
+
+### Phase C: Remaining Gaps & Enhancements 🔜
+
+| ID | Gap | Priority | Description |
+|----|-----|----------|-------------|
+| C1 | OCR for scanned PDFs | P2 | `pdf_ingestor.py` has a TODO. Integrate pytesseract as a 4th extraction tier for image-only PDFs. Requires `PyMuPDF` page-to-image + `pytesseract`. |
+| C2 | Drag-and-drop upload UI | P2 | Replace `<input type="file">` with a drop zone component in Wizard. UX polish, no API changes. |
+| C3 | `web_api_real.py` wiring | P2 | The experimental real-pipeline server doesn't construct RCConfig — needs alternative config injection for `uploaded_file_paths`. |
+| C4 | `standalone_api.py` wiring | P3 | Same as C3 for the standalone stub server. |
+| C5 | Upload progress WebSocket | P3 | Broadcast upload progress (bytes received, SHA-256 computed) via existing `ConnectionManager` to the dashboard. |
+| C6 | Upload deduplication at API level | P3 | Check SHA-256 against existing uploads before writing, return existing path (save disk space and avoid re-processing). |
+| C7 | Upload cleanup policy | P3 | Periodic cleanup of orphaned uploads (not referenced by any run). Config-driven TTL. |
+
+---
+
+## 4. Task Breakdown Structure (WBS)
+
+```
+1. File Upload & Ingestion (1.0) ✅
+  1.1 PDF Ingestor Core               ✅
+  1.2 Config & Pipeline Integration    ✅
+  1.3 API Upload Endpoint              ✅
+  1.4 CLI Wiring                       ✅
+  1.5 Frontend                         ✅
+  1.6 Unit Tests                       ✅
+  1.7 Review Fixes                     ✅
+
+2. Integration Tests (2.0) 🔜
+  2.1 API Upload Endpoint Tests        🔜
+  2.2 Pipeline Stage Integration       🔜
+  2.3 Full Pipeline Smoke Test         🔜
+  2.4 CLI Flag Tests                   🔜
+  2.5 Frontend E2E Tests               🔜
+
+3. Remaining Enhancements (3.0) 🔜
+  3.1 OCR for Scanned PDFs             🔜
+  3.2 Drag-and-Drop UI                 🔜
+  3.3 Server Wiring Completeness       🔜
+  3.4 Upload Progress WebSocket        🔜
+  3.5 Upload Deduplication             🔜
+  3.6 Upload Cleanup Policy            🔜
+```
+
+---
+
+## 5. Risk & Mitigation Matrix
+
+| Risk | L | I | Mitigation |
+|------|---|---|------------|
+| Uploaded PDFs not reaching pipeline (server model mismatch) | M | H | Fixed in review — `uploaded_pdfs` field added to all Pydantic models |
+| LLM-assisted metadata extraction silently fails | M | H | Fixed — `chat()` called as primary instead of non-existent `chat_completion` |
+| Password-protected PDFs swallowed silently | L | L | Fixed — explicit `is_encrypted` check with clear warning |
+| Frontend sends `uploaded_pdfs` to wrong server (api.py vs web_api.py vs pipeline.py) | M | M | Start scripts use `api.py:app` — verified wiring; `web_api.py` also fixed. Add integration test. |
+| SHA-256 collision for uploaded files | VL | VL | 128-bit collision space for paper IDs (birthday bound ~2^64); 256-bit for file naming |
+| Large PDFs (>100MB) cause memory issues | L | M | 100MB cap enforced at upload endpoint; PyMuPDF reads pages in streaming fashion |
+| No cleanup of orphaned uploads | M | L | Acceptable for MVP; C7 adds config-driven TTL cleanup |
+| Existing pipeline breaks due to config field changes | VL | H | `uploaded_file_paths` defaults to empty tuple; frozen dataclass pattern ensures immutability; all existing tests pass |
+
+**L** = Likelihood (VL/L/M/H), **I** = Impact (VL/L/M/H)
 
-### 8.4 Property and Fuzz Tests
+---
 
-Use lightweight fuzzing for:
+## 6. Testing & Quality Assurance Strategy
 
-- Numeric extraction with LaTeX commands.
-- Citation parsing with multi-key citations.
-- Figure/table reference parsing.
-- Claim manifest load/save round trips.
+### 6.1 Current Coverage
 
-### 8.5 Manual QA
+| Layer | Tests | Status |
+|-------|-------|--------|
+| PDF ingestor unit | 16 tests | ✅ All passing |
+| PDF ingestor edge cases | Corrupt PDF, missing metadata, password-protected, non-existent files | ✅ Covered |
+| Literature integration | 52 existing tests | ✅ No regressions |
+| API endpoint integration | 0 tests | 🔜 Phase B1 |
+| Pipeline stage integration | 0 tests | 🔜 Phase B2 |
+| CLI flag resolution | 0 tests | 🔜 Phase B4 |
+| Frontend e2e | 0 tests | 🔜 Phase B5 |
 
-Manual review scenarios:
+### 6.2 Test Categories
 
-- Biomedical topic defaults to strict mode.
-- Non-high-risk topic remains configurable.
-- A valid paper with partial source snippets produces warnings, not false critical failures in draft mode.
-- A submission build with unsupported claims fails with actionable messages.
+- **Unit:** Isolated `pdf_ingestor` functions (extract_text, extract_metadata, heuristic_*, pdf_to_paper, ingest_pdfs)
+- **Integration:** API endpoint + config → LITERATURE_COLLECT → candidates.jsonl round-trip
+- **E2E:** Full pipeline (stages 3→8) with an uploaded PDF
+- **CLI:** `_resolve_upload_args` with real/missing/mixed paths
+- **Frontend:** Playwright test for file picker → upload → job submission
 
-### 8.6 Quality Gates
+### 6.3 CI Pipeline
 
-CI should run:
+All tests marked `@pytest.mark.llm` or `@pytest.mark.e2e` are excluded from
+CI pre-commit. Integration tests (Phase B) will be marked `@pytest.mark.slow`
+to run nightly but not per-commit.
 
-- `pytest tests/test_paper_verifier.py`
-- new integrity unit tests
-- citation verifier tests
-- stage contract tests
-- config tests
-- targeted pipeline integration tests
+---
 
-Optional slow CI:
+## 7. Deployment & Rollback Plan
 
-- live citation API verification
-- LLM-backed claim support checks
-- full end-to-end run in draft mode
+### 7.1 Deployment
 
-## 9. Engineering Practices
+1. **Code:** Merge to `main` (already pushed — commits `b9867c7`, `da70793`)
+2. **Dependencies:** `PyMuPDF` is already in `[pdf]` and `[all]` optional-deps. No new required dependencies.
+3. **Config:** `uploaded_file_paths` defaults to empty tuple — no config migration needed. YAML loader reads optional `uploaded_file_paths` field, ignores it if absent.
+4. **Database:** No schema changes. Uploaded files stored on disk in `uploads/` directory.
+5. **Frontend:** Vite build unchanged. New file picker component is additive.
 
-### SOLID and Clean Architecture
+### 7.2 Rollback
 
-- Use single-purpose services: registry, claim extraction, support verification, gate policy, report generation.
-- Depend on interfaces for LLM and source clients.
-- Keep deterministic verification independent from model providers.
-- Keep stage implementations thin.
+If the upload feature must be rolled back:
 
-### Separation of Concerns
+1. **Server:** Revert commits `b9867c7` and `da70793`. The `RCConfig.uploaded_file_paths` field defaults to empty tuple — no server crash even if partially deployed.
+2. **Uploaded files:** No automatic cleanup. Orphaned files in `uploads/` are harmless.
+3. **Pipeline:** LITERATURE_COLLECT skips upload ingestion when `uploaded_file_paths` is empty — no impact on existing runs.
+4. **Frontend:** Revert Wizard.tsx to pre-upload state. The component gracefully handles missing `uploaded_pdfs` field (sets to `undefined`).
 
-- Evidence production belongs in literature, experiment, analysis, and figure stages.
-- Evidence validation belongs in integrity services.
-- Paper generation consumes evidence but does not certify it.
-- Export packages reports but does not invent verification state.
+---
 
-### DRY, KISS, and YAGNI
+## 8. Post-Implementation Validation Checklist
 
-- Reuse `VerifiedRegistry` for numeric values instead of duplicating numeric logic.
-- Add a minimal evidence schema first.
-- Avoid adding new infrastructure or databases until JSON artifacts become insufficient.
-- Do not introduce a new ML dependency for claim classification unless existing LLM interfaces are inadequate.
+- [x] `berb/literature/pdf_ingestor.py` imports without errors
+- [x] `berb/server/routes/uploads.py` router registered in `create_app()`
+- [x] `POST /api/uploads` returns 200 for valid PDF, 400 for .exe, 413 for >100MB
+- [x] `RCConfig` accepts `uploaded_file_paths` as immutable tuple
+- [x] `LITERATURE_COLLECT` imports and calls `ingest_pdfs` when paths present
+- [x] `berb run --upload paper.pdf` resolves path and sets config
+- [x] `berb literature --upload-dir ./papers/` ingests all PDFs in directory
+- [x] Frontend file picker sends FormData to `/api/uploads`, passes paths to job creation
+- [x] `PipelineStartRequest` accepts `uploaded_file_paths`
+- [x] `ResearchJobRequest` (api.py) accepts `uploaded_pdfs`, wired to config
+- [x] `ResearchRequest` (web_api.py) accepts `uploaded_pdfs`, wired to config
+- [x] All 16 pdf_ingestor tests pass
+- [x] All 52 literature tests pass (no regressions)
+- [x] ruff lint passes on all modified files
+- [ ] Integration test: API upload → pipeline run with uploaded PDF (Phase B)
+- [ ] E2E test: Full pipeline with uploaded PDF surviving through Stage 6 (Phase B)
+- [ ] Performance test: 50 concurrent uploads of 50MB PDFs (Phase C)
+- [ ] Security test: Path traversal in filename, ZIP bomb PDF, oversized files (Phase C)
 
-### Secure by Design
+---
 
-- Redact secrets from evidence artifacts.
-- Store sensitive dataset provenance as metadata/hashes, not raw records.
-- Respect existing SSRF protections in web fetchers.
-- Treat clinical/biomedical/legal/financial claims as high-risk by default.
+## Appendix: Key Design Decisions
 
-### Defensive Programming
+### A. Why inject at Stage 4, not a new stage?
 
-- Fail closed in strict mode.
-- Treat missing evidence as unsupported, not as implicitly valid.
-- Distinguish "cannot determine" from "supported."
-- Preserve old artifacts when writing new reports so failures are debuggable.
+The 23-stage IntEnum is tightly coupled to stage numbering. Adding a new stage
+would renumber everything, breaking: config files referencing stage numbers,
+checkpoint resumes, scripts, and DAG-level scheduling. Modifying an existing
+stage is surgical and minimal-impact.
 
-### Observability
+### B. Why `ResearchConfig`, not `WorkflowConfig`?
 
-- Log integrity mode, gate decisions, and counts.
-- Emit structured `integrity_report.json`.
-- Add run summary metrics.
-- Include claim IDs in logs and CLI output.
+`WorkflowConfig` is a separate system that is **not currently wired** into
+`execute_pipeline()`. Stages receive `config: RCConfig`, not `WorkflowConfig`.
+Threading a second config object through the entire call chain is invasive.
+Adding one field to `ResearchConfig` requires zero additional plumbing.
 
-### CI/CD
+### C. Why file-system-based I/O, not in-memory context?
 
-- Keep fast deterministic integrity tests in default CI.
-- Run live-source and LLM checks in optional scheduled CI.
-- Add regression fixtures before enabling hard gates broadly.
-- Require code review for changes to gate policy and fallback behavior.
+The pipeline's stage I/O contract is entirely file-based via
+`_read_prior_artifact()`. There is no shared in-memory context dict. Uploaded
+files follow this contract: they're parsed into `Paper` dicts and serialized
+into `candidates.jsonl`, identical to API search results.
 
-### Documentation
+### D. Why PyMuPDF, not PyPDF2?
 
-Update:
-
-- `README.md`: integrity modes and finalization behavior.
-- `configs/config.arc.example.yaml`: `integrity` section.
-- `docs/`: provenance schema and strict-mode guide.
-- CLI help text for draft/submission/strict modes.
-
-### Performance
-
-- Cache claim verification by normalized claim text, evidence IDs, and source snippet hashes.
-- Batch LLM alignment checks.
-- Verify only changed claims after rewrites.
-- Avoid repeated full-text retrieval.
-
-### Scalability
-
-- JSONL artifacts are sufficient initially.
-- If registries grow large, split by stage and maintain an index.
-- Keep stable evidence IDs so downstream tools can reference claims across runs.
-
-## 10. Deployment and Rollback Plan
-
-### Deployment Sequence
-
-1. Merge models and config with no hard behavior changes.
-2. Start writing `evidence_registry.json` and `claim_manifest.json` in draft mode.
-3. Add report generation and CLI/API exposure.
-4. Enable warning gates in draft mode.
-5. Enable submission mode for explicit user opt-in.
-6. Enable strict defaults for high-risk domains.
-7. Tighten Stage 23 fallback behavior in strict/submission modes.
-
-### Rollback Strategy
-
-Rollback levers:
-
-- Set `integrity.mode: draft`.
-- Disable specific verifier rules through config.
-- Disable manifest requirement while continuing to write reports.
-- Re-enable legacy citation fallback only in draft mode.
-- Keep old output artifact names unchanged.
-
-Rollback constraints:
-
-- Do not remove generated integrity artifacts during rollback.
-- Do not downgrade strict-mode failures silently.
-- Log any downgrade from strict/submission to draft mode.
-
-### Backward Compatibility
-
-Preserve:
-
-- Existing stage numbers.
-- Existing artifact names.
-- Existing CLI commands.
-- Existing tests for `VerifiedRegistry` and `paper_verifier.py`.
-
-Add:
-
-- New optional artifacts.
-- New config section with safe defaults.
-- New summary fields without removing old fields.
-
-## 11. Post-Implementation Validation Checklist
-
-Before considering the upgrade complete:
-
-- [ ] `evidence_registry.json` is produced for a normal run.
-- [ ] `claim_manifest.json` is produced after Stage 17 and updated after revisions.
-- [ ] Numeric claims still pass existing `VerifiedRegistry` tests.
-- [ ] Fake numeric result in Results fails strict/submission mode.
-- [ ] Fake p-value fails strict/submission mode.
-- [ ] Fake confidence interval fails strict/submission mode.
-- [ ] Fake dataset/database claim fails strict/submission mode.
-- [ ] Fake baseline/ablation claim fails strict/submission mode.
-- [ ] Real citation with unsupported sentence is flagged.
-- [ ] Hallucinated citation is removed or blocks finalization according to mode.
-- [ ] Stage 23 does not silently restore unverified bibliography in strict mode.
-- [ ] Rewriting cannot change a verified number without detection.
-- [ ] Missing figure/table references are detected.
-- [ ] Biomedical/clinical/legal/financial/policy topics default to strict mode.
-- [ ] Draft mode remains usable and non-blocking.
-- [ ] Submission mode blocks critical integrity failures.
-- [ ] CLI failure messages identify claim, location, evidence gap, and suggested fix.
-- [ ] API exposes integrity report artifacts.
-- [ ] Provenance appendix is generated.
-- [ ] CI includes deterministic negative regression tests.
-- [ ] Documentation explains integrity modes and manual override policy.
-
-## 12. Recommended First Sprint
-
-Sprint objective: ship the foundation without breaking existing runs.
-
-Scope:
-
-1. Add `integrity` config with `draft`, `submission`, and `strict` modes.
-2. Add `berb/integrity/evidence.py` and `berb/integrity/registry.py`.
-3. Mirror `VerifiedRegistry` numeric values into evidence records.
-4. Emit `evidence_registry.json` from Stage 17 or Stage 20 using `from_run_dir`.
-5. Add `ClaimManifest` schema and create a best-effort manifest after Stage 17.
-6. Add tests for registry load/save and draft-mode non-blocking behavior.
-
-Out of scope for first sprint:
-
-- LLM-backed citation support.
-- Full strict-mode enforcement.
-- Domain auto-strict defaults.
-- Rewrite drift detection.
-
-This first sprint creates the substrate needed for the rest of the anti-fabrication roadmap while keeping behavior backward-compatible.
+`PyMuPDF` (fitz) was already declared in `pyproject.toml` optional-deps
+`[pdf]` and `[all]`. It's faster, more robust, and provides metadata
+extraction, XMP reading, and encryption detection out of the box.
