@@ -86,6 +86,8 @@ class ResearchRequest(BaseModel):
     topic: str
     preset: str | None = "humanities"
     mode: str = "collaborative"  # Changed default to collaborative
+    uploaded_pdfs: list[str] = []
+    """Paths to uploaded PDFs (returned by POST /api/uploads)."""
 
 
 class ResearchResponse(BaseModel):

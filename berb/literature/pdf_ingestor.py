@@ -59,6 +59,12 @@ def extract_text_from_pdf(path: Path) -> str:
 
     try:
         doc = fitz.open(str(path))
+        if doc.is_encrypted:
+            logger.warning(
+                "PDF is password-protected, cannot extract text: %s", path
+            )
+            doc.close()
+            return ""
         pages: list[str] = []
         for page in doc:
             text = page.get_text()
@@ -219,10 +225,12 @@ def _llm_extract_metadata(
             },
         ]
         # Duck-type the LLM interface
-        if hasattr(llm, "chat_completion"):
+        if hasattr(llm, "chat"):
+            response = llm.chat(messages, json_mode=True)
+        elif hasattr(llm, "chat_completion"):
             response = llm.chat_completion(messages, json_mode=True)
         else:
-            # Fallback for simpler interfaces
+            # Fallback for simpler interfaces (callable)
             response = llm(messages, json_mode=True)
 
         content = response.content if hasattr(response, "content") else str(response)
@@ -253,9 +261,8 @@ def _compute_paper_id(path: Path) -> str:
     path = Path(path)
     try:
         raw = path.read_bytes()
-        return "upload-" + hashlib.sha256(raw).hexdigest()[:12]
+        return "upload-" + hashlib.sha256(raw).hexdigest()[:16]
     except Exception:
-        # Fallback: use filename (less stable but functional)
         return f"upload-{path.stem}"
 
 

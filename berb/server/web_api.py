@@ -34,6 +34,8 @@ class ResearchRequest(BaseModel):
     preset: str | None = "humanities"
     mode: str = "autonomous"
     budget_usd: float = 2.0
+    uploaded_pdfs: list[str] = []
+    """Paths to uploaded PDFs (returned by POST /api/uploads)."""
 
 
 class ResearchResponse(BaseModel):
@@ -139,6 +141,7 @@ async def run_real_pipeline(job_id: str, request: ResearchRequest):
                 "domains": ["philosophy", "religion"]
                 if request.preset == "humanities"
                 else ["machine-learning"],
+                "uploaded_file_paths": tuple(getattr(request, 'uploaded_pdfs', []) or []),
             },
         )
 

@@ -81,7 +81,7 @@ def _validate_filename(filename: str) -> str:
 
 def _compute_sha256(content: bytes) -> str:
     """Compute SHA-256 hex digest of file content."""
-    return hashlib.sha256(content).hexdigest()[:16]
+    return hashlib.sha256(content).hexdigest()
 
 
 @router.post("/uploads", summary="Upload one or more files")

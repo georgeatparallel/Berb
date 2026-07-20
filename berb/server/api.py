@@ -93,6 +93,8 @@ class ResearchJobRequest(BaseModel):
     mode: str = "autonomous"
     pause_after: list[int] = Field(default_factory=list)
     budget_usd: float = 1.0
+    uploaded_pdfs: list[str] = []
+    """Paths to uploaded PDFs (returned by POST /api/uploads)."""
 
 
 class ResearchJobResponse(BaseModel):
@@ -174,6 +176,7 @@ async def create_research_job(
         request.topic,
         request.preset,
         request.mode,
+        request.uploaded_pdfs,
     )
 
     return ResearchJobResponse(
@@ -258,6 +261,7 @@ async def run_research_pipeline(
     topic: str,
     preset: str | None,
     mode: str,
+    uploaded_pdfs: list[str] | None = None,
 ) -> None:
     """Run research pipeline in background.
 
@@ -301,7 +305,11 @@ async def run_research_pipeline(
         # Create basic config if needed
         config = RCConfig(
             project={"name": run_id, "mode": mode},
-            research={"topic": topic, "domains": ["general"]},
+            research={
+                "topic": topic,
+                "domains": ("general",),
+                "uploaded_file_paths": tuple(uploaded_pdfs or []),
+            },
         )
 
         try:
