@@ -10,13 +10,13 @@ from unittest.mock import patch
 import pytest
 
 from berb.pipeline.checkpoint import (
-    _replace_with_retry,
     _utcnow_iso,
     resume_from_checkpoint,
     validate_checkpoint_checksum,
     write_checkpoint,
 )
 from berb.pipeline.stages import Stage
+from berb.utils.atomic import replace_with_retry as _replace_with_retry
 
 
 def test_validate_checkpoint_checksum_accepts_valid() -> None:
@@ -138,7 +138,7 @@ class TestReplaceWithRetry:
             return real_replace(self, target)
 
         with patch.object(Path, "replace", flaky_replace), patch(
-            "berb.pipeline.checkpoint.time.sleep"
+            "berb.utils.atomic.time.sleep"
         ) as mock_sleep:
             _replace_with_retry(src, dst, attempts=5, base_delay_sec=0.01)
 
@@ -155,7 +155,7 @@ class TestReplaceWithRetry:
             raise PermissionError("[WinError 5] Access is denied")
 
         with patch.object(Path, "replace", always_fails), patch(
-            "berb.pipeline.checkpoint.time.sleep"
+            "berb.utils.atomic.time.sleep"
         ):
             with pytest.raises(PermissionError):
                 _replace_with_retry(src, dst, attempts=3, base_delay_sec=0.01)
@@ -172,7 +172,7 @@ class TestReplaceWithRetry:
             return real_replace(self, target)
 
         with patch.object(Path, "replace", flaky_replace), patch(
-            "berb.pipeline.checkpoint.time.sleep"
+            "berb.utils.atomic.time.sleep"
         ):
             write_checkpoint(tmp_path, Stage.EXPERIMENT_DESIGN, "test-flaky")
 

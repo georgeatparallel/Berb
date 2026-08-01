@@ -16,6 +16,8 @@ import time
 from pathlib import Path
 from typing import Any
 
+from berb.utils.atomic import replace_with_retry
+
 logger = logging.getLogger(__name__)
 
 _DEFAULT_CACHE_DIR = Path(".berb_cache") / "literature"
@@ -118,9 +120,11 @@ def put_cache(
     treat the entry as a cache miss, and trigger redundant API calls.
 
     The fix writes to a sibling temp file and renames it onto the target.
-    ``Path.replace()`` maps to ``os.replace()`` which is atomic on POSIX and
-    as close to atomic as Windows allows (the kernel swap is not interruptible
-    by another writer operating on the same path).
+    ``Path.replace()`` maps to ``os.replace()`` which is atomic on POSIX. On
+    Windows the swap is rejected outright while another writer holds the
+    target open, so the rename goes through
+    :func:`~berb.utils.atomic.replace_with_retry`, which retries the transient
+    lock instead of surfacing it to the caller as a failed cache write.
     """
     d = _cache_dir(cache_base)
     key = cache_key(query, source, limit)
@@ -140,12 +144,13 @@ def put_cache(
     #   (b) concurrent writers each have their own temp file and don't race on
     #       a shared ".tmp" name (Windows raises PermissionError if two threads
     #       try to replace/unlink the same file simultaneously).
-    # os.replace() is atomic on POSIX and best-effort-atomic on Windows.
     fd, tmp_path = tempfile.mkstemp(dir=d, suffix=".tmp", prefix=f"{key}_")
     os.close(fd)
     try:
         Path(tmp_path).write_text(serialized, encoding="utf-8")
-        os.replace(tmp_path, path)  # atomic: readers see old or new, never partial
+        # Retries the Windows lock contention two writers hit on the same key;
+        # readers still see old-or-new, never partial.
+        replace_with_retry(tmp_path, path)
     except BaseException:
         try:
             os.unlink(tmp_path)

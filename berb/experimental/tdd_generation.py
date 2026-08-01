@@ -34,7 +34,10 @@ Usage (if reactivated):
 from __future__ import annotations
 
 import asyncio
+import importlib.util
 import logging
+import os
+import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -402,7 +405,6 @@ class PytestRunner:
         Returns:
             Test output
         """
-        import concurrent.futures
         import subprocess
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -418,31 +420,37 @@ class PytestRunner:
 
             # Run pytest
             try:
-                loop = asyncio.get_event_loop()
-                with concurrent.futures.ThreadPoolExecutor():
-                    result = await loop.run_in_executor(
-                        None,
-                        self._run_pytest,
-                        str(test_path),
-                    )
-                return result
+                loop = asyncio.get_running_loop()
+                return await loop.run_in_executor(None, self._run_pytest, str(test_path))
             except subprocess.TimeoutExpired:
                 return f"Tests timed out after {self._timeout}s"
             except Exception as e:
                 return f"Test runner error: {e}"
 
     def _run_pytest(self, test_path: str) -> str:
-        """Run pytest synchronously."""
+        """Run pytest synchronously in a hermetic subprocess.
+
+        Plugin autoload is disabled: pulling in every pytest plugin installed in
+        the host environment (xdist, cov, benchmark, randomly, ...) dominated the
+        run and pushed a trivial two-line test past the timeout. Only
+        ``pytest-asyncio`` is loaded back, since generated tests may be async.
+        """
         import subprocess
 
+        env = {**os.environ, "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"}
+        cmd = [sys.executable, "-m", "pytest", test_path, "-v", "--tb=short"]
+        if importlib.util.find_spec("pytest_asyncio") is not None:
+            cmd += ["-p", "pytest_asyncio", "-o", "asyncio_mode=auto"]
+
         result = subprocess.run(
-            ["python", "-m", "pytest", test_path, "-v", "--tb=short"],
+            cmd,
             capture_output=True,
             text=True,
             encoding="utf-8",
             errors="replace",
             timeout=self._timeout,
             cwd=str(Path(test_path).parent),
+            env=env,
         )
 
         return result.stdout + result.stderr

@@ -4,12 +4,38 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-# Re-export LLMProvider enum and utilities for cross-model review
-from berb.llm.client import (
-    LLMProvider,
-    get_provider_from_model,
-    validate_model_for_provider,
-)
+from berb._lazy import lazy_exports
+
+# Re-exports resolve on first attribute access (PEP 562). Eagerly importing
+# openrouter_adapter pulled httpx — and transitively httpcore/anyio/trio — into
+# every module that only wanted a preset lookup or the LLMProvider enum.
+_EXPORTS = {
+    "LLMProvider": "client",
+    "get_provider_from_model": "client",
+    "validate_model_for_provider": "client",
+    # OpenRouter adapter
+    "ModelVariant": "openrouter_adapter",
+    "ProviderRouting": "openrouter_adapter",
+    "OpenRouterProvider": "openrouter_adapter",
+    "strip_variant": "openrouter_adapter",
+    "ROUTING_EXACT": "openrouter_adapter",
+    "ROUTING_NITRO": "openrouter_adapter",
+    "ROUTING_ANTHROPIC_DIRECT": "openrouter_adapter",
+    # Presets
+    "MODELS": "presets",
+    "PRESETS": "presets",
+    "ModelConfig": "presets",
+    "PresetConfig": "presets",
+    "get_model": "presets",
+    "get_models_for_stage": "presets",
+    "get_preset": "presets",
+    "list_models": "presets",
+    "list_presets": "presets",
+    "print_preset_info": "presets",
+    "to_llm_config": "presets",
+}
+
+__getattr__, __dir__ = lazy_exports(__name__, _EXPORTS, globals())
 
 __all__ = [
     "LLMProvider",
@@ -41,8 +67,35 @@ __all__ = [
 if TYPE_CHECKING:
     from berb.config import RCConfig
     from berb.llm.acp_client import ACPClient
-    from berb.llm.client import LLMClient, MultiProviderLLMClient
-    from berb.llm.presets import ModelConfig, PresetConfig
+    from berb.llm.client import (
+        LLMClient,
+        LLMProvider,
+        MultiProviderLLMClient,
+        get_provider_from_model,
+        validate_model_for_provider,
+    )
+    from berb.llm.openrouter_adapter import (
+        ROUTING_ANTHROPIC_DIRECT,
+        ROUTING_EXACT,
+        ROUTING_NITRO,
+        ModelVariant,
+        OpenRouterProvider,
+        ProviderRouting,
+        strip_variant,
+    )
+    from berb.llm.presets import (
+        MODELS,
+        PRESETS,
+        ModelConfig,
+        PresetConfig,
+        get_model,
+        get_models_for_stage,
+        get_preset,
+        list_models,
+        list_presets,
+        print_preset_info,
+        to_llm_config,
+    )
     from berb.llm.smart_client import SmartLLMClient
 
 # Provider presets for common LLM services
@@ -81,33 +134,6 @@ PROVIDER_PRESETS = {
         "base_url": None,  # Use user-provided base_url
     },
 }
-
-# Re-export OpenRouter variant routing API
-from berb.llm.openrouter_adapter import (  # noqa: E402
-    ROUTING_ANTHROPIC_DIRECT,
-    ROUTING_EXACT,
-    ROUTING_NITRO,
-    ModelVariant,
-    OpenRouterProvider,
-    ProviderRouting,
-    strip_variant,
-)
-
-# Re-export preset functions for convenience
-from berb.llm.presets import (  # noqa: E402
-    MODELS,
-    PRESETS,
-    ModelConfig,
-    PresetConfig,
-    get_model,
-    get_models_for_stage,
-    get_preset,
-    list_models,
-    list_presets,
-    print_preset_info,
-    to_llm_config,
-)
-
 
 def create_llm_client(
     config: RCConfig,

@@ -208,17 +208,16 @@ class TestAtomicCacheWrite:
 
         The atomic-write guarantee: any cache file that exists after all writes
         complete must contain valid, complete JSON — never a partial or empty
-        payload.  On Windows, os.replace() may raise PermissionError when two
-        threads race on the same target (mandatory-lock limitation); those
-        failures are acceptable because the temp file is cleaned up and the
-        original cache file is untouched.  A PermissionError is not a
-        corruption — it is a clean failure.
+        payload.  Concurrent writers must also all *succeed*: on Windows the
+        kernel rejects os.replace() while another writer holds the target open,
+        so put_cache() retries the transient lock rather than surfacing a
+        PermissionError to the caller and silently dropping the cache write.
         """
         import threading
 
         from berb.literature.cache import get_cached, put_cache
 
-        non_permission_errors: list[Exception] = []
+        errors: list[Exception] = []
 
         def writer(idx: int) -> None:
             try:
@@ -229,13 +228,8 @@ class TestAtomicCacheWrite:
                     [{"id": f"p{idx}"}],
                     cache_base=tmp_path,
                 )
-            except PermissionError:
-                # Windows mandatory locking: os.replace() on a contended target
-                # raises PermissionError.  The temp file is cleaned up; the
-                # existing cache file is left intact.  This is acceptable.
-                pass
-            except Exception as exc:
-                non_permission_errors.append(exc)
+            except Exception as exc:  # noqa: BLE001 — recorded and asserted below
+                errors.append(exc)
 
         threads = [threading.Thread(target=writer, args=(i,)) for i in range(20)]
         for t in threads:
@@ -243,28 +237,24 @@ class TestAtomicCacheWrite:
         for t in threads:
             t.join()
 
-        assert not non_permission_errors, (
-            f"Unexpected non-PermissionError exceptions: {non_permission_errors}"
-        )
+        assert not errors, f"Concurrent put_cache() writes must not fail: {errors}"
 
-        # The file must be readable as valid JSON — never a partial payload.
+        # Every writer succeeded, so a well-formed payload must be readable.
         result = get_cached("concurrent_q", "arxiv", 5, cache_base=tmp_path)
-        if result is not None:
-            # If a write succeeded, the payload must be a well-formed list
-            assert isinstance(result, list), f"Unexpected type: {type(result)}"
+        assert isinstance(result, list), f"Unexpected type: {type(result)}"
 
         # No orphaned temp files should remain after all threads finish
         remaining_tmp = list(tmp_path.glob("*.tmp"))
         assert remaining_tmp == [], f"Temp files leaked: {remaining_tmp}"
 
     def test_cleanup_on_replace_failure(self, tmp_path):
-        """REGRESSION BUG-006: temp file is removed when os.replace() fails."""
+        """REGRESSION BUG-006: temp file is removed when the rename fails."""
         from berb.literature.cache import put_cache
 
         def failing_replace(src, dst):
             raise OSError("Simulated rename failure")
 
-        with patch("berb.literature.cache.os.replace", side_effect=failing_replace):
+        with patch("berb.literature.cache.replace_with_retry", side_effect=failing_replace):
             with pytest.raises(OSError):
                 put_cache("fail_q", "arxiv", 1, [{"id": "x"}], cache_base=tmp_path)
 
