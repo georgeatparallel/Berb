@@ -25,6 +25,10 @@ from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
+# Sample rendering of 1000.50 in each supported convention. Kept in sync with
+# NUMBER_SEPARATORS, which maps each one to its thousands/decimal separator.
+NumberFormat = Literal["1.000,50", "1,000.50", "1 000,50"]
+
 
 class WritingDirection(StrEnum):
     """Text writing direction.
@@ -65,9 +69,17 @@ class AcademicLanguageProfile(BaseModel):
     typical_sentence_length: tuple[int, int] = (15, 30)
     citation_placement: Literal["inline", "footnote", "endnote"] = "inline"
     date_format: str = "YYYY-MM-DD"
-    number_format: Literal["1.000,50", "1,000.50"] = "1,000.50"
+    number_format: NumberFormat = "1,000.50"
     bibliography_sort_locale: str = "en"
     academic_conventions: list[str] = Field(default_factory=list)
+
+
+# Thousands and decimal separator for each NumberFormat.
+NUMBER_SEPARATORS: dict[NumberFormat, tuple[str, str]] = {
+    "1,000.50": (",", "."),
+    "1.000,50": (".", ","),
+    "1 000,50": (" ", ","),
+}
 
 
 # Language profiles database
@@ -638,12 +650,10 @@ class MultilingualWritingAssistant:
         Returns:
             Formatted number string
         """
-        if self.profile.number_format == "1.000,50":
-            # European format
-            return f"{number:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-        else:
-            # US/UK format
-            return f"{number:,.2f}"
+        thousands, decimal = NUMBER_SEPARATORS[self.profile.number_format]
+        # f-string grouping always emits "," thousands and "." decimal; remap both
+        # in one pass so the two separators can't clobber each other.
+        return f"{number:,.2f}".translate(str.maketrans({",": thousands, ".": decimal}))
 
     def get_section_names(self) -> dict[str, str]:
         """Get section names in this language.
