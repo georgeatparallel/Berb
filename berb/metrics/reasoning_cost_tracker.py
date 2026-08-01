@@ -203,6 +203,7 @@ class ExtendedReasoningCostTracker:
         "qwen/qwen3.6-flash": (0.19, 1.13),
         "qwen/qwen3.7-plus": (0.32, 1.28),
         "qwen/qwen3.7-max": (1.25, 3.75),
+        "qwen/qwen3.7-flash": (0.03, 0.13),
         "qwen/qwen3-coder": (0.22, 1.80),
         "qwen/qwen3-coder-plus": (0.65, 3.25),
         "qwen/qwen3-coder-flash": (0.20, 0.98),

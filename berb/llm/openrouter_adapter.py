@@ -809,6 +809,16 @@ OPENROUTER_MODELS: dict[str, OpenRouterModel] = {
         supports_vision=True,
         tier="mid",
     ),
+    "qwen/qwen3.7-flash": OpenRouterModel(
+        id="qwen/qwen3.7-flash",
+        name="Qwen3.7 Flash",
+        provider="qwen",
+        input_price=0.03,
+        output_price=0.13,
+        context_length=1_000_000,
+        supports_vision=True,
+        tier="budget",
+    ),
     "qwen/qwen3-coder": OpenRouterModel(
         id="qwen/qwen3-coder",
         name="Qwen3 Coder",

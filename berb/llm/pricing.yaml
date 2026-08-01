@@ -97,6 +97,9 @@ models:
   qwen/qwen3.5-flash-02-23:
     input: 0.065
     output: 0.26
+  qwen/qwen3.7-flash:
+    input: 0.03
+    output: 0.13
 
   # ===========================================================================
   # XAI (Grok)

@@ -99,7 +99,7 @@ MODEL_ALTERNATIVES = {
     "simple": {
         Provider.MINIMAX: "minimax/minimax-m2.5",
         Provider.GLM: "z-ai/glm-4.5-air",
-        Provider.QWEN: "qwen/qwen3.5-9b",
+        Provider.QWEN: "qwen/qwen3.7-flash",
         Provider.XAI: "x-ai/grok-4.5",
         Provider.DEEPSEEK: "deepseek/deepseek-chat-v3.1",
     },

@@ -443,7 +443,7 @@ class NadirClawRouter:
 
     def __init__(
         self,
-        simple_model: str = "google/gemini-2.5-flash",
+        simple_model: str = "qwen/qwen3.7-flash",
         mid_model: str = "openai/gpt-4o-mini",
         complex_model: str = "anthropic/claude-sonnet-4.6",
         tier_thresholds: tuple[float, float] = (0.3, 0.7),

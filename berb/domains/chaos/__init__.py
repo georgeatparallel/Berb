@@ -48,7 +48,24 @@ Usage:
 
     chaos_test = test_01_chaos(signal)
     print(f"0-1 test K: {chaos_test.K:.3f}")  # ~1 for chaotic
+
+.. deprecated::
+    This numerical-library subpackage has zero production callers in the
+    pipeline (verified via ``scripts/check_reachability.py``). It is retained
+    only for its test suite and is scheduled for removal. Do not add new
+    dependencies on it. Decision recorded as D-01 in ``implementation_plan2.md``
+    (deprecated 2026-07-19). If the physics/chaos vertical is revived, remove
+    this notice and wire it through ``berb/domains/detector.py``.
 """
+
+import warnings
+
+warnings.warn(
+    "berb.domains.chaos is deprecated (D-01, 2026-07-19): no production "
+    "callers; scheduled for removal. See implementation_plan2.md.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 from .bifurcation import (
     BifurcationDiagram,

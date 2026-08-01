@@ -6,15 +6,16 @@ computational research domain — not just ML/AI.
 
 Includes specialized modules for:
 - General domain detection and adaptation
-- Physics domain (including chaos detection)
+
+The physics/ and chaos/ numerical-library subpackages are DEPRECATED (D-01,
+2026-07-19): zero production callers, scheduled for removal. They are no longer
+re-exported here so importing this package does not pull in deprecated code.
+Import them directly (``from berb.domains import chaos``) if genuinely needed.
 """
 
-# Chaos detection tools (physics domain)
-from berb.domains import chaos
 from berb.domains.detector import DomainProfile, detect_domain
 
 __all__ = [
     "DomainProfile",
     "detect_domain",
-    "chaos",
 ]

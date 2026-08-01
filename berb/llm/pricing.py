@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +49,7 @@ FALLBACK_PRICING: dict[str, tuple[float, float]] = {
     "qwen/qwen3-max": (0.78, 3.90),
     "qwen/qwen3.5-plus-20260420": (0.30, 1.80),
     "qwen/qwen3.5-flash-02-23": (0.065, 0.26),
+    "qwen/qwen3.7-flash": (0.03, 0.13),
     # XAI (Grok)
     "x-ai/grok-4.5": (2.00, 4.00),
     "x-ai/grok-4.3": (1.25, 2.50),
@@ -170,5 +170,7 @@ class PricingTable:
             return None
 
         input_price, output_price = prices
-        cost = (prompt_tokens / 1_000_000) * input_price + (completion_tokens / 1_000_000) * output_price
+        cost = (prompt_tokens / 1_000_000) * input_price + (
+            completion_tokens / 1_000_000
+        ) * output_price
         return cost
