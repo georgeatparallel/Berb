@@ -25,18 +25,20 @@ router = APIRouter(prefix="/api", tags=["uploads"])
 # Maximum upload size: 100 MB per file
 MAX_UPLOAD_SIZE = 100 * 1024 * 1024
 # Allowed file extensions
-ALLOWED_EXTENSIONS: frozenset[str] = frozenset({
-    ".pdf",
-    ".csv",
-    ".json",
-    ".jsonl",
-    ".txt",
-    ".md",
-    ".yaml",
-    ".yml",
-    ".py",
-    ".tsv",
-})
+ALLOWED_EXTENSIONS: frozenset[str] = frozenset(
+    {
+        ".pdf",
+        ".csv",
+        ".json",
+        ".jsonl",
+        ".txt",
+        ".md",
+        ".yaml",
+        ".yml",
+        ".py",
+        ".tsv",
+    }
+)
 # Default upload directory (relative to CWD or absolute)
 _DEFAULT_UPLOAD_DIR = "uploads"
 
@@ -145,7 +147,7 @@ async def upload_files(
         if len(content) > MAX_UPLOAD_SIZE:
             raise HTTPException(
                 status_code=413,
-                detail=f"File '{safe_name}' exceeds {MAX_UPLOAD_SIZE // (1024*1024)} MB limit",
+                detail=f"File '{safe_name}' exceeds {MAX_UPLOAD_SIZE // (1024 * 1024)} MB limit",
             )
 
         # Compute checksum for deduplication
@@ -162,12 +164,14 @@ async def upload_files(
             ) from exc
 
         abs_path = str(dest_path.resolve())
-        saved.append({
-            "path": abs_path,
-            "original_name": safe_name,
-            "size": len(content),
-            "sha256": sha,
-        })
+        saved.append(
+            {
+                "path": abs_path,
+                "original_name": safe_name,
+                "size": len(content),
+                "sha256": sha,
+            }
+        )
 
         logger.info(
             "Uploaded: %s → %s (%d bytes, sha256=%s)",

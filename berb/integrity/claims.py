@@ -11,13 +11,14 @@ import json
 import logging
 import uuid
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
+from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-class ClaimType(str, Enum):
+class ClaimType(StrEnum):
     """Taxonomy of research claims found in a paper."""
 
     EMPIRICAL = "empirical"
@@ -51,7 +52,7 @@ class ClaimType(str, Enum):
     """Could not be classified."""
 
 
-class ClaimVerdict(str, Enum):
+class ClaimVerdict(StrEnum):
     """Support verdict for a single claim."""
 
     SUPPORTED = "supported"
@@ -201,23 +202,17 @@ class ClaimManifest:
             try:
                 manifest.claims.append(ClaimRecord.from_dict(item))
             except (KeyError, ValueError, TypeError):
-                logger.warning("Skipping unparseable claim in manifest: %s",
-                               str(item)[:120])
+                logger.warning("Skipping unparseable claim in manifest: %s", str(item)[:120])
         return manifest
 
     @classmethod
     def load(cls, path: str | Path) -> ClaimManifest:
         """Load from a JSON file."""
-        import json
-        from pathlib import Path
-
         data = json.loads(Path(path).read_text(encoding="utf-8"))
         return cls.from_dict(data)
 
     def save(self, path: str | Path) -> Path:
         """Save to a JSON file."""
-        from pathlib import Path
-
         p = Path(path)
         p.write_text(self.to_json(), encoding="utf-8")
         return p

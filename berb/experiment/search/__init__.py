@@ -22,8 +22,8 @@ from berb.experiment.search.runner import (
 )
 from berb.experiment.search.scoring import (
     ScoreBreakdown,
-    score_node,
     normalize_cohort,
+    score_node,
 )
 
 __all__ = [

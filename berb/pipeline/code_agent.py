@@ -1237,19 +1237,32 @@ class CodeAgent:
         )
 
         # Fall back to sequential generation
-        if not self._cfg.sequential_generation or not hasattr(self, '_phase2_sequential_generate'):
-            self._log_event(
-                "  Tree search deprecated — falling back to single-shot generation"
-            )
+        if not self._cfg.sequential_generation or not hasattr(self, "_phase2_sequential_generate"):
+            self._log_event("  Tree search deprecated — falling back to single-shot generation")
             files = self._phase2_generate_and_fix(
-                topic, exp_plan, metric, pkg_hint, arch_spec, max_tokens,
+                topic,
+                exp_plan,
+                metric,
+                pkg_hint,
+                arch_spec,
+                max_tokens,
             )
         else:
             files = self._phase2_sequential_generate(
-                topic, exp_plan, metric, pkg_hint, arch_spec, None,
+                topic,
+                exp_plan,
+                metric,
+                pkg_hint,
+                arch_spec,
+                None,
             )
             files = self._hard_validate_and_repair(
-                files, topic, exp_plan, metric, pkg_hint, arch_spec,
+                files,
+                topic,
+                exp_plan,
+                metric,
+                pkg_hint,
+                arch_spec,
             )
             files = self._exec_fix_loop(files)
 

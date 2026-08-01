@@ -13,6 +13,7 @@ import json
 import logging
 import os
 import tempfile
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -56,6 +57,30 @@ def write_heartbeat(run_dir: Path, stage: Stage, run_id: str) -> None:
 # ============================================================================
 
 
+def _replace_with_retry(
+    src: Path, dst: Path, *, attempts: int = 5, base_delay_sec: float = 0.01
+) -> None:
+    """Atomically replace *dst* with *src*, retrying on transient file locks.
+
+    Windows can intermittently raise ``PermissionError`` (WinError 5) from
+    ``os.replace()`` when another process — real-time antivirus scanning,
+    the search indexer — briefly holds an open handle on the target file
+    right after it's written. POSIX ``rename()`` has no equivalent failure
+    mode. Retrying with jittered exponential backoff is the standard fix for
+    this class of transient Windows file-lock contention; it does not
+    address a code-level race (the caller is expected to already serialize
+    concurrent writers, e.g. via ``CheckpointManager``'s lock).
+    """
+    for attempt in range(attempts):
+        try:
+            src.replace(dst)
+            return
+        except PermissionError:
+            if attempt == attempts - 1:
+                raise
+            time.sleep(base_delay_sec * (2**attempt))
+
+
 def write_checkpoint(run_dir: Path, stage: Stage, run_id: str) -> None:
     """Write checkpoint atomically via temp file + rename to prevent corruption.
 
@@ -82,7 +107,7 @@ def write_checkpoint(run_dir: Path, stage: Stage, run_id: str) -> None:
             fh.flush()
             os.fsync(fh.fileno())
 
-        Path(tmp_path).replace(target)
+        _replace_with_retry(Path(tmp_path), target)
 
         if hasattr(os, "O_DIRECTORY"):
             dir_fd = os.open(run_dir, os.O_RDONLY | os.O_DIRECTORY)

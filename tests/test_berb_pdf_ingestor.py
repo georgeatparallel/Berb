@@ -53,10 +53,12 @@ def minimal_pdf() -> Path:
         fontsize=11,
     )
     # Set docinfo metadata
-    doc.set_metadata({
-        "title": "Attention Is All You Need",
-        "author": "Ashish Vaswani; Noam Shazeer; Niki Parmar",
-    })
+    doc.set_metadata(
+        {
+            "title": "Attention Is All You Need",
+            "author": "Ashish Vaswani; Noam Shazeer; Niki Parmar",
+        }
+    )
     doc.save(str(path))
     doc.close()
     yield path
@@ -165,12 +167,7 @@ def test_heuristic_title_found() -> None:
     """Should extract title from text that starts with a capitalized title."""
     from berb.literature.pdf_ingestor import _heuristic_title
 
-    text = (
-        "Attention Is All You Need\n\n"
-        "Authors: John Doe\n\n"
-        "Abstract\n"
-        "This is the abstract."
-    )
+    text = "Attention Is All You Need\n\nAuthors: John Doe\n\nAbstract\nThis is the abstract."
     title = _heuristic_title(text)
     assert "Attention" in title
 
@@ -236,13 +233,16 @@ def test_pdf_to_paper_with_llm(minimal_pdf: Path) -> None:
 
         def chat_completion(self, messages, json_mode=True):
             class Response:
-                content = json.dumps({
-                    "title": "LLM Extracted Title",
-                    "authors": ["LLM Author"],
-                    "abstract": "LLM extracted abstract.",
-                    "doi": "10.1234/test",
-                    "year": 2024,
-                })
+                content = json.dumps(
+                    {
+                        "title": "LLM Extracted Title",
+                        "authors": ["LLM Author"],
+                        "abstract": "LLM extracted abstract.",
+                        "doi": "10.1234/test",
+                        "year": 2024,
+                    }
+                )
+
             return Response()
 
     paper = pdf_to_paper(minimal_pdf, llm=MockLLM())

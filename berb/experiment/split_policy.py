@@ -20,12 +20,11 @@ admit
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from berb.integrity.claims import ClaimVerdict
 from berb.pipeline.contracts import SplitEvidence
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Configuration
@@ -148,9 +147,7 @@ def partition(
         test_indices=test,
         n_total=n_total,
         feasible=True,
-        reason=(
-            f"Split {n_total} rows: {len(train)} train, {len(val)} val, {len(test)} test"
-        ),
+        reason=(f"Split {n_total} rows: {len(train)} train, {len(val)} val, {len(test)} test"),
     )
 
 

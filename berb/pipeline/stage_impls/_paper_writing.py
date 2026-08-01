@@ -10,7 +10,7 @@ from typing import Any
 
 from berb.adapters import AdapterBundle
 from berb.config import RCConfig
-from berb.integrity import ClaimRecord, ClaimType, ClaimVerdict
+from berb.integrity import ClaimManifest, ClaimRecord, ClaimType, ClaimVerdict
 from berb.integrity import VerifiedEvidenceRegistry as _IntegrityRegistry  # noqa: N814
 from berb.llm.client import LLMClient
 from berb.pipeline._domain import _detect_domain
@@ -2295,7 +2295,8 @@ def _build_draft_claim_manifest(
     # 1. Load evidence registry if available
     evidence_reg = _IntegrityRegistry.load(run_dir / "evidence_registry.json")
     metric_values = {
-        r.value for r in evidence_reg.records.values()
+        r.value
+        for r in evidence_reg.records.values()
         if hasattr(r, "value") and isinstance(r.value, (int, float))
     }
 
@@ -2368,7 +2369,8 @@ def _extract_numeric_claims(
 
         # Filter out year-like numbers (1900-2100) and very common small ints
         meaningful = [
-            n for n in numbers
+            n
+            for n in numbers
             if not (1900 <= float(n) <= 2100)  # not a year
         ]
         # Also skip lines with only single-digit numbers (indexes, counts)
@@ -2376,11 +2378,25 @@ def _extract_numeric_claims(
             continue
         # If the ONLY numbers are <= 5, skip unless comparative language is present
         has_small_only = all(float(n) <= 5.0 for n in meaningful)
-        is_comparative = any(w in stripped.lower() for w in (
-            "outperform", "improve", "better", "worse", "higher",
-            "lower", "faster", "vs.", "versus", "compared", "gain",
-            "superior", "advantage", "outperformed",
-        ))
+        is_comparative = any(
+            w in stripped.lower()
+            for w in (
+                "outperform",
+                "improve",
+                "better",
+                "worse",
+                "higher",
+                "lower",
+                "faster",
+                "vs.",
+                "versus",
+                "compared",
+                "gain",
+                "superior",
+                "advantage",
+                "outperformed",
+            )
+        )
         if has_small_only and not is_comparative:
             continue
 
@@ -2432,11 +2448,25 @@ def _classify_numeric_claim(text: str, section: str) -> ClaimType:
     section_lower = section.lower()
 
     # Comparative language
-    if any(w in text_lower for w in (
-        "outperform", "improve", "better", "worse", "higher",
-        "lower", "faster", "vs.", "versus", "compared", "gain",
-        "superior", "advantage", "outperformed",
-    )):
+    if any(
+        w in text_lower
+        for w in (
+            "outperform",
+            "improve",
+            "better",
+            "worse",
+            "higher",
+            "lower",
+            "faster",
+            "vs.",
+            "versus",
+            "compared",
+            "gain",
+            "superior",
+            "advantage",
+            "outperformed",
+        )
+    ):
         return ClaimType.COMPARATIVE
 
     # Dataset claims

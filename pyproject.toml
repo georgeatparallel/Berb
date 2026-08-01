@@ -108,7 +108,9 @@ ignore = ["E501", "B008"]
 [tool.ruff.lint.per-file-ignores]
 # N806 (non-lowercase variables) allowed in scientific modules
 # Standard notation in chaos theory/physics: D2, C_m, C_r, q_matrix, etc.
+"berb/domains/chaos/__init__.py" = ["E402"]
 "berb/domains/chaos/*" = ["N806"]
+"berb/domains/physics/__init__.py" = ["E402"]
 "berb/domains/physics/*" = ["N806", "N803", "E741"]
 "berb/experiment/*" = ["N806"]
 # N806 false positives for module-level constants in pipeline/templates

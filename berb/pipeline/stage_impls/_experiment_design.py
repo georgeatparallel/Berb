@@ -74,7 +74,9 @@ def _execute_experiment_design(
                     error_detail=f"Falsification gate blocked: {_hs.get('critic_transcript', 'No transcript')[:500]}",
                 )
         except (json.JSONDecodeError, AttributeError) as _hs_err:
-            logger.warning("E1: Could not parse hypothesis_state.json, gate passes open: %s", _hs_err)
+            logger.warning(
+                "E1: Could not parse hypothesis_state.json, gate passes open: %s", _hs_err
+            )
     else:
         logger.info("E1: No hypothesis_state.json found, gate passes open (backward compat)")
 

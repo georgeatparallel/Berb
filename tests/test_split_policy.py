@@ -7,20 +7,16 @@ Test matrix for admit() covers all verdict paths:
 
 from __future__ import annotations
 
-import math
-
 import pytest
 
 from berb.experiment.split_policy import (
     GateConfig,
-    SplitSpec,
     admit,
     partition,
     selection_penalty,
 )
 from berb.integrity.claims import ClaimVerdict
 from berb.pipeline.contracts import SplitEvidence
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # split_policy tests
@@ -246,8 +242,7 @@ class TestAdmitVerdictMatrix:
         cfg = GateConfig(**cfg_kwargs)
         verdict = admit(ev, cfg)
         assert verdict == expected, (
-            f"FAIL [{desc}]: expected {expected.value}, got {verdict.value}\n"
-            f"  ev={ev}\n  cfg={cfg}"
+            f"FAIL [{desc}]: expected {expected.value}, got {verdict.value}\n  ev={ev}\n  cfg={cfg}"
         )
 
 
@@ -290,7 +285,10 @@ class TestAdmitUnderpowered:
     def test_underpowered_null_effect(self):
         """Underpowered with null effect → INCONCLUSIVE (not UNSUPPORTED)."""
         ev = SplitEvidence(
-            metric_key="acc", metric_select=0.0, metric_rank=0.0, metric_report=0.0,
+            metric_key="acc",
+            metric_select=0.0,
+            metric_rank=0.0,
+            metric_report=0.0,
             n_candidates=1,
         )
         cfg = GateConfig(min_effect=0.3)
@@ -299,7 +297,10 @@ class TestAdmitUnderpowered:
     def test_underpowered_small_effect(self):
         """Underpowered with small but real effect → INCONCLUSIVE."""
         ev = SplitEvidence(
-            metric_key="acc", metric_select=0.2, metric_rank=0.2, metric_report=0.2,
+            metric_key="acc",
+            metric_select=0.2,
+            metric_rank=0.2,
+            metric_report=0.2,
             n_candidates=2,
         )
         cfg = GateConfig(min_effect=0.3)

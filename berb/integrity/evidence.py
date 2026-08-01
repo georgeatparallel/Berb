@@ -10,12 +10,12 @@ import hashlib
 import json
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from enum import Enum
+from datetime import UTC, datetime
+from enum import StrEnum
 from typing import Any
 
 
-class EvidenceType(str, Enum):
+class EvidenceType(StrEnum):
     """Categorisation of a piece of registered evidence."""
 
     METRIC = "metric"
@@ -95,7 +95,7 @@ class EvidenceRecord:
 
     def __post_init__(self) -> None:
         if not self.created_at:
-            self.created_at = datetime.now(timezone.utc).isoformat()
+            self.created_at = datetime.now(UTC).isoformat()
         if not self.evidence_id:
             self.evidence_id = uuid.uuid4().hex[:16]
         if not self.content_hash:

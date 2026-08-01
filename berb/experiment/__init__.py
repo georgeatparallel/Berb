@@ -25,8 +25,8 @@ from .compute_guard import (
 )
 from .evolutionary_search import (
     DesignProposalEvolver,
-    EvolutionResult,
     EvolutionaryExperimentSearch,  # deprecated alias
+    EvolutionResult,
     ExperimentVariant,
 )
 from .isolation import (

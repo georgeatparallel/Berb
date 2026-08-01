@@ -25,6 +25,7 @@ from berb.integrity import (
 )
 from berb.integrity.evidence import make_evidence_id
 from berb.pipeline.stage_impls._paper_writing import (
+    _build_draft_claim_manifest,
     _build_line_section_map,
     _classify_numeric_claim,
     _extract_dataset_claims,
@@ -63,9 +64,7 @@ def tmp_run_dir():
         }
         s14 = run_dir / "stage-14"
         s14.mkdir()
-        (s14 / "experiment_summary.json").write_text(
-            json.dumps(exp_data), encoding="utf-8"
-        )
+        (s14 / "experiment_summary.json").write_text(json.dumps(exp_data), encoding="utf-8")
         yield run_dir
 
 
@@ -137,24 +136,32 @@ class TestEvidenceRecord:
 
     def test_deduplicate_hash(self) -> None:
         rec1 = EvidenceRecord(
-            evidence_id="a", evidence_type=EvidenceType.METRIC,
-            value=0.95, source=EvidenceSource(stage=14, artifact_path="x.json"),
+            evidence_id="a",
+            evidence_type=EvidenceType.METRIC,
+            value=0.95,
+            source=EvidenceSource(stage=14, artifact_path="x.json"),
         )
         rec2 = EvidenceRecord(
-            evidence_id="b", evidence_type=EvidenceType.METRIC,
-            value=0.95, source=EvidenceSource(stage=14, artifact_path="x.json"),
+            evidence_id="b",
+            evidence_type=EvidenceType.METRIC,
+            value=0.95,
+            source=EvidenceSource(stage=14, artifact_path="x.json"),
         )
         # Same content → same hash (even though ids differ)
         assert rec1.content_hash == rec2.content_hash
 
     def test_different_content_different_hash(self) -> None:
         rec1 = EvidenceRecord(
-            evidence_id="a", evidence_type=EvidenceType.METRIC,
-            value=0.95, source=EvidenceSource(stage=14, artifact_path="x.json"),
+            evidence_id="a",
+            evidence_type=EvidenceType.METRIC,
+            value=0.95,
+            source=EvidenceSource(stage=14, artifact_path="x.json"),
         )
         rec2 = EvidenceRecord(
-            evidence_id="b", evidence_type=EvidenceType.METRIC,
-            value=0.96, source=EvidenceSource(stage=14, artifact_path="x.json"),
+            evidence_id="b",
+            evidence_type=EvidenceType.METRIC,
+            value=0.96,
+            source=EvidenceSource(stage=14, artifact_path="x.json"),
         )
         assert rec1.content_hash != rec2.content_hash
 
@@ -173,8 +180,10 @@ class TestVerifiedEvidenceRegistry:
     def test_add_and_lookup(self) -> None:
         reg = VerifiedEvidenceRegistry()
         rec = EvidenceRecord(
-            evidence_id="e001", evidence_type=EvidenceType.METRIC,
-            value=0.95, source=EvidenceSource(stage=14, artifact_path="x.json"),
+            evidence_id="e001",
+            evidence_type=EvidenceType.METRIC,
+            value=0.95,
+            source=EvidenceSource(stage=14, artifact_path="x.json"),
         )
         eid = reg.add_record(rec)
         assert eid == "e001"
@@ -184,28 +193,40 @@ class TestVerifiedEvidenceRegistry:
     def test_add_deduplicate(self) -> None:
         reg = VerifiedEvidenceRegistry()
         rec1 = EvidenceRecord(
-            evidence_id="a", evidence_type=EvidenceType.METRIC,
-            value=0.95, source=EvidenceSource(stage=14, artifact_path="x.json"),
+            evidence_id="a",
+            evidence_type=EvidenceType.METRIC,
+            value=0.95,
+            source=EvidenceSource(stage=14, artifact_path="x.json"),
         )
         rec2 = EvidenceRecord(
-            evidence_id="b", evidence_type=EvidenceType.METRIC,
-            value=0.95, source=EvidenceSource(stage=14, artifact_path="x.json"),
+            evidence_id="b",
+            evidence_type=EvidenceType.METRIC,
+            value=0.95,
+            source=EvidenceSource(stage=14, artifact_path="x.json"),
         )
         eid1 = reg.add_record(rec1)
         eid2 = reg.add_record(rec2)
         # Same content → deduplicated (eid2 should return first id)
-        assert eid2 == "a"
+        assert eid2 == eid1
 
     def test_find_by_type(self) -> None:
         reg = VerifiedEvidenceRegistry()
-        reg.add_record(EvidenceRecord(
-            evidence_id="m1", evidence_type=EvidenceType.METRIC,
-            value=0.9, source=EvidenceSource(stage=14, artifact_path="x.json"),
-        ))
-        reg.add_record(EvidenceRecord(
-            evidence_id="m2", evidence_type=EvidenceType.METHOD_IMPLEMENTATION,
-            value="DQN", source=EvidenceSource(stage=14, artifact_path="x.json"),
-        ))
+        reg.add_record(
+            EvidenceRecord(
+                evidence_id="m1",
+                evidence_type=EvidenceType.METRIC,
+                value=0.9,
+                source=EvidenceSource(stage=14, artifact_path="x.json"),
+            )
+        )
+        reg.add_record(
+            EvidenceRecord(
+                evidence_id="m2",
+                evidence_type=EvidenceType.METHOD_IMPLEMENTATION,
+                value="DQN",
+                source=EvidenceSource(stage=14, artifact_path="x.json"),
+            )
+        )
         metrics = reg.find(evidence_type=EvidenceType.METRIC)
         assert len(metrics) == 1
         methods = reg.find(evidence_type=EvidenceType.METHOD_IMPLEMENTATION)
@@ -213,14 +234,22 @@ class TestVerifiedEvidenceRegistry:
 
     def test_find_by_stage(self) -> None:
         reg = VerifiedEvidenceRegistry()
-        reg.add_record(EvidenceRecord(
-            evidence_id="s9", evidence_type=EvidenceType.RUN_CONFIG,
-            value={"lr": 0.001}, source=EvidenceSource(stage=9, artifact_path="x.yaml"),
-        ))
-        reg.add_record(EvidenceRecord(
-            evidence_id="s14", evidence_type=EvidenceType.METRIC,
-            value=0.95, source=EvidenceSource(stage=14, artifact_path="x.json"),
-        ))
+        reg.add_record(
+            EvidenceRecord(
+                evidence_id="s9",
+                evidence_type=EvidenceType.RUN_CONFIG,
+                value={"lr": 0.001},
+                source=EvidenceSource(stage=9, artifact_path="x.yaml"),
+            )
+        )
+        reg.add_record(
+            EvidenceRecord(
+                evidence_id="s14",
+                evidence_type=EvidenceType.METRIC,
+                value=0.95,
+                source=EvidenceSource(stage=14, artifact_path="x.json"),
+            )
+        )
         stage14 = reg.find(stage=14)
         assert len(stage14) == 1
 
@@ -242,15 +271,23 @@ class TestVerifiedEvidenceRegistry:
 
     def test_merge(self) -> None:
         reg1 = VerifiedEvidenceRegistry()
-        reg1.add_record(EvidenceRecord(
-            evidence_id="a", evidence_type=EvidenceType.METRIC,
-            value=0.9, source=EvidenceSource(stage=14, artifact_path="x.json"),
-        ))
+        reg1.add_record(
+            EvidenceRecord(
+                evidence_id="a",
+                evidence_type=EvidenceType.METRIC,
+                value=0.9,
+                source=EvidenceSource(stage=14, artifact_path="x.json"),
+            )
+        )
         reg2 = VerifiedEvidenceRegistry()
-        reg2.add_record(EvidenceRecord(
-            evidence_id="b", evidence_type=EvidenceType.METHOD_IMPLEMENTATION,
-            value="PPO", source=EvidenceSource(stage=14, artifact_path="x.json"),
-        ))
+        reg2.add_record(
+            EvidenceRecord(
+                evidence_id="b",
+                evidence_type=EvidenceType.METHOD_IMPLEMENTATION,
+                value="PPO",
+                source=EvidenceSource(stage=14, artifact_path="x.json"),
+            )
+        )
         count = reg1.merge(reg2)
         assert count == 1
         assert len(reg1.records) == 2
@@ -271,10 +308,14 @@ class TestVerifiedEvidenceRegistry:
 
     def test_find_by_value(self) -> None:
         reg = VerifiedEvidenceRegistry()
-        reg.add_record(EvidenceRecord(
-            evidence_id="v1", evidence_type=EvidenceType.METRIC,
-            value=0.95, source=EvidenceSource(stage=14, artifact_path="x.json"),
-        ))
+        reg.add_record(
+            EvidenceRecord(
+                evidence_id="v1",
+                evidence_type=EvidenceType.METRIC,
+                value=0.95,
+                source=EvidenceSource(stage=14, artifact_path="x.json"),
+            )
+        )
         matches = reg.find_by_value(0.95)
         assert len(matches) == 1
         matches = reg.find_by_value(0.99)
@@ -350,12 +391,20 @@ class TestClaimManifest:
 
     def test_save_load_round_trip(self) -> None:
         manifest = ClaimManifest(paper_stage="draft")
-        manifest.add_claim(ClaimRecord(
-            claim_id="c1", text="Claim 1", claim_type=ClaimType.EMPIRICAL,
-        ))
-        manifest.add_claim(ClaimRecord(
-            claim_id="c2", text="Claim 2", claim_type=ClaimType.COMPARATIVE,
-        ))
+        manifest.add_claim(
+            ClaimRecord(
+                claim_id="c1",
+                text="Claim 1",
+                claim_type=ClaimType.EMPIRICAL,
+            )
+        )
+        manifest.add_claim(
+            ClaimRecord(
+                claim_id="c2",
+                text="Claim 2",
+                claim_type=ClaimType.COMPARATIVE,
+            )
+        )
 
         with tempfile.TemporaryDirectory() as td:
             path = Path(td) / "claim_manifest.json"
@@ -368,9 +417,13 @@ class TestClaimManifest:
 
     def test_to_json_output(self) -> None:
         manifest = ClaimManifest(paper_stage="draft")
-        manifest.add_claim(ClaimRecord(
-            claim_id="c1", text="Claim 1", claim_type=ClaimType.EMPIRICAL,
-        ))
+        manifest.add_claim(
+            ClaimRecord(
+                claim_id="c1",
+                text="Claim 1",
+                claim_type=ClaimType.EMPIRICAL,
+            )
+        )
         json_str = manifest.to_json()
         data = json.loads(json_str)
         assert data["paper_stage"] == "draft"
@@ -379,14 +432,22 @@ class TestClaimManifest:
 
     def test_verdict_counts(self) -> None:
         manifest = ClaimManifest(paper_stage="draft")
-        manifest.add_claim(ClaimRecord(
-            claim_id="c1", text="Supported", claim_type=ClaimType.EMPIRICAL,
-            verdict=ClaimVerdict.SUPPORTED,
-        ))
-        manifest.add_claim(ClaimRecord(
-            claim_id="c2", text="Unsupported", claim_type=ClaimType.EMPIRICAL,
-            verdict=ClaimVerdict.UNSUPPORTED,
-        ))
+        manifest.add_claim(
+            ClaimRecord(
+                claim_id="c1",
+                text="Supported",
+                claim_type=ClaimType.EMPIRICAL,
+                verdict=ClaimVerdict.SUPPORTED,
+            )
+        )
+        manifest.add_claim(
+            ClaimRecord(
+                claim_id="c2",
+                text="Unsupported",
+                claim_type=ClaimType.EMPIRICAL,
+                verdict=ClaimVerdict.UNSUPPORTED,
+            )
+        )
         assert manifest.supported_claims == 1
         assert manifest.unsupported_claims == 1
 
@@ -394,7 +455,9 @@ class TestClaimManifest:
 class TestClaimRecord:
     def test_minimal(self) -> None:
         claim = ClaimRecord(
-            claim_id="c001", text="Test claim.", claim_type=ClaimType.EMPIRICAL,
+            claim_id="c001",
+            text="Test claim.",
+            claim_type=ClaimType.EMPIRICAL,
         )
         assert claim.claim_id == "c001"
         assert claim.claim_type == ClaimType.EMPIRICAL
@@ -470,7 +533,7 @@ class TestDraftClaimExtraction:
         assert _classify_numeric_claim("We run 10 experiments", "Setup") == ClaimType.EMPIRICAL
 
     def test_extract_dataset_claims(self) -> None:
-        text = "We use the ImageNet dataset for evaluation.\n" "We evaluate on CIFAR-100.\n"
+        text = "We use the ImageNet dataset for evaluation.\nWe evaluate on CIFAR-100.\n"
         sections = {"Method": (0, 1)}
         manifest = ClaimManifest(paper_stage="draft")
         _extract_dataset_claims(text, sections, manifest)
@@ -483,6 +546,23 @@ class TestDraftClaimExtraction:
         assert section_map[0] == "Intro"
         assert section_map[5] == "Method"
         assert section_map[9] == "Method"
+
+    def test_build_draft_claim_manifest_writes_file(self, tmp_run_dir, sample_draft) -> None:
+        # Regression test (audit §4.2): _build_draft_claim_manifest referenced
+        # the module-level name ClaimManifest without importing it, raising
+        # NameError on every call. The caller in generate_paper_draft() swallows
+        # that exception (`except Exception: logger.debug(...)`), so the bug
+        # never crashed the pipeline — it just silently produced no manifest.
+        stage_dir = tmp_run_dir / "stage-17"
+        stage_dir.mkdir()
+
+        _build_draft_claim_manifest(sample_draft, tmp_run_dir, stage_dir)
+
+        manifest_path = stage_dir / "claim_manifest.json"
+        assert manifest_path.exists()
+        saved = json.loads(manifest_path.read_text(encoding="utf-8"))
+        assert saved["paper_stage"] == "draft"
+        assert len(saved["claims"]) >= 1
 
 
 # ---------------------------------------------------------------------------
@@ -501,12 +581,9 @@ class TestIntegrityIntegration:
         sections = _parse_draft_sections(sample_draft)
         manifest = ClaimManifest(paper_stage="draft")
 
-        evidence_reg = VerifiedEvidenceRegistry.load(
-            tmp_run_dir / "evidence_registry.json"
-        )
+        evidence_reg = VerifiedEvidenceRegistry.load(tmp_run_dir / "evidence_registry.json")
         metric_values = {
-            r.value for r in evidence_reg.records.values()
-            if isinstance(r.value, (int, float))
+            r.value for r in evidence_reg.records.values() if isinstance(r.value, (int, float))
         }
 
         _extract_numeric_claims(sample_draft, sections, manifest, metric_values)
@@ -524,9 +601,7 @@ class TestIntegrityIntegration:
                     assert c.verdict == ClaimVerdict.UNSUPPORTED
                 break
 
-    def test_evidence_registry_and_claim_manifest_coexist(
-        self, tmp_run_dir, sample_draft
-    ) -> None:
+    def test_evidence_registry_and_claim_manifest_coexist(self, tmp_run_dir, sample_draft) -> None:
         """Both artifacts can be produced from the same run directory."""
         # Build evidence registry
         reg = VerifiedEvidenceRegistry.from_run_dir(tmp_run_dir)
@@ -543,12 +618,8 @@ class TestIntegrityIntegration:
         assert (tmp_run_dir / "claim_manifest.json").is_file()
 
         # They are valid JSON
-        er = json.loads(
-            (tmp_run_dir / "evidence_registry.json").read_text(encoding="utf-8")
-        )
-        cm = json.loads(
-            (tmp_run_dir / "claim_manifest.json").read_text(encoding="utf-8")
-        )
+        er = json.loads((tmp_run_dir / "evidence_registry.json").read_text(encoding="utf-8"))
+        cm = json.loads((tmp_run_dir / "claim_manifest.json").read_text(encoding="utf-8"))
         assert er["record_count"] > 0
         assert cm["total_claims"] > 0
 

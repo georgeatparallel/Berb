@@ -152,8 +152,12 @@ def _execute_experiment_run(
     # ── Search-enabled path (E2) ──────────────────────────────────────
     if config.experiment.search.enabled:
         return _execute_experiment_run_with_search(
-            stage_dir, run_dir, config, adapters,
-            llm=llm, prompts=prompts,
+            stage_dir,
+            run_dir,
+            config,
+            adapters,
+            llm=llm,
+            prompts=prompts,
         )
 
     # ── Legacy single-run path ────────────────────────────────────────
@@ -482,7 +486,9 @@ def _execute_experiment_run_with_search(
         "total_wallclock_sec": round(result.total_wallclock_sec, 2),
         "best_node_id": result.best_node.node_id if result.best_node else None,
         "best_metrics": result.best_node.metrics if result.best_node else {},
-        "best_score": round(result.best_node.score.total, 4) if result.best_node and result.best_node.score else 0.0,
+        "best_score": round(result.best_node.score.total, 4)
+        if result.best_node and result.best_node.score
+        else 0.0,
     }
     (stage_dir / "search_summary.json").write_text(
         json.dumps(search_summary, indent=2), encoding="utf-8"
@@ -871,7 +877,24 @@ def _execute_iterative_refine(
             }
         )
         (stage_dir / "refinement_log.json").write_text(json.dumps(log, indent=2), encoding="utf-8")
-        artifacts = ("refinement_log.json", "experiment_final/")
+
+        # F2: the stage contract requires selection_bias.json unconditionally
+        # (consumed by RESULT_ANALYSIS). No refinement loop ran here, so
+        # report honestly that no three-way split evidence is available.
+        _sb_fallback = {
+            "metric_key": metric_key,
+            "metric_select": baseline_metric if baseline_metric is not None else 0.0,
+            "metric_rank": best_metric if best_metric is not None else 0.0,
+            "metric_report": None,
+            "n_candidates": 0,
+            "test_evaluations": 0,
+            "split_available": False,
+        }
+        (stage_dir / "selection_bias.json").write_text(
+            json.dumps(_sb_fallback, indent=2), encoding="utf-8"
+        )
+
+        artifacts = ("refinement_log.json", "experiment_final/", "selection_bias.json")
         return StageResult(
             stage=Stage.ITERATIVE_REFINE,
             status=StageStatus.DONE,
@@ -1312,6 +1335,7 @@ def _write_execution_feedback(
 ) -> None:
     """Write execution_feedback.json for consumption by Stage 13."""
     import json as _j
+
     feedback: dict[str, str] = {
         "kind": kind,
         "severity": severity,
@@ -1332,6 +1356,7 @@ def _write_seed_validity(
 ) -> None:
     """Write seed_validity.json for consumption by Stage 14."""
     import json as _j
+
     validity: dict[str, Any] = {
         "seeds_run": seeds_run,
         "seeds_required": 3,
@@ -1339,9 +1364,7 @@ def _write_seed_validity(
         "remediation_attempted": "none",
         "disclosed": disclosed,
     }
-    (stage_dir / "seed_validity.json").write_text(
-        _j.dumps(validity, indent=2), encoding="utf-8"
-    )
+    (stage_dir / "seed_validity.json").write_text(_j.dumps(validity, indent=2), encoding="utf-8")
     logger.info(
         "Seed validity written: %d seeds across %d conditions",
         seeds_run,

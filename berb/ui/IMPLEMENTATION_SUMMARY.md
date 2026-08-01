@@ -305,7 +305,7 @@ berb survey --topic "..." --preset ml-conference
 
 ### Immediate
 1. Install dependencies: `cd berb/ui/web && npm install`
-2. Start backend: `cd berb/api && python -m berb.api.server`
+2. Start backend: `berb serve --config config.yaml`
 3. Start frontend: `cd berb/ui/web && npm run dev`
 4. Access UI at `http://localhost:3000`
 
@@ -323,8 +323,7 @@ berb survey --topic "..." --preset ml-conference
 
 ```bash
 # Terminal 1: Start FastAPI backend
-cd berb/api
-python -m berb.api.server
+berb serve --config config.yaml
 
 # Terminal 2: Start React frontend
 cd berb/ui/web

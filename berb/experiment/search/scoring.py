@@ -18,7 +18,7 @@ Usage:
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 
@@ -83,7 +83,7 @@ def score_node(
     # Extract attributes safely
     runs_ok = getattr(node, "runs_ok", False)
     is_buggy_plots = getattr(node, "is_buggy_plots", None)
-    metrics = getattr(node, "metrics") if hasattr(node, "metrics") else {}
+    metrics = node.metrics if hasattr(node, "metrics") else {}
     stderr = getattr(node, "stderr", "") or ""
     timed_out = getattr(node, "timed_out", False)
 

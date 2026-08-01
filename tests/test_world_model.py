@@ -10,6 +10,12 @@ from __future__ import annotations
 
 import pytest
 
+from berb.research.discovery_loop import (
+    BudgetGovernor,
+    DiscoveryConfig,
+    DiscoveryLoop,
+    reflect,
+)
 from berb.research.world_model import (
     Contradiction,
     DeadEnd,
@@ -19,13 +25,6 @@ from berb.research.world_model import (
     Question,
     WorldModel,
 )
-from berb.research.discovery_loop import (
-    BudgetGovernor,
-    DiscoveryConfig,
-    DiscoveryLoop,
-    reflect,
-)
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # WorldModel tests
@@ -92,7 +91,8 @@ class TestDeadEndAntiReExploration:
         """Substring matching should catch variant descriptions."""
         wm = WorldModel(objective="Test")
         wm.update(
-            new_findings=[], rejected=[],
+            new_findings=[],
+            rejected=[],
             new_dead_ends=[DeadEnd(description="Bayesian optimization", reason="Too slow")],
         )
         assert wm.is_dead_end("Using Bayesian optimization for hyperparams") is True

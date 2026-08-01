@@ -1,10 +1,7 @@
-"""FastAPI API server for Berb Web UI.
+"""Legacy namespace.
 
-This module provides the backend API for the Berb web interface.
-
-# Author: Georgios-Chrysovalantis Chatzivantsidis
+The FastAPI app that used to be re-exported from here
+(``berb.api.server``) was unauthenticated by default and has been
+deleted (audit §3.3). The live, documented entry point is
+``berb.server.app:create_app``.
 """
-
-from berb.api.server import app
-
-__all__ = ["app"]

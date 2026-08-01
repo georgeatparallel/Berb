@@ -7,7 +7,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -48,6 +48,15 @@ def create_app(
     # allow_credentials=True is incompatible with allow_origins=["*"] per the CORS spec.
     # Only enable credentials when an explicit allowlist is configured.
     _origins = list(config.server.cors_origins)
+    if "*" in _origins:
+        # Defense in depth: RCConfig.load() already rejects a non-loopback host with no
+        # auth_token via validate_config()'s security checks, but refuse here too in case
+        # create_app() is ever called with a hand-built config that bypassed validation.
+        raise ValueError(
+            "server.cors_origins contains '*' (wildcard). Wildcard CORS combined with "
+            "allow_credentials is forbidden by the CORS spec and a security risk. "
+            "Configure an explicit origin allowlist."
+        )
     app.add_middleware(
         CORSMiddleware,
         allow_origins=_origins,
@@ -113,8 +122,6 @@ def create_app(
 
     # --- WebSocket events endpoint ---
     import uuid
-
-    from fastapi import WebSocket, WebSocketDisconnect
 
     @app.websocket("/ws/events")
     async def events_ws(websocket: WebSocket) -> None:

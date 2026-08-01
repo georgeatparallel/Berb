@@ -303,17 +303,21 @@ def _execute_hypothesis_gen(
                     _max_rounds = 2
                     _current_text = _ht
                     for _round in range(_max_rounds):
+
                         async def _run_critic(text=_current_text):
                             return await _critic.scrutinize(text)
+
                         _issues = asyncio.run(_run_critic())
                         _hard = [i for i in _issues if i.get("severity") == "hard"]
                         _soft = [i for i in _issues if i.get("severity") == "soft"]
 
-                        _record.setdefault("rounds", []).append({
-                            "round": _round + 1,
-                            "hard_issues": _hard,
-                            "soft_issues": _soft,
-                        })
+                        _record.setdefault("rounds", []).append(
+                            {
+                                "round": _round + 1,
+                                "hard_issues": _hard,
+                                "soft_issues": _soft,
+                            }
+                        )
 
                         if not _hard:
                             break

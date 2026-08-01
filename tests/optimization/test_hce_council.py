@@ -139,8 +139,6 @@ class TestHiddenConsistentEvaluation:
         assert scores == {}
 
 
-
-
 class TestHCEIntegration:
     """Integration tests for HCE."""
 
