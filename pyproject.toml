@@ -46,7 +46,15 @@ openai = ["openai>=1.0"]
 deepseek = ["openai>=1.0"]  # Uses OpenAI-compatible API
 perplexity = []  # Built-in
 xai = []  # Built-in
-web = ["crawl4ai>=0.2", "tavily-python>=0.3"]
+# Web stack: search/scraping providers plus the `berb serve` HTTP server.
+# berb/cli.py points users here on ImportError, so the server deps must live here.
+web = [
+    "crawl4ai>=0.2",
+    "tavily-python>=0.3",
+    "fastapi>=0.100",
+    "uvicorn>=0.23",
+    "python-multipart>=0.0.7",  # required by the Form/File upload routes
+]
 pdf = ["PyMuPDF>=1.23"]
 all = [
     "anthropic>=0.20",
@@ -57,6 +65,9 @@ all = [
     "huggingface-hub>=0.20",
     "matplotlib>=3.7",
     "scipy>=1.10",
+    "fastapi>=0.100",
+    "uvicorn>=0.23",
+    "python-multipart>=0.0.7",
 ]
 dev = [
     "pytest>=7.0",
@@ -65,8 +76,13 @@ dev = [
     "httpx>=0.24",
     "mypy>=1.15",
     "scipy>=1.10",
-    "ruff>=0.4",
+    # Upper bound is deliberate: ruff's formatter changes between minor
+    # versions, so an unpinned range lets CI fail on a version bump with no
+    # code change. Raise both bounds together after running `ruff format`.
+    "ruff>=0.15,<0.16",
     "fastapi>=0.100",
+    "uvicorn>=0.23",
+    "python-multipart>=0.0.7",
 ]
 
 [project.scripts]
@@ -100,6 +116,10 @@ markers = [
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+# berb/data/ holds LLM-facing reference content, not source. Newer ruff
+# versions format code blocks inside Markdown, which would rewrite the
+# examples the model is shown. Keep the formatter out of it.
+extend-exclude = ["berb/data"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "B", "C4"]
