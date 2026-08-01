@@ -89,12 +89,14 @@ class TestRateLimiterConcurrency:
             await limiter.wait()
             times.append(time.monotonic())
 
-        # Check intervals are in expected range
+        # The limiter's contract is a *floor* on the gap, so only the lower
+        # bound is asserted. An upper bound here would be asserting the machine
+        # is idle: under `pytest -n auto` the event loop can be descheduled for
+        # far longer than the interval, which fails the test without the
+        # limiter having done anything wrong.
         for i in range(1, len(times)):
             elapsed = times[i] - times[i - 1]
-            # Min interval + jitter should be 0.05-0.07s
             assert elapsed >= 0.04, f"Interval too short: {elapsed}s"
-            assert elapsed <= 0.15, f"Interval too long: {elapsed}s"  # Generous upper bound
 
     @pytest.mark.asyncio
     async def test_sync_wait_thread_safety(self):
@@ -146,8 +148,10 @@ class TestRateLimiterEdgeCases:
         await limiter.wait()  # First call should not wait
         elapsed = time.monotonic() - start
 
-        # First call should return immediately
-        assert elapsed < 0.01
+        # The bug this guards against is the first call sleeping for the full
+        # interval. Any bound far below 3600s proves that; a tight one would
+        # instead be asserting the machine is idle.
+        assert elapsed < 5.0
 
     def test_backoff_delay(self):
         """Test exponential backoff helper."""

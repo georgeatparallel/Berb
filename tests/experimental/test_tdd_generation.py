@@ -151,16 +151,33 @@ class TestTDDCodeGenerator:
         assert total == 1
 
 
+# PytestRunner spawns a nested `python -m pytest` subprocess. That takes ~10s on
+# an idle machine here, but the suite itself runs under `pytest -n auto`, where
+# every worker competes for cores and may be spawning subprocesses of its own.
+# The value only has to exceed the worst case; it is not a performance budget.
+NESTED_PYTEST_TIMEOUT_SEC = 300
+
+
+def _assert_not_timeout(output: str) -> None:
+    """Fail loudly on a timeout instead of letting it look like wrong output.
+
+    PytestRunner.run() swallows TimeoutExpired and returns a message string, so
+    without this the content assertions below fail with a confusing diff that
+    reads like the runner produced wrong results.
+    """
+    assert not output.startswith("Tests timed out"), (
+        f"nested pytest exceeded {NESTED_PYTEST_TIMEOUT_SEC}s - machine contention, "
+        f"not a PytestRunner defect: {output}"
+    )
+
+
 class TestPytestRunner:
     """Test PytestRunner class."""
 
     @pytest.mark.asyncio
     async def test_run_valid_tests(self):
         """Test running valid tests."""
-        # Spawns a nested `python -m pytest` subprocess; 10s is too tight
-        # under a loaded machine (full plugin autoload + interpreter
-        # startup), so use a generous margin.
-        runner = PytestRunner(timeout=60)
+        runner = PytestRunner(timeout=NESTED_PYTEST_TIMEOUT_SEC)
 
         tests = """
 def test_addition():
@@ -173,15 +190,13 @@ def add(a, b):
 
         output = await runner.run(tests, implementation)
 
+        _assert_not_timeout(output)
         assert "passed" in output.lower() or "PASSED" in output
 
     @pytest.mark.asyncio
     async def test_run_failing_tests(self):
         """Test running failing tests."""
-        # Spawns a nested `python -m pytest` subprocess; 10s is too tight
-        # under a loaded machine (full plugin autoload + interpreter
-        # startup), so use a generous margin.
-        runner = PytestRunner(timeout=60)
+        runner = PytestRunner(timeout=NESTED_PYTEST_TIMEOUT_SEC)
 
         tests = """
 def test_failure():
@@ -193,6 +208,7 @@ def x(): pass
 
         output = await runner.run(tests, implementation)
 
+        _assert_not_timeout(output)
         assert "failed" in output.lower() or "FAILED" in output or "assert" in output
 
 

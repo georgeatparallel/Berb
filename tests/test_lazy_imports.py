@@ -68,14 +68,21 @@ def test_light_import_does_not_pull_heavy_deps(target: str) -> None:
         f"import sys; import {target}; "
         f"print(','.join(d for d in {HEAVY_DEPS!r} if d in sys.modules))"
     )
-    result = subprocess.run(
-        [sys.executable, "-c", probe],
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        timeout=300,
-    )
+    try:
+        result = subprocess.run(
+            [sys.executable, "-c", probe],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=300,
+        )
+    except OSError as exc:
+        # The interpreter never started, so nothing can be concluded about the
+        # import. Happens under `pytest -n auto` when workers exhaust the fork
+        # limit. A non-zero returncode below is different: Python *did* run, so
+        # that stays a hard failure and a real import regression can't hide.
+        pytest.skip(f"could not spawn probe interpreter ({exc}); machine contention")
 
     assert result.returncode == 0, f"import {target} failed:\n{result.stderr}"
     leaked = result.stdout.strip()
