@@ -2,11 +2,8 @@
 # Each entry must be a dotted module name followed by a # justification.
 # Parked modules are acknowledged debt; revisit each within 2 quarters.
 
-# D-01: DEPRECATED domains (physics + chaos). Numerical libraries, zero
-# production callers. Emit DeprecationWarning on import; scheduled for removal.
-# Retained only for their test suites until deletion.
-berb.domains.physics    # Deprecated — 2026-07-19; scheduled for removal
-berb.domains.chaos      # Deprecated — 2026-07-19; scheduled for removal
+# D-01: CLOSED 2026-08-04 — berb.domains.physics and berb.domains.chaos were
+# deleted along with their test suites. Do not re-add without a caller.
 
 # D-03: Parked modules. No active roadmap evidence.
 berb.hyperagent         # Parked — 2026-07-19; revisit Q1 2027

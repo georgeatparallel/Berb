@@ -1,5 +1,9 @@
 # Physics Domain Optimizations for Berb
 
+> **Superseded 2026-08-04.** `berb.domains.physics` and `berb.domains.chaos`
+> were deleted (D-01): deprecated 2026-07-19, zero production callers. The code
+> samples below no longer import. Kept as a historical design record.
+
 **Εξειδικευμένες Βελτιστοποιήσεις για Έρευνα σε:**
 - Δυναμικά Συστήματα (Dynamical Systems)
 - Hamiltonian Systems
