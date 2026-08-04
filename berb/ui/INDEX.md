@@ -2,6 +2,13 @@
 
 This directory contains the complete UI implementation for Berb, an AI-powered autonomous research system.
 
+> **Note:** the REST/WebSocket endpoint tables below describe the original
+> `berb/api/server.py` backend, which was unauthenticated by default and has
+> been deleted (docs/PRODUCTION_READINESS_AUDIT.md §3.3). The live backend is
+> `berb/server/app.py` (started via `berb serve`); its route set is defined
+> across `berb/server/app.py` and `berb/server/routes/*.py` and may not match
+> every endpoint listed here.
+
 ## Quick Links
 
 - **[QUICK_START.md](QUICK_START.md)** - Get started in 5 minutes
@@ -45,9 +52,7 @@ berb/ui/
 │   ├── tsconfig.node.json
 │   ├── index.html
 │   └── README.md
-└── api/                        # FastAPI backend
-    ├── __init__.py
-    └── server.py
+└── (backend is berb/server/app.py, not part of berb/ui/)
 ```
 
 ## Documentation Guide
@@ -213,8 +218,7 @@ berb/ui/
 
 ```bash
 # Terminal 1 - Backend
-cd berb/api
-python -m berb.api.server
+berb serve --config config.yaml
 
 # Terminal 2 - Frontend
 cd berb/ui/web

@@ -23,10 +23,10 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from berb.experiment.search.scoring import ScoreBreakdown
@@ -143,8 +143,12 @@ class JournalNode:
             d["score"] = {
                 "total": round(self.score.total, 6),
                 "runs_ok": self.score.runs_ok,
-                "metric_value": round(self.score.metric_value, 6) if self.score.metric_value is not None else None,  # noqa: E501
-                "metric_normalized": round(self.score.metric_normalized, 6) if self.score.metric_normalized is not None else None,  # noqa: E501
+                "metric_value": round(self.score.metric_value, 6)
+                if self.score.metric_value is not None
+                else None,  # noqa: E501
+                "metric_normalized": round(self.score.metric_normalized, 6)
+                if self.score.metric_normalized is not None
+                else None,  # noqa: E501
                 "buggy_plots": self.score.buggy_plots,
                 "penalties": list(self.score.penalties),
                 "reason": self.score.reason,
@@ -168,6 +172,7 @@ class JournalNode:
         score: ScoreBreakdown | None = None
         if score_raw is not None and isinstance(score_raw, dict):
             from berb.experiment.search.scoring import ScoreBreakdown
+
             score = ScoreBreakdown(
                 total=score_raw.get("total", 0.0),
                 runs_ok=score_raw.get("runs_ok", False),
@@ -586,8 +591,7 @@ class ExperimentJournal:
             "origins": {
                 o: len(nodes)
                 for o, nodes in {
-                    origin: self.by_origin(origin)
-                    for origin in {n.origin for n in self._nodes}
+                    origin: self.by_origin(origin) for origin in {n.origin for n in self._nodes}
                 }.items()
             },
             "total_cost_usd": round(sum(n.cost_usd for n in self._nodes), 6),

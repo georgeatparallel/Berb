@@ -97,6 +97,9 @@ models:
   qwen/qwen3.5-flash-02-23:
     input: 0.065
     output: 0.26
+  qwen/qwen3.7-flash:
+    input: 0.03
+    output: 0.13
 
   # ===========================================================================
   # XAI (Grok)
@@ -127,3 +130,937 @@ models:
   perplexity/sonar-deep-research:
     input: 10.00
     output: 10.00
+
+  # ===========================================================================
+  # AI21
+  # ===========================================================================
+  ai21/jamba-large-1.7:
+    input: 2.0
+    output: 8.0
+
+  # ===========================================================================
+  # AION LABS
+  # ===========================================================================
+  aion-labs/aion-2.0:
+    input: 0.8
+    output: 1.6
+  aion-labs/aion-3.0:
+    input: 3.0
+    output: 6.0
+  aion-labs/aion-3.0-mini:
+    input: 0.7
+    output: 1.4
+  aion-labs/aion-rp-llama-3.1-8b:
+    input: 0.8
+    output: 1.6
+
+  # ===========================================================================
+  # ALLENAI
+  # ===========================================================================
+  allenai/olmo-3-32b-think:
+    input: 0.15
+    output: 0.5
+
+  # ===========================================================================
+  # AMAZON
+  # ===========================================================================
+  amazon/nova-lite-v1:
+    input: 0.06
+    output: 0.24
+  amazon/nova-micro-v1:
+    input: 0.035
+    output: 0.14
+
+  # ===========================================================================
+  # ANTHRACITE ORG
+  # ===========================================================================
+  anthracite-org/magnum-v4-72b:
+    input: 3.0
+    output: 5.0
+
+  # ===========================================================================
+  # ANTHROPIC
+  # ===========================================================================
+  anthropic/claude-3-haiku:
+    input: 0.25
+    output: 1.25
+  anthropic/claude-opus-4:
+    input: 15.0
+    output: 75.0
+  anthropic/claude-opus-5:
+    input: 5.0
+    output: 25.0
+  anthropic/claude-opus-5-fast:
+    input: 10.0
+    output: 50.0
+  anthropic/claude-sonnet-4:
+    input: 3.0
+    output: 15.0
+  anthropic/claude-sonnet-5:
+    input: 2.0
+    output: 10.0
+
+  # ===========================================================================
+  # ARCEE AI
+  # ===========================================================================
+  arcee-ai/trinity-large-thinking:
+    input: 0.22
+    output: 0.85
+  arcee-ai/virtuoso-large:
+    input: 0.75
+    output: 1.2
+
+  # ===========================================================================
+  # BAIDU
+  # ===========================================================================
+  baidu/ernie-4.5-vl-424b-a47b:
+    input: 0.42
+    output: 1.25
+
+  # ===========================================================================
+  # BYTEDANCE
+  # ===========================================================================
+  bytedance/ui-tars-1.5-7b:
+    input: 0.1
+    output: 0.2
+
+  # ===========================================================================
+  # BYTEDANCE SEED
+  # ===========================================================================
+  bytedance-seed/seed-1.6:
+    input: 0.25
+    output: 2.0
+  bytedance-seed/seed-1.6-flash:
+    input: 0.075
+    output: 0.3
+  bytedance-seed/seed-2.0-lite:
+    input: 0.25
+    output: 2.0
+
+  # ===========================================================================
+  # COGNITIVECOMPUTATIONS
+  # ===========================================================================
+  cognitivecomputations/dolphin-mistral-24b-venice-edition:
+    input: 0.2
+    output: 0.9
+
+  # ===========================================================================
+  # COHERE
+  # ===========================================================================
+  cohere/command-r-08-2024:
+    input: 0.15
+    output: 0.6
+  cohere/command-r-plus-08-2024:
+    input: 2.5
+    output: 10.0
+  cohere/command-r7b-12-2024:
+    input: 0.0375
+    output: 0.15
+  cohere/north-mini-code:free:
+    input: 0.0
+    output: 0.0
+
+  # ===========================================================================
+  # DEEPCOGITO
+  # ===========================================================================
+  deepcogito/cogito-v2.1-671b:
+    input: 1.25
+    output: 1.25
+
+  # ===========================================================================
+  # DEEPSEEK
+  # ===========================================================================
+  deepseek/deepseek-chat:
+    input: 0.2574
+    output: 1.0287
+  deepseek/deepseek-chat-v3-0324:
+    input: 0.27
+    output: 1.12
+  deepseek/deepseek-r1-0528:
+    input: 0.5
+    output: 2.15
+  deepseek/deepseek-r1-distill-llama-70b:
+    input: 0.8
+    output: 0.8
+  deepseek/deepseek-v3.1-terminus:
+    input: 0.27
+    output: 1.0
+  deepseek/deepseek-v3.2-exp:
+    input: 0.27
+    output: 0.41
+  deepseek/deepseek-v4-flash-0731:
+    input: 0.14
+    output: 0.28
+
+  # ===========================================================================
+  # GOOGLE
+  # ===========================================================================
+  google/gemini-2.5-flash-image:
+    input: 0.3
+    output: 2.5
+  google/gemini-2.5-pro-preview:
+    input: 1.25
+    output: 10.0
+  google/gemini-2.5-pro-preview-05-06:
+    input: 1.25
+    output: 10.0
+  google/gemini-3-pro-image:
+    input: 2.0
+    output: 12.0
+  google/gemini-3-pro-image-preview:
+    input: 2.0
+    output: 12.0
+  google/gemini-3.1-flash-image:
+    input: 0.5
+    output: 3.0
+  google/gemini-3.1-flash-image-preview:
+    input: 0.5
+    output: 3.0
+  google/gemini-3.1-flash-lite-image:
+    input: 0.25
+    output: 1.5
+  google/gemini-3.1-flash-lite-preview:
+    input: 0.25
+    output: 1.5
+  google/gemini-3.1-pro-preview:
+    input: 2.0
+    output: 12.0
+  google/gemini-3.1-pro-preview-customtools:
+    input: 2.0
+    output: 12.0
+  google/gemini-3.5-flash-lite:
+    input: 0.3
+    output: 2.5
+  google/gemini-3.6-flash:
+    input: 1.5
+    output: 7.5
+  google/gemma-2-27b-it:
+    input: 0.65
+    output: 0.65
+  google/gemma-3-12b-it:
+    input: 0.05
+    output: 0.15
+  google/gemma-3-27b-it:
+    input: 0.08
+    output: 0.45
+  google/gemma-3-4b-it:
+    input: 0.05
+    output: 0.1
+  google/gemma-3n-e4b-it:
+    input: 0.06
+    output: 0.12
+  google/gemma-4-26b-a4b-it:free:
+    input: 0.0
+    output: 0.0
+  google/gemma-4-31b-it:free:
+    input: 0.0
+    output: 0.0
+  google/lyria-3-clip-preview:
+    input: 0.0
+    output: 0.0
+  google/lyria-3-pro-preview:
+    input: 0.0
+    output: 0.0
+
+  # ===========================================================================
+  # GRYPHE
+  # ===========================================================================
+  gryphe/mythomax-l2-13b:
+    input: 0.06
+    output: 0.06
+
+  # ===========================================================================
+  # IBM GRANITE
+  # ===========================================================================
+  ibm-granite/granite-4.0-h-micro:
+    input: 0.017
+    output: 0.112
+  ibm-granite/granite-4.1-8b:
+    input: 0.05
+    output: 0.1
+
+  # ===========================================================================
+  # INCEPTION
+  # ===========================================================================
+  inception/mercury-2:
+    input: 0.25
+    output: 0.75
+
+  # ===========================================================================
+  # INCLUSIONAI
+  # ===========================================================================
+  inclusionai/ling-2.6-1t:
+    input: 0.075
+    output: 0.625
+  inclusionai/ling-2.6-flash:
+    input: 0.01
+    output: 0.03
+  inclusionai/ling-3.0-flash:free:
+    input: 0.0
+    output: 0.0
+  inclusionai/ring-2.6-1t:
+    input: 0.075
+    output: 0.625
+
+  # ===========================================================================
+  # KWAIPILOT
+  # ===========================================================================
+  kwaipilot/kat-coder-air-v2.5:
+    input: 0.15
+    output: 0.6
+  kwaipilot/kat-coder-pro-v2:
+    input: 0.3
+    output: 1.2
+  kwaipilot/kat-coder-pro-v2.5:
+    input: 0.74
+    output: 2.96
+
+  # ===========================================================================
+  # MANCER
+  # ===========================================================================
+  mancer/weaver:
+    input: 0.5
+    output: 0.75
+
+  # ===========================================================================
+  # MEITUAN
+  # ===========================================================================
+  meituan/longcat-2.0:
+    input: 0.3
+    output: 1.2
+
+  # ===========================================================================
+  # META
+  # ===========================================================================
+  meta/muse-spark-1.1:
+    input: 1.25
+    output: 4.25
+
+  # ===========================================================================
+  # META LLAMA
+  # ===========================================================================
+  meta-llama/llama-3.1-70b-instruct:
+    input: 0.4
+    output: 0.4
+  meta-llama/llama-3.1-8b-instruct:
+    input: 0.05
+    output: 0.08
+  meta-llama/llama-3.2-1b-instruct:
+    input: 0.027
+    output: 0.201
+  meta-llama/llama-3.2-3b-instruct:
+    input: 0.05
+    output: 0.33
+  meta-llama/llama-3.3-70b-instruct:
+    input: 0.13
+    output: 0.4
+  meta-llama/llama-guard-4-12b:
+    input: 0.18
+    output: 0.18
+
+  # ===========================================================================
+  # MICROSOFT
+  # ===========================================================================
+  microsoft/phi-4:
+    input: 0.07
+    output: 0.14
+  microsoft/wizardlm-2-8x22b:
+    input: 0.62
+    output: 0.62
+
+  # ===========================================================================
+  # MINIMAX
+  # ===========================================================================
+  minimax/minimax-01:
+    input: 0.2
+    output: 1.1
+  minimax/minimax-m2:
+    input: 0.255
+    output: 1.02
+  minimax/minimax-m2-her:
+    input: 0.3
+    output: 1.2
+  minimax/minimax-m2.1:
+    input: 0.3
+    output: 1.2
+
+  # ===========================================================================
+  # MISTRALAI
+  # ===========================================================================
+  mistralai/codestral-2508:
+    input: 0.3
+    output: 0.9
+  mistralai/ministral-14b-2512:
+    input: 0.2
+    output: 0.2
+  mistralai/ministral-3b-2512:
+    input: 0.1
+    output: 0.1
+  mistralai/ministral-8b-2512:
+    input: 0.15
+    output: 0.15
+  mistralai/mistral-large-2407:
+    input: 2.0
+    output: 6.0
+  mistralai/mistral-large-2512:
+    input: 0.5
+    output: 1.5
+  mistralai/mistral-medium-3:
+    input: 0.4
+    output: 2.0
+  mistralai/mistral-medium-3.1:
+    input: 0.4
+    output: 2.0
+  mistralai/mistral-nemo:
+    input: 0.019
+    output: 0.03
+  mistralai/mistral-saba:
+    input: 0.2
+    output: 0.6
+  mistralai/mistral-small-24b-instruct-2501:
+    input: 0.05
+    output: 0.08
+  mistralai/mistral-small-2603:
+    input: 0.15
+    output: 0.6
+  mistralai/mistral-small-3.1-24b-instruct:
+    input: 0.351
+    output: 0.555
+  mistralai/mixtral-8x22b-instruct:
+    input: 2.0
+    output: 6.0
+  mistralai/voxtral-small-24b-2507:
+    input: 0.1
+    output: 0.3
+
+  # ===========================================================================
+  # MOONSHOTAI
+  # ===========================================================================
+  moonshotai/kimi-k2-0905:
+    input: 0.6
+    output: 2.5
+  moonshotai/kimi-k2-thinking:
+    input: 0.6
+    output: 2.5
+  moonshotai/kimi-k3:
+    input: 3.0
+    output: 15.0
+
+  # ===========================================================================
+  # MORPH
+  # ===========================================================================
+  morph/morph-v3-fast:
+    input: 0.8
+    output: 1.2
+  morph/morph-v3-large:
+    input: 0.9
+    output: 1.9
+
+  # ===========================================================================
+  # NEX AGI
+  # ===========================================================================
+  nex-agi/nex-n2-mini:
+    input: 0.025
+    output: 0.1
+  nex-agi/nex-n2-pro:
+    input: 0.25
+    output: 1.0
+
+  # ===========================================================================
+  # NOUSRESEARCH
+  # ===========================================================================
+  nousresearch/hermes-3-llama-3.1-405b:
+    input: 1.0
+    output: 1.0
+  nousresearch/hermes-3-llama-3.1-70b:
+    input: 0.7
+    output: 0.7
+  nousresearch/hermes-4-405b:
+    input: 1.0
+    output: 3.0
+  nousresearch/hermes-4-70b:
+    input: 0.13
+    output: 0.4
+
+  # ===========================================================================
+  # NVIDIA
+  # ===========================================================================
+  nvidia/nemotron-3-nano-30b-a3b:
+    input: 0.05
+    output: 0.2
+  nvidia/nemotron-3-nano-30b-a3b:free:
+    input: 0.0
+    output: 0.0
+  nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free:
+    input: 0.0
+    output: 0.0
+  nvidia/nemotron-3-super-120b-a12b:free:
+    input: 0.0
+    output: 0.0
+  nvidia/nemotron-3-ultra-550b-a55b:
+    input: 0.6
+    output: 3.6
+  nvidia/nemotron-3-ultra-550b-a55b:free:
+    input: 0.0
+    output: 0.0
+  nvidia/nemotron-3.5-content-safety:free:
+    input: 0.0
+    output: 0.0
+  nvidia/nemotron-nano-12b-v2-vl:free:
+    input: 0.0
+    output: 0.0
+  nvidia/nemotron-nano-9b-v2:free:
+    input: 0.0
+    output: 0.0
+
+  # ===========================================================================
+  # OPENAI
+  # ===========================================================================
+  openai/gpt-3.5-turbo:
+    input: 0.5
+    output: 1.5
+  openai/gpt-3.5-turbo-0613:
+    input: 1.0
+    output: 2.0
+  openai/gpt-3.5-turbo-16k:
+    input: 3.0
+    output: 4.0
+  openai/gpt-3.5-turbo-instruct:
+    input: 1.5
+    output: 2.0
+  openai/gpt-4:
+    input: 30.0
+    output: 60.0
+  openai/gpt-4-turbo:
+    input: 10.0
+    output: 30.0
+  openai/gpt-4-turbo-preview:
+    input: 10.0
+    output: 30.0
+  openai/gpt-4o-2024-05-13:
+    input: 5.0
+    output: 15.0
+  openai/gpt-4o-2024-08-06:
+    input: 2.5
+    output: 10.0
+  openai/gpt-4o-2024-11-20:
+    input: 2.5
+    output: 10.0
+  openai/gpt-4o-mini-2024-07-18:
+    input: 0.15
+    output: 0.6
+  openai/gpt-5-image:
+    input: 10.0
+    output: 10.0
+  openai/gpt-5-image-mini:
+    input: 2.5
+    output: 2.0
+  openai/gpt-5-pro:
+    input: 15.0
+    output: 120.0
+  openai/gpt-5.1-codex:
+    input: 1.25
+    output: 10.0
+  openai/gpt-5.1-codex-max:
+    input: 1.25
+    output: 10.0
+  openai/gpt-5.1-codex-mini:
+    input: 0.25
+    output: 2.0
+  openai/gpt-5.2-chat:
+    input: 1.75
+    output: 14.0
+  openai/gpt-5.2-pro:
+    input: 21.0
+    output: 168.0
+  openai/gpt-5.3-chat:
+    input: 1.75
+    output: 14.0
+  openai/gpt-5.3-codex:
+    input: 1.75
+    output: 14.0
+  openai/gpt-5.4-image-2:
+    input: 8.0
+    output: 15.0
+  openai/gpt-5.6-luna:
+    input: 0.1
+    output: 0.6
+  openai/gpt-5.6-luna-pro:
+    input: 0.1
+    output: 0.6
+  openai/gpt-5.6-sol:
+    input: 5.0
+    output: 30.0
+  openai/gpt-5.6-sol-pro:
+    input: 5.0
+    output: 30.0
+  openai/gpt-5.6-terra:
+    input: 1.0
+    output: 6.0
+  openai/gpt-5.6-terra-pro:
+    input: 1.0
+    output: 6.0
+  openai/gpt-audio:
+    input: 2.5
+    output: 10.0
+  openai/gpt-audio-mini:
+    input: 0.6
+    output: 2.4
+  openai/gpt-chat-latest:
+    input: 5.0
+    output: 30.0
+  openai/gpt-oss-120b:
+    input: 0.037
+    output: 0.17
+  openai/gpt-oss-20b:
+    input: 0.03
+    output: 0.13
+  openai/gpt-oss-20b:free:
+    input: 0.0
+    output: 0.0
+  openai/gpt-oss-safeguard-20b:
+    input: 0.075
+    output: 0.3
+  openai/o1-pro:
+    input: 150.0
+    output: 600.0
+  openai/o3-mini-high:
+    input: 1.1
+    output: 4.4
+  openai/o4-mini-high:
+    input: 1.1
+    output: 4.4
+
+  # ===========================================================================
+  # OPENROUTER
+  # ===========================================================================
+  openrouter/auto:
+    input: -1000000.0
+    output: -1000000.0
+  openrouter/auto-beta:
+    input: -1000000.0
+    output: -1000000.0
+  openrouter/bodybuilder:
+    input: -1000000.0
+    output: -1000000.0
+  openrouter/free:
+    input: 0.0
+    output: 0.0
+  openrouter/fusion:
+    input: -1000000.0
+    output: -1000000.0
+  openrouter/pareto-code:
+    input: -1000000.0
+    output: -1000000.0
+
+  # ===========================================================================
+  # PERCEPTRON
+  # ===========================================================================
+  perceptron/perceptron-mk1:
+    input: 0.15
+    output: 1.5
+
+  # ===========================================================================
+  # POOLSIDE
+  # ===========================================================================
+  poolside/laguna-s-2.1:
+    input: 0.09
+    output: 0.18
+  poolside/laguna-s-2.1:free:
+    input: 0.0
+    output: 0.0
+  poolside/laguna-xs-2.1:
+    input: 0.06
+    output: 0.12
+  poolside/laguna-xs-2.1:free:
+    input: 0.0
+    output: 0.0
+
+  # ===========================================================================
+  # QWEN
+  # ===========================================================================
+  qwen/qwen-2.5-72b-instruct:
+    input: 0.36
+    output: 0.4
+  qwen/qwen-2.5-7b-instruct:
+    input: 0.1
+    output: 0.2
+  qwen/qwen-2.5-coder-32b-instruct:
+    input: 0.66
+    output: 1.0
+  qwen/qwen-plus:
+    input: 0.26
+    output: 0.78
+  qwen/qwen-plus-2025-07-28:
+    input: 0.26
+    output: 0.78
+  qwen/qwen-plus-2025-07-28:thinking:
+    input: 0.4
+    output: 1.2
+  qwen/qwen2.5-vl-72b-instruct:
+    input: 0.8
+    output: 1.0
+  qwen/qwen3-14b:
+    input: 0.2275
+    output: 0.91
+  qwen/qwen3-235b-a22b:
+    input: 0.455
+    output: 1.82
+  qwen/qwen3-235b-a22b-2507:
+    input: 0.09
+    output: 0.55
+  qwen/qwen3-235b-a22b-thinking-2507:
+    input: 0.23
+    output: 2.3
+  qwen/qwen3-30b-a3b:
+    input: 0.12
+    output: 0.5
+  qwen/qwen3-30b-a3b-instruct-2507:
+    input: 0.0481
+    output: 0.193
+  qwen/qwen3-30b-a3b-thinking-2507:
+    input: 0.2
+    output: 2.4
+  qwen/qwen3-32b:
+    input: 0.08
+    output: 0.28
+  qwen/qwen3-8b:
+    input: 0.117
+    output: 0.455
+  qwen/qwen3-coder-30b-a3b-instruct:
+    input: 0.07
+    output: 0.28
+  qwen/qwen3-coder-next:
+    input: 0.12
+    output: 0.8
+  qwen/qwen3-next-80b-a3b-instruct:
+    input: 0.1
+    output: 1.1
+  qwen/qwen3-next-80b-a3b-thinking:
+    input: 0.15
+    output: 1.2
+  qwen/qwen3-vl-235b-a22b-instruct:
+    input: 0.21
+    output: 1.9
+  qwen/qwen3-vl-235b-a22b-thinking:
+    input: 0.4
+    output: 4.0
+  qwen/qwen3-vl-30b-a3b-instruct:
+    input: 0.13
+    output: 0.52
+  qwen/qwen3-vl-30b-a3b-thinking:
+    input: 0.2
+    output: 2.4
+  qwen/qwen3-vl-32b-instruct:
+    input: 0.104
+    output: 0.416
+  qwen/qwen3-vl-8b-instruct:
+    input: 0.117
+    output: 0.455
+  qwen/qwen3-vl-8b-thinking:
+    input: 0.18
+    output: 2.1
+  qwen/qwen3.5-plus-02-15:
+    input: 0.26
+    output: 1.56
+  qwen/qwen3.6-27b:
+    input: 0.3
+    output: 2.0
+  qwen/qwen3.6-35b-a3b:
+    input: 0.14
+    output: 1.0
+  qwen/qwen3.6-max-preview:
+    input: 1.027
+    output: 6.162
+
+  # ===========================================================================
+  # REKAAI
+  # ===========================================================================
+  rekaai/reka-edge:
+    input: 0.1
+    output: 0.1
+  rekaai/reka-flash-3:
+    input: 0.1
+    output: 0.2
+
+  # ===========================================================================
+  # RELACE
+  # ===========================================================================
+  relace/relace-apply-3:
+    input: 0.85
+    output: 1.25
+  relace/relace-search:
+    input: 1.0
+    output: 3.0
+
+  # ===========================================================================
+  # SAKANA
+  # ===========================================================================
+  sakana/fugu-ultra:
+    input: 5.0
+    output: 30.0
+
+  # ===========================================================================
+  # SAO10K
+  # ===========================================================================
+  sao10k/l3-lunaris-8b:
+    input: 0.04
+    output: 0.05
+  sao10k/l3.1-euryale-70b:
+    input: 0.85
+    output: 0.85
+  sao10k/l3.3-euryale-70b:
+    input: 0.65
+    output: 0.75
+
+  # ===========================================================================
+  # STEPFUN
+  # ===========================================================================
+  stepfun/step-3.5-flash:
+    input: 0.1
+    output: 0.3
+  stepfun/step-3.7-flash:
+    input: 0.2
+    output: 1.15
+
+  # ===========================================================================
+  # TENCENT
+  # ===========================================================================
+  tencent/hunyuan-a13b-instruct:
+    input: 0.14
+    output: 0.57
+  tencent/hy3:
+    input: 0.132
+    output: 0.528
+  tencent/hy3-preview:
+    input: 0.063
+    output: 0.21
+
+  # ===========================================================================
+  # THEDRUMMER
+  # ===========================================================================
+  thedrummer/cydonia-24b-v4.1:
+    input: 0.3
+    output: 0.5
+  thedrummer/rocinante-12b:
+    input: 0.25
+    output: 0.5
+  thedrummer/skyfall-36b-v2:
+    input: 0.55
+    output: 0.8
+  thedrummer/unslopnemo-12b:
+    input: 0.4
+    output: 0.4
+
+  # ===========================================================================
+  # THINKINGMACHINES
+  # ===========================================================================
+  thinkingmachines/inkling:
+    input: 1.0
+    output: 4.05
+  thinkingmachines/inkling-small:
+    input: 0.5
+    output: 1.2
+
+  # ===========================================================================
+  # UNDI95
+  # ===========================================================================
+  undi95/remm-slerp-l2-13b:
+    input: 0.45
+    output: 0.65
+
+  # ===========================================================================
+  # UPSTAGE
+  # ===========================================================================
+  upstage/solar-pro-3:
+    input: 0.15
+    output: 0.6
+
+  # ===========================================================================
+  # WRITER
+  # ===========================================================================
+  writer/palmyra-x5:
+    input: 0.6
+    output: 6.0
+
+  # ===========================================================================
+  # X AI
+  # ===========================================================================
+  x-ai/grok-4.20:
+    input: 1.25
+    output: 2.5
+  x-ai/grok-4.20-multi-agent:
+    input: 1.25
+    output: 2.5
+  x-ai/grok-build-0.1:
+    input: 1.0
+    output: 2.0
+
+  # ===========================================================================
+  # Z AI
+  # ===========================================================================
+  z-ai/glm-4.5v:
+    input: 0.6
+    output: 1.8
+  z-ai/glm-4.6:
+    input: 0.5
+    output: 2.0
+  z-ai/glm-4.6v:
+    input: 0.3
+    output: 0.9
+  z-ai/glm-5-turbo:
+    input: 1.2
+    output: 4.0
+  z-ai/glm-5v-turbo:
+    input: 1.2
+    output: 4.0
+
+  # ===========================================================================
+  # ~ANTHROPIC
+  # ===========================================================================
+  ~anthropic/claude-fable-latest:
+    input: 10.0
+    output: 50.0
+  ~anthropic/claude-haiku-latest:
+    input: 1.0
+    output: 5.0
+  ~anthropic/claude-opus-latest:
+    input: 5.0
+    output: 25.0
+  ~anthropic/claude-sonnet-latest:
+    input: 2.0
+    output: 10.0
+
+  # ===========================================================================
+  # ~GOOGLE
+  # ===========================================================================
+  ~google/gemini-flash-latest:
+    input: 1.5
+    output: 7.5
+  ~google/gemini-pro-latest:
+    input: 2.0
+    output: 12.0
+
+  # ===========================================================================
+  # ~MOONSHOTAI
+  # ===========================================================================
+  ~moonshotai/kimi-latest:
+    input: 2.9
+    output: 14.0
+
+  # ===========================================================================
+  # ~OPENAI
+  # ===========================================================================
+  ~openai/gpt-latest:
+    input: 5.0
+    output: 30.0
+  ~openai/gpt-mini-latest:
+    input: 0.75
+    output: 4.5
+
+  # ===========================================================================
+  # ~X AI
+  # ===========================================================================
+  ~x-ai/grok-latest:
+    input: 2.0
+    output: 6.0

@@ -3,19 +3,17 @@
 from __future__ import annotations
 
 import asyncio
-from pathlib import Path
-import pytest
 
 from berb.experiment.journal import ExperimentJournal, JournalNode
-from berb.experiment.search.scoring import score_node, ScoreBreakdown
-from berb.experiment.search.policy import BestFirstDiversePolicy, SearchConfig, _debug_depth
-from berb.llm.cost_tracker import CostTracker
 from berb.experiment.plot_verdict import verify_plots
-
+from berb.experiment.search.policy import BestFirstDiversePolicy, SearchConfig, _debug_depth
+from berb.experiment.search.scoring import score_node
+from berb.llm.cost_tracker import CostTracker
 
 # ---------------------------------------------------------------------------
 # ExperimentJournal Topology & Serialization Tests (E1)
 # ---------------------------------------------------------------------------
+
 
 def test_journal_topology() -> None:
     journal = ExperimentJournal()
@@ -27,7 +25,7 @@ def test_journal_topology() -> None:
         depth=1,
         phase="baseline",
         origin="draft",
-        returncode=0, # successful execution
+        returncode=0,  # successful execution
         metrics={"accuracy": 0.8},
     )
     journal.append(root)
@@ -51,7 +49,7 @@ def test_journal_topology() -> None:
         depth=1,
         phase="baseline",
         origin="draft",
-        returncode=1, # crashed
+        returncode=1,  # crashed
     )
     journal.append(root_2)
 
@@ -108,6 +106,7 @@ def test_journal_serialization() -> None:
 # ---------------------------------------------------------------------------
 # Grounded Metric Scoring Tests (F2)
 # ---------------------------------------------------------------------------
+
 
 def test_score_node_maximize() -> None:
     node = JournalNode(
@@ -166,6 +165,7 @@ def test_score_node_hard_gates() -> None:
 # Search Policy & Debug Depth Tests (E2)
 # ---------------------------------------------------------------------------
 
+
 def test_debug_depth_calculation() -> None:
     journal = ExperimentJournal()
 
@@ -207,7 +207,9 @@ def test_best_first_diverse_policy() -> None:
     assert policy.select(journal, 1, config) == [None]
 
     # Add second root
-    r2 = JournalNode(node_id="r2", parent_id=None, returncode=1, is_buggy=True) # buggy root (exit status 1)
+    r2 = JournalNode(
+        node_id="r2", parent_id=None, returncode=1, is_buggy=True
+    )  # buggy root (exit status 1)
     journal.append(r2)
 
     # 2. Repair: debug_probability=1.0 -> chooses buggy root r2
@@ -220,6 +222,7 @@ def test_best_first_diverse_policy() -> None:
 # ---------------------------------------------------------------------------
 # CostTracker thread-safe price accumulation (E10)
 # ---------------------------------------------------------------------------
+
 
 def test_cost_tracker_accumulation() -> None:
     tracker = CostTracker()
@@ -252,11 +255,14 @@ def test_cost_tracker_accumulation() -> None:
 # Figure Critic Plot Verdict Tests (E3)
 # ---------------------------------------------------------------------------
 
+
 def test_plot_verdict_fail_open() -> None:
     # verify_plots must fail-open (return verdict.is_buggy=None) if critic is None
-    verdict = asyncio.run(verify_plots(
-        plot_paths=[],
-        critic=None,
-    ))
+    verdict = asyncio.run(
+        verify_plots(
+            plot_paths=[],
+            critic=None,
+        )
+    )
     assert verdict.is_buggy is None
     assert verdict.confidence == 0.0

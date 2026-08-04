@@ -102,8 +102,7 @@ berb/ui/web/
 
 1. Start the FastAPI backend:
    ```bash
-   cd berb/api
-   python -m berb.api.server
+   berb serve --config config.yaml
    ```
 
 2. Start the React dev server:

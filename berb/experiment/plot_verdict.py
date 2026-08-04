@@ -27,7 +27,7 @@ Usage:
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -132,7 +132,9 @@ async def verify_plots(
             max_plots,
         )
         # Deterministic: take first N (most recently created)
-        selected_paths = sorted(selected_paths, key=lambda p: p.stat().st_mtime if p.exists() else 0, reverse=True)[:max_plots]  # noqa: E501
+        selected_paths = sorted(
+            selected_paths, key=lambda p: p.stat().st_mtime if p.exists() else 0, reverse=True
+        )[:max_plots]  # noqa: E501
 
     # Guardrail 2 + 4: Evaluate each plot with anti-hallucination prompt
     analyses: list[PlotAnalysis] = []
@@ -166,7 +168,9 @@ async def verify_plots(
             is_valid = getattr(critique, "is_acceptable", True)
             overall_score = getattr(critique, "overall_score", 5.0)
             issues = getattr(critique, "issues", [])
-            confidence = getattr(critique, "confidence", overall_score / 10.0) if overall_score else 0.5
+            confidence = (
+                getattr(critique, "confidence", overall_score / 10.0) if overall_score else 0.5
+            )
 
             # Normalize confidence to 0-1
             if confidence > 1.0:
@@ -177,7 +181,10 @@ async def verify_plots(
                 file_name=plot_path.name,
                 is_valid=is_valid,
                 confidence=confidence,
-                issues=tuple(i.get("description", str(i)) if isinstance(i, dict) else str(i) for i in (issues or [])),  # noqa: E501
+                issues=tuple(
+                    i.get("description", str(i)) if isinstance(i, dict) else str(i)
+                    for i in (issues or [])
+                ),  # noqa: E501
                 summary=f"Score: {overall_score:.1f}/10, {'Pass' if is_valid else 'Issues found'}",
             )
             analyses.append(analysis)
@@ -203,16 +210,6 @@ async def verify_plots(
     valid_count = sum(1 for a in analyses if a.is_valid)
     invalid_count = sum(1 for a in analyses if not a.is_valid)
     avg_confidence = sum(a.confidence for a in analyses) / max(len(analyses), 1)
-
-    # Guardrail 4: Confidence floor
-    if avg_confidence < min_confidence and invalid_count == 0:
-        # Low confidence but no clear invalids — treat as not evaluated
-        verdict_valid = None
-    elif invalid_count > 0:
-        # At least one plot is invalid — candidate is buggy
-        verdict_valid = False
-    else:
-        verdict_valid = True
 
     summary_parts = [
         f"Evaluated {len(analyses)} plot(s): {valid_count} valid, {invalid_count} invalid",

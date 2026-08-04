@@ -510,8 +510,6 @@ class DesignProposalEvolver:
 # Deprecation alias
 # ─────────────────────────────────────────────────────────────────────────────
 
-import warnings
-
 
 class EvolutionaryExperimentSearch(DesignProposalEvolver):
     """Deprecated alias for DesignProposalEvolver.

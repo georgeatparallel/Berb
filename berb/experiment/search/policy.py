@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import logging
 import random
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Protocol
 
 from berb.experiment.journal import ExperimentJournal, JournalNode
@@ -145,17 +145,18 @@ class BestFirstDiversePolicy:
 
         # Rule 1: Bootstrap — grow independent trees
         if len(roots) < config.num_roots:
-            logger.debug("Policy: bootstrap — creating root %d/%d", len(roots) + 1, config.num_roots)
+            logger.debug(
+                "Policy: bootstrap — creating root %d/%d", len(roots) + 1, config.num_roots
+            )
             return None
 
         # Rule 2: Repair — fix buggy leaves with some probability
         if self._rng.random() < config.debug_probability:
             # Find buggy leaves that haven't been debugged too much
             buggy_leaves = [
-                l
-                for l in leaves
-                if l.is_buggy is True
-                and _debug_depth(l, journal) < config.max_debug_depth
+                leaf
+                for leaf in leaves
+                if leaf.is_buggy is True and _debug_depth(leaf, journal) < config.max_debug_depth
             ]
             if buggy_leaves:
                 selected = self._rng.choice(buggy_leaves)
@@ -163,13 +164,17 @@ class BestFirstDiversePolicy:
                 return selected
 
         # Rule 3: Exploit with diversity
-        good_leaves = [l for l in leaves if l.is_buggy is not True]
+        good_leaves = [leaf for leaf in leaves if leaf.is_buggy is not True]
 
         # Filter out leaves whose root is already claimed (diversity constraint)
         candidate_leaves = []
         for leaf in good_leaves:
             leaf_root = self._find_root(journal, leaf.node_id)
-            if leaf_root is None or leaf_root not in claimed_roots or len(claimed_roots) >= len(roots):
+            if (
+                leaf_root is None
+                or leaf_root not in claimed_roots
+                or len(claimed_roots) >= len(roots)
+            ):
                 # Either no root constraint, or all roots are claimed anyway
                 candidate_leaves.append(leaf)
 
@@ -182,18 +187,22 @@ class BestFirstDiversePolicy:
             return None
 
         # Score-sort candidates: prefer nodes with higher metrics
-        def _candidate_quality(l: JournalNode) -> float:
-            if l.score is not None:
-                return l.score.total
-            if l.metrics:
+        def _candidate_quality(leaf: JournalNode) -> float:
+            if leaf.score is not None:
+                return leaf.score.total
+            if leaf.metrics:
                 # Use the first metric value as a proxy
-                first_val = next(iter(l.metrics.values()), 0.0)
+                first_val = next(iter(leaf.metrics.values()), 0.0)
                 return float(first_val)
             return 0.0
 
         candidate_leaves.sort(key=_candidate_quality, reverse=True)
         selected = candidate_leaves[0]
-        logger.debug("Policy: exploit — selected %s (score=%.2f)", selected.node_id[:8], _candidate_quality(selected))
+        logger.debug(
+            "Policy: exploit — selected %s (score=%.2f)",
+            selected.node_id[:8],
+            _candidate_quality(selected),
+        )
         return selected
 
     def _find_root(self, journal: ExperimentJournal, node_id: str) -> str | None:

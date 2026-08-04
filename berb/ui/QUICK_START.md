@@ -30,8 +30,7 @@ npm install
 
 **Terminal 1 - Backend:**
 ```bash
-cd berb/api
-python -m berb.api.server
+berb serve --config config.yaml
 ```
 
 **Terminal 2 - Frontend:**
@@ -44,7 +43,7 @@ npm run dev
 
 **Terminal 1 - Backend:**
 ```bash
-cd berb/api && python -m berb.api.server
+berb serve --config config.yaml
 ```
 
 **Terminal 2 - Frontend:**
@@ -158,8 +157,7 @@ npm run type-check # Type check
 ### Backend Development
 
 ```bash
-cd berb/api
-python -m berb.api.server  # Start server
+berb serve --config config.yaml  # Start server
 ```
 
 ## Troubleshooting
@@ -171,18 +169,16 @@ python -m berb.api.server  # Start server
 npm run dev -- --port 3001
 
 # Change FastAPI port
-uvicorn berb.api.server:app --host 127.0.0.1 --port 8001
+berb serve --config config.yaml --port 8001
 ```
 
 ### CORS Errors
 
-Ensure backend allows origins in `berb/api/server.py`:
-```python
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
-    ...
-)
+Set `server.cors_origins` in your config file:
+```yaml
+server:
+  cors_origins:
+    - "http://localhost:3000"
 ```
 
 ### Dependencies Not Found

@@ -719,7 +719,6 @@ class TestOptimizationIntegration:
 
         assert hasattr(hidden_eval, "HiddenConsistentEvaluation")
 
-
     def test_literature_module_complete(self):
         """Test literature module has FS processing."""
         from berb import literature

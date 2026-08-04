@@ -60,9 +60,7 @@ def extract_text_from_pdf(path: Path) -> str:
     try:
         doc = fitz.open(str(path))
         if doc.is_encrypted:
-            logger.warning(
-                "PDF is password-protected, cannot extract text: %s", path
-            )
+            logger.warning("PDF is password-protected, cannot extract text: %s", path)
             doc.close()
             return ""
         pages: list[str] = []
@@ -72,7 +70,9 @@ def extract_text_from_pdf(path: Path) -> str:
                 pages.append(text)
         doc.close()
         text = "\n\n".join(pages)
-        logger.debug("Extracted %d characters from %d pages in %s", len(text), len(pages), path.name)
+        logger.debug(
+            "Extracted %d characters from %d pages in %s", len(text), len(pages), path.name
+        )
         return text
     except Exception:
         logger.warning("Failed to extract text from PDF: %s", path, exc_info=True)

@@ -715,6 +715,7 @@ class ServerConfig:
     port: int = 8080
     cors_origins: tuple[str, ...] = ()  # Empty = deny all cross-origin; configure explicitly
     auth_token: str = ""  # empty = no authentication
+    insecure: bool = False  # explicit opt-out required to bind non-loopback without auth_token
     voice_enabled: bool = False
     whisper_model: str = "whisper-1"
     whisper_api_url: str = ""  # empty = use OpenAI default
@@ -978,21 +979,17 @@ class RCConfig:
             ),
             integrity=IntegrityConfig(
                 mode=str(integrity.get("mode", "draft")),
-                fail_on_unsupported_claims=bool(
-                    integrity.get("fail_on_unsupported_claims", False)
-                ),
+                fail_on_unsupported_claims=bool(integrity.get("fail_on_unsupported_claims", False)),
                 fail_on_unverified_statistics=bool(
                     integrity.get("fail_on_unverified_statistics", False)
                 ),
-                fail_on_citation_fallback=bool(
-                    integrity.get("fail_on_citation_fallback", False)
-                ),
-                require_source_snippets=bool(
-                    integrity.get("require_source_snippets", False)
-                ),
+                fail_on_citation_fallback=bool(integrity.get("fail_on_citation_fallback", False)),
+                require_source_snippets=bool(integrity.get("require_source_snippets", False)),
                 auto_strict_domains=tuple(
-                    integrity.get("auto_strict_domains",
-                        ("biomedical", "clinical", "legal", "finance", "policy"))
+                    integrity.get(
+                        "auto_strict_domains",
+                        ("biomedical", "clinical", "legal", "finance", "policy"),
+                    )
                 ),
             ),
             experiment=_parse_experiment_config(experiment),
@@ -1137,6 +1134,24 @@ def validate_config(
                 "SECURITY WARNING: Plaintext tavily_api_key detected. "
                 "Consider using tavily_api_key_env instead."
             )
+
+        # Refuse to start an unauthenticated server on a non-loopback interface.
+        server_enabled = _get_by_path(data, "server.enabled")
+        if server_enabled:
+            server_host = str(_get_by_path(data, "server.host") or "127.0.0.1")
+            server_auth_token = _get_by_path(data, "server.auth_token")
+            server_insecure = bool(_get_by_path(data, "server.insecure") or False)
+            if (
+                server_host not in ("127.0.0.1", "localhost", "::1")
+                and _is_blank(server_auth_token)
+                and not server_insecure
+            ):
+                errors.append(
+                    f"SECURITY VIOLATION: server.host is '{server_host}' (non-loopback) but "
+                    "server.auth_token is empty. Set server.auth_token to require "
+                    "authentication, bind server.host to 127.0.0.1, or set "
+                    "server.insecure: true to explicitly opt out (not recommended)."
+                )
 
     project_mode = _get_by_path(data, "project.mode")
     if not _is_blank(project_mode) and project_mode not in PROJECT_MODES:
@@ -1560,15 +1575,16 @@ def _parse_server_config(data: dict[str, Any]) -> ServerConfig:
     if isinstance(cors, list):
         cors = tuple(cors)
     elif cors is None:
-        cors = ("*",)
+        cors = ()  # Empty = deny all cross-origin; matches the ServerConfig dataclass default
     else:
         cors = (str(cors),)
     return ServerConfig(
         enabled=bool(data.get("enabled", False)),
-        host=data.get("host", "0.0.0.0"),
+        host=data.get("host", "127.0.0.1"),
         port=int(data.get("port", 8080)),
         cors_origins=cors,
         auth_token=data.get("auth_token", ""),
+        insecure=bool(data.get("insecure", False)),
         voice_enabled=bool(data.get("voice_enabled", False)),
         whisper_model=data.get("whisper_model", "whisper-1"),
         whisper_api_url=data.get("whisper_api_url", ""),

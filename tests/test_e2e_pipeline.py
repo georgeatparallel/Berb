@@ -879,6 +879,22 @@ class TestPhaseF_AnalysisDecision:
         runs_dir = run_dir / "stage-12" / "runs"
         runs_dir.mkdir(parents=True, exist_ok=True)
         (runs_dir / "run-1.json").write_text('{"accuracy": 0.85}', encoding="utf-8")
+        # RESULT_ANALYSIS requires stage-13/selection_bias.json as an input
+        # (produced by ITERATIVE_REFINE — see contracts.py).
+        (run_dir / "stage-13" / "selection_bias.json").write_text(
+            json.dumps(
+                {
+                    "metric_key": "accuracy",
+                    "metric_select": 0.85,
+                    "metric_rank": 0.85,
+                    "metric_report": None,
+                    "n_candidates": 1,
+                    "test_evaluations": 0,
+                    "split_available": True,
+                }
+            ),
+            encoding="utf-8",
+        )
 
         stage_dir = run_dir / f"stage-{Stage.RESULT_ANALYSIS:02d}"
         stage_dir.mkdir(parents=True, exist_ok=True)

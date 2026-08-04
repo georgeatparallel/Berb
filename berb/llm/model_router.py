@@ -294,6 +294,7 @@ def get_cascade_for_stage(stage_name: str) -> CascadeConfig:
     if stage_name in {"TOPIC_INIT", "LITERATURE_COLLECT", "KNOWLEDGE_EXTRACT"}:
         return CascadeConfig(
             cascade=[
+                CascadeStep("qwen/qwen3.7-flash", min_score=0.70),
                 CascadeStep("deepseek/deepseek-chat", min_score=0.70),
                 CascadeStep("openai/gpt-4o-mini", min_score=0.75),
                 CascadeStep("anthropic/claude-sonnet-4-5-20250929", min_score=0.0),
@@ -332,6 +333,7 @@ def get_cascade_for_stage(stage_name: str) -> CascadeConfig:
     else:
         return CascadeConfig(
             cascade=[
+                CascadeStep("qwen/qwen3.7-flash", min_score=0.75),
                 CascadeStep("deepseek/deepseek-chat", min_score=0.75),
                 CascadeStep("openai/gpt-4o-mini", min_score=0.75),
                 CascadeStep("anthropic/claude-sonnet-4-5-20250929", min_score=0.0),

@@ -95,6 +95,15 @@ MODELS = {
         stages=["1", "11"],
         capabilities=["fast", "cheap"],
     ),
+    "qwen3.7-flash": ModelConfig(
+        model_id="qwen/qwen3.7-flash",
+        provider="qwen",
+        price_input=0.03,
+        price_output=0.13,
+        context_window=1000000,
+        stages=["1", "4", "11"],
+        capabilities=["fast", "cheap", "vision", "long-context"],
+    ),
     # ZhipuAI GLM models (OpenRouter prefix is "z-ai", not "zhipuai")
     "glm-4.5": ModelConfig(
         model_id="z-ai/glm-4.5",

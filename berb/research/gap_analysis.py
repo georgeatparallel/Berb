@@ -160,6 +160,22 @@ class GapAnalysisConfig(BaseModel):
     llm_provider: LLMProvider | None = None
 
 
+class PerspectiveResult(BaseModel):
+    """Result of running a single reasoning perspective over a problem.
+
+    Attributes:
+        perspective_type: Which perspective produced this result
+        content: The perspective's raw output text
+        reasoning: The perspective's stated reasoning, if any
+        confidence: Self-reported confidence in [0, 1]
+    """
+
+    perspective_type: PerspectiveType
+    content: str = ""
+    reasoning: str = ""
+    confidence: float = 0.0
+
+
 class ResearchGapAnalyzer:
     """Systematic research gap analyzer using multi-perspective reasoning.
 

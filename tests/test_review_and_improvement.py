@@ -8,10 +8,7 @@ Cross-model review and improvement loop tests removed (modules deleted in F1).
 
 from __future__ import annotations
 
-import pytest
-
 from berb.integrity import ClaimManifest, ClaimRecord, ClaimType, ClaimVerdict
-from berb.integrity.claims import ClaimRecord as ClaimRecordClass
 
 
 class TestClaimVerdict:
@@ -75,11 +72,13 @@ class TestClaimRecord:
 
     def test_claim_record_unknown_type_fallback(self):
         """Test that unknown type falls back gracefully."""
-        record = ClaimRecord.from_dict({
-            "claim_id": "test-3",
-            "text": "Fallback test",
-            "claim_type": "nonexistent",
-        })
+        record = ClaimRecord.from_dict(
+            {
+                "claim_id": "test-3",
+                "text": "Fallback test",
+                "claim_type": "nonexistent",
+            }
+        )
         assert record.claim_type == ClaimType.UNKNOWN
 
 
@@ -120,40 +119,53 @@ class TestClaimManifest:
     def test_supported_count(self):
         """Test counting supported claims."""
         manifest = ClaimManifest(paper_stage="draft")
-        manifest.add_claim(ClaimRecord(
-            claim_id="c-1", text="Supported",
-            claim_type=ClaimType.EMPIRICAL,
-            verdict=ClaimVerdict.SUPPORTED,
-        ))
-        manifest.add_claim(ClaimRecord(
-            claim_id="c-2", text="Unsupported",
-            claim_type=ClaimType.EMPIRICAL,
-            verdict=ClaimVerdict.UNSUPPORTED,
-        ))
-        manifest.add_claim(ClaimRecord(
-            claim_id="c-3", text="Not checked",
-            claim_type=ClaimType.EMPIRICAL,
-        ))
+        manifest.add_claim(
+            ClaimRecord(
+                claim_id="c-1",
+                text="Supported",
+                claim_type=ClaimType.EMPIRICAL,
+                verdict=ClaimVerdict.SUPPORTED,
+            )
+        )
+        manifest.add_claim(
+            ClaimRecord(
+                claim_id="c-2",
+                text="Unsupported",
+                claim_type=ClaimType.EMPIRICAL,
+                verdict=ClaimVerdict.UNSUPPORTED,
+            )
+        )
+        manifest.add_claim(
+            ClaimRecord(
+                claim_id="c-3",
+                text="Not checked",
+                claim_type=ClaimType.EMPIRICAL,
+            )
+        )
         assert manifest.supported_claims == 1
         assert manifest.unsupported_claims == 1
 
     def test_manifest_round_trip(self):
         """Test ClaimManifest JSON round-trip."""
         manifest = ClaimManifest(paper_stage="draft")
-        manifest.add_claim(ClaimRecord(
-            claim_id="c-1", text="Claim 1",
-            claim_type=ClaimType.EMPIRICAL,
-            verdict=ClaimVerdict.SUPPORTED,
-        ))
-        manifest.add_claim(ClaimRecord(
-            claim_id="c-2", text="Claim 2",
-            claim_type=ClaimType.COMPARATIVE,
-            verdict=ClaimVerdict.UNSUPPORTED,
-        ))
-        json_str = manifest.to_json()
-        restored = ClaimManifest.from_dict(
-            __import__("json").loads(json_str)
+        manifest.add_claim(
+            ClaimRecord(
+                claim_id="c-1",
+                text="Claim 1",
+                claim_type=ClaimType.EMPIRICAL,
+                verdict=ClaimVerdict.SUPPORTED,
+            )
         )
+        manifest.add_claim(
+            ClaimRecord(
+                claim_id="c-2",
+                text="Claim 2",
+                claim_type=ClaimType.COMPARATIVE,
+                verdict=ClaimVerdict.UNSUPPORTED,
+            )
+        )
+        json_str = manifest.to_json()
+        restored = ClaimManifest.from_dict(__import__("json").loads(json_str))
         assert restored.paper_stage == "draft"
         assert restored.total_claims == 2
         assert restored.supported_claims == 1
@@ -161,10 +173,13 @@ class TestClaimManifest:
     def test_manifest_load_save(self, tmp_path):
         """Test ClaimManifest.save() and .load()."""
         manifest = ClaimManifest(paper_stage="draft")
-        manifest.add_claim(ClaimRecord(
-            claim_id="c-1", text="File test",
-            claim_type=ClaimType.NOVELTY,
-        ))
+        manifest.add_claim(
+            ClaimRecord(
+                claim_id="c-1",
+                text="File test",
+                claim_type=ClaimType.NOVELTY,
+            )
+        )
         path = tmp_path / "test_manifest.json"
         manifest.save(str(path))
         assert path.exists()

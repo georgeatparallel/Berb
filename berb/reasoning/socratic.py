@@ -441,9 +441,7 @@ class FalsificationCritic:
 
         ctx_str = ""
         if context:
-            ctx_str = "\nContext:\n" + "\n".join(
-                f"  {k}: {v}" for k, v in context.items()
-            )
+            ctx_str = "\nContext:\n" + "\n".join(f"  {k}: {v}" for k, v in context.items())
 
         prompt = f"""You are an interrogative critic.  Your ONLY job is to find flaws in the
 hypothesis below.  You MUST NOT propose alternatives, improvements, or

@@ -689,6 +689,15 @@ class TestSharedResearchMemoryConcurrency:
         """
         import threading
 
+        # These are thread barriers, not measurements, so they are sized to
+        # never fire under `pytest -n auto` contention. The one constraint that
+        # matters is ACQUIRE < PAUSE: with the bug present the writer holds the
+        # lock for the whole pause window, so the checker must give up first.
+        # Raising ACQUIRE above PAUSE would make the buggy case pass.
+        pause_sec = 30.0
+        acquire_sec = 5.0
+        join_sec = 60.0
+
         mem = self._make_memory(tmp_path=tmp_path)
 
         io_started = threading.Event()
@@ -700,17 +709,20 @@ class TestSharedResearchMemoryConcurrency:
         def pausing_save(snapshot=None):
             # Signal that disk I/O has begun, then wait for the checker.
             io_started.set()
-            io_can_finish.wait(timeout=2.0)
+            io_can_finish.wait(timeout=pause_sec)
             original_save(snapshot)
 
         mem._save_to_disk = pausing_save
 
         def checker():
-            io_started.wait(timeout=2.0)
+            if not io_started.wait(timeout=pause_sec):
+                # Never entered _save_to_disk, so the lock state proves nothing.
+                io_can_finish.set()
+                return
             # Attempt to acquire the lock from a different thread.
             # RLock from a DIFFERENT thread behaves like a regular lock —
             # it will block if the writer_thread holds it.
-            acquired = mem._sync_lock.acquire(blocking=True, timeout=0.2)
+            acquired = mem._sync_lock.acquire(blocking=True, timeout=acquire_sec)
             if acquired:
                 lock_was_free_during_io.set()
                 mem._sync_lock.release()
@@ -721,9 +733,13 @@ class TestSharedResearchMemoryConcurrency:
 
         checker_thread.start()
         writer_thread.start()
-        writer_thread.join(timeout=3)
-        checker_thread.join(timeout=3)
+        writer_thread.join(timeout=join_sec)
+        checker_thread.join(timeout=join_sec)
 
+        assert io_started.is_set(), (
+            "_save_to_disk was never entered — the lock check below never ran, "
+            "so this test would otherwise pass without proving anything."
+        )
         assert lock_was_free_during_io.is_set(), (
             "Lock was held during _save_to_disk — disk I/O is still inside the "
             "critical section (BUG-002 not fixed)."

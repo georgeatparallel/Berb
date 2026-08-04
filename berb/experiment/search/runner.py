@@ -10,9 +10,9 @@ import asyncio
 import logging
 import time
 import uuid
-from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any, Callable
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Any
 
 from berb.experiment.journal import ExperimentJournal, JournalNode
 from berb.experiment.search.policy import SearchConfig, SearchPolicy
@@ -72,7 +72,9 @@ class BudgetGovernor:
         """
         elapsed = time.monotonic() - self._start_time
         if elapsed > self._config.budget_wallclock_sec:
-            return f"wallclock budget exceeded ({elapsed:.0f}s > {self._config.budget_wallclock_sec}s)"
+            return (
+                f"wallclock budget exceeded ({elapsed:.0f}s > {self._config.budget_wallclock_sec}s)"
+            )
 
         total_cost = self._cost_tracker.total_usd()
         if total_cost > self._config.budget_usd:
@@ -347,12 +349,14 @@ class SearchRunner:
                     node.metrics.update(parsed)
                     node.result_source = "stdout_fallback"
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             node.returncode = -1
             node.stderr = "Timed out"
             node.timed_out = True
             node.is_buggy = True
-            logger.warning("Node %s timed out after %ds", node.node_id[:8], self._config.eval_timeout_sec)
+            logger.warning(
+                "Node %s timed out after %ds", node.node_id[:8], self._config.eval_timeout_sec
+            )
 
         except Exception as e:
             node.returncode = -1
@@ -405,9 +409,7 @@ class SearchRunner:
         if hasattr(sandbox, "run"):
             return await sandbox.run()
 
-        raise NotImplementedError(
-            f"Sandbox {type(sandbox).__name__} does not support run()"
-        )
+        raise NotImplementedError(f"Sandbox {type(sandbox).__name__} does not support run()")
 
     def _parse_metrics_from_stdout(self, stdout: str) -> dict[str, float]:
         """Parse metrics from stdout fallback.

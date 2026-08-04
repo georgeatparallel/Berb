@@ -204,9 +204,7 @@ def _resolve_upload_args(args: argparse.Namespace) -> list[Path]:
     if upload_dir:
         d = Path(upload_dir)
         if d.is_dir():
-            raw_paths.extend(
-                str(p.resolve()) for p in d.iterdir() if p.is_file()
-            )
+            raw_paths.extend(str(p.resolve()) for p in d.iterdir() if p.is_file())
         else:
             print(f"Warning: --upload-dir not found: {upload_dir}", file=sys.stderr)
 
@@ -273,7 +271,9 @@ def cmd_run(args: argparse.Namespace) -> int:
     if uploaded:
         import dataclasses as _dc_ul
 
-        new_research = _dc_ul.replace(config.research, uploaded_file_paths=tuple(str(p) for p in uploaded))
+        new_research = _dc_ul.replace(
+            config.research, uploaded_file_paths=tuple(str(p) for p in uploaded)
+        )
         config = _dc_ul.replace(config, research=new_research)
         print(f"Including {len(uploaded)} uploaded file(s) in pipeline.")
 

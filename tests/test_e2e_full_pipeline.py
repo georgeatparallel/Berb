@@ -1069,6 +1069,23 @@ class TestPhaseF_AnalysisDecision:
                 runs_dir = stage_dir / "runs"
                 runs_dir.mkdir(parents=True, exist_ok=True)
                 (runs_dir / "run-1.json").write_text('{"status": "completed"}', encoding="utf-8")
+            elif i == 13:
+                # RESULT_ANALYSIS requires selection_bias.json as an input
+                # (produced by ITERATIVE_REFINE — see contracts.py).
+                (stage_dir / "selection_bias.json").write_text(
+                    json.dumps(
+                        {
+                            "metric_key": "accuracy",
+                            "metric_select": 0.85,
+                            "metric_rank": 0.85,
+                            "metric_report": None,
+                            "n_candidates": 1,
+                            "test_evaluations": 0,
+                            "split_available": True,
+                        }
+                    ),
+                    encoding="utf-8",
+                )
             else:
                 (stage_dir / f"artifact-{i}.md").write_text(f"# Artifact {i}", encoding="utf-8")
 

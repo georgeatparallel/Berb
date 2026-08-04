@@ -17,6 +17,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from berb.pipeline.stages import Stage
+from berb.utils.atomic import replace_with_retry
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +83,7 @@ def write_checkpoint(run_dir: Path, stage: Stage, run_id: str) -> None:
             fh.flush()
             os.fsync(fh.fileno())
 
-        Path(tmp_path).replace(target)
+        replace_with_retry(Path(tmp_path), target)
 
         if hasattr(os, "O_DIRECTORY"):
             dir_fd = os.open(run_dir, os.O_RDONLY | os.O_DIRECTORY)

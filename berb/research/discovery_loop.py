@@ -28,15 +28,12 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
 
 from berb.research.world_model import (
     Contradiction,
     DeadEnd,
     Finding,
-    FindingVerdict,
     Guidance,
     Question,
     WorldModel,
@@ -166,18 +163,14 @@ def reflect(world: WorldModel) -> Guidance:
 
     # Confounds: contradictions that remain unresolved
     for c in world.contradictions[:3]:
-        confounds.append(
-            f"Unresolved contradiction: {c.description}"
-        )
+        confounds.append(f"Unresolved contradiction: {c.description}")
 
     # Compound hypotheses: combine two established findings
     if len(world.established) >= 2:
         for i in range(min(2, len(world.established) - 1)):
             a = world.established[i]
             b = world.established[i + 1]
-            compound.append(
-                f"Combine '{a.statement[:50]}...' with '{b.statement[:50]}...'"
-            )
+            compound.append(f"Combine '{a.statement[:50]}...' with '{b.statement[:50]}...'")
 
     return Guidance(gaps=gaps, confounds=confounds, compound_hypotheses=compound)
 
@@ -247,11 +240,13 @@ class DiscoveryLoop:
             for t in tasks:
                 logger.info("E2:   Task: %s", t[:100])
                 # Placeholder: each task records a dead end until wired
-                new_dead_ends.append(DeadEnd(
-                    description=t,
-                    reason="Task execution not yet wired into pipeline (E2 stub)",
-                    source_cycle=cycle,
-                ))
+                new_dead_ends.append(
+                    DeadEnd(
+                        description=t,
+                        reason="Task execution not yet wired into pipeline (E2 stub)",
+                        source_cycle=cycle,
+                    )
+                )
 
             cycle_wall = __import__("time").time() - cycle_start
 
@@ -259,8 +254,11 @@ class DiscoveryLoop:
             cycle_guidance: Guidance | None = None
             if cycle % self.config.reflect_every == 0:
                 cycle_guidance = reflect(self.wm)
-                logger.info("E2: REFLECT produced %d gaps, %d confounds",
-                            len(cycle_guidance.gaps), len(cycle_guidance.confounds))
+                logger.info(
+                    "E2: REFLECT produced %d gaps, %d confounds",
+                    len(cycle_guidance.gaps),
+                    len(cycle_guidance.confounds),
+                )
                 self.wm.guidance = cycle_guidance
 
             # --- Update world model ---

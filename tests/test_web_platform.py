@@ -18,6 +18,24 @@ import pytest
 # ---------------------------------------------------------------------------
 
 
+def _minimal_config_data(**overrides: object) -> dict:
+    """Minimal valid RCConfig.from_dict() input, with optional top-level overrides."""
+    data = {
+        "project": {"name": "test"},
+        "research": {"topic": "test topic"},
+        "runtime": {"timezone": "UTC"},
+        "notifications": {"channel": "console"},
+        "knowledge_base": {"root": "knowledge"},
+        "llm": {
+            "provider": "openai-compatible",
+            "base_url": "http://localhost",
+            "api_key_env": "TEST_KEY",
+        },
+    }
+    data.update(overrides)
+    return data
+
+
 class TestServerConfig:
     """Test ServerConfig and DashboardConfig in config.py."""
 
@@ -75,24 +93,56 @@ class TestServerConfig:
         assert cfg.refresh_interval_sec == 10
         assert cfg.max_log_lines == 500
 
+    def test_parse_server_config_empty_cors_is_deny_all(self) -> None:
+        # P0 fix: the parser used to substitute cors=("*",) when cors_origins was
+        # omitted, silently widening the ServerConfig(cors_origins=()) default.
+        from berb.config import _parse_server_config
+
+        cfg = _parse_server_config({})
+        assert cfg.cors_origins == ()
+
+    def test_rcconfig_rejects_nonloopback_host_without_auth_token(self) -> None:
+        # P0 fix (audit §3.1): a server.host that isn't loopback with no
+        # auth_token must be rejected, not silently started unauthenticated.
+        from berb.config import RCConfig
+
+        data = _minimal_config_data(server={"enabled": True, "host": "0.0.0.0"})
+        with pytest.raises(ValueError, match="SECURITY VIOLATION"):
+            RCConfig.from_dict(data, check_paths=False)
+
+    def test_rcconfig_allows_nonloopback_host_with_auth_token(self) -> None:
+        from berb.config import RCConfig
+
+        data = _minimal_config_data(
+            server={"enabled": True, "host": "0.0.0.0", "auth_token": "secret123"}
+        )
+        cfg = RCConfig.from_dict(data, check_paths=False)
+        assert cfg.server.host == "0.0.0.0"
+        assert cfg.server.auth_token == "secret123"
+
+    def test_rcconfig_allows_nonloopback_host_with_explicit_insecure_opt_out(self) -> None:
+        from berb.config import RCConfig
+
+        data = _minimal_config_data(server={"enabled": True, "host": "0.0.0.0", "insecure": True})
+        cfg = RCConfig.from_dict(data, check_paths=False)
+        assert cfg.server.host == "0.0.0.0"
+        assert cfg.server.insecure is True
+
+    def test_rcconfig_allows_disabled_server_with_nonloopback_host(self) -> None:
+        # The validation only applies when the server is actually enabled.
+        from berb.config import RCConfig
+
+        data = _minimal_config_data(server={"enabled": False, "host": "0.0.0.0"})
+        cfg = RCConfig.from_dict(data, check_paths=False)
+        assert cfg.server.host == "0.0.0.0"
+
     def test_rcconfig_has_server_and_dashboard(self) -> None:
         from berb.config import DashboardConfig, RCConfig, ServerConfig
 
-        # Build minimal valid config dict
-        data = {
-            "project": {"name": "test"},
-            "research": {"topic": "test topic"},
-            "runtime": {"timezone": "UTC"},
-            "notifications": {"channel": "console"},
-            "knowledge_base": {"root": "knowledge"},
-            "llm": {
-                "provider": "openai-compatible",
-                "base_url": "http://localhost",
-                "api_key_env": "TEST_KEY",
-            },
-            "server": {"enabled": True, "port": 9999},
-            "dashboard": {"refresh_interval_sec": 3},
-        }
+        data = _minimal_config_data(
+            server={"enabled": True, "port": 9999},
+            dashboard={"refresh_interval_sec": 3},
+        )
         cfg = RCConfig.from_dict(data, check_paths=False)
         assert isinstance(cfg.server, ServerConfig)
         assert cfg.server.enabled is True
@@ -682,3 +732,99 @@ class TestFastAPIApp:
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             resp = await ac.post("/api/pipeline/stop")
             assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# TokenAuthMiddleware — pure-ASGI auth covering both HTTP and WebSocket scopes
+# (audit §3.2: BaseHTTPMiddleware never saw "websocket" scopes, so /ws/events
+# was unauthenticated even with a token configured)
+# ---------------------------------------------------------------------------
+
+
+class TestTokenAuthMiddleware:
+    """Test TokenAuthMiddleware against a real app with auth_token configured."""
+
+    @pytest.fixture
+    def _skip_if_no_fastapi(self) -> None:
+        try:
+            import fastapi  # noqa: F401
+            import httpx  # noqa: F401
+        except ImportError:
+            pytest.skip("fastapi/httpx not installed")
+
+    @pytest.fixture
+    def app(self, _skip_if_no_fastapi: None) -> object:
+        from berb.config import RCConfig
+        from berb.server.app import create_app
+
+        data = _minimal_config_data(
+            server={"enabled": True, "host": "127.0.0.1", "auth_token": "secret123"}
+        )
+        config = RCConfig.from_dict(data, check_paths=False)
+        return create_app(config)
+
+    @pytest.mark.asyncio
+    async def test_health_exempt_without_token(self, app: object) -> None:
+        from httpx import ASGITransport, AsyncClient
+
+        transport = ASGITransport(app=app)  # type: ignore[arg-type]
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            resp = await ac.get("/api/health")
+            assert resp.status_code == 200
+
+    @pytest.mark.asyncio
+    async def test_config_rejected_without_token(self, app: object) -> None:
+        from httpx import ASGITransport, AsyncClient
+
+        transport = ASGITransport(app=app)  # type: ignore[arg-type]
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            resp = await ac.get("/api/config")
+            assert resp.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_config_rejected_with_wrong_token(self, app: object) -> None:
+        from httpx import ASGITransport, AsyncClient
+
+        transport = ASGITransport(app=app)  # type: ignore[arg-type]
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            resp = await ac.get("/api/config", headers={"authorization": "Bearer wrong"})
+            assert resp.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_config_allowed_with_correct_token(self, app: object) -> None:
+        from httpx import ASGITransport, AsyncClient
+
+        transport = ASGITransport(app=app)  # type: ignore[arg-type]
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            resp = await ac.get("/api/config", headers={"authorization": "Bearer secret123"})
+            assert resp.status_code == 200
+
+    @pytest.mark.asyncio
+    async def test_docs_no_longer_exempt(self, app: object) -> None:
+        # audit §3.2: /docs used to be hardcoded-exempt, publishing the full
+        # API surface pre-auth. It must now require the token like any route.
+        from httpx import ASGITransport, AsyncClient
+
+        transport = ASGITransport(app=app)  # type: ignore[arg-type]
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            resp = await ac.get("/docs")
+            assert resp.status_code == 401
+
+    def test_websocket_rejected_without_token(self, app: object) -> None:
+        from starlette.testclient import TestClient
+        from starlette.websockets import WebSocketDisconnect
+
+        client = TestClient(app)  # type: ignore[arg-type]
+        with pytest.raises(WebSocketDisconnect) as exc_info:
+            with client.websocket_connect("/ws/events"):
+                pass
+        assert exc_info.value.code == 4401
+
+    def test_websocket_accepted_with_correct_token(self, app: object) -> None:
+        from starlette.testclient import TestClient
+
+        client = TestClient(app)  # type: ignore[arg-type]
+        with client.websocket_connect("/ws/events?token=secret123") as ws:
+            # A successful handshake is the assertion — the server accepted
+            # the connection instead of closing it with code 4401.
+            ws.close()

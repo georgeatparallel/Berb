@@ -266,11 +266,10 @@ Configuration panel:
 ### Running the Backend
 
 ```bash
-cd berb/api
-python -m berb.api.server
+berb serve --config config.yaml
 ```
 
-The server runs on `http://127.0.0.1:8000`.
+The server runs on `http://127.0.0.1:8080` by default (see `server.host`/`server.port` in your config).
 
 ## Integration Points
 
@@ -305,8 +304,7 @@ New workflow commands in `berb/cli.py`:
 ### 1. Start Backend
 
 ```bash
-cd berb/api
-python -m berb.api.server
+berb serve --config config.yaml
 ```
 
 ### 2. Start Frontend
@@ -333,7 +331,7 @@ npm test
 ### Backend Tests
 
 ```bash
-pytest tests/test_api_server.py
+pytest tests/test_web_platform.py
 ```
 
 ## Deployment
@@ -375,18 +373,16 @@ The `dist/` directory can be deployed to:
 npm run dev -- --port 3001
 
 # Change FastAPI port
-uvicorn berb.api.server:app --host 127.0.0.1 --port 8001
+berb serve --config config.yaml --port 8001
 ```
 
 ### CORS Errors
 
-Ensure backend allows origins:
-```python
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
-    ...
-)
+Set `server.cors_origins` in your config file:
+```yaml
+server:
+  cors_origins:
+    - "http://localhost:3000"
 ```
 
 ### Build Errors

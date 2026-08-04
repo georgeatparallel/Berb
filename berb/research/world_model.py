@@ -10,19 +10,18 @@ contradictions that steer the next cycle's hypothesis generation.
 
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Supporting types
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-class FindingVerdict(str, Enum):
+class FindingVerdict(StrEnum):
     """Whether a finding was empirically supported or refuted."""
+
     SUPPORTED = "supported"
     REFUTED = "refuted"
 
@@ -30,6 +29,7 @@ class FindingVerdict(str, Enum):
 @dataclass(frozen=True)
 class Finding:
     """A single empirical or literature finding."""
+
     id: str
     statement: str
     verdict: FindingVerdict
@@ -41,6 +41,7 @@ class Finding:
 @dataclass(frozen=True)
 class Question:
     """An open research question."""
+
     id: str
     text: str
     priority: float = 0.5
@@ -50,6 +51,7 @@ class Question:
 @dataclass(frozen=True)
 class Contradiction:
     """Two findings that cannot both be true."""
+
     finding_a_id: str
     finding_b_id: str
     description: str
@@ -58,6 +60,7 @@ class Contradiction:
 @dataclass(frozen=True)
 class DeadEnd:
     """A path that was explored and found unproductive."""
+
     description: str
     reason: str
     source_cycle: int = 1
@@ -66,6 +69,7 @@ class DeadEnd:
 @dataclass
 class Guidance:
     """Strategic guidance produced by the REFLECT step."""
+
     gaps: list[str] = field(default_factory=list)
     confounds: list[str] = field(default_factory=list)
     compound_hypotheses: list[str] = field(default_factory=list)
@@ -182,16 +186,12 @@ class WorldModel:
 
         # 1. Follow up on contradictions
         for c in self.contradictions[:k]:
-            tasks.append(
-                f"Resolve contradiction: {c.description}"
-            )
+            tasks.append(f"Resolve contradiction: {c.description}")
 
         # 2. Pursue high-priority open questions
         sorted_qs = sorted(self.open_questions, key=lambda q: q.priority, reverse=True)
         for q in sorted_qs[:k]:
-            tasks.append(
-                f"Investigate: {q.text}"
-            )
+            tasks.append(f"Investigate: {q.text}")
 
         # 3. Follow guidance if available
         if self.guidance:
@@ -200,15 +200,11 @@ class WorldModel:
 
         # 4. Fallback: propose from best explanation
         if not tasks and self.current_best_explanation:
-            tasks.append(
-                f"Strengthen or challenge: {self.current_best_explanation[:200]}"
-            )
+            tasks.append(f"Strengthen or challenge: {self.current_best_explanation[:200]}")
 
         # 5. Last resort: generic exploration
         if not tasks:
-            tasks.append(
-                f"Explore new directions for: {self.objective[:200]}"
-            )
+            tasks.append(f"Explore new directions for: {self.objective[:200]}")
 
         return tasks[:k]
 

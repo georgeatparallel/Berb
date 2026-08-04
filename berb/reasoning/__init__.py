@@ -98,10 +98,10 @@ from berb.reasoning.scientific import (
     Hypothesis as ScientificHypothesis,
 )
 from berb.reasoning.socratic import (
+    FalsificationCritic,
     SocraticMethod,
     SocraticQuestion,
     SocraticResult,
-    FalsificationCritic,
 )
 
 __all__ = [
