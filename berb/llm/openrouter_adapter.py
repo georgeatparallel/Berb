@@ -2836,8 +2836,10 @@ OPENROUTER_MODELS: dict[str, OpenRouterModel] = {
         id="openrouter/auto",
         name="Auto Router",
         provider="openrouter",
-        input_price=-1000000.0,
-        output_price=-1000000.0,
+        # Dynamic router with no fixed underlying price; 0.0 avoids a negative
+        # cost since OpenRouterModel.input_price/output_price is a plain float.
+        input_price=0.0,
+        output_price=0.0,
         context_length=2000000,
         supports_vision=True,
         tier="budget",
@@ -2846,8 +2848,10 @@ OPENROUTER_MODELS: dict[str, OpenRouterModel] = {
         id="openrouter/auto-beta",
         name="Auto Router (Beta)",
         provider="openrouter",
-        input_price=-1000000.0,
-        output_price=-1000000.0,
+        # Dynamic router with no fixed underlying price; 0.0 avoids a negative
+        # cost since OpenRouterModel.input_price/output_price is a plain float.
+        input_price=0.0,
+        output_price=0.0,
         context_length=2000000,
         supports_vision=True,
         tier="budget",
@@ -2856,8 +2860,10 @@ OPENROUTER_MODELS: dict[str, OpenRouterModel] = {
         id="openrouter/bodybuilder",
         name="Body Builder (beta)",
         provider="openrouter",
-        input_price=-1000000.0,
-        output_price=-1000000.0,
+        # Dynamic router with no fixed underlying price; 0.0 avoids a negative
+        # cost since OpenRouterModel.input_price/output_price is a plain float.
+        input_price=0.0,
+        output_price=0.0,
         context_length=128000,
         supports_json=False,
         tier="budget",
@@ -2876,8 +2882,10 @@ OPENROUTER_MODELS: dict[str, OpenRouterModel] = {
         id="openrouter/fusion",
         name="Fusion",
         provider="openrouter",
-        input_price=-1000000.0,
-        output_price=-1000000.0,
+        # Dynamic router with no fixed underlying price; 0.0 avoids a negative
+        # cost since OpenRouterModel.input_price/output_price is a plain float.
+        input_price=0.0,
+        output_price=0.0,
         context_length=1000000,
         supports_json=False,
         tier="budget",
@@ -2886,8 +2894,10 @@ OPENROUTER_MODELS: dict[str, OpenRouterModel] = {
         id="openrouter/pareto-code",
         name="Pareto Code Router",
         provider="openrouter",
-        input_price=-1000000.0,
-        output_price=-1000000.0,
+        # Dynamic router with no fixed underlying price; 0.0 avoids a negative
+        # cost since OpenRouterModel.input_price/output_price is a plain float.
+        input_price=0.0,
+        output_price=0.0,
         context_length=2000000,
         supports_json=False,
         tier="budget",

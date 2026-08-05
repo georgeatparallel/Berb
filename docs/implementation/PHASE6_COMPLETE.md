@@ -1,5 +1,10 @@
 # Phase 6 Implementation Complete
 
+> **Superseded 2026-08-04.** `berb.domains.physics` and `berb.domains.chaos`
+> were deleted (D-01): deprecated 2026-07-19, zero production callers. The code
+> samples below no longer import. Kept as a historical record of what was built;
+> recover the modules from git history if a caller ever materialises.
+
 **Date:** 2026-03-28  
 **Session:** Phase 6 Physics Domain Integration  
 **Status:** ✅ **COMPLETE**

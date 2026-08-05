@@ -1,7 +1,0 @@
-{
-  "query": "Test research topic",
-  "source": "openalex",
-  "limit": 15,
-  "timestamp": 1782980673.334975,
-  "papers": []
-}

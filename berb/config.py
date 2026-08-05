@@ -103,6 +103,22 @@ EXPERIMENT_MODES = {
 }
 CLI_AGENT_PROVIDERS = {"llm", "claude_code", "codex"}
 
+# Config sections that parse into a dataclass but that no code reads. Setting
+# them has no effect, which is worse than an unknown key: the pipeline reports
+# success and silently does nothing. Warn instead of failing, so existing
+# configs keep loading. Remove an entry here the moment its section gains a
+# real consumer (grep for `config.<section>.` to confirm).
+UNWIRED_CONFIG_SECTIONS = {
+    "memory": "berb/memory/ is implemented but nothing constructs it",
+    "skills": "berb/skills/ has no importer on any pipeline path",
+    "knowledge_graph": "berb/knowledge/graph/ has no importer",
+    "quality_assessor": "berb/assessor/ has no importer",
+    "calendar": "no deadline-calendar consumer exists",
+    "copilot": "berb/copilot/ has no importer",
+    "mcp": "berb/mcp/ ships its own settings; nothing reads config.mcp",
+    "compute_servers": "berb/servers/ has no importer on any pipeline path",
+}
+
 
 def _get_by_path(data: dict[str, Any], dotted_key: str) -> Any:
     cur: Any = data
@@ -902,6 +918,15 @@ class RCConfig:
         if not result.ok:
             raise ValueError("; ".join(result.errors))
 
+        # `berb validate` prints these; every other entry point loads config
+        # through here, so log them too rather than dropping them on the floor.
+        if result.warnings:
+            import logging as _cfg_log
+
+            _log = _cfg_log.getLogger(__name__)
+            for warning in result.warnings:
+                _log.warning("%s", warning)
+
         project = data["project"]
         research = data["research"]
         runtime = data["runtime"]
@@ -1069,6 +1094,22 @@ class RCConfig:
         )
 
 
+def validate_server_bind(host: str, auth_token: str | None, insecure: bool) -> str | None:
+    """Return a security-violation message if binding to `host` is unsafe, else None.
+
+    Must be called with the *effective* host — after any CLI ``--host`` override
+    has been applied — since that's what actually gets passed to the server.
+    """
+    if host not in ("127.0.0.1", "localhost", "::1") and _is_blank(auth_token) and not insecure:
+        return (
+            f"SECURITY VIOLATION: server.host is '{host}' (non-loopback) but "
+            "server.auth_token is empty. Set server.auth_token to require "
+            "authentication, bind server.host to 127.0.0.1, or set "
+            "server.insecure: true to explicitly opt out (not recommended)."
+        )
+    return None
+
+
 def validate_config(
     data: dict[str, Any],
     *,
@@ -1136,22 +1177,14 @@ def validate_config(
             )
 
         # Refuse to start an unauthenticated server on a non-loopback interface.
-        server_enabled = _get_by_path(data, "server.enabled")
-        if server_enabled:
-            server_host = str(_get_by_path(data, "server.host") or "127.0.0.1")
-            server_auth_token = _get_by_path(data, "server.auth_token")
-            server_insecure = bool(_get_by_path(data, "server.insecure") or False)
-            if (
-                server_host not in ("127.0.0.1", "localhost", "::1")
-                and _is_blank(server_auth_token)
-                and not server_insecure
-            ):
-                errors.append(
-                    f"SECURITY VIOLATION: server.host is '{server_host}' (non-loopback) but "
-                    "server.auth_token is empty. Set server.auth_token to require "
-                    "authentication, bind server.host to 127.0.0.1, or set "
-                    "server.insecure: true to explicitly opt out (not recommended)."
-                )
+        # Not gated on server.enabled: `berb serve`/`berb dashboard` bind
+        # unconditionally when invoked, regardless of that flag's value.
+        server_host = str(_get_by_path(data, "server.host") or "127.0.0.1")
+        server_auth_token = _get_by_path(data, "server.auth_token")
+        server_insecure = bool(_get_by_path(data, "server.insecure") or False)
+        bind_error = validate_server_bind(server_host, server_auth_token, server_insecure)
+        if bind_error:
+            errors.append(bind_error)
 
     project_mode = _get_by_path(data, "project.mode")
     if not _is_blank(project_mode) and project_mode not in PROJECT_MODES:
@@ -1188,6 +1221,14 @@ def validate_config(
     cli_agent_provider = _get_by_path(data, "experiment.cli_agent.provider")
     if not _is_blank(cli_agent_provider) and cli_agent_provider not in CLI_AGENT_PROVIDERS:
         errors.append(f"Invalid experiment.cli_agent.provider: {cli_agent_provider}")
+
+    for section, reason in UNWIRED_CONFIG_SECTIONS.items():
+        if isinstance(data.get(section), dict) and data[section]:
+            warnings.append(
+                f"CONFIGURATION WARNING: '{section}' is configured but nothing reads it "
+                f"({reason}). These settings have no effect. Remove the section, or "
+                f"track wiring it up before relying on this behaviour."
+            )
 
     kb_root_raw = _get_by_path(data, "knowledge_base.root")
     if check_paths and not _is_blank(kb_root_raw) and project_root is not None:

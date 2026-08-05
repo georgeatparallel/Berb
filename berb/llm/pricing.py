@@ -249,12 +249,11 @@ FALLBACK_PRICING: dict[str, tuple[float, float]] = {
     "openai/o3-mini-high": (1.1, 4.4),
     "openai/o4-mini-high": (1.1, 4.4),
     # openrouter
-    "openrouter/auto": (-1000000.0, -1000000.0),
-    "openrouter/auto-beta": (-1000000.0, -1000000.0),
-    "openrouter/bodybuilder": (-1000000.0, -1000000.0),
+    # auto/auto-beta/bodybuilder/fusion/pareto-code route to a dynamic underlying
+    # model with no fixed price — omitted so get_price() returns None for them
+    # (compute_cost -> None -> record_from_llm_response falls back to cost_usd=0.0
+    # with a warning) instead of recording a negative cost.
     "openrouter/free": (0.0, 0.0),
-    "openrouter/fusion": (-1000000.0, -1000000.0),
-    "openrouter/pareto-code": (-1000000.0, -1000000.0),
     # perceptron
     "perceptron/perceptron-mk1": (0.15, 1.5),
     # poolside

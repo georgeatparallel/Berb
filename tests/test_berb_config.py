@@ -1,3 +1,4 @@
+import dataclasses
 import json
 from pathlib import Path
 from typing import cast
@@ -5,6 +6,7 @@ from typing import cast
 import pytest
 
 from berb.config import (
+    UNWIRED_CONFIG_SECTIONS,
     ExperimentConfig,
     RCConfig,
     SandboxConfig,
@@ -345,3 +347,57 @@ def test_load_uses_file_parent_as_default_project_root(tmp_path: Path):
 
     assert config.project.name == "demo"
     assert config.knowledge_base.root == "docs/kb"
+
+
+class TestUnwiredConfigSections:
+    """Sections that parse but that no code reads must announce themselves.
+
+    A config option that silently does nothing is worse than an unknown key:
+    the user sets `memory.enabled: true`, the run reports success, and nothing
+    was ever stored.
+    """
+
+    def test_no_warning_when_unwired_sections_absent(self, tmp_path: Path):
+        result = validate_config(_valid_config_data(), project_root=tmp_path, check_paths=False)
+
+        assert result.ok is True
+        assert not [w for w in result.warnings if "nothing reads it" in w]
+
+    @pytest.mark.parametrize("section", sorted(UNWIRED_CONFIG_SECTIONS))
+    def test_each_unwired_section_warns_when_set(self, section: str, tmp_path: Path):
+        data = _valid_config_data()
+        data[section] = {"enabled": True}
+
+        result = validate_config(data, project_root=tmp_path, check_paths=False)
+
+        # A warning, never an error — existing configs must keep loading.
+        assert result.ok is True
+        assert any(f"'{section}' is configured but nothing reads it" in w for w in result.warnings)
+
+    def test_empty_section_does_not_warn(self, tmp_path: Path):
+        """`memory: {}` expresses no intent, so it is not a false promise."""
+        data = _valid_config_data()
+        data["memory"] = {}
+
+        result = validate_config(data, project_root=tmp_path, check_paths=False)
+
+        assert not [w for w in result.warnings if "nothing reads it" in w]
+
+    def test_from_dict_logs_warnings_instead_of_dropping_them(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ):
+        data = _valid_config_data()
+        data["skills"] = {"enabled": True}
+
+        with caplog.at_level("WARNING", logger="berb.config"):
+            config = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False)
+
+        assert config.skills.enabled is True  # still parsed, still loadable
+        assert any(
+            "'skills' is configured but nothing reads it" in r.message for r in caplog.records
+        )
+
+    def test_every_listed_section_is_a_real_rcconfig_field(self):
+        """Guards against a typo silencing the check, or a stale entry."""
+        fields = {f.name for f in dataclasses.fields(RCConfig)}
+        assert set(UNWIRED_CONFIG_SECTIONS) <= fields

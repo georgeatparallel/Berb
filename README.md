@@ -41,7 +41,7 @@ The system is built around a modular, event-driven architecture with explicit pi
 Berb automates the research workflow from topic to paper:
 
 1. **Scope** — decomposes a research topic into tractable sub-problems.
-2. **Discover** — searches arXiv, OpenAlex, Semantic Scholar, SearXNG, and grey literature.
+2. **Discover** — searches arXiv, OpenAlex, and Semantic Scholar.
 3. **Synthesize** — extracts knowledge, scores novelty, and generates hypotheses.
 4. **Design** — produces reproducible experiment code and execution plans.
 5. **Execute** — runs experiments in sandbox, Docker, SSH remote, or Colab environments.
@@ -381,7 +381,7 @@ Berb is organized as a hybrid modular monolith with clear layer boundaries:
 ├─────────────────────────────────────────────────────────────┤
 │  Domain:       Literature · Experiment · Writing · Review   │
 ├─────────────────────────────────────────────────────────────┤
-│  Integration:  LLM Providers · SearXNG · MCP · Bridges      │
+│  Integration:  LLM Providers · Scholarly APIs · MCP · Bridges│
 ├─────────────────────────────────────────────────────────────┤
 │  Infrastructure: SQLite · File Cache · External APIs        │
 └─────────────────────────────────────────────────────────────┘
@@ -420,19 +420,26 @@ Stage definitions live in `berb/pipeline/stages.py`; implementations are in `ber
 
 ## Key Subsystems
 
-| Module | Responsibility |
-|--------|---------------|
-| `berb/pipeline/` | Stage definitions, orchestration, checkpointing, execution, tracing |
-| `berb/llm/` | Provider clients, model routing, cascading fallbacks, cost tracking, retry logic |
-| `berb/literature/` | arXiv, OpenAlex, Semantic Scholar, SearXNG, grey literature, novelty scoring |
-| `berb/experiment/` | Sandboxed code execution, Docker/SSH/Colab backends, self-correcting simulation |
-| `berb/agents/` | Benchmark agent, code-search agent, figure critique agent |
-| `berb/review/` | Multi-reviewer ensemble and automated revision |
-| `berb/writing/` | Paper drafting, citation engine, style polishers, anti-AI editing |
-| `berb/memory/` | Shared memory coordination across stages |
-| `berb/vision/` | VLM-based figure generation and critique |
-| `berb/validation/` | Finding reproduction and verification |
-| `berb/mcp/` | MCP server interface and tool registry |
+| Module | Responsibility | Wired |
+|--------|---------------|-------|
+| `berb/pipeline/` | Stage definitions, orchestration, checkpointing, execution | yes |
+| `berb/llm/` | Provider clients, model routing, cascading fallbacks, cost tracking, retry logic | yes |
+| `berb/literature/` | arXiv, OpenAlex, Semantic Scholar, novelty scoring, PDF ingestion, Zotero | yes |
+| `berb/experiment/` | Sandboxed code execution, Docker/SSH/Colab backends, tree search | yes |
+| `berb/agents/` | Benchmark agent, code-search agent, figure critique agent | yes |
+| `berb/review/` | Multi-reviewer ensemble and automated revision | yes |
+| `berb/writing/` | Paper drafting, citation engine, style polishers, anti-AI editing | yes |
+| `berb/integrity/` | Claim manifests, evidence tracking, finding reproduction | partial |
+| `berb/mcp/` | MCP server interface and tool registry | yes |
+| `berb/memory/` | Shared memory coordination across stages | **no** — no caller |
+| `berb/research/` | Idea scoring, gap analysis, open-ended discovery | **no** — no caller |
+| `berb/vision/` | VLM-based figure generation | **no** — critique runs via `agents/figure_agent/` |
+
+"Wired" means reachable from `berb run` / `berb serve`; check with
+`python scripts/check_reachability.py`. Unwired modules are implemented and
+tested but have no importer on any pipeline path, so they do not run: SearXNG
+search, grey literature, multimodal figure extraction, self-correcting
+simulation, and the auto-debugger are all in this category.
 
 ---
 
@@ -499,9 +506,14 @@ Before deploying in production, review `configs/config.berb.example.yaml`, set e
 
 Completed major workstreams:
 
-- P4 optimizations: reviewer ensemble, parallelized tree search, figure critique, progress management, idea scoring, automated debugging, citation verification, cost-quality optimization
-- P5 enhancements: multimodal literature search, self-correcting simulation, open-ended discovery, finding reproduction, memory-centric coordination
+- P4 optimizations: reviewer ensemble, parallelized tree search, figure critique, citation verification, cost-quality optimization
 - Production hardening: security fixes, concurrency controls, observability, CI/CD, and expanded test coverage
+
+Built but not yet wired into the pipeline (see the Wired column above):
+multimodal literature search, SearXNG and grey-literature search,
+self-correcting simulation, the auto-debugger, open-ended discovery, idea
+scoring, finding reproduction, and memory-centric coordination. These ship as
+libraries with tests; they are not part of a `berb run`.
 
 See [docs/P4_OPTIMIZATION_PLAN.md](docs/P4_OPTIMIZATION_PLAN.md) and [docs/P5_ENHANCEMENT_PLAN.md](docs/P5_ENHANCEMENT_PLAN.md) for detailed plans.
 

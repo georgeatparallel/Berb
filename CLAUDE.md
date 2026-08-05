@@ -41,17 +41,27 @@ Stage definitions live in `berb/pipeline/stages.py`; implementations in `berb/pi
 
 ### Key Subsystems
 
-| Module | Responsibility |
-|--------|---------------|
-| `berb/llm/` | LLM providers, model routing, cost optimization (caching, batching, cascading) |
-| `berb/literature/` | arXiv, OpenAlex, Semantic Scholar, SearXNG, grey literature, multimodal figure extraction |
-| `berb/experiment/` | Sandboxed code execution (local, Docker, SSH, Colab); self-correcting simulation; auto-debugger |
-| `berb/agents/` | Benchmark agent, code searcher, figure critique agent |
-| `berb/review/` | 5-reviewer + Area Chair peer review ensemble |
-| `berb/memory/` | Shared memory coordination across pipeline stages |
-| `berb/research/` | Agentic tree search, idea scoring, open-ended discovery |
-| `berb/vision/` | VLM figure critique and generation (Matplotlib/TikZ) |
-| `berb/validation/` | Finding reproduction and verification |
+Wired = reachable from `berb run` / `berb serve`. Verify with
+`python scripts/check_reachability.py`.
+
+| Module | Responsibility | Wired |
+|--------|---------------|-------|
+| `berb/llm/` | LLM providers, model routing, cost optimization (caching, batching, cascading) | yes |
+| `berb/literature/` | arXiv, OpenAlex, Semantic Scholar, novelty scoring, PDF ingestion, Zotero | yes |
+| `berb/experiment/` | Sandboxed code execution (local, Docker, SSH, Colab), tree search, validation | yes |
+| `berb/agents/` | Benchmark agent, code searcher, figure critique agent | yes |
+| `berb/review/` | 5-reviewer + Area Chair peer review ensemble | yes |
+| `berb/integrity/` | Claim manifests, evidence tracking, finding reproduction | partial — `integrity.eval.finding_reproduction` is unwired |
+| `berb/memory/` | Shared memory coordination across pipeline stages | **no** — implemented and tested, but nothing constructs it |
+| `berb/research/` | Idea scoring, gap analysis, open-ended discovery, world model | **no** — no caller |
+| `berb/vision/` | VLM figure generation (Matplotlib/TikZ) | **no** — figure critique runs via `agents/figure_agent/` instead |
+
+Unwired capabilities that the docs used to claim as live: SearXNG
+(`literature/searxng_client.py`), grey literature (`literature/grey_search.py`),
+multimodal figure extraction (`literature/multimodal_search.py`),
+self-correcting simulation (`experiment/self_correcting.py`), and the
+auto-debugger (`experiment/auto_debugger.py`). All are present and tested but
+have no importer on any pipeline path — they do not run.
 
 ### Bridges (External Integrations)
 
