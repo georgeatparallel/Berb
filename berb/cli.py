@@ -33,6 +33,7 @@ from berb.config import (
     EXAMPLE_CONFIG,
     RCConfig,
     resolve_config_path,
+    validate_server_bind,
 )
 from berb.health import print_doctor_report, run_doctor, write_doctor_report
 
@@ -598,6 +599,11 @@ def cmd_serve(args: argparse.Namespace) -> int:
     host = cast(str, args.host) or config.server.host
     port = int(cast(int, args.port) or config.server.port)
 
+    bind_error = validate_server_bind(host, config.server.auth_token, config.server.insecure)
+    if bind_error:
+        print(f"Error: {bind_error}", file=sys.stderr)
+        return 1
+
     try:
         import uvicorn
 
@@ -624,6 +630,11 @@ def cmd_dashboard(args: argparse.Namespace) -> int:
     config = RCConfig.load(config_path, check_paths=False)
     host = cast(str, args.host) or config.server.host
     port = int(cast(int, args.port) or config.server.port)
+
+    bind_error = validate_server_bind(host, config.server.auth_token, config.server.insecure)
+    if bind_error:
+        print(f"Error: {bind_error}", file=sys.stderr)
+        return 1
 
     try:
         import uvicorn

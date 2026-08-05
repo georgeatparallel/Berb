@@ -734,24 +734,12 @@ models:
   # ===========================================================================
   # OPENROUTER
   # ===========================================================================
-  openrouter/auto:
-    input: -1000000.0
-    output: -1000000.0
-  openrouter/auto-beta:
-    input: -1000000.0
-    output: -1000000.0
-  openrouter/bodybuilder:
-    input: -1000000.0
-    output: -1000000.0
+  # auto/auto-beta/bodybuilder/fusion/pareto-code route to a dynamic underlying
+  # model with no fixed price — omitted so lookups fall back to the unknown-model
+  # path (cost_usd=0.0 with a warning) instead of recording a negative cost.
   openrouter/free:
     input: 0.0
     output: 0.0
-  openrouter/fusion:
-    input: -1000000.0
-    output: -1000000.0
-  openrouter/pareto-code:
-    input: -1000000.0
-    output: -1000000.0
 
   # ===========================================================================
   # PERCEPTRON

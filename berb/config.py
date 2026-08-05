@@ -1094,6 +1094,22 @@ class RCConfig:
         )
 
 
+def validate_server_bind(host: str, auth_token: str | None, insecure: bool) -> str | None:
+    """Return a security-violation message if binding to `host` is unsafe, else None.
+
+    Must be called with the *effective* host — after any CLI ``--host`` override
+    has been applied — since that's what actually gets passed to the server.
+    """
+    if host not in ("127.0.0.1", "localhost", "::1") and _is_blank(auth_token) and not insecure:
+        return (
+            f"SECURITY VIOLATION: server.host is '{host}' (non-loopback) but "
+            "server.auth_token is empty. Set server.auth_token to require "
+            "authentication, bind server.host to 127.0.0.1, or set "
+            "server.insecure: true to explicitly opt out (not recommended)."
+        )
+    return None
+
+
 def validate_config(
     data: dict[str, Any],
     *,
@@ -1161,22 +1177,14 @@ def validate_config(
             )
 
         # Refuse to start an unauthenticated server on a non-loopback interface.
-        server_enabled = _get_by_path(data, "server.enabled")
-        if server_enabled:
-            server_host = str(_get_by_path(data, "server.host") or "127.0.0.1")
-            server_auth_token = _get_by_path(data, "server.auth_token")
-            server_insecure = bool(_get_by_path(data, "server.insecure") or False)
-            if (
-                server_host not in ("127.0.0.1", "localhost", "::1")
-                and _is_blank(server_auth_token)
-                and not server_insecure
-            ):
-                errors.append(
-                    f"SECURITY VIOLATION: server.host is '{server_host}' (non-loopback) but "
-                    "server.auth_token is empty. Set server.auth_token to require "
-                    "authentication, bind server.host to 127.0.0.1, or set "
-                    "server.insecure: true to explicitly opt out (not recommended)."
-                )
+        # Not gated on server.enabled: `berb serve`/`berb dashboard` bind
+        # unconditionally when invoked, regardless of that flag's value.
+        server_host = str(_get_by_path(data, "server.host") or "127.0.0.1")
+        server_auth_token = _get_by_path(data, "server.auth_token")
+        server_insecure = bool(_get_by_path(data, "server.insecure") or False)
+        bind_error = validate_server_bind(server_host, server_auth_token, server_insecure)
+        if bind_error:
+            errors.append(bind_error)
 
     project_mode = _get_by_path(data, "project.mode")
     if not _is_blank(project_mode) and project_mode not in PROJECT_MODES:

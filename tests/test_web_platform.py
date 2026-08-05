@@ -128,13 +128,15 @@ class TestServerConfig:
         assert cfg.server.host == "0.0.0.0"
         assert cfg.server.insecure is True
 
-    def test_rcconfig_allows_disabled_server_with_nonloopback_host(self) -> None:
-        # The validation only applies when the server is actually enabled.
+    def test_rcconfig_rejects_nonloopback_host_even_when_server_disabled(self) -> None:
+        # `berb serve`/`berb dashboard` bind unconditionally when invoked; they
+        # never check config.server.enabled. Gating this validation on that flag
+        # let an unsafe host/auth combo through untouched (PR #9 review finding).
         from berb.config import RCConfig
 
         data = _minimal_config_data(server={"enabled": False, "host": "0.0.0.0"})
-        cfg = RCConfig.from_dict(data, check_paths=False)
-        assert cfg.server.host == "0.0.0.0"
+        with pytest.raises(ValueError, match="SECURITY VIOLATION"):
+            RCConfig.from_dict(data, check_paths=False)
 
     def test_rcconfig_has_server_and_dashboard(self) -> None:
         from berb.config import DashboardConfig, RCConfig, ServerConfig
