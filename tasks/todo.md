@@ -44,10 +44,20 @@ from every generated file, uncapped, *inside* the
 `files[fname]` mutates at :744, so the context differs every attempt — **this
 sink is cache-hostile by construction. Caching cannot fix it. Only capping can.**
 
-- [ ] Send only the failing file + its direct imports, not all files
-- [ ] If sibling context is needed, order it `[other files — stable] + [target file — volatile]` so the stable half becomes cacheable in step 2
-- [ ] Add a hard char/token ceiling on `all_files_ctx` with explicit truncation logging
-- [ ] Check the compounding loops: `code_agent.py:66` `hard_validation_max_repairs=4`, `code_agent.py:69` `exec_fix_max_iterations=3`
+- [x] Send only the failing file + its direct imports, not all files —
+      `_build_repair_context()` in `_code_generation.py:734`
+- [x] If sibling context is needed, order it `[other files — stable] + [target file — volatile]` so the stable half becomes cacheable in step 2 — same helper
+- [x] Add a hard char/token ceiling on `all_files_ctx` with explicit truncation logging — `_REPAIR_CTX_CHAR_LIMIT = 24_000` chars, drop-siblings-then-truncate-target, both paths logged
+- [x] Check the compounding loops: `code_agent.py:66` `hard_validation_max_repairs=4`,
+      `code_agent.py:69` `exec_fix_max_iterations=3` — found `_repair_critical_issues`
+      (called from the `hard_validation_max_repairs` loop) had the identical
+      uncapped-`_format_files(files)` pattern and is on the *primary* CodeAgent
+      path (`_code_generation.py:635`), not a fallback. Fixed with
+      `CodeAgent._format_files_scoped()`. Left two other `_format_files()`
+      call sites alone: `_fix_runtime_error` (:1083) already tries targeted
+      single-file repair first and only falls back to full-file on parse
+      failure; `_phase4_review` (:1338) is a holistic code review, not a
+      targeted repair, so it legitimately needs every file.
 
 ## 2. Wire `berb/llm/prompt_cache.py`
 

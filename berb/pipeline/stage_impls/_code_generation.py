@@ -71,6 +71,67 @@ def _check_rl_compatibility(code: str) -> list[str]:
     return errors
 
 
+# Hard ceiling on repair-prompt context. Keeps a single repair attempt's
+# prompt bounded regardless of how many files the run has generated —
+# without this, all_files_ctx grows with every file and every attempt
+# (see PR review / tasks/todo.md #1).
+_REPAIR_CTX_CHAR_LIMIT = 24_000
+
+
+def _build_repair_context(
+    fname: str, files: dict[str, str], char_limit: int = _REPAIR_CTX_CHAR_LIMIT
+) -> str:
+    """Build the file context sent to the repair LLM call for `fname`.
+
+    Includes only `fname`'s direct local imports (not every generated file),
+    ordered stable-siblings-first and the volatile target file last, so the
+    prefix stays identical across repair attempts and is cache-friendly once
+    prompt caching is wired (tasks/todo.md #2). Enforces `char_limit` with
+    explicit truncation logging rather than growing unbounded.
+    """
+    known_modules = {f[:-3] for f in files if f.endswith(".py")}
+    target_code = files[fname]
+    imported = set(
+        re.findall(r"^(?:from|import)\s+([a-zA-Z_][a-zA-Z0-9_]*)", target_code, re.MULTILINE)
+    )
+    sibling_names = sorted(m for m in imported if m in known_modules and m + ".py" != fname)
+
+    blocks: list[str] = []
+    used = 0
+    for name in sibling_names:
+        sib_fname = f"{name}.py"
+        sib_code = files.get(sib_fname)
+        if sib_code is None:
+            continue
+        block = f"```filename:{sib_fname}\n{sib_code}\n```"
+        if used + len(block) > char_limit:
+            logger.warning(
+                "Repair context for %s: dropping sibling %s — char limit %d reached",
+                fname,
+                sib_fname,
+                char_limit,
+            )
+            continue
+        blocks.append(block)
+        used += len(block)
+
+    target_block = f"```filename:{fname}\n{target_code}\n```"
+    if used + len(target_block) > char_limit:
+        allowed = max(char_limit - used, 0)
+        logger.warning(
+            "Repair context for %s: truncating target file from %d to %d chars — "
+            "char limit %d reached",
+            fname,
+            len(target_block),
+            allowed,
+            char_limit,
+        )
+        target_block = target_block[:allowed]
+    blocks.append(target_block)
+
+    return "\n\n".join(blocks)
+
+
 @register_stage(
     stage=Stage.CODE_GENERATION,
     depends_on=frozenset({Stage.EXPERIMENT_DESIGN}),
@@ -731,7 +792,7 @@ def _execute_code_generation(
                 max_repair,
                 validation.summary(),
             )
-            all_files_ctx = "\n\n".join(f"```filename:{f}\n{c}\n```" for f, c in files.items())
+            all_files_ctx = _build_repair_context(fname, files)
             rp = _pm.sub_prompt(
                 "code_repair",
                 fname=fname,

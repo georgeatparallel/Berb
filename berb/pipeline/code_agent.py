@@ -919,7 +919,12 @@ class CodeAgent:
         if not affected_files:
             affected_files.update(f for f in files if f.endswith(".py"))
 
-        files_ctx = self._format_files(files)
+        # Scope context to the affected files + their direct imports rather
+        # than every generated file — this loop reruns on every hard-
+        # validation attempt (up to hard_validation_max_repairs), so an
+        # uncapped files_ctx compounds with total-files x attempts
+        # (tasks/todo.md #1).
+        files_ctx = self._format_files_scoped(files, affected_files)
         issues_text = "\n".join(f"- {issue}" for issue in critical_issues)
 
         prompt = (
@@ -929,7 +934,7 @@ class CodeAgent:
             f"{issues_text}\n\n"
             "## Architecture Blueprint\n"
             f"{arch_spec[:4000]}\n\n"
-            "## Current Code\n"
+            "## Current Code (affected files + their direct imports)\n"
             f"{files_ctx}\n\n"
             "## Rules\n"
             "1. Fix every critical issue listed above\n"
@@ -938,7 +943,8 @@ class CodeAgent:
             "3. Never hardcode metric values — compute them from actual data\n"
             "4. nn.Module layers must be created in __init__(), not forward()\n"
             "5. All cross-file imports must reference names that actually exist\n"
-            "6. Output ALL files in ```filename:xxx.py``` format\n"
+            "6. Output only the files you changed, each as a "
+            "```filename:xxx.py``` block\n"
         )
 
         sys_prompt = self._pm.system("code_generation")
@@ -1450,6 +1456,67 @@ class CodeAgent:
         from berb.pipeline.executor import _extract_multi_file_blocks
 
         return _extract_multi_file_blocks(content)
+
+    @staticmethod
+    def _format_files_scoped(
+        files: dict[str, str],
+        target_files: set[str],
+        char_limit: int = 24_000,
+    ) -> str:
+        """Format `target_files` plus their direct local imports, capped.
+
+        Used by targeted repair loops (unlike `_format_files`, which sends
+        every generated file — appropriate for a full review pass, but not
+        for a repair loop that reruns per attempt). Non-target siblings are
+        dropped once `char_limit` is reached; target files are always
+        included, truncated if necessary, since they're what's being
+        repaired.
+        """
+        known_modules = {f[:-3] for f in files if f.endswith(".py")}
+        needed = set(target_files)
+        for tname in target_files:
+            code = files.get(tname, "")
+            imported = set(
+                re.findall(r"^(?:from|import)\s+([a-zA-Z_][a-zA-Z0-9_]*)", code, re.MULTILINE)
+            )
+            needed |= {f"{m}.py" for m in imported if m in known_modules}
+
+        stable = sorted(f for f in needed if f in files and f not in target_files)
+        targets = sorted(f for f in needed if f in files and f in target_files)
+
+        blocks: list[str] = []
+        used = 0
+        for fname in stable:
+            code = files[fname]
+            block = f"```filename:{fname}\n{code}\n```"
+            if used + len(block) > char_limit:
+                logger.warning(
+                    "Repair context: dropping sibling %s — char limit %d reached",
+                    fname,
+                    char_limit,
+                )
+                continue
+            blocks.append(block)
+            used += len(block)
+
+        for fname in targets:
+            code = files[fname]
+            block = f"```filename:{fname}\n{code}\n```"
+            if used + len(block) > char_limit:
+                allowed = max(char_limit - used, 0)
+                logger.warning(
+                    "Repair context: truncating target %s from %d to %d chars — "
+                    "char limit %d reached",
+                    fname,
+                    len(block),
+                    allowed,
+                    char_limit,
+                )
+                block = block[:allowed]
+            blocks.append(block)
+            used += len(block)
+
+        return "\n\n".join(blocks)
 
     @staticmethod
     def _format_files(files: dict[str, str]) -> str:
