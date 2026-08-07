@@ -232,6 +232,13 @@ class LlmConfig:
     # Only takes effect when provider == "openrouter"; ignored otherwise.
     provider_routing_order: tuple[str, ...] = ()
     provider_routing_allow_fallbacks: bool = True
+    # Try Anthropic's Message Batches API (50% discount, stacks with
+    # prompt caching) for the review ensemble's 5-persona fan-out before
+    # falling back to normal synchronous calls. Only takes effect when
+    # provider is "anthropic"/"kimi-anthropic" (direct) — OpenRouter has
+    # no verified native batch endpoint. Bounded poll timeout, so worst
+    # case behavior matches disabled.
+    batch_review_enabled: bool = False
     s2_api_key: str = ""
     notes: str = ""
     acp: AcpConfig = field(default_factory=AcpConfig)
@@ -1268,6 +1275,7 @@ def _parse_llm_config(data: dict[str, Any]) -> LlmConfig:
         max_retries=_safe_int(data.get("max_retries"), 3),
         provider_routing_order=tuple(data.get("provider_routing_order") or ()),
         provider_routing_allow_fallbacks=bool(data.get("provider_routing_allow_fallbacks", True)),
+        batch_review_enabled=bool(data.get("batch_review_enabled", False)),
         s2_api_key=data.get("s2_api_key", ""),
         notes=data.get("notes", ""),
         acp=AcpConfig(

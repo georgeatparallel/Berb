@@ -257,6 +257,25 @@ def test_rcconfig_from_dict_provider_routing_defaults(tmp_path: Path):
     assert config.llm.provider_routing_allow_fallbacks is True
 
 
+def test_rcconfig_from_dict_parses_batch_review_enabled(tmp_path: Path):
+    data = _valid_config_data()
+    data["llm"]["batch_review_enabled"] = True
+
+    config = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False)
+
+    assert config.llm.batch_review_enabled is True
+
+
+def test_rcconfig_from_dict_batch_review_enabled_defaults_false(tmp_path: Path):
+    config = RCConfig.from_dict(
+        _valid_config_data(),
+        project_root=tmp_path,
+        check_paths=False,
+    )
+
+    assert config.llm.batch_review_enabled is False
+
+
 def test_rcconfig_from_dict_missing_fields_raises_value_error(tmp_path: Path):
     data = _valid_config_data()
     del data["runtime"]

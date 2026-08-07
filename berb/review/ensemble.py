@@ -236,12 +236,22 @@ class AutomatedReviewerEnsemble:
         self,
         paper_path: str | Path,
         paper_text: str | None = None,
+        *,
+        use_batch: bool = False,
     ) -> list[Review]:
         """Generate 5 independent reviews.
 
         Args:
             paper_path: Path to paper (PDF or LaTeX)
             paper_text: Optional pre-extracted paper text
+            use_batch: Try Anthropic's Message Batches API first (50%
+                discount, stacks with prompt caching — tasks/todo.md #5).
+                Only takes effect when the configured LLM client talks to
+                Anthropic directly (OpenRouter has no verified native
+                batch endpoint, so this is a no-op there). Bounded by a
+                short poll timeout — on timeout or any failure this falls
+                back to the normal per-persona calls below, so worst-case
+                behavior matches use_batch=False.
 
         Returns:
             List of 5 reviews
@@ -252,6 +262,15 @@ class AutomatedReviewerEnsemble:
         if paper_text is None:
             paper_text = self._extract_paper_text(paper_path)
 
+        if use_batch:
+            batch_reviews = await self._review_paper_batch(paper_text)
+            if batch_reviews is not None:
+                logger.info(
+                    f"Generated {len(batch_reviews)} reviews via batch for {paper_path.name}"
+                )
+                return batch_reviews
+            logger.info("Batch review unavailable or timed out — falling back to per-call reviews")
+
         # Generate reviews in parallel
         import asyncio
 
@@ -261,6 +280,156 @@ class AutomatedReviewerEnsemble:
 
         logger.info(f"Generated {len(reviews)} reviews for {paper_path.name}")
         return list(reviews)
+
+    async def _review_paper_batch(
+        self,
+        paper_text: str,
+        *,
+        poll_interval_sec: float = 5.0,
+        max_wait_sec: float = 600.0,
+    ) -> list[Review] | None:
+        """Submit all 5 persona reviews as one Anthropic Message Batch.
+
+        Returns None (never raises) if batch mode isn't available, the
+        submission fails, or the batch doesn't finish within
+        max_wait_sec — every failure mode is a signal for the caller to
+        fall back to the synchronous per-persona path, not an error to
+        propagate. Bounding the wait (rather than trusting the API's 24h
+        SLA) keeps `berb run` from stalling for hours on a slow batch —
+        for a 5-request batch, actual turnaround is normally minutes.
+        """
+        anthropic = getattr(self._llm_client, "_anthropic", None)
+        if anthropic is None:
+            return None
+
+        model = getattr(getattr(self._llm_client, "config", None), "primary_model", None)
+        if not model:
+            return None
+        client_config = self._llm_client.config
+        max_tokens = getattr(client_config, "max_tokens", 4096)
+        temperature = getattr(client_config, "temperature", 0.7)
+
+        if len(paper_text) > 50000:
+            paper_text = paper_text[:50000] + "\n\n[... truncated ...]"
+        cached_prefix = f"PAPER TEXT:\n{paper_text}"
+
+        requests = [
+            {
+                "custom_id": persona.id,
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": persona.system_prompt},
+                    {"role": "user", "content": self._build_review_prompt(persona)},
+                ],
+                "max_tokens": max_tokens,
+                "temperature": temperature,
+                "cached_prefix": cached_prefix,
+                "cache_ttl": "1h",
+            }
+            for persona in self._personas
+        ]
+
+        import asyncio
+
+        try:
+            batch_id = await asyncio.to_thread(anthropic.submit_batch, requests)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Batch submission failed: %s", exc)
+            return None
+
+        elapsed = 0.0
+        results_url: str | None = None
+        while elapsed < max_wait_sec:
+            await asyncio.sleep(poll_interval_sec)
+            elapsed += poll_interval_sec
+            try:
+                status = await asyncio.to_thread(anthropic.get_batch_status, batch_id)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Batch status poll failed: %s", exc)
+                return None
+            if status.get("processing_status") == "ended":
+                results_url = status.get("results_url")
+                break
+        else:
+            logger.warning(
+                "Batch %s did not finish within %ss — falling back", batch_id, max_wait_sec
+            )
+            return None
+
+        if not results_url:
+            return None
+
+        try:
+            raw_results = await asyncio.to_thread(anthropic.fetch_batch_results, results_url)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Batch result fetch failed: %s", exc)
+            return None
+
+        reviews: list[Review] = []
+        for persona in self._personas:
+            entry = raw_results.get(persona.id)
+            content = entry["choices"][0]["message"]["content"] if entry else ""
+            reviews.append(self._parse_review_content(persona, content))
+        return reviews
+
+    @staticmethod
+    def _build_review_prompt(persona: ReviewerPersona) -> str:
+        """The persona-specific user turn — identical between the sync
+        per-call path and the batch path, so results are comparable."""
+        return f"""OUTPUT FORMAT (JSON):
+{{
+    "scores": {{
+        "novelty": <1-10>,
+        "significance": <1-10>,
+        "technical_quality": <1-10>,
+        "experimental_rigor": <1-10>,
+        "clarity": <1-10>,
+        "reproducibility": <1-10>
+    }},
+    "overall_score": <float 1-10>,
+    "decision": "<strong_accept|accept|weak_accept|weak_reject|reject|strong_reject>",
+    "strengths": ["strength 1", "strength 2", ...],
+    "weaknesses": ["weakness 1", "weakness 2", ...],
+    "questions_for_authors": ["question 1", ...],
+    "confidence": <1-5>,
+    "detailed_feedback": "<2-3 paragraphs of detailed review>"
+}}
+
+Focus on your assigned areas: {", ".join(d.value for d in persona.focus_areas)}
+Return ONLY the JSON object, no other text.
+"""
+
+    def _parse_review_content(self, persona: ReviewerPersona, content: str) -> Review:
+        """Parse an LLM response's text content into a Review, falling back
+        to the honestly-marked "unavailable" placeholder on empty/malformed
+        content. Shared by the sync per-call path and the batch path."""
+        parsed = _safe_json_loads(content, None) if content else None
+        review_data = parsed if isinstance(parsed, dict) and "scores" in parsed else None
+
+        if review_data is None:
+            review_data = self._generate_unavailable_review(persona)
+
+        try:
+            scores = {ReviewDimension(k): int(v) for k, v in review_data["scores"].items()}
+            decision = Decision(review_data["decision"])
+        except (KeyError, ValueError):
+            logger.warning("Reviewer '%s' returned malformed review data", persona.name)
+            review_data = self._generate_unavailable_review(persona)
+            scores = {ReviewDimension(k): int(v) for k, v in review_data["scores"].items()}
+            decision = Decision(review_data["decision"])
+
+        return Review(
+            reviewer_id=persona.id,
+            reviewer_name=persona.name,
+            scores=scores,
+            overall_score=float(review_data["overall_score"]),
+            decision=decision,
+            strengths=review_data["strengths"],
+            weaknesses=review_data["weaknesses"],
+            questions_for_authors=review_data["questions_for_authors"],
+            confidence=int(review_data["confidence"]),
+            detailed_feedback=review_data["detailed_feedback"],
+        )
 
     def _extract_paper_text(self, paper_path: Path) -> str:
         """Extract text from paper (PDF or LaTeX)."""
@@ -299,30 +468,9 @@ class AutomatedReviewerEnsemble:
         # it out of the (persona-varying) user turn lets it sit in a
         # provider-cached, shared system prefix instead of being resent in
         # full 5x per round (tasks/todo.md #2).
-        prompt = f"""OUTPUT FORMAT (JSON):
-{{
-    "scores": {{
-        "novelty": <1-10>,
-        "significance": <1-10>,
-        "technical_quality": <1-10>,
-        "experimental_rigor": <1-10>,
-        "clarity": <1-10>,
-        "reproducibility": <1-10>
-    }},
-    "overall_score": <float 1-10>,
-    "decision": "<strong_accept|accept|weak_accept|weak_reject|reject|strong_reject>",
-    "strengths": ["strength 1", "strength 2", ...],
-    "weaknesses": ["weakness 1", "weakness 2", ...],
-    "questions_for_authors": ["question 1", ...],
-    "confidence": <1-5>,
-    "detailed_feedback": "<2-3 paragraphs of detailed review>"
-}}
+        prompt = self._build_review_prompt(persona)
 
-Focus on your assigned areas: {", ".join(d.value for d in persona.focus_areas)}
-Return ONLY the JSON object, no other text.
-"""
-
-        review_data: dict[str, Any] | None = None
+        content = ""
         if self._llm_client is not None:
             try:
                 response = self._llm_client.chat(
@@ -332,36 +480,10 @@ Return ONLY the JSON object, no other text.
                     cache_ttl="1h",
                 )
                 content = response.content if hasattr(response, "content") else str(response)
-                parsed = _safe_json_loads(content, None)
-                if isinstance(parsed, dict) and "scores" in parsed:
-                    review_data = parsed
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Reviewer '%s' LLM call failed: %s", persona.name, exc)
 
-        if review_data is None:
-            review_data = self._generate_unavailable_review(persona)
-
-        try:
-            scores = {ReviewDimension(k): int(v) for k, v in review_data["scores"].items()}
-            decision = Decision(review_data["decision"])
-        except (KeyError, ValueError):
-            logger.warning("Reviewer '%s' returned malformed review data", persona.name)
-            review_data = self._generate_unavailable_review(persona)
-            scores = {ReviewDimension(k): int(v) for k, v in review_data["scores"].items()}
-            decision = Decision(review_data["decision"])
-
-        return Review(
-            reviewer_id=persona.id,
-            reviewer_name=persona.name,
-            scores=scores,
-            overall_score=float(review_data["overall_score"]),
-            decision=decision,
-            strengths=review_data["strengths"],
-            weaknesses=review_data["weaknesses"],
-            questions_for_authors=review_data["questions_for_authors"],
-            confidence=int(review_data["confidence"]),
-            detailed_feedback=review_data["detailed_feedback"],
-        )
+        return self._parse_review_content(persona, content)
 
     def _generate_unavailable_review(self, persona: ReviewerPersona) -> dict[str, Any]:
         """Honest fallback when no real review could be obtained.

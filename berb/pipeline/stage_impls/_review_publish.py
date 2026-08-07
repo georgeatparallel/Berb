@@ -2778,7 +2778,11 @@ def _execute_export_publish(
                         _ensemble = AutomatedReviewerEnsemble(llm_client=llm)
                         _tex_text_e = tex_path.read_text(encoding="utf-8")
                         _ens_reviews = asyncio.run(
-                            _ensemble.review_paper(tex_path, paper_text=_tex_text_e)
+                            _ensemble.review_paper(
+                                tex_path,
+                                paper_text=_tex_text_e,
+                                use_batch=config.llm.batch_review_enabled,
+                            )
                         )
                         _ens_meta = _ensemble.area_chair_decision(_ens_reviews)
                         _ensemble.generate_review_report(

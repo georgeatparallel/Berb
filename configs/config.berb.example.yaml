@@ -66,6 +66,14 @@ llm:
   # provider_routing_order: ["Anthropic"]
   # provider_routing_allow_fallbacks: false  # true (default) still permits reroutes
 
+  # Try Anthropic's Message Batches API (50% discount, stacks with prompt
+  # caching) for the review ensemble's 5-persona fan-out. Only takes effect
+  # with provider: "anthropic"/"kimi-anthropic" (direct) — OpenRouter has no
+  # verified native batch endpoint. Bounded poll timeout with automatic
+  # fallback to normal synchronous calls, so leaving this off just means
+  # missing the discount, never a stalled run.
+  # batch_review_enabled: true
+
   # --- Provider-specific examples ---
   # MiniMax (best budget):
   #   primary_model: "minimax/minimax-m2.5"

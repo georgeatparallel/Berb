@@ -188,12 +188,46 @@ is a no-op.
 
 ## 5. Batch API
 
-50% discount, **stacks with prompt caching**. Available on both OpenRouter and
-Anthropic direct. Larger refactor, so last.
+50% discount, **stacks with prompt caching**. **Correction to this plan**:
+"Available on both OpenRouter and Anthropic direct" is unverified for
+OpenRouter — Anthropic's Message Batches API is well-documented and stable;
+no live API access in this environment to confirm OpenRouter has an
+equivalent, and nothing in `berb/llm/openrouter_adapter.py` implements one.
+Built Anthropic-direct only; OpenRouter batch support stays a documented gap,
+not a silent scope cut.
 
-- [ ] Evaluate the 5-persona review fan-out as the first batch unit — it is
-      already async, non-interactive, and naturally parallel
-- [ ] Confirm latency budget: most batches finish <1h, SLA is 24h
+- [x] Evaluate the 5-persona review fan-out as the first batch unit — it is
+      already async, non-interactive, and naturally parallel. Confirmed and
+      implemented: `AnthropicAdapter` gained `submit_batch()` /
+      `get_batch_status()` / `fetch_batch_results()` (POST
+      `/v1/messages/batches`, poll, fetch+parse JSONL results), sharing the
+      same `_build_message_body`/`_parse_message_response` helpers
+      `chat_completion()` was refactored to use — same cache_control and
+      json_mode semantics as the single-call path, not a parallel
+      implementation to drift out of sync. `AutomatedReviewerEnsemble.
+      review_paper(use_batch=True)` submits all 5 personas as one batch;
+      each persona's system prompt + prompt template were extracted into
+      `_build_review_prompt`/`_parse_review_content` so the batch and
+      sync paths build byte-identical requests and share result parsing.
+      Wired at the one real call site (`_review_publish.py`, stage 22) via
+      new `RCConfig.llm.batch_review_enabled` (default `False`).
+- [x] Confirm latency budget: most batches finish <1h, SLA is 24h —
+      `berb run` executes stages synchronously in one process
+      (`asyncio.run(...)` at the call site), so trusting the 24h SLA would
+      risk stalling an "autonomous" run for the better part of a day.
+      `_review_paper_batch()` instead polls with a **bounded** wait
+      (`max_wait_sec=600` default, i.e. 10 min — generous for a 5-request
+      batch) and returns `None` on timeout/any failure, which
+      `review_paper()` treats as a signal to fall back to the existing
+      synchronous per-persona calls. Worst case behavior is therefore
+      identical to `use_batch=False` (today's behavior); the discount is
+      pure upside when the batch completes in time. Default is `False`
+      (opt-in) since this can't be exercised against a live API in this
+      environment — same "verify via response data before trusting it"
+      caveat as the caching work in section 2. Tests
+      (`tests/test_anthropic_batch.py`, `tests/test_ensemble_batch.py`)
+      cover submission, polling, result parsing, and every fallback path
+      via a fake adapter — no network calls.
 
 ## 6. Cap the experiment-data leak
 
