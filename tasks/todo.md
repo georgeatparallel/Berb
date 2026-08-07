@@ -271,13 +271,72 @@ not a silent scope cut.
 
 ## Open questions
 
-- [ ] Two audits (cost machinery in `berb/llm/`, provider-side features) were
-      still running when this was written — fold in anything they surface
-- [ ] Is `PromptCache` (local response cache) worth wiring at all, or is
-      provider-side caching sufficient? Local cache only helps on exact repeat
-      calls, which may be rare outside retries.
+- [x] Two audits (cost machinery in `berb/llm/`, provider-side features) were
+      still running when this was written — fold in anything they surface.
+      No audit artifacts from that run were ever available in this
+      environment to fold in directly, but implementing sections 2/4/5
+      independently surfaced the same class of finding those audits would
+      likely have flagged: `CostTracker.record_from_llm_response` (cost
+      machinery) and `OpenRouterProvider.complete()` (provider-side
+      features) both turned out to be fully dead code with zero real
+      callers, in addition to `prompt_cache.py`'s original
+      `get_cache_control_header`/`apply_cache_control_to_messages`. All
+      three are fixed at their live call sites instead (see sections 2
+      and 4). Treating this as resolved rather than leaving it open
+      indefinitely for audit output that may never surface.
+- [x] Is `PromptCache` (local response cache) worth wiring at all, or is
+      provider-side caching sufficient? **Recommendation: not worth
+      wiring, in its current form.** `PromptCache`/`CacheWarmer`/
+      `cached_completion` memoize exact-repeat (same model + byte-identical
+      messages) calls end-to-end — a narrower case than provider-side
+      caching, which now handles the actual repeat pattern in this
+      codebase (a large *shared prefix* reused across calls with
+      *different* trailing user content — the review ensemble's 5
+      personas, the writing stage's 3 sequential calls). A local
+      exact-match cache would score zero hits on both of those, since the
+      user message differs every time. The scenario where exact-repeat
+      caching would help — replaying the identical request twice within
+      one process — doesn't occur anywhere in the live pipeline: `berb
+      run --from-stage X` starts a fresh process and fresh calls, and
+      retries only fire after a failed call (nothing to have cached yet).
+      `PromptCache` has zero callers anywhere in `berb/`, has since before
+      this audit, and only exists today because its own test file
+      (`tests/test_prompt_cache.py`, 17 tests) tests it in isolation from
+      any real call site. Left in place rather than deleted unprompted —
+      this is a recommendation for the user to act on, not an
+      unrequested deletion — but if wiring it is ever revisited, disk
+      persistence (surviving across `--from-stage` reruns during
+      development) is the one use case that would make it worth the
+      code; an in-process-only LRU as currently written would not.
 
 ## Review
 
-<!-- Fill in after implementation: what changed, measured before/after token
-     counts per stage, and any findings that contradicted this plan. -->
+**What changed:** All 6 numbered sections plus both open questions are
+resolved — see commits `a29d663`..`3614317`. Three capping fixes (repair
+context, experiment-data leak, this doc's own audit-fold-in question),
+provider-side prompt caching wired through 3 real call sites (review
+ensemble, paper-draft writing, generically through retries), OpenRouter
+provider pinning, and Anthropic-direct batch review with a bounded-timeout
+fallback. 3848 tests pass at time of writing.
+
+**Findings that contradicted this plan:** Three of the plan's named call
+sites turned out to be dead code with zero real callers rather than live
+targets — `berb/llm/prompt_cache.py`'s original cache_control helpers
+(section 2, already known going in), `berb/llm/cost_tracker.py`'s
+`CostTracker` (section 2's cost-accounting bullet), and
+`berb/llm/openrouter_adapter.py`'s `OpenRouterProvider.complete()`
+(section 4's `provider_routing` target). In each case the actual live
+call path was found and wired instead of the one the plan named. Section
+5's claim that OpenRouter also supports batch caching alongside Anthropic
+was left unverified — no live API access in this environment, and nothing
+in `openrouter_adapter.py` implements a batch endpoint — so only the
+Anthropic-direct path was built.
+
+**Measured before/after token counts per stage:** Not done — this
+environment has no live LLM API access. Every mechanism wired this
+session (`cached_prefix`, `provider_routing`, `batch_review_enabled`)
+degrades to today's exact behavior when unset or on any failure, so
+nothing here is blocked on measurement, but the actual savings are
+unverified. Before trusting a number, run a real `berb run` (or just the
+review-ensemble/paper-draft stages) and inspect `response.cached_tokens`
+per call, or OpenRouter's dashboard, with and without each flag enabled.
