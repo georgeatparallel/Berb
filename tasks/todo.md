@@ -161,14 +161,30 @@ Trivial, pure waste. ~150 tok × 5 personas × every round.
 Config only. **Only matters after step 2** — pinning a cache you never populate
 is a no-op.
 
-- [ ] Pass `provider_routing` at the call sites (currently always `None`,
-      `openrouter_adapter.py:3767`)
-- [ ] Use `order` + `allow_fallbacks=False` (`ROUTING_EXACT` at :174) — note
-      `ROUTING_ANTHROPIC_DIRECT` (:178) sets `allow_fallbacks=True`, which still
-      permits silent reroutes
-- [ ] Rationale: caches live on the upstream provider's infra. OpenRouter
+- [x] Pass `provider_routing` at the call sites — **correction to this
+      plan**: `openrouter_adapter.py:3767`'s `provider_routing` param
+      belongs to `OpenRouterProvider.complete()`, which turned out to be
+      dead code too (only instantiated in its own file and in tests, zero
+      real callers — same category as the `prompt_cache.py` and
+      `cost_tracker.py` findings above). The live OpenRouter call path is
+      `LLMClient._raw_call()` in `client.py`, which built its request body
+      with no `provider` field at all. Added `LLMConfig.provider_routing:
+      dict | None`, populated in `from_rc_config()` from two new
+      `RCConfig.llm` fields (`provider_routing_order`,
+      `provider_routing_allow_fallbacks`; both default to today's
+      behavior — empty order = field omitted entirely), and applied to the
+      request body in `_raw_call()`'s chat_completions branch. Reused the
+      existing `ProviderRouting` dataclass's `{order, allow_fallbacks}`
+      shape (OpenRouter's own wire format) without importing the dead
+      class itself. Documented in `configs/config.berb.example.yaml`.
+- [x] Use `order` + `allow_fallbacks=False` — `provider_routing_allow_fallbacks`
+      config field, default `True` (matches OpenRouter's own default, so
+      unset = no behavior change); set `false` to get `ROUTING_EXACT`-equivalent
+      strict pinning.
+- [x] Rationale: caches live on the upstream provider's infra. OpenRouter
       load-balances across Anthropic/Bedrock/Vertex by default; each reroute is a
-      cold cache **plus** a repeated 1.25× write premium
+      cold cache **plus** a repeated 1.25× write premium — documented in both
+      `config.py`'s field comment and the example config.
 
 ## 5. Batch API
 

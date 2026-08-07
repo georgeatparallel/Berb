@@ -226,6 +226,12 @@ class LlmConfig:
     # "deepseek/deepseek-v3.2" OpenRouter-style IDs).
     fallback_provider_models: tuple[tuple[str, str], ...] = ()
     max_retries: int = 3  # Number of retries for failed LLM API calls
+    # Pins OpenRouter's upstream provider (e.g. ["Anthropic"]) instead of
+    # letting it load-balance across Anthropic/Bedrock/Vertex — each reroute
+    # is a cold provider-side prompt cache plus a repeated write premium.
+    # Only takes effect when provider == "openrouter"; ignored otherwise.
+    provider_routing_order: tuple[str, ...] = ()
+    provider_routing_allow_fallbacks: bool = True
     s2_api_key: str = ""
     notes: str = ""
     acp: AcpConfig = field(default_factory=AcpConfig)
@@ -1260,6 +1266,8 @@ def _parse_llm_config(data: dict[str, Any]) -> LlmConfig:
             (str(k), str(v)) for k, v in (data.get("fallback_provider_models") or {}).items()
         ),
         max_retries=_safe_int(data.get("max_retries"), 3),
+        provider_routing_order=tuple(data.get("provider_routing_order") or ()),
+        provider_routing_allow_fallbacks=bool(data.get("provider_routing_allow_fallbacks", True)),
         s2_api_key=data.get("s2_api_key", ""),
         notes=data.get("notes", ""),
         acp=AcpConfig(

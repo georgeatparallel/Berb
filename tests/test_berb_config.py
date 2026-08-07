@@ -235,6 +235,28 @@ def test_rcconfig_from_dict_parses_llm_wire_api(tmp_path: Path):
     assert config.llm.wire_api == "responses"
 
 
+def test_rcconfig_from_dict_parses_provider_routing(tmp_path: Path):
+    data = _valid_config_data()
+    data["llm"]["provider_routing_order"] = ["Anthropic"]
+    data["llm"]["provider_routing_allow_fallbacks"] = False
+
+    config = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False)
+
+    assert config.llm.provider_routing_order == ("Anthropic",)
+    assert config.llm.provider_routing_allow_fallbacks is False
+
+
+def test_rcconfig_from_dict_provider_routing_defaults(tmp_path: Path):
+    config = RCConfig.from_dict(
+        _valid_config_data(),
+        project_root=tmp_path,
+        check_paths=False,
+    )
+
+    assert config.llm.provider_routing_order == ()
+    assert config.llm.provider_routing_allow_fallbacks is True
+
+
 def test_rcconfig_from_dict_missing_fields_raises_value_error(tmp_path: Path):
     data = _valid_config_data()
     del data["runtime"]

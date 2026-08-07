@@ -182,6 +182,11 @@ class LLMConfig:
     # P1 FIX: Multi-provider failover configuration
     provider_name: str = ""  # Current provider name (for logging)
     fallback_providers: list[str] = field(default_factory=list)  # Provider names for failover
+    # OpenRouter-only: pins the upstream provider instead of OpenRouter's
+    # default cross-provider load balancing. Shape matches OpenRouter's
+    # `provider` request field: {"order": [...], "allow_fallbacks": bool}.
+    # None (default) omits the field entirely — unchanged behavior.
+    provider_routing: dict[str, Any] | None = None
 
 
 class TokenBucketRateLimiter:
@@ -511,6 +516,19 @@ class LLMClient:
         # by provider name.
         model_chain_fallbacks = list(rc_config.llm.fallback_models or [])
 
+        # Provider pinning only means something on OpenRouter — other
+        # providers don't have a cross-provider load balancer to pin.
+        provider_routing: dict[str, Any] | None = None
+        if provider == "openrouter":
+            routing_order = list(getattr(rc_config.llm, "provider_routing_order", ()) or ())
+            if routing_order:
+                provider_routing = {
+                    "order": routing_order,
+                    "allow_fallbacks": bool(
+                        getattr(rc_config.llm, "provider_routing_allow_fallbacks", True)
+                    ),
+                }
+
         config = LLMConfig(
             base_url=base_url,
             api_key=api_key,
@@ -521,6 +539,7 @@ class LLMClient:
             fallback_api_key=fallback_api_key,
             max_retries=getattr(rc_config.llm, "max_retries", 3),
             rate_limit_enabled=False,  # Disable rate limiter for faster response
+            provider_routing=provider_routing,
         )
         client = cls(config, circuit_breaker_enabled=circuit_breaker_enabled)
 
@@ -863,6 +882,9 @@ class LLMClient:
                     body["max_completion_tokens"] = max(max_tokens, reasoning_min)
                 else:
                     body["max_tokens"] = max_tokens
+
+                if self.config.provider_routing:
+                    body["provider"] = self.config.provider_routing
 
             if json_mode:
                 # Many OpenAI-compatible proxies serving Claude models don't

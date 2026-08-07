@@ -57,7 +57,15 @@ llm:
     - "minimax/minimax-m2.5:free"
     - "z-ai/glm-4.7-flash"
     - "qwen/qwen3.5-9b"
-  
+
+  # Pin OpenRouter's upstream provider instead of its default cross-provider
+  # load balancing. Only takes effect when provider: "openrouter" above.
+  # Each silent reroute is a cold provider-side prompt cache (see caching
+  # notes) plus a repeated write premium — pin this once you've confirmed
+  # cache hit rates via response usage data.
+  # provider_routing_order: ["Anthropic"]
+  # provider_routing_allow_fallbacks: false  # true (default) still permits reroutes
+
   # --- Provider-specific examples ---
   # MiniMax (best budget):
   #   primary_model: "minimax/minimax-m2.5"

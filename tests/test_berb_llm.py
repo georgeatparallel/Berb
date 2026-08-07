@@ -281,6 +281,112 @@ def test_from_rc_config_defaults_max_retries_when_absent():
     assert client.config.max_retries == 3
 
 
+def test_from_rc_config_wires_provider_routing_for_openrouter():
+    rc_config = SimpleNamespace(
+        llm=SimpleNamespace(
+            provider="openrouter",
+            base_url="https://openrouter.ai/api/v1",
+            api_key="inline-key",
+            api_key_env="OPENROUTER_API_KEY",
+            wire_api="chat_completions",
+            primary_model="anthropic/claude-sonnet-4.6",
+            fallback_models=(),
+            provider_routing_order=("Anthropic",),
+            provider_routing_allow_fallbacks=False,
+        )
+    )
+    client = LLMClient.from_rc_config(rc_config)
+    assert client.config.provider_routing == {
+        "order": ["Anthropic"],
+        "allow_fallbacks": False,
+    }
+
+
+def test_from_rc_config_provider_routing_none_when_order_empty():
+    rc_config = SimpleNamespace(
+        llm=SimpleNamespace(
+            provider="openrouter",
+            base_url="https://openrouter.ai/api/v1",
+            api_key="inline-key",
+            api_key_env="OPENROUTER_API_KEY",
+            wire_api="chat_completions",
+            primary_model="anthropic/claude-sonnet-4.6",
+            fallback_models=(),
+            provider_routing_order=(),
+        )
+    )
+    client = LLMClient.from_rc_config(rc_config)
+    assert client.config.provider_routing is None
+
+
+def test_from_rc_config_provider_routing_ignored_for_non_openrouter():
+    # provider_routing_order set, but provider isn't openrouter — pinning
+    # an upstream that OpenRouter never load-balances is meaningless.
+    rc_config = SimpleNamespace(
+        llm=SimpleNamespace(
+            provider="anthropic",
+            base_url="https://api.anthropic.com",
+            api_key="inline-key",
+            api_key_env="ANTHROPIC_API_KEY",
+            wire_api="chat_completions",
+            primary_model="claude-sonnet-4.6",
+            fallback_models=(),
+            provider_routing_order=("Anthropic",),
+        )
+    )
+    client = LLMClient.from_rc_config(rc_config)
+    assert client.config.provider_routing is None
+
+
+def test_from_rc_config_provider_routing_absent_attribute_defaults_none():
+    # Bare-bones rc_config missing provider_routing_order entirely (e.g. an
+    # older config object) must not crash from_rc_config.
+    rc_config = SimpleNamespace(
+        llm=SimpleNamespace(
+            provider="openrouter",
+            base_url="https://openrouter.ai/api/v1",
+            api_key="inline-key",
+            api_key_env="OPENROUTER_API_KEY",
+            wire_api="chat_completions",
+            primary_model="anthropic/claude-sonnet-4.6",
+            fallback_models=(),
+        )
+    )
+    client = LLMClient.from_rc_config(rc_config)
+    assert client.config.provider_routing is None
+
+
+def test_build_request_body_includes_provider_when_routing_set(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    captured: dict[str, object] = {}
+
+    def fake_urlopen(req: urllib.request.Request, timeout: int) -> _DummyHTTPResponse:
+        captured["request"] = req
+        return _DummyHTTPResponse(
+            {"choices": [{"message": {"content": "x"}, "finish_reason": "stop"}]}
+        )
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    config = LLMConfig(
+        base_url="https://openrouter.ai/api/v1",
+        api_key="test-key",
+        provider_routing={"order": ["Anthropic"], "allow_fallbacks": False},
+    )
+    client = LLMClient(config)
+    client._raw_call("anthropic/claude-sonnet-4.6", [{"role": "user", "content": "hi"}], 100, 0.2, False)
+    body = json.loads(captured["request"].data.decode("utf-8"))
+    assert body["provider"] == {"order": ["Anthropic"], "allow_fallbacks": False}
+
+
+def test_build_request_body_omits_provider_when_routing_unset(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    response = {"choices": [{"message": {"content": "x"}, "finish_reason": "stop"}]}
+    body, _, _ = _capture_raw_call(monkeypatch, model="gpt-4o", response_data=response)
+    assert "provider" not in body
+
+
 def test_responses_wire_api_uses_responses_endpoint(monkeypatch: pytest.MonkeyPatch):
     captured: dict[str, object] = {}
 
