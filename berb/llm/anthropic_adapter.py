@@ -53,6 +53,9 @@ class AnthropicAdapter:
         max_tokens: int,
         temperature: float,
         json_mode: bool = False,
+        *,
+        cached_prefix: str | None = None,
+        cache_ttl: str = "5m",
     ) -> dict[str, Any]:
         """Call Anthropic Messages API and return OpenAI-compatible response.
 
@@ -111,7 +114,16 @@ class AnthropicAdapter:
             "max_tokens": max_tokens,
             "temperature": temperature,
         }
-        if system_msg:
+        if cached_prefix:
+            from berb.llm.prompt_cache import build_cached_system_blocks
+
+            blocks = build_cached_system_blocks(cached_prefix, system_msg, ttl=cache_ttl)
+            body["system"] = (
+                blocks
+                if blocks is not None
+                else cached_prefix + ("\n\n" + system_msg if system_msg else "")
+            )
+        elif system_msg:
             body["system"] = system_msg
 
         url = f"{self.base_url}/v1/messages"
@@ -186,6 +198,10 @@ class AnthropicAdapter:
                     data.get("usage", {}).get("input_tokens", 0)
                     + data.get("usage", {}).get("output_tokens", 0)
                 ),
+                # Pre-normalized (Anthropic uses cache_read_input_tokens, not
+                # OpenAI's prompt_tokens_details.cached_tokens) — see
+                # LLMClient._parse_chat_completions_response.
+                "cached_tokens": data.get("usage", {}).get("cache_read_input_tokens", 0),
             },
             "model": data.get("model", model),
         }

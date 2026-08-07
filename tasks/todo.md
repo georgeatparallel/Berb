@@ -65,42 +65,85 @@ Where sustained savings live. Cache reads bill at **0.1× input**.
 
 Targets in value order:
 
-- [ ] **Review ensemble** — `berb/review/ensemble.py:258` fans the same
-      12.5k-token paper (50k-char cap at :293) to 5 personas. Identical prefix,
-      5× per round, repeated across rounds. Use **1-hour TTL** here (2× write)
-      since reuse spans a round.
+- [x] **Review ensemble** — `berb/review/ensemble.py` fanned the same
+      paper to 5 personas with the paper text embedded in each persona's
+      (varying) user message, so nothing was byte-identical across calls.
+      Restructured: paper text now goes through `chat(cached_prefix=...,
+      cache_ttl="1h")`, landing in a `system` block **before** the
+      persona-specific system prompt, so the breakpoint covers the
+      identical part regardless of which persona is calling. Also fixed
+      #3 below in the same edit (they touched the same lines).
 - [ ] **Static prompt blocks** — `writing_structure` (4,296 ch) +
       `academic_style_guide` (3,103 ch) + `narrative_writing_rules` (2,137 ch)
       resent on every writing call. ~2.4k tok combined; clears Sonnet's 1,024
       minimum together, but **not individually** — cache as one block.
+      Not yet wired — `_apply_cached_prefix`/`chat(cached_prefix=...)` exist
+      and are ready to use, this just needs the writing call sites updated.
 - [ ] **Retry layers** — `_prompt_helpers.py:139/166` wraps `client.py:694`
       (`max_retries=3`) wraps model-fallback at `client.py:617`. One logical call
       can resend an identical 20k-token prompt 6+ times. Retries on cached
-      content bill at 0.1×.
+      content bill at 0.1×. Not yet wired — retries already reuse the same
+      `messages` object passed into `_call_with_retry`, so `cached_prefix`
+      threading through unchanged; nothing extra needed there once a caller
+      passes it.
 
-Mechanics that decide whether this pays off:
+Mechanics — now actually implemented in `berb/llm/prompt_cache.py`
+(`model_needs_explicit_cache_control`, `build_cached_system_blocks`) and
+wired through `LLMClient.chat(cached_prefix=..., cache_ttl=...)` →
+`_apply_cached_prefix` → `_raw_call`, plus `AnthropicAdapter.chat_completion`
+for the direct-Anthropic path and `MultiProviderLLMClient`/`ACPClient` for
+signature compatibility:
 
-- [ ] Anthropic and Qwen require **explicit** `cache_control`; OpenAI, DeepSeek,
+- [x] Anthropic and Qwen require **explicit** `cache_control`; OpenAI, DeepSeek,
       Grok, Groq, Z.AI and Gemini 2.5 cache automatically. Berb's OpenRouter path
-      sends nothing today, so Claude-routed calls get zero benefit.
-- [ ] Order must be `tools → system → messages`, stable content first, breakpoint
-      on the **last unchanging block**. Max 4 breakpoints, 20-block lookback.
+      sends nothing today, so Claude-routed calls get zero benefit. —
+      `model_needs_explicit_cache_control()` gates on this; non-matching
+      models get the stable text plainly prepended (no cache_control field)
+      since it's a no-op for them anyway.
+- [x] Order must be `tools → system → messages`, stable content first, breakpoint
+      on the **last unchanging block**. Max 4 breakpoints, 20-block lookback. —
+      `build_cached_system_blocks` puts `cached_prefix` first with the
+      breakpoint, volatile `system` text after. Berb doesn't send `tools`
+      today so that segment doesn't apply.
 - [ ] Never put a breakpoint on content carrying timestamps, run IDs, or rotating
       state — the prefix hash changes and you get 0% hits while still paying writes.
-- [ ] Minimum cacheable: 512 tok (Opus 5) / 1,024 (Sonnet 5) / 4,096 (Haiku 4.5).
+      Mechanically enforced only where `cached_prefix` is actually passed
+      (ensemble.py's paper text is stable per round) — this is a caller
+      discipline note for whoever wires the next two targets above, not
+      something the plumbing itself can verify.
+- [x] Minimum cacheable: 512 tok (Opus 5) / 1,024 (Sonnet 5) / 4,096 (Haiku 4.5).
       Below the floor it silently does not cache — verify via
-      `cache_read_input_tokens` in the response, not by assumption.
-- [ ] Teach `berb/llm/cost_tracker.py` to read `cached_tokens` /
-      `cache_discount` from `prompt_tokens_details` (OpenRouter returns these),
-      otherwise cached tokens bill at full rate in reports and the savings signal
-      is invisible.
+      `cache_read_input_tokens` in the response, not by assumption. —
+      `build_cached_system_blocks(min_chars=4000)` (~4 chars/token, so this
+      clears Sonnet's floor; conservative for Opus, not quite Haiku's 4,096
+      tok — fine since the explicit-cache-control path is Claude/Qwen only,
+      and Haiku wasn't the target here). **The "verify, don't assume" part
+      is still on you** — I have no live API access in this environment;
+      run a real review round and check `response.cached_tokens` /
+      OpenRouter's dashboard before trusting this saves anything.
+- [x] Teach cost accounting to read `cached_tokens` / `cache_discount` so the
+      savings signal is visible. **Correction to this plan**: `cost_tracker.py`
+      turned out to be dead code too — `CostTracker.record_from_llm_response`
+      has zero callers anywhere in `berb/`; live cost accounting happens via
+      `PricingTable.compute_cost()` called directly from ~14 other sites, this
+      class is never instantiated in the real pipeline. Teaching it to read
+      cached tokens would've been teaching nothing. Instead added
+      `LLMResponse.cached_tokens: int`, populated in
+      `_parse_chat_completions_response` (reads OpenRouter/OpenAI's
+      `prompt_tokens_details.cached_tokens`) and normalized from
+      `AnthropicAdapter`'s `cache_read_input_tokens` — any caller can now
+      read `response.cached_tokens` directly. Wiring `CostTracker` itself
+      into the live pipeline is a separate, larger gap outside this plan's
+      scope.
 
 ## 3. Remove duplicated persona prompt
 
 Trivial, pure waste. ~150 tok × 5 personas × every round.
 
-- [ ] `berb/review/ensemble.py:297` embeds `persona.system_prompt` in the user
-      message, then :330 passes it again as `system=`. Drop one.
+- [x] `berb/review/ensemble.py:297` embeds `persona.system_prompt` in the user
+      message, then :330 passes it again as `system=`. Drop one. — Dropped
+      from the user message (`system=` is the correct home for it); done in
+      the same edit as section 2's ensemble restructuring.
 
 ## 4. Pin the OpenRouter provider
 

@@ -105,6 +105,8 @@ class ACPClient:
         temperature: float | None = None,
         json_mode: bool = False,
         system: str | None = None,
+        cached_prefix: str | None = None,
+        cache_ttl: str = "5m",
         strip_thinking: bool = False,
     ) -> LLMResponse:
         """Send a prompt and return the agent's response.
@@ -112,8 +114,13 @@ class ACPClient:
         Parameters mirror ``LLMClient.chat()`` for drop-in compatibility.
         ``model``, ``max_tokens``, ``temperature``, and ``json_mode`` are
         accepted but not forwarded — the agent manages its own model and
-        parameters.
+        parameters. ``cached_prefix``/``cache_ttl`` request provider-side
+        prompt caching, which doesn't apply to a CLI-driven agent — the
+        text is still sent (folded into ``system``) so it isn't silently
+        dropped, just without a cache_control breakpoint.
         """
+        if cached_prefix:
+            system = f"{cached_prefix}\n\n{system}" if system else cached_prefix
         prompt_text = self._messages_to_prompt(messages, system=system)
         content = self._send_prompt(prompt_text)
         if strip_thinking:

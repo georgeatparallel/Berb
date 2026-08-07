@@ -9,9 +9,9 @@ from berb.llm.prompt_cache import (
     CacheEntry,
     CacheWarmer,
     PromptCache,
-    apply_cache_control_to_messages,
+    build_cached_system_blocks,
     cached_completion,
-    get_cache_control_header,
+    model_needs_explicit_cache_control,
 )
 
 
@@ -249,51 +249,55 @@ class TestCacheWarmer:
         assert warmer.is_warmed("Test prompt", "gpt-4o") is True
 
 
-class TestCacheControlHeaders:
-    """Test cache control header functions."""
+class TestModelNeedsExplicitCacheControl:
+    """Test provider-caching model gating."""
 
-    def test_anthropic_headers(self):
-        """Test Anthropic cache control headers."""
-        headers = get_cache_control_header("anthropic")
+    @pytest.mark.parametrize(
+        "model",
+        ["anthropic/claude-sonnet-4.5", "claude-3-7-sonnet", "qwen/qwen-2.5-72b"],
+    )
+    def test_explicit_cache_models(self, model):
+        assert model_needs_explicit_cache_control(model) is True
 
-        assert "anthropic-beta" in headers
-        assert headers["anthropic-beta"] == "prompt-caching-2024-07-31"
+    @pytest.mark.parametrize(
+        "model",
+        ["openai/gpt-4o", "deepseek/deepseek-v3", "x-ai/grok-4", "google/gemini-2.5-pro"],
+    )
+    def test_automatic_cache_models(self, model):
+        assert model_needs_explicit_cache_control(model) is False
 
-    def test_openai_headers(self):
-        """Test OpenAI headers (no special headers)."""
-        headers = get_cache_control_header("openai")
 
-        assert headers == {}
+class TestBuildCachedSystemBlocks:
+    """Test provider cache_control block construction."""
 
-    def test_unknown_provider_headers(self):
-        """Test unknown provider headers."""
-        headers = get_cache_control_header("unknown")
+    def test_builds_breakpoint_on_prefix_and_appends_system(self):
+        prefix = "x" * 5000
+        blocks = build_cached_system_blocks(prefix, "You are a reviewer.")
 
-        assert headers == {}
+        assert blocks is not None
+        assert blocks[0]["text"] == prefix
+        assert blocks[0]["cache_control"] == {"type": "ephemeral", "ttl": "5m"}
+        assert blocks[1] == {"type": "text", "text": "You are a reviewer."}
 
-    def test_apply_cache_control_anthropic(self):
-        """Test applying cache control to Anthropic messages."""
-        messages = [
-            {"role": "system", "content": "System prompt"},
-            {"role": "user", "content": "User message"},
-        ]
+    def test_omits_system_block_when_none(self):
+        blocks = build_cached_system_blocks("x" * 5000, None)
 
-        annotated = apply_cache_control_to_messages(messages, "anthropic")
+        assert blocks is not None
+        assert len(blocks) == 1
 
-        assert len(annotated) == 2
-        assert annotated[0].get("cache_control") == {"type": "ephemeral"}
-        assert annotated[1].get("cache_control") is None
+    def test_returns_none_below_min_chars(self):
+        blocks = build_cached_system_blocks("short", "system", min_chars=4000)
 
-    def test_apply_cache_control_non_anthropic(self):
-        """Test applying cache control to non-Anthropic messages."""
-        messages = [
-            {"role": "system", "content": "System prompt"},
-        ]
+        assert blocks is None
 
-        annotated = apply_cache_control_to_messages(messages, "openai")
+    def test_custom_ttl(self):
+        blocks = build_cached_system_blocks("x" * 5000, None, ttl="1h")
 
-        # Should return unchanged
-        assert annotated == messages
+        assert blocks[0]["cache_control"]["ttl"] == "1h"
+
+    def test_rejects_invalid_ttl(self):
+        with pytest.raises(ValueError):
+            build_cached_system_blocks("x" * 5000, None, ttl="1d")
 
 
 class TestCachedCompletion:

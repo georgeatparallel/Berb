@@ -152,6 +152,7 @@ class LLMResponse:
     truncated: bool = False
     raw: dict[str, Any] = field(default_factory=dict)
     cost: float = 0.0  # BUG-001 FIX: Added cost field for OpenRouter compatibility
+    cached_tokens: int = 0  # Prompt-cache reads (0.1x price) — see llm/prompt_cache.py
 
 
 @dataclass
@@ -542,6 +543,8 @@ class LLMClient:
         temperature: float | None = None,
         json_mode: bool = False,
         system: str | None = None,
+        cached_prefix: str | None = None,
+        cache_ttl: str = "5m",
         strip_thinking: bool = False,
         stage: Any | None = None,  # Optional pipeline stage for token limits
     ) -> LLMResponse:
@@ -556,6 +559,19 @@ class LLMClient:
             temperature: Override temperature.
             json_mode: Request JSON response format.
             system: Prepend a system message.
+            cached_prefix: Stable, reused text (e.g. shared document
+                content across several calls) to mark with a provider-side
+                cache_control breakpoint on models that need one
+                explicitly (Claude, Qwen — see
+                berb.llm.prompt_cache.model_needs_explicit_cache_control).
+                Sent as the FIRST system block so `system` — the volatile,
+                call-specific part — never needs to match across calls for
+                the cached prefix to hit. Below ~4,000 chars this is a
+                no-op (falls back to plain concatenation): too short to
+                clear the provider's minimum-cacheable-tokens floor.
+            cache_ttl: "5m" (1.25x write cost, default) or "1h" (2x write
+                cost) — use "1h" when reuse spans longer than a few
+                minutes (e.g. a multi-call review round).
             strip_thinking: If True, strip <think>…</think> reasoning
                 tags from the response content.  Use this when the
                 output will be written to paper/script artifacts but
@@ -614,7 +630,9 @@ class LLMClient:
 
         for m in models:
             try:
-                resp = self._call_with_retry(m, messages, max_tok, temp, json_mode)
+                resp = self._call_with_retry(
+                    m, messages, max_tok, temp, json_mode, cached_prefix, cache_ttl
+                )
                 if strip_thinking:
                     from berb.utils.thinking_tags import strip_thinking_tags
 
@@ -683,6 +701,8 @@ class LLMClient:
         max_tokens: int,
         temperature: float,
         json_mode: bool,
+        cached_prefix: str | None = None,
+        cache_ttl: str = "5m",
     ) -> LLMResponse:
         """Call with exponential backoff retry and circuit breaker.
 
@@ -696,9 +716,15 @@ class LLMClient:
                 # P0 2026-04-02: Wrap call with circuit breaker
                 if self._circuit_breaker:
                     with self._circuit_breaker:
-                        return self._raw_call(model, messages, max_tokens, temperature, json_mode)
+                        return self._raw_call(
+                            model, messages, max_tokens, temperature, json_mode,
+                            cached_prefix, cache_ttl,
+                        )
                 else:
-                    return self._raw_call(model, messages, max_tokens, temperature, json_mode)
+                    return self._raw_call(
+                        model, messages, max_tokens, temperature, json_mode,
+                        cached_prefix, cache_ttl,
+                    )
             except http.client.IncompleteRead as e:
                 # P0 2026-04-06: Retry on IncompleteRead (streaming truncation)
                 if attempt < self.config.max_retries - 1:
@@ -785,13 +811,21 @@ class LLMClient:
         max_tokens: int,
         temperature: float,
         json_mode: bool,
+        cached_prefix: str | None = None,
+        cache_ttl: str = "5m",
     ) -> LLMResponse:
         """Make a single API call."""
 
         # Use Anthropic adapter if configured
         if self._anthropic:
             data = self._anthropic.chat_completion(
-                model, messages, max_tokens, temperature, json_mode
+                model,
+                messages,
+                max_tokens,
+                temperature,
+                json_mode,
+                cached_prefix=cached_prefix,
+                cache_ttl=cache_ttl,
             )
         else:
             # Original OpenAI logic
@@ -799,6 +833,14 @@ class LLMClient:
             # retries and model-fallback — each attempt must start from the
             # original, un-modified messages).
             msgs = [dict(m) for m in messages]
+
+            # Provider-side prompt caching: mark the stable cached_prefix
+            # with a cache_control breakpoint (Claude/Qwen) or plainly
+            # prepend it (other providers cache automatically). Skipped for
+            # the "responses" wire API — _messages_to_responses_input
+            # stringifies content and would mangle a block list.
+            if cached_prefix and self._normalize_wire_api(self.config.wire_api) != "responses":
+                msgs = self._apply_cached_prefix(msgs, model, cached_prefix, cache_ttl)
 
             # MiniMax API requires temperature in [0, 1.0]
             _temp = temperature
@@ -834,9 +876,21 @@ class LLMClient:
                         "You MUST respond with valid JSON only. "
                         "Do not include any text outside the JSON object."
                     )
-                    # Prepend to existing system message or add as new one
+                    # Prepend to existing system message or add as new one.
+                    # System content may be a plain string or a block list
+                    # (when cached_prefix applied a cache_control breakpoint
+                    # — see _apply_cached_prefix) — a hint block is
+                    # prepended rather than string-concatenated so an
+                    # existing cache_control breakpoint stays intact.
                     if msgs and msgs[0]["role"] == "system":
-                        msgs[0]["content"] = _json_hint + "\n\n" + msgs[0]["content"]
+                        existing = msgs[0]["content"]
+                        if isinstance(existing, list):
+                            msgs[0]["content"] = [
+                                {"type": "text", "text": _json_hint},
+                                *existing,
+                            ]
+                        else:
+                            msgs[0]["content"] = _json_hint + "\n\n" + existing
                     else:
                         msgs.insert(0, {"role": "system", "content": _json_hint})
                 else:
@@ -911,6 +965,39 @@ class LLMClient:
             return self._parse_responses_response(data, model)
         return self._parse_chat_completions_response(data, model)
 
+    def _apply_cached_prefix(
+        self,
+        msgs: list[dict[str, Any]],
+        model: str,
+        cached_prefix: str,
+        cache_ttl: str,
+    ) -> list[dict[str, Any]]:
+        """Fold `cached_prefix` into `msgs`'s system message.
+
+        `msgs` must already be a fresh copy (callers own it, safe to mutate
+        in place here). See `LLMClient.chat`'s `cached_prefix` docs for the
+        ordering rationale.
+        """
+        from .prompt_cache import build_cached_system_blocks, model_needs_explicit_cache_control
+
+        existing_system = ""
+        rest = msgs
+        if msgs and msgs[0].get("role") == "system" and isinstance(msgs[0].get("content"), str):
+            existing_system = msgs[0]["content"]
+            rest = msgs[1:]
+
+        if not model_needs_explicit_cache_control(model):
+            # Automatic-caching providers: no cache_control field needed —
+            # just make the stable text part of the (auto-cached) prefix.
+            merged = cached_prefix + ("\n\n" + existing_system if existing_system else "")
+            return [{"role": "system", "content": merged}] + rest
+
+        blocks = build_cached_system_blocks(cached_prefix, existing_system or None, ttl=cache_ttl)
+        if blocks is None:
+            merged = cached_prefix + ("\n\n" + existing_system if existing_system else "")
+            return [{"role": "system", "content": merged}] + rest
+        return [{"role": "system", "content": blocks}] + rest
+
     def _build_responses_body(
         self,
         model: str,
@@ -950,6 +1037,16 @@ class LLMClient:
         message = choice.get("message", {})
         content = message.get("content") or ""
 
+        # Cached-token reads, normalized across shapes: OpenAI/OpenRouter
+        # nest it under prompt_tokens_details; AnthropicAdapter (direct
+        # Anthropic path) puts a pre-normalized "cached_tokens" at the top
+        # of usage — see anthropic_adapter.py.
+        prompt_details = usage.get("prompt_tokens_details")
+        if isinstance(prompt_details, dict):
+            cached_tokens = int(prompt_details.get("cached_tokens", 0) or 0)
+        else:
+            cached_tokens = int(usage.get("cached_tokens", 0) or 0)
+
         return LLMResponse(
             content=content,
             model=data.get("model", model),
@@ -959,6 +1056,7 @@ class LLMClient:
             finish_reason=choice.get("finish_reason", ""),
             truncated=(choice.get("finish_reason", "") == "length"),
             raw=data,
+            cached_tokens=cached_tokens,
         )
 
     def _parse_responses_response(self, data: dict[str, Any], model: str) -> LLMResponse:
@@ -1169,6 +1267,8 @@ class MultiProviderLLMClient:
         temperature: float | None = None,
         json_mode: bool = False,
         system: str | None = None,
+        cached_prefix: str | None = None,
+        cache_ttl: str = "5m",
         strip_thinking: bool = False,
         stage: Any | None = None,
     ) -> LLMResponse:
@@ -1194,6 +1294,8 @@ class MultiProviderLLMClient:
                     temperature=temperature,
                     json_mode=json_mode,
                     system=system,
+                    cached_prefix=cached_prefix,
+                    cache_ttl=cache_ttl,
                     strip_thinking=strip_thinking,
                     stage=stage,
                 )

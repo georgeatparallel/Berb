@@ -294,12 +294,12 @@ class AutomatedReviewerEnsemble:
         if len(paper_text) > max_length:
             paper_text = paper_text[:max_length] + "\n\n[... truncated ...]"
 
-        prompt = f"""{persona.system_prompt}
-
-PAPER TEXT:
-{paper_text}
-
-OUTPUT FORMAT (JSON):
+        # PAPER TEXT is passed via `cached_prefix` below rather than
+        # embedded here — all 5 personas review the same paper, so keeping
+        # it out of the (persona-varying) user turn lets it sit in a
+        # provider-cached, shared system prefix instead of being resent in
+        # full 5x per round (tasks/todo.md #2).
+        prompt = f"""OUTPUT FORMAT (JSON):
 {{
     "scores": {{
         "novelty": <1-10>,
@@ -328,6 +328,8 @@ Return ONLY the JSON object, no other text.
                 response = self._llm_client.chat(
                     messages=[{"role": "user", "content": prompt}],
                     system=persona.system_prompt,
+                    cached_prefix=f"PAPER TEXT:\n{paper_text}",
+                    cache_ttl="1h",
                 )
                 content = response.content if hasattr(response, "content") else str(response)
                 parsed = _safe_json_loads(content, None)

@@ -1,10 +1,18 @@
-"""Provider prompt caching for LLM calls.
+"""Prompt caching helpers for LLM calls.
 
-This module implements prompt caching to reduce input token costs by 80-90%
-for repeated system prompts and context.
+Two independent mechanisms live here:
 
-Architecture: LRU cache with TTL, provider-specific cache control
-Paradigm: Decorator pattern with async support
+1. Provider-side caching (`model_needs_explicit_cache_control`,
+   `build_cached_system_blocks`) — builds Anthropic-style `cache_control`
+   breakpoints so a stable, reused prefix (e.g. a paper shared across a
+   5-persona review round) is billed at ~0.1x on repeat reads instead of
+   full input price. Wired into `LLMClient.chat(cached_prefix=...)` and
+   `AnthropicAdapter.chat_completion(cached_prefix=...)`.
+2. Local response cache (`PromptCache`, `CacheWarmer`, `cached_completion`)
+   — an in-process LRU that memoizes exact-repeat calls (same model +
+   messages) end to end. Separate from provider caching: it only helps on
+   byte-identical repeats (e.g. retries), not on shared-prefix reuse. Not
+   currently wired into any call site.
 
 Usage:
     from berb.llm.prompt_cache import PromptCache, cached_completion
@@ -299,61 +307,72 @@ class CacheWarmer:
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Provider-Specific Cache Control
+#
+# This targets Anthropic's Messages API `cache_control` mechanic (also
+# honored by OpenRouter for Claude/Qwen, which route to Anthropic-shaped
+# backends). It requires content as an array of blocks — a bare
+# `cache_control` key alongside a string `content` field, which an earlier
+# version of this module produced, is not part of any provider's wire
+# format and would be silently ignored.
 # ─────────────────────────────────────────────────────────────────────────────
 
+# Per OpenRouter's prompt-caching docs: these need an explicit cache_control
+# breakpoint to get provider-side caching. OpenAI, DeepSeek, Grok, Groq,
+# Z.AI and Gemini 2.5 cache automatically and don't need (or use) the field.
+_EXPLICIT_CACHE_MODEL_MARKERS = ("claude", "anthropic", "qwen")
 
-def get_cache_control_header(provider: str) -> dict[str, str]:
-    """Get cache control headers for specific provider.
+_VALID_TTLS = ("5m", "1h")
 
-    Args:
-        provider: Provider name (anthropic, openai, etc.)
+# Below Sonnet's 1,024-token floor (Opus is 512, Haiku is 4,096) a cached
+# block silently never caches. ~4 chars/token is a conservative estimate.
+_DEFAULT_MIN_CACHEABLE_CHARS = 4000
 
-    Returns:
-        Dictionary with cache control headers
+
+def model_needs_explicit_cache_control(model: str) -> bool:
+    """Whether `model` needs an explicit `cache_control` breakpoint to get
+    provider-side prompt caching, vs. providers that cache automatically.
     """
-    if provider == "anthropic":
-        # Anthropic prompt caching via cache_control
-        return {
-            "anthropic-beta": "prompt-caching-2024-07-31",
+    m = model.lower()
+    return any(marker in m for marker in _EXPLICIT_CACHE_MODEL_MARKERS)
+
+
+def build_cached_system_blocks(
+    cached_prefix: str,
+    system: str | None,
+    *,
+    ttl: str = "5m",
+    min_chars: int = _DEFAULT_MIN_CACHEABLE_CHARS,
+) -> list[dict[str, Any]] | None:
+    """Build system content blocks with a cache breakpoint on `cached_prefix`.
+
+    `cached_prefix` should be the STABLE part of the prompt (e.g. shared
+    document text reused across several calls); it becomes the first block
+    with a `cache_control` breakpoint. `system` (if given) is the volatile,
+    call-specific part and is appended as a second, uncached block — it
+    comes after the breakpoint so it never has to match for the cached
+    prefix to hit.
+
+    Returns None when `cached_prefix` is shorter than `min_chars` — too
+    short to clear the provider's minimum-cacheable-tokens floor, so
+    callers should fall back to plain string concatenation rather than pay
+    the cache-write premium (1.25x for 5m, 2x for 1h) for a block that will
+    never register a cache hit.
+    """
+    if ttl not in _VALID_TTLS:
+        raise ValueError(f"cache ttl must be one of {_VALID_TTLS}, got {ttl!r}")
+    if len(cached_prefix) < min_chars:
+        return None
+
+    blocks: list[dict[str, Any]] = [
+        {
+            "type": "text",
+            "text": cached_prefix,
+            "cache_control": {"type": "ephemeral", "ttl": ttl},
         }
-    elif provider == "openai":
-        # OpenAI automatic caching (no special headers needed)
-        return {}
-    else:
-        return {}
-
-
-def apply_cache_control_to_messages(
-    messages: list[dict],
-    provider: str,
-    cache_system_prompt: bool = True,
-) -> list[dict]:
-    """Apply cache control annotations to messages.
-
-    Args:
-        messages: List of message dicts
-        provider: Provider name
-        cache_system_prompt: Whether to cache system prompt
-
-    Returns:
-        Messages with cache control annotations
-    """
-    if provider != "anthropic":
-        return messages
-
-    # Deep copy messages
-    annotated = []
-    for msg in messages:
-        annotated_msg = msg.copy()
-
-        # Add cache_control to system message
-        if msg.get("role") == "system" and cache_system_prompt:
-            annotated_msg["cache_control"] = {"type": "ephemeral"}
-
-        annotated.append(annotated_msg)
-
-    logger.debug(f"Applied cache control to {len(annotated)} messages")
-    return annotated
+    ]
+    if system:
+        blocks.append({"type": "text", "text": system})
+    return blocks
 
 
 # ─────────────────────────────────────────────────────────────────────────────
