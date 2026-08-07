@@ -73,19 +73,30 @@ Targets in value order:
       persona-specific system prompt, so the breakpoint covers the
       identical part regardless of which persona is calling. Also fixed
       #3 below in the same edit (they touched the same lines).
-- [ ] **Static prompt blocks** — `writing_structure` (4,296 ch) +
+- [x] **Static prompt blocks** — `writing_structure` (4,296 ch) +
       `academic_style_guide` (3,103 ch) + `narrative_writing_rules` (2,137 ch)
       resent on every writing call. ~2.4k tok combined; clears Sonnet's 1,024
       minimum together, but **not individually** — cache as one block.
-      Not yet wired — `_apply_cached_prefix`/`chat(cached_prefix=...)` exist
-      and are ready to use, this just needs the writing call sites updated.
-- [ ] **Retry layers** — `_prompt_helpers.py:139/166` wraps `client.py:694`
+      Wired in `_write_paper_sections()` (`_paper_writing.py`): the 3
+      sequential calls (title/abstract/intro, method/experiments,
+      results/discussion) already shared one `system` string built once —
+      `academic_style_guide`, `narrative_writing_rules`,
+      `anti_hedging_rules`, and `anti_repetition_rules` were instead being
+      re-embedded verbatim into each call's *user* message (same bytes,
+      3x). Folded all four into `system` and dropped the per-call
+      duplicates; `system` is now passed as `cached_prefix` to
+      `_chat_with_prompt` for all 3 calls instead of as the plain system
+      message, so it's identical across the round and gets the
+      breakpoint. This also required threading `cached_prefix`/`cache_ttl`
+      through `_chat_with_prompt` itself — see Retry layers below, same edit.
+- [x] **Retry layers** — `_prompt_helpers.py:139/166` wraps `client.py:694`
       (`max_retries=3`) wraps model-fallback at `client.py:617`. One logical call
       can resend an identical 20k-token prompt 6+ times. Retries on cached
-      content bill at 0.1×. Not yet wired — retries already reuse the same
-      `messages` object passed into `_call_with_retry`, so `cached_prefix`
-      threading through unchanged; nothing extra needed there once a caller
-      passes it.
+      content bill at 0.1×. Wired — added `cached_prefix`/`cache_ttl` params
+      to `_chat_with_prompt()`, threaded straight to `llm.chat(...)`; the
+      retry loop already reused the same `messages` object per attempt, so
+      any caller passing `cached_prefix` (e.g. the writing stage above) now
+      gets cache benefit on retries automatically, no extra plumbing.
 
 Mechanics — now actually implemented in `berb/llm/prompt_cache.py`
 (`model_needs_explicit_cache_control`, `build_cached_system_blocks`) and

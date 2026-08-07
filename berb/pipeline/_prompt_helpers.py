@@ -138,13 +138,21 @@ def _chat_with_prompt(
     stage: object = None,
     retries: int = 1,
     call_timeout_sec: int | None = None,
+    cached_prefix: str | None = None,
+    cache_ttl: str = "5m",
 ) -> LLMResponse:
     """Send a prompt to the LLM and return the full response.
 
     Args:
         retries: Total attempts (>=1) if the call raises; retries the
-            same request on failure before giving up.
+            same request on failure before giving up. Retries resend the
+            same `messages`, so a passed `cached_prefix` benefits repeats
+            too — no separate wiring needed for that.
         call_timeout_sec: Per-call timeout override, restored afterward.
+        cached_prefix: Stable, reused text (e.g. shared across several
+            calls in one stage) marked with a provider-side cache_control
+            breakpoint. See `LLMClient.chat`'s docstring for the mechanic.
+        cache_ttl: "5m" (default) or "1h" — see `LLMClient.chat`.
     """
     messages: list[dict[str, str]] = []
     if system_prompt:
@@ -171,6 +179,8 @@ def _chat_with_prompt(
                     json_mode=json_mode,
                     strip_thinking=strip_thinking,
                     stage=stage,
+                    cached_prefix=cached_prefix,
+                    cache_ttl=cache_ttl,
                 )
             except Exception as exc:  # noqa: BLE001
                 last_error = exc

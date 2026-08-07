@@ -391,6 +391,20 @@ def _write_paper_sections(
     except (KeyError, Exception):  # noqa: BLE001
         anti_repetition_rules = ""
 
+    # These four blocks were previously re-embedded verbatim in each of the
+    # 3 call*_user strings below (identical bytes every time). Folded into
+    # `system` instead — `system` is already byte-identical across all 3
+    # calls in this function, so it becomes the cached_prefix passed to
+    # _chat_with_prompt, letting the provider cache this ~2-3k token static
+    # payload once instead of paying full price on every call.
+    system = (
+        f"{system}\n\n"
+        f"{academic_style_guide}\n"
+        f"{narrative_writing_rules}\n"
+        f"{anti_hedging_rules}\n"
+        f"{anti_repetition_rules}"
+    )
+
     # Cross-run writing style patterns (transitions, hedging phrases) mined
     # from this run's own literature corpus abstracts and persisted across
     # runs in .berb_cache/writing_patterns.json. Regex-based extraction only
@@ -471,10 +485,6 @@ def _write_paper_sections(
         f"{_style_patterns_block}\n\n"
         f"{_style_fingerprint_block}\n\n"
         f"{title_guidelines}\n\n"
-        f"{academic_style_guide}\n"
-        f"{narrative_writing_rules}\n"
-        f"{anti_hedging_rules}\n"
-        f"{anti_repetition_rules}\n\n"
         "Write the following sections of a NeurIPS/ICML-quality paper in markdown. "
         "Follow the LENGTH REQUIREMENTS strictly:\n\n"
         "1. **Title** (HARD RULE: MUST be 14 words or fewer. Create a catchy method name "
@@ -500,7 +510,14 @@ def _write_paper_sections(
 
     # T3.5: Retry once on failure, use outline-based stub if still fails
     try:
-        resp1 = _chat_with_prompt(llm, system, call1_user, max_tokens=_paper_max_tokens, retries=1)
+        resp1 = _chat_with_prompt(
+            llm,
+            "",
+            call1_user,
+            max_tokens=_paper_max_tokens,
+            retries=1,
+            cached_prefix=system,
+        )
         part1 = resp1.content.strip()
     except Exception:  # noqa: BLE001
         logger.error("Stage 17: Part 1 LLM call failed after retry — using outline-based stub")
@@ -536,8 +553,6 @@ def _write_paper_sections(
         f"{preamble}\n\n"
         f"{topic_constraint}"
         f"{exp_metrics_instruction}\n\n"
-        f"{narrative_writing_rules}\n"
-        f"{anti_hedging_rules}\n\n"
         # IMP-21: Citation instruction for Method + Experiments
         "CITATION REQUIREMENT: The Method section MUST cite at least 3-5 related "
         "technical papers (foundations your method builds on). The Experiments section "
@@ -560,7 +575,14 @@ def _write_paper_sections(
         "Output markdown with ## headers. Continue from where Part 1 ended."
     )
     try:
-        resp2 = _chat_with_prompt(llm, system, call2_user, max_tokens=_paper_max_tokens, retries=1)
+        resp2 = _chat_with_prompt(
+            llm,
+            "",
+            call2_user,
+            max_tokens=_paper_max_tokens,
+            retries=1,
+            cached_prefix=system,
+        )
         part2 = resp2.content.strip()
     except Exception:  # noqa: BLE001
         logger.error("Stage 17: Part 2 LLM call failed after retry — using outline-based stub")
@@ -590,9 +612,6 @@ def _write_paper_sections(
         f"{preamble}\n\n"
         f"{topic_constraint}"
         f"{exp_metrics_instruction}\n\n"
-        f"{narrative_writing_rules}\n"
-        f"{anti_hedging_rules}\n"
-        f"{anti_repetition_rules}\n\n"
         # IMP-21: Citation instruction for Results + Discussion + Conclusion
         "CITATION REQUIREMENT: The Discussion section MUST cite at least 3-5 papers "
         "when comparing findings with prior work. The Conclusion may cite 1-2 "
@@ -630,7 +649,14 @@ def _write_paper_sections(
         "Output markdown with ## headers. Do NOT include a References section."
     )
     try:
-        resp3 = _chat_with_prompt(llm, system, call3_user, max_tokens=_paper_max_tokens, retries=1)
+        resp3 = _chat_with_prompt(
+            llm,
+            "",
+            call3_user,
+            max_tokens=_paper_max_tokens,
+            retries=1,
+            cached_prefix=system,
+        )
         part3 = resp3.content.strip()
     except Exception:  # noqa: BLE001
         logger.error("Stage 17: Part 3 LLM call failed after retry — using outline-based stub")
