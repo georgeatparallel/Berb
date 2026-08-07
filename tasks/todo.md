@@ -197,9 +197,29 @@ Anthropic direct. Larger refactor, so last.
 
 ## 6. Cap the experiment-data leak
 
-- [ ] `_prompt_helpers.py:223` injects `experiment_summary.json` untruncated
-- [ ] `_execution.py:1128` writes up to 50,000 chars of stdout into that summary
-- [ ] Net: ~12.5k-token leak into downstream analysis/writing prompts
+- [x] `_prompt_helpers.py:223` injects `experiment_summary.json` untruncated —
+      added `_EXPERIMENT_DATA_CHAR_LIMIT = 50_000` (chars) in
+      `_build_context_preamble`'s `include_experiment_data` branch, with
+      truncation logged. This is the single choke point every
+      `include_experiment_data=True` caller (outline, paper draft, analysis
+      preamble) shares, so capping here bounds the leak for all of them at
+      once regardless of how large `experiment_summary.json` grows — no
+      need to chase every writer separately.
+- [x] `_execution.py:1128` writes up to 50,000 chars of stdout into that
+      summary — checked, left as-is: that cap is per-iteration raw sandbox
+      stdout captured into `iter_record["sandbox"]["stdout"]` (comment:
+      "R19-1: store stdout (capped) so PAIRED lines survive for Stage
+      14"), not what actually lands in `experiment_summary.json`.
+      `_analysis.py:554` writes `summary_payload` built from aggregated
+      `condition_summaries`/`metrics`/`ablation_warnings`/
+      `paired_comparisons`, not the raw per-iteration stdout blobs — so
+      this cap doesn't directly compound into the leak the way section 6
+      assumed. Left untouched since changing it risks losing the PAIRED
+      lines Stage 14 depends on, for a cap that isn't the actual leak
+      source.
+- [x] Net: ~12.5k-token leak into downstream analysis/writing prompts —
+      now hard-capped at 50,000 chars (~12.5k tok), matching this
+      estimate as an actual ceiling instead of an unenforced average.
 
 ---
 

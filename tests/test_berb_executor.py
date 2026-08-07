@@ -202,6 +202,35 @@ def test_build_context_preamble_includes_selected_prior_artifacts(
     assert "synth content" in text
 
 
+def test_build_context_preamble_includes_experiment_data(
+    rc_config: RCConfig, run_dir: Path
+) -> None:
+    _write_prior_artifact(run_dir, 14, "experiment_summary.json", '{"metric": 0.5}')
+    text = rc_executor._build_context_preamble(
+        rc_config, run_dir, include_experiment_data=True
+    )
+    assert "### Experiment Data" in text
+    assert '{"metric": 0.5}' in text
+
+
+def test_build_context_preamble_caps_oversized_experiment_data(
+    rc_config: RCConfig, run_dir: Path
+) -> None:
+    # R6-caps: experiment_summary.json can grow unbounded (many conditions x
+    # iterations x capped-but-nonzero stdout each) — this is the one choke
+    # point every include_experiment_data=True caller shares, so a cap here
+    # bounds the leak for all of them regardless of how big the file gets.
+    from berb.pipeline._prompt_helpers import _EXPERIMENT_DATA_CHAR_LIMIT
+
+    oversized = "x" * (_EXPERIMENT_DATA_CHAR_LIMIT + 5_000)
+    _write_prior_artifact(run_dir, 14, "experiment_summary.json", oversized)
+    text = rc_executor._build_context_preamble(
+        rc_config, run_dir, include_experiment_data=True
+    )
+    injected = text.split("### Experiment Data\n", 1)[1]
+    assert len(injected) == _EXPERIMENT_DATA_CHAR_LIMIT
+
+
 def test_read_prior_artifact_finds_newest_file(run_dir: Path) -> None:
     _write_prior_artifact(run_dir, 1, "goal.md", "old")
     _write_prior_artifact(run_dir, 3, "goal.md", "new")

@@ -18,6 +18,14 @@ from berb.pipeline._io_helpers import _read_prior_artifact
 
 logger = logging.getLogger(__name__)
 
+# experiment_summary.json aggregates per-condition metrics plus (capped, but
+# not zero) raw sandbox stdout across every experiment iteration — with
+# enough iterations/conditions it has no upper bound. This is the single
+# choke point every include_experiment_data=True caller goes through
+# (outline, paper draft, analysis, ...), so capping here bounds the leak
+# for all of them at once rather than chasing each writer.
+_EXPERIMENT_DATA_CHAR_LIMIT = 50_000
+
 
 def _build_fallback_queries(topic: str) -> list[str]:
     """Build fallback search queries from topic text."""
@@ -233,6 +241,13 @@ def _build_context_preamble(
     if include_experiment_data:
         exp_summary = _read_prior_artifact(run_dir, "experiment_summary.json")
         if exp_summary:
+            if len(exp_summary) > _EXPERIMENT_DATA_CHAR_LIMIT:
+                logger.warning(
+                    "experiment_summary.json is %d chars — truncating to %d for prompt context",
+                    len(exp_summary),
+                    _EXPERIMENT_DATA_CHAR_LIMIT,
+                )
+                exp_summary = exp_summary[:_EXPERIMENT_DATA_CHAR_LIMIT]
             lines.append(f"\n### Experiment Data\n{exp_summary}")
 
     return "\n".join(lines)
