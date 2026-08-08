@@ -299,15 +299,17 @@ not a silent scope cut.
       one process — doesn't occur anywhere in the live pipeline: `berb
       run --from-stage X` starts a fresh process and fresh calls, and
       retries only fire after a failed call (nothing to have cached yet).
-      `PromptCache` has zero callers anywhere in `berb/`, has since before
-      this audit, and only exists today because its own test file
-      (`tests/test_prompt_cache.py`, 17 tests) tests it in isolation from
-      any real call site. Left in place rather than deleted unprompted —
-      this is a recommendation for the user to act on, not an
-      unrequested deletion — but if wiring it is ever revisited, disk
-      persistence (surviving across `--from-stage` reruns during
-      development) is the one use case that would make it worth the
-      code; an in-process-only LRU as currently written would not.
+      `PromptCache` had zero callers anywhere in `berb/`, had since before
+      this audit, and only existed because its own test file
+      (`tests/test_prompt_cache.py`, 17 tests) tested it in isolation from
+      any real call site. **Update:** removed on user request —
+      `PromptCache`/`CacheEntry`/`CacheWarmer`/`cached_completion` and
+      their 17 tests deleted from `berb/llm/prompt_cache.py` /
+      `tests/test_prompt_cache.py`, keeping only the live provider-side
+      caching functions. If wiring exact-repeat caching is ever revisited,
+      disk persistence (surviving across `--from-stage` reruns during
+      development) is the one use case that would make it worth the code;
+      an in-process-only LRU like the removed version would not.
 
 ## Review
 
