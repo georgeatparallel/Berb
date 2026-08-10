@@ -10,6 +10,7 @@ from typing import Any
 import yaml
 
 from berb.adapters import AdapterBundle
+from berb.agents.benchmark_agent import extract_corpus_method_names, find_omitted_baselines
 from berb.config import RCConfig
 from berb.llm.client import LLMClient
 from berb.pipeline._domain import _detect_domain
@@ -29,6 +30,105 @@ from berb.pipeline.stages import Stage, StageStatus
 from berb.prompts import PromptManager
 
 logger = logging.getLogger(__name__)
+
+
+def _read_candidate_titles(run_dir: Path) -> tuple[str, ...]:
+    """Read paper titles from stage 4's candidates.jsonl, if present."""
+    text = _read_prior_artifact(run_dir, "candidates.jsonl")
+    if not text:
+        return ()
+    titles: list[str] = []
+    for line in text.strip().splitlines():
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(row, dict):
+            title = row.get("title")
+            if isinstance(title, str) and title.strip():
+                titles.append(title.strip())
+    return tuple(titles)
+
+
+def _trim_plan_to_condition_budget(
+    plan: dict[str, Any], *, time_budget_sec: int, required_baseline_count: int = 0
+) -> dict[str, Any]:
+    """Cap plan['baselines']/['proposed_methods']/['ablations'] to a
+    condition-count budget derived from time_budget_sec (mutates and
+    returns *plan*).
+
+    P1-04: *required_baseline_count* reference baselines — assumed to
+    occupy the first N slots of plan['baselines'] (the benchmark agent's
+    selections are prepended there before this runs) — are never trimmed.
+    Only variants (proposed_methods) and ablations shrink under a tight
+    budget. If the required baselines alone exceed the nominal budget, the
+    budget is expanded to fit them rather than silently shipping a paper
+    with no SOTA comparison.
+    """
+    # BUG-R41-09: Enforce condition count limit based on time budget.
+    # Too many conditions (30+) guarantee timeouts and wasted compute.
+    max_conditions = 8  # default for budgets ≤ 3600s
+    if time_budget_sec > 3600:
+        max_conditions = 12
+    if time_budget_sec > 7200:
+        max_conditions = 20
+
+    baselines = plan.get("baselines", [])
+    if isinstance(baselines, dict):
+        baselines = list(baselines.values())
+    proposed = plan.get("proposed_methods", [])
+    if isinstance(proposed, dict):
+        proposed = list(proposed.values())
+    ablations = plan.get("ablations", [])
+    if isinstance(ablations, dict):
+        ablations = list(ablations.values())
+    total = len(baselines) + len(proposed) + len(ablations)
+
+    required_baseline_count = min(required_baseline_count, len(baselines))
+
+    if total <= max_conditions:
+        return plan
+
+    logger.warning(
+        "Stage 9: Plan has %d conditions (limit %d for %ds budget). Trimming to fit.",
+        total,
+        max_conditions,
+        time_budget_sec,
+    )
+    if required_baseline_count > max_conditions:
+        logger.error(
+            "Stage 9: %d benchmark-required baseline(s) exceed the %d-condition "
+            "budget on their own — keeping all of them rather than shipping a "
+            "paper with no SOTA comparison; total conditions will exceed the "
+            "nominal budget for this run.",
+            required_baseline_count,
+            max_conditions,
+        )
+        max_conditions = required_baseline_count
+
+    # Keep all proposed methods (up to max), trim baselines and ablations
+    proposed_count = min(len(proposed), max(1, max_conditions - 4))
+    remaining = max(0, max_conditions - proposed_count)
+    baseline_budget = max(required_baseline_count, 1, remaining // 2)
+    ablation_budget = max(0, remaining - baseline_budget)
+
+    if len(proposed) > proposed_count:
+        plan["proposed_methods"] = proposed[:proposed_count]
+        logger.info("Stage 9: Trimmed proposed methods %d → %d", len(proposed), proposed_count)
+
+    if len(baselines) > baseline_budget:
+        plan["baselines"] = baselines[:baseline_budget]
+        logger.info(
+            "Stage 9: Trimmed baselines %d → %d (kept all %d benchmark-required)",
+            len(baselines),
+            baseline_budget,
+            required_baseline_count,
+        )
+    if len(ablations) > ablation_budget:
+        plan["ablations"] = ablations[:ablation_budget]
+        logger.info("Stage 9: Trimmed ablations %d → %d", len(ablations), ablation_budget)
+
+    return plan
 
 
 @register_stage(
@@ -54,6 +154,22 @@ def _execute_experiment_design(
 ) -> StageResult:
     hypotheses = _read_prior_artifact(run_dir, "hypotheses.md") or ""
     preamble = _build_context_preamble(config, run_dir, include_goal=True, include_hypotheses=True)
+
+    # P2-03: feed the corpus Berb itself retrieved into the baseline choice.
+    # Previously this context preamble loaded only goal.md + hypotheses.md —
+    # candidates.jsonl sat unused on disk while the prompt told the model to
+    # "check recent NeurIPS/ICML/ICLR papers" with nothing actually
+    # retrieved, so baselines came from parametric memory alone.
+    _corpus_titles = _read_candidate_titles(run_dir)
+    _corpus_methods = extract_corpus_method_names(_corpus_titles)
+    if _corpus_methods:
+        preamble += (
+            "\n\n## Methods found in your own retrieved literature corpus\n"
+            "These competitor/prior-work methods were named in papers your "
+            "own literature search retrieved for this topic. Prefer "
+            "comparing against these over inventing baselines from memory:\n"
+            + "\n".join(f"- {m}" for m in _corpus_methods[:30])
+        )
 
     # --- E1: Falsification gate check ---
     _hs_text = _read_prior_artifact(run_dir, "hypothesis_state.json")
@@ -434,68 +550,50 @@ def _execute_experiment_design(
 
     plan.setdefault("topic", config.research.topic)
 
-    # BUG-R41-09: Enforce condition count limit based on time budget.
-    # Too many conditions (30+) guarantee timeouts and wasted compute.
+    # P1-04: benchmark-agent baselines (prepended into plan["baselines"]
+    # above — lines 409-413, so they occupy the first N slots) are
+    # reference comparisons a reviewer would flag as missing if silently
+    # dropped by the budget trim — never trim them, only variants/ablations.
     _time_budget = getattr(getattr(config, "experiment", None), "time_budget_sec", 3600)
-    _max_conditions = 8  # default for budgets ≤ 3600s
-    if _time_budget > 3600:
-        _max_conditions = 12
-    if _time_budget > 7200:
-        _max_conditions = 20
-
-    _baselines = plan.get("baselines", [])
-    if isinstance(_baselines, dict):
-        _baselines = list(_baselines.values())
-    _proposed = plan.get("proposed_methods", [])
-    if isinstance(_proposed, dict):
-        _proposed = list(_proposed.values())
-    _ablations = plan.get("ablations", [])
-    if isinstance(_ablations, dict):
-        _ablations = list(_ablations.values())
-    _total = len(_baselines) + len(_proposed) + len(_ablations)
-
-    if _total > _max_conditions:
-        logger.warning(
-            "Stage 9: Plan has %d conditions (limit %d for %ds budget). Trimming to fit.",
-            _total,
-            _max_conditions,
-            _time_budget,
-        )
-        # Keep all proposed methods (up to max), trim baselines and ablations
-        _proposed_count = min(len(_proposed), max(1, _max_conditions - 4))
-        _remaining = max(0, _max_conditions - _proposed_count)
-        _baseline_budget = max(1, _remaining // 2)
-        _ablation_budget = max(0, _remaining - _baseline_budget)
-        if len(_proposed) > _proposed_count:
-            plan["proposed_methods"] = _proposed[:_proposed_count]
-            logger.info(
-                "Stage 9: Trimmed proposed methods %d → %d",
-                len(_proposed),
-                _proposed_count,
-            )
-
-        if len(_baselines) > _baseline_budget:
-            plan["baselines"] = _baselines[:_baseline_budget]
-            logger.info(
-                "Stage 9: Trimmed baselines %d → %d",
-                len(_baselines),
-                _baseline_budget,
-            )
-        if len(_ablations) > _ablation_budget:
-            plan["ablations"] = _ablations[:_ablation_budget]
-            logger.info(
-                "Stage 9: Trimmed ablations %d → %d",
-                len(_ablations),
-                _ablation_budget,
-            )
+    _required_baseline_count = (
+        len(_benchmark_plan.selected_baselines) if _benchmark_plan is not None else 0
+    )
+    plan = _trim_plan_to_condition_budget(
+        plan,
+        time_budget_sec=_time_budget,
+        required_baseline_count=_required_baseline_count,
+    )
 
     (stage_dir / "exp_plan.yaml").write_text(
         yaml.dump(plan, default_flow_style=False, allow_unicode=True),
         encoding="utf-8",
     )
+    _artifacts = ["exp_plan.yaml"]
+
+    # P2-03: cross-check the final baseline list against the literature
+    # corpus one more time. The context injection above only asks the LLM
+    # to prefer these methods; this is the deterministic check for whether
+    # it actually did.
+    if _corpus_methods:
+        _final_baselines = plan.get("baselines", [])
+        if isinstance(_final_baselines, dict):
+            _final_baselines = list(_final_baselines.values())
+        _omitted = find_omitted_baselines(_final_baselines, _corpus_methods)
+        if _omitted.missing:
+            logger.warning(
+                "Stage 9: %d method(s) from the retrieved literature corpus "
+                "have no matching baseline in the experiment plan: %s",
+                len(_omitted.missing),
+                ", ".join(_omitted.missing),
+            )
+            (stage_dir / "omitted_baselines.json").write_text(
+                json.dumps(_omitted.to_dict(), indent=2), encoding="utf-8"
+            )
+            _artifacts.append("omitted_baselines.json")
+
     return StageResult(
         stage=Stage.EXPERIMENT_DESIGN,
         status=StageStatus.DONE,
-        artifacts=("exp_plan.yaml",),
+        artifacts=tuple(_artifacts),
         evidence_refs=("stage-09/exp_plan.yaml",),
     )

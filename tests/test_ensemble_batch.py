@@ -103,11 +103,11 @@ class TestReviewPaperBatch:
         )
 
         assert reviews is not None
-        assert len(adapter.submitted_requests) == 5
+        assert len(adapter.submitted_requests) == len(REVIEWER_PERSONAS)
         assert {r["custom_id"] for r in adapter.submitted_requests} == {
             p.id for p in REVIEWER_PERSONAS
         }
-        assert len(reviews) == 5
+        assert len(reviews) == len(REVIEWER_PERSONAS)
         assert all(r.overall_score == 7.0 for r in reviews)
 
     def test_applies_cached_prefix_and_system_per_persona(self) -> None:
@@ -181,7 +181,7 @@ class TestReviewPaperBatch:
         )
 
         assert reviews is not None
-        assert len(reviews) == 5
+        assert len(reviews) == len(REVIEWER_PERSONAS)
         missing_persona_id = REVIEWER_PERSONAS[-1].id
         missing_review = next(r for r in reviews if r.reviewer_id == missing_persona_id)
         assert "could not be generated" in missing_review.detailed_feedback.lower()
@@ -224,5 +224,5 @@ class TestReviewPaperUsesBatchFlag:
                 ensemble.review_paper(paper_path, paper_text="text", use_batch=True)
             )
 
-        assert len(reviews) == 5
-        assert mock_llm.chat.call_count == 5
+        assert len(reviews) == len(REVIEWER_PERSONAS)
+        assert mock_llm.chat.call_count == len(REVIEWER_PERSONAS)

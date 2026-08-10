@@ -1105,6 +1105,996 @@ class TestExportPublishCodePackage:
         assert "My Great Paper" in readme
 
 
+class TestExportCitationGate:
+    """P0-03: CITATION_VERIFY's own contract says hallucinated citations MUST
+    block export, but stage 23 ran after stage 22 and could never do so.
+    Verification now happens inside stage 22 itself, after the key-space is
+    finalized (_resolve_missing_citations) and before templates/PDF export.
+    """
+
+    def _write_bib_and_paper(self, run_dir: Path) -> None:
+        _write_prior_artifact(
+            run_dir,
+            19,
+            "paper_revised.md",
+            "# Test Paper\n\nCites [good2024paper] and [fake2024hallu] here.\n",
+        )
+        _write_prior_artifact(
+            run_dir,
+            4,
+            "references.bib",
+            "@article{good2024paper,\n"
+            "  title = {A Good Paper},\n"
+            "  author = {Good, A.},\n"
+            "  year = {2024},\n"
+            "}\n\n"
+            "@article{fake2024hallu,\n"
+            "  title = {A Hallucinated Paper},\n"
+            "  author = {Fake, B.},\n"
+            "  year = {2024},\n"
+            "}\n",
+        )
+
+    def test_export_fails_when_hallucinated_citation_present(
+        self,
+        tmp_path: Path,
+        run_dir: Path,
+        rc_config: RCConfig,
+        adapters: AdapterBundle,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from berb.literature.verify import CitationResult, VerificationReport, VerifyStatus
+
+        def _fake_verify(bib_text: str, **kwargs: object) -> VerificationReport:
+            return VerificationReport(
+                total=2,
+                verified=1,
+                suspicious=0,
+                hallucinated=1,
+                skipped=0,
+                results=[
+                    CitationResult(
+                        cite_key="good2024paper",
+                        title="A Good Paper",
+                        status=VerifyStatus.VERIFIED,
+                        confidence=0.9,
+                        method="doi",
+                    ),
+                    CitationResult(
+                        cite_key="fake2024hallu",
+                        title="A Hallucinated Paper",
+                        status=VerifyStatus.HALLUCINATED,
+                        confidence=0.0,
+                        method="title_search",
+                    ),
+                ],
+            )
+
+        monkeypatch.setattr("berb.literature.verify.verify_citations", _fake_verify)
+        self._write_bib_and_paper(run_dir)
+        stage_dir = run_dir / "stage-22"
+        stage_dir.mkdir(parents=True, exist_ok=True)
+
+        result = rc_executor._execute_export_publish(
+            stage_dir, run_dir, rc_config, adapters, llm=None
+        )
+
+        assert result.status is StageStatus.FAILED
+        assert result.error is not None
+        assert "fake2024hallu" in result.error
+        assert not (stage_dir / "paper.tex").exists()
+
+    def test_export_succeeds_when_all_citations_verified(
+        self,
+        tmp_path: Path,
+        run_dir: Path,
+        rc_config: RCConfig,
+        adapters: AdapterBundle,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from berb.literature.verify import CitationResult, VerificationReport, VerifyStatus
+
+        def _fake_verify(bib_text: str, **kwargs: object) -> VerificationReport:
+            return VerificationReport(
+                total=2,
+                verified=2,
+                suspicious=0,
+                hallucinated=0,
+                skipped=0,
+                results=[
+                    CitationResult(
+                        cite_key="good2024paper",
+                        title="A Good Paper",
+                        status=VerifyStatus.VERIFIED,
+                        confidence=0.9,
+                        method="doi",
+                    ),
+                    CitationResult(
+                        cite_key="fake2024hallu",
+                        title="Actually A Real Paper",
+                        status=VerifyStatus.VERIFIED,
+                        confidence=0.8,
+                        method="title_search",
+                    ),
+                ],
+            )
+
+        monkeypatch.setattr("berb.literature.verify.verify_citations", _fake_verify)
+        self._write_bib_and_paper(run_dir)
+        stage_dir = run_dir / "stage-22"
+        stage_dir.mkdir(parents=True, exist_ok=True)
+
+        result = rc_executor._execute_export_publish(
+            stage_dir, run_dir, rc_config, adapters, llm=None
+        )
+
+        assert result.status is StageStatus.DONE
+        assert "references.bib" in result.artifacts
+
+
+class TestInventedCitationDetectionNotRepair:
+    """P2-01: _resolve_missing_citations used to inject an API-search match
+    for an LLM-invented cite_key straight into references.bib — repairing a
+    hallucination into legitimacy. It's diagnostic-only now: the invented
+    key is stripped from the paper and reported, never added to the bib,
+    and its presence blocks export (P0-03's gate).
+    """
+
+    def test_invented_cite_key_blocks_export_even_when_a_match_is_found(
+        self,
+        tmp_path: Path,
+        run_dir: Path,
+        rc_config: RCConfig,
+        adapters: AdapterBundle,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # _resolve_missing_citations claims to have found a plausible match
+        # for the invented key — this must NOT leak into references.bib.
+        monkeypatch.setattr(
+            "berb.pipeline.stage_impls._review_publish._resolve_missing_citations",
+            lambda missing_keys, existing_bib: (
+                set(missing_keys),
+                [
+                    "@article{"
+                    + next(iter(missing_keys))
+                    + ",\n  title = {A Suspicious Match},\n}\n"
+                ],
+            ),
+        )
+        _write_prior_artifact(
+            run_dir,
+            19,
+            "paper_revised.md",
+            "# Test Paper\n\nCites [good2024paper] and [invented2099key] here.\n",
+        )
+        _write_prior_artifact(
+            run_dir,
+            4,
+            "references.bib",
+            "@article{good2024paper,\n"
+            "  title = {A Good Paper},\n"
+            "  author = {Good, A.},\n"
+            "  year = {2024},\n"
+            "}\n",
+        )
+        stage_dir = run_dir / "stage-22"
+        stage_dir.mkdir(parents=True, exist_ok=True)
+
+        result = rc_executor._execute_export_publish(
+            stage_dir, run_dir, rc_config, adapters, llm=None
+        )
+
+        assert result.status is StageStatus.FAILED
+        assert result.error is not None
+        assert "invented2099key" in result.error
+        assert (stage_dir / "invalid_citations.json").is_file()
+        invalid = json.loads((stage_dir / "invalid_citations.json").read_text(encoding="utf-8"))
+        assert "invented2099key" in invalid
+
+        bib_text = (stage_dir / "references.bib").read_text(encoding="utf-8")
+        assert "invented2099key" not in bib_text
+        assert "A Suspicious Match" not in bib_text
+
+    def test_paper_with_only_known_citations_exports_cleanly(
+        self,
+        tmp_path: Path,
+        run_dir: Path,
+        rc_config: RCConfig,
+        adapters: AdapterBundle,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from berb.literature.verify import CitationResult, VerificationReport, VerifyStatus
+
+        def _fake_verify(bib_text: str, **kwargs: object) -> VerificationReport:
+            return VerificationReport(
+                total=1,
+                verified=1,
+                suspicious=0,
+                hallucinated=0,
+                skipped=0,
+                results=[
+                    CitationResult(
+                        cite_key="good2024paper",
+                        title="A Good Paper",
+                        status=VerifyStatus.VERIFIED,
+                        confidence=0.9,
+                        method="doi",
+                    ),
+                ],
+            )
+
+        monkeypatch.setattr("berb.literature.verify.verify_citations", _fake_verify)
+        _write_prior_artifact(
+            run_dir, 19, "paper_revised.md", "# Test Paper\n\nCites [good2024paper] here.\n"
+        )
+        _write_prior_artifact(
+            run_dir,
+            4,
+            "references.bib",
+            "@article{good2024paper,\n"
+            "  title = {A Good Paper},\n"
+            "  author = {Good, A.},\n"
+            "  year = {2024},\n"
+            "}\n",
+        )
+        stage_dir = run_dir / "stage-22"
+        stage_dir.mkdir(parents=True, exist_ok=True)
+
+        result = rc_executor._execute_export_publish(
+            stage_dir, run_dir, rc_config, adapters, llm=None
+        )
+
+        assert not (stage_dir / "invalid_citations.json").exists()
+        assert result.status is StageStatus.DONE
+
+
+class TestLiteratureCollectExpansionRounds:
+    """P2-04: stage 4 now runs up to 3 gap-driven expansion rounds, seeded
+    from the previous round's highest-cited new finds, stopping early on
+    diminishing returns (< 3 new candidates in a round).
+    """
+
+    def _fake_paper(self, title: str, citation_count: int = 10):
+        from berb.literature.models import Paper
+
+        return Paper(
+            paper_id=f"id-{title}",
+            title=title,
+            authors=(),
+            year=2023,
+            abstract="",
+            venue="",
+            citation_count=citation_count,
+            source="arxiv",
+        )
+
+    def test_stops_early_on_diminishing_returns(
+        self, tmp_path: Path, run_dir: Path, rc_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
+        call_count = {"n": 0}
+
+        def _fake_search(queries, **kwargs):  # noqa: ANN001, ANN003
+            call_count["n"] += 1
+            if call_count["n"] == 1:
+                # Round 1: plenty of new candidates -> should continue.
+                return [self._fake_paper(f"Round1 Paper {i}", 100 - i) for i in range(5)]
+            # Round 2: below _MIN_NEW_CANDIDATES_TO_CONTINUE -> stop here.
+            return [self._fake_paper("Round2 Paper", 1)]
+
+        monkeypatch_target = "berb.literature.search.search_papers_multi_query"
+        import unittest.mock
+
+        with unittest.mock.patch(monkeypatch_target, side_effect=_fake_search):
+            stage_dir = run_dir / "stage-04"
+            stage_dir.mkdir(parents=True, exist_ok=True)
+            result = rc_executor._execute_literature_collect(
+                stage_dir, run_dir, rc_config, adapters, llm=None
+            )
+
+        # 2 rounds ran (round 2 had too few new candidates to continue to
+        # round 3), not the full 3.
+        assert call_count["n"] == 2
+        assert result.status == StageStatus.DONE
+        candidates_text = (stage_dir / "candidates.jsonl").read_text(encoding="utf-8")
+        assert "Round1 Paper 0" in candidates_text
+        assert "Round2 Paper" in candidates_text
+
+    def test_runs_all_three_rounds_when_each_finds_enough(
+        self, tmp_path: Path, run_dir: Path, rc_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
+        call_count = {"n": 0}
+
+        def _fake_search(queries, **kwargs):  # noqa: ANN001, ANN003
+            call_count["n"] += 1
+            return [
+                self._fake_paper(f"R{call_count['n']} Paper {i}", 100 - i) for i in range(5)
+            ]
+
+        import unittest.mock
+
+        with unittest.mock.patch(
+            "berb.literature.search.search_papers_multi_query", side_effect=_fake_search
+        ):
+            stage_dir = run_dir / "stage-04"
+            stage_dir.mkdir(parents=True, exist_ok=True)
+            rc_executor._execute_literature_collect(
+                stage_dir, run_dir, rc_config, adapters, llm=None
+            )
+
+        assert call_count["n"] == 3
+
+    def test_year_max_from_queries_json_reaches_search(
+        self, tmp_path: Path, run_dir: Path, rc_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
+        _write_prior_artifact(
+            run_dir, 3, "queries.json", json.dumps({"queries": ["test"], "year_max": 2023})
+        )
+        captured_kwargs: dict[str, object] = {}
+
+        def _fake_search(queries, **kwargs):  # noqa: ANN001, ANN003
+            captured_kwargs.update(kwargs)
+            return []
+
+        import unittest.mock
+
+        with unittest.mock.patch(
+            "berb.literature.search.search_papers_multi_query", side_effect=_fake_search
+        ):
+            stage_dir = run_dir / "stage-04"
+            stage_dir.mkdir(parents=True, exist_ok=True)
+            rc_executor._execute_literature_collect(
+                stage_dir, run_dir, rc_config, adapters, llm=None
+            )
+
+        assert captured_kwargs.get("year_max") == 2023
+
+
+class TestExperimentDesignBaselineScout:
+    """P2-03: stage 9's context preamble used to load only goal.md +
+    hypotheses.md — candidates.jsonl (the corpus Berb itself retrieved)
+    sat unused on disk while the prompt told the model to check recent
+    conference papers with nothing actually retrieved.
+    """
+
+    def _write_common_artifacts(self, run_dir: Path) -> None:
+        _write_prior_artifact(run_dir, 1, "goal.md", "# Goal\nTest goal.")
+        _write_prior_artifact(run_dir, 8, "hypotheses.md", "# H1\nTest hypothesis.")
+        _write_prior_artifact(
+            run_dir,
+            4,
+            "candidates.jsonl",
+            "\n".join(
+                json.dumps({"title": t})
+                for t in [
+                    "GPT-4: Technical Report",
+                    "A survey of deep learning methods",  # no colon prefix -> skipped
+                ]
+            ),
+        )
+
+    def test_corpus_methods_injected_into_prompt(
+        self, tmp_path: Path, run_dir: Path, rc_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
+        self._write_common_artifacts(run_dir)
+        stage_dir = run_dir / "stage-09"
+        stage_dir.mkdir(parents=True, exist_ok=True)
+
+        llm = FakeLLMClient(
+            "```yaml\nbaselines:\n  - existing_baseline\nproposed_methods:\n"
+            "  - ours\nablations: []\n```"
+        )
+        rc_executor._execute_experiment_design(stage_dir, run_dir, rc_config, adapters, llm=llm)
+
+        assert len(llm.calls) >= 1
+        all_prompts = " ".join(msg["content"] for call in llm.calls for msg in call)
+        assert "GPT-4" in all_prompts
+        assert "A survey of deep learning methods" not in all_prompts
+
+    def test_omitted_baselines_written_when_plan_misses_corpus_method(
+        self, tmp_path: Path, run_dir: Path, rc_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
+        self._write_common_artifacts(run_dir)
+        stage_dir = run_dir / "stage-09"
+        stage_dir.mkdir(parents=True, exist_ok=True)
+
+        # The plan's baselines never mention GPT-4, which the corpus named.
+        llm = FakeLLMClient(
+            "```yaml\nbaselines:\n  - existing_baseline\nproposed_methods:\n"
+            "  - ours\nablations: []\n```"
+        )
+        result = rc_executor._execute_experiment_design(
+            stage_dir, run_dir, rc_config, adapters, llm=llm
+        )
+
+        assert result.status is StageStatus.DONE
+        omitted_path = stage_dir / "omitted_baselines.json"
+        assert omitted_path.is_file()
+        assert "omitted_baselines.json" in result.artifacts
+        data = json.loads(omitted_path.read_text(encoding="utf-8"))
+        assert "GPT-4" in data["missing"]
+
+    def test_no_omitted_baselines_file_when_plan_covers_corpus(
+        self, tmp_path: Path, run_dir: Path, rc_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
+        self._write_common_artifacts(run_dir)
+        stage_dir = run_dir / "stage-09"
+        stage_dir.mkdir(parents=True, exist_ok=True)
+
+        llm = FakeLLMClient(
+            "```yaml\nbaselines:\n  - GPT-4\nproposed_methods:\n"
+            "  - ours\nablations: []\n```"
+        )
+        rc_executor._execute_experiment_design(stage_dir, run_dir, rc_config, adapters, llm=llm)
+
+        assert not (stage_dir / "omitted_baselines.json").exists()
+
+    def test_no_candidates_file_no_omitted_baselines_check(
+        self, tmp_path: Path, run_dir: Path, rc_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
+        """Backwards compat: no candidates.jsonl -> no corpus injection, no crash."""
+        _write_prior_artifact(run_dir, 1, "goal.md", "# Goal\nTest goal.")
+        _write_prior_artifact(run_dir, 8, "hypotheses.md", "# H1\nTest hypothesis.")
+        stage_dir = run_dir / "stage-09"
+        stage_dir.mkdir(parents=True, exist_ok=True)
+
+        llm = FakeLLMClient(
+            "```yaml\nbaselines:\n  - b\nproposed_methods:\n  - ours\nablations: []\n```"
+        )
+        result = rc_executor._execute_experiment_design(
+            stage_dir, run_dir, rc_config, adapters, llm=llm
+        )
+
+        assert result.status is StageStatus.DONE
+        assert not (stage_dir / "omitted_baselines.json").exists()
+
+
+class TestLiteratureScreenRealSearchGate:
+    """P0-04: search_meta.json records real_search=False when stage 4 fell
+    back to letting the LLM invent the entire candidate corpus, but nothing
+    downstream checked the flag — a fabricated literature corpus proceeded
+    to publication indistinguishably from a real one.
+    """
+
+    def test_screen_fails_when_search_was_synthetic(
+        self, tmp_path: Path, run_dir: Path, rc_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
+        _write_prior_artifact(
+            run_dir,
+            4,
+            "candidates.jsonl",
+            json.dumps({"cite_key": "fake2024x", "title": "Invented Paper"}),
+        )
+        _write_prior_artifact(
+            run_dir,
+            4,
+            "search_meta.json",
+            json.dumps({"real_search": False, "queries_used": [], "total_candidates": 1}),
+        )
+        stage_dir = run_dir / "stage-05"
+        stage_dir.mkdir(parents=True, exist_ok=True)
+
+        result = rc_executor._execute_literature_screen(
+            stage_dir, run_dir, rc_config, adapters, llm=None
+        )
+
+        assert result.status is StageStatus.FAILED
+        assert result.error is not None
+        assert "fabricated" in result.error.lower()
+        assert not (stage_dir / "shortlist.jsonl").exists()
+
+    def test_screen_proceeds_when_search_was_real(
+        self, tmp_path: Path, run_dir: Path, rc_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
+        _write_prior_artifact(
+            run_dir,
+            4,
+            "candidates.jsonl",
+            "\n".join(
+                json.dumps({"cite_key": f"real{i}2024", "title": f"Real Paper {i}"})
+                for i in range(3)
+            ),
+        )
+        _write_prior_artifact(
+            run_dir,
+            4,
+            "search_meta.json",
+            json.dumps({"real_search": True, "queries_used": ["q1"], "total_candidates": 3}),
+        )
+        stage_dir = run_dir / "stage-05"
+        stage_dir.mkdir(parents=True, exist_ok=True)
+
+        result = rc_executor._execute_literature_screen(
+            stage_dir, run_dir, rc_config, adapters, llm=None
+        )
+
+        assert result.status is StageStatus.DONE
+        assert (stage_dir / "shortlist.jsonl").exists()
+
+    def test_screen_proceeds_when_search_meta_missing(
+        self, tmp_path: Path, run_dir: Path, rc_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
+        """Backwards compat: absent search_meta.json must not block screening."""
+        _write_prior_artifact(
+            run_dir,
+            4,
+            "candidates.jsonl",
+            json.dumps({"cite_key": "real2024x", "title": "Real Paper"}),
+        )
+        stage_dir = run_dir / "stage-05"
+        stage_dir.mkdir(parents=True, exist_ok=True)
+
+        result = rc_executor._execute_literature_screen(
+            stage_dir, run_dir, rc_config, adapters, llm=None
+        )
+
+        assert result.status is StageStatus.DONE
+
+
+class TestQualityGateEnsembleVeto:
+    """P1-03: the 5-reviewer ensemble now runs inside the quality gate
+    (stage 20) instead of after export (stage 22), so its verdict can
+    actually block the pipeline. Independent veto only — the numeric score
+    path is unchanged, so wiring this in cannot make outcomes worse.
+    """
+
+    class _FakeRejectingEnsemble:
+        """Stands in for AutomatedReviewerEnsemble: always REJECT consensus."""
+
+        def __init__(self, llm_client: object = None) -> None:
+            del llm_client
+
+        async def review_paper(self, paper_path: object, paper_text: object = None, **kw: object):
+            del paper_path, paper_text, kw
+            return []
+
+        def area_chair_decision(self, reviews: object):
+            from berb.review.ensemble import Decision, MetaReview
+
+            del reviews
+            return MetaReview(
+                reviews=[],
+                average_score=2.0,
+                score_std=0.0,
+                max_score=2.0,
+                min_score=2.0,
+                score_distribution={},
+                consensus_decision=Decision.REJECT,
+                confidence=1.0,
+                meta_review_text="fatal flaw found",
+                acceptance_recommendation="reject",
+                reviewer_conflicts=[],
+            )
+
+        def generate_review_report(
+            self, reviews: object, meta_review: object, output_path: Path | None = None
+        ) -> str:
+            del reviews, meta_review
+            text = "# Ensemble Review\nConsensus: REJECT"
+            if output_path is not None:
+                output_path.write_text(text, encoding="utf-8")
+            return text
+
+    def _setup_run_dir(self, run_dir: Path) -> None:
+        _write_prior_artifact(
+            run_dir, 19, "paper_revised.md", "# Test Paper\n\nSome content...\n"
+        )
+        exp_summary = {
+            "best_run": {"status": "completed", "metrics": {"accuracy": 0.95}},
+            "condition_summaries": {"baseline": {"metrics": {"accuracy": 0.95}}},
+            "metrics_summary": {"accuracy": {"min": 0.9, "max": 0.96, "mean": 0.93}},
+        }
+        _write_prior_artifact(run_dir, 14, "experiment_summary.json", json.dumps(exp_summary))
+
+    def _strict_config(self, tmp_path: Path) -> RCConfig:
+        """rc_config fixture's shape, but graceful_degradation=False so a
+        veto surfaces as a hard StageStatus.FAILED instead of a DONE/
+        degraded pass-through — the plan's acceptance test wants a clean
+        FAILED assertion.
+        """
+        data = {
+            "project": {"name": "rc-test", "mode": "docs-first"},
+            "research": {
+                "topic": "test-driven science",
+                "domains": ["ml", "systems"],
+                "daily_paper_count": 2,
+                "quality_threshold": 8.2,
+                "graceful_degradation": False,
+            },
+            "runtime": {"timezone": "UTC"},
+            "notifications": {
+                "channel": "local",
+                "on_stage_start": True,
+                "on_stage_fail": False,
+                "on_gate_required": True,
+            },
+            "knowledge_base": {"backend": "markdown", "root": str(tmp_path / "kb")},
+            "openclaw_bridge": {"use_memory": True, "use_message": True},
+            "llm": {
+                "provider": "openai-compatible",
+                "base_url": "http://localhost:1234/v1",
+                "api_key_env": "RC_TEST_KEY",
+                "primary_model": "fake-model",
+                "fallback_models": [],
+            },
+            "security": {"hitl_required_stages": [5, 9, 20]},
+            "experiment": {"mode": "sandbox"},
+        }
+        return RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
+
+    def test_quality_gate_blocks_on_ensemble_reject_consensus(
+        self,
+        tmp_path: Path,
+        run_dir: Path,
+        adapters: AdapterBundle,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(
+            "berb.review.ensemble.AutomatedReviewerEnsemble", self._FakeRejectingEnsemble
+        )
+        self._setup_run_dir(run_dir)
+        stage_dir = run_dir / "stage-20"
+        stage_dir.mkdir(parents=True, exist_ok=True)
+
+        # Score alone would PASS (9 >= threshold 8.2) — only the ensemble
+        # veto should cause this to fail.
+        llm = FakeLLMClient(json.dumps({"score_1_to_10": 9, "verdict": "accept"}))
+        result = rc_executor._execute_quality_gate(
+            stage_dir, run_dir, self._strict_config(tmp_path), adapters, llm=llm
+        )
+
+        assert result.status is StageStatus.FAILED
+        assert result.error is not None
+        assert "ensemble" in result.error.lower() or "reject" in result.error.lower()
+        assert (run_dir / "ensemble_veto_used.json").is_file()
+        assert (stage_dir / "ensemble_review.md").is_file()
+
+    def test_quality_gate_passes_when_ensemble_unavailable(
+        self,
+        tmp_path: Path,
+        run_dir: Path,
+        rc_config: RCConfig,
+        adapters: AdapterBundle,
+    ) -> None:
+        """No LLM -> no ensemble at all; gate behaves score-only, exactly
+        as it did before the ensemble was wired in (no regression)."""
+        self._setup_run_dir(run_dir)
+        stage_dir = run_dir / "stage-20"
+        stage_dir.mkdir(parents=True, exist_ok=True)
+
+        result = rc_executor._execute_quality_gate(
+            stage_dir, run_dir, rc_config, adapters, llm=None
+        )
+
+        assert result.status in (StageStatus.DONE, StageStatus.FAILED)
+        assert not (stage_dir / "ensemble_review.md").exists()
+        assert not (run_dir / "ensemble_veto_used.json").exists()
+
+    def test_ensemble_rollback_bounded_to_once_per_run(
+        self,
+        tmp_path: Path,
+        run_dir: Path,
+        adapters: AdapterBundle,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(
+            "berb.review.ensemble.AutomatedReviewerEnsemble", self._FakeRejectingEnsemble
+        )
+        self._setup_run_dir(run_dir)
+        llm = FakeLLMClient(json.dumps({"score_1_to_10": 9, "verdict": "accept"}))
+        config = self._strict_config(tmp_path)
+
+        stage_dir_1 = run_dir / "stage-20"
+        stage_dir_1.mkdir(parents=True, exist_ok=True)
+        first = rc_executor._execute_quality_gate(stage_dir_1, run_dir, config, adapters, llm=llm)
+        assert first.status is StageStatus.FAILED
+
+        # Simulate the rollback -> rewrite -> re-run: same run_dir, fresh
+        # stage_dir. The ensemble still rejects, but the veto marker from
+        # the first pass must prevent a second veto.
+        stage_dir_2 = run_dir / "stage-20_v2"
+        stage_dir_2.mkdir(parents=True, exist_ok=True)
+        second = rc_executor._execute_quality_gate(
+            stage_dir_2, run_dir, config, adapters, llm=llm
+        )
+        assert second.status is StageStatus.DONE
+
+
+class TestEnsembleStructuredContext:
+    """P1-01: the claim manifest (stage 17) is Berb's own version of
+    ScholarPeer's summary-agent output (claims/method/evidence) — it was
+    being written and never read by any reviewer.
+    """
+
+    def test_includes_claims_and_exp_plan_when_present(
+        self, tmp_path: Path, run_dir: Path
+    ) -> None:
+        from berb.integrity import ClaimManifest, ClaimRecord, ClaimType, ClaimVerdict
+
+        manifest = ClaimManifest(paper_stage="draft")
+        manifest.add_claim(
+            ClaimRecord(
+                claim_id="c1",
+                text="Our method achieves 95.3% accuracy on CIFAR-10.",
+                claim_type=ClaimType.EMPIRICAL,
+                verdict=ClaimVerdict.SUPPORTED,
+            )
+        )
+        _write_prior_artifact(
+            run_dir, 17, "claim_manifest.json", manifest.to_json()
+        )
+        _write_prior_artifact(
+            run_dir, 9, "exp_plan.yaml", "baselines:\n  - resnet50\nvariants:\n  - ours\n"
+        )
+
+        from berb.pipeline.stage_impls._review_publish import (
+            _build_ensemble_structured_context,
+        )
+
+        context = _build_ensemble_structured_context(run_dir)
+
+        assert "95.3% accuracy on CIFAR-10" in context
+        assert "supported" in context.lower()
+        assert "resnet50" in context
+
+    def test_empty_when_nothing_present(self, tmp_path: Path, run_dir: Path) -> None:
+        from berb.pipeline.stage_impls._review_publish import (
+            _build_ensemble_structured_context,
+        )
+
+        context = _build_ensemble_structured_context(run_dir)
+        assert context == ""
+
+    def test_quality_gate_ensemble_receives_structured_context(
+        self,
+        tmp_path: Path,
+        run_dir: Path,
+        rc_config: RCConfig,
+        adapters: AdapterBundle,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from berb.integrity import ClaimManifest, ClaimRecord, ClaimType, ClaimVerdict
+
+        captured: dict[str, object] = {}
+
+        class _SpyEnsemble:
+            def __init__(self, llm_client: object = None) -> None:
+                del llm_client
+
+            async def review_paper(self, paper_path: object, paper_text: object = None, **kw):
+                del paper_path, kw
+                captured["paper_text"] = paper_text
+                return []
+
+            def area_chair_decision(self, reviews: object):
+                from berb.review.ensemble import Decision, MetaReview
+
+                del reviews
+                return MetaReview(
+                    reviews=[],
+                    average_score=8.0,
+                    score_std=0.0,
+                    max_score=8.0,
+                    min_score=8.0,
+                    score_distribution={},
+                    consensus_decision=Decision.ACCEPT,
+                    confidence=1.0,
+                    meta_review_text="",
+                    acceptance_recommendation="accept",
+                    reviewer_conflicts=[],
+                )
+
+            def generate_review_report(self, reviews, meta_review, output_path=None):
+                del reviews, meta_review
+                if output_path is not None:
+                    output_path.write_text("ok", encoding="utf-8")
+                return "ok"
+
+        monkeypatch.setattr("berb.review.ensemble.AutomatedReviewerEnsemble", _SpyEnsemble)
+
+        manifest = ClaimManifest(paper_stage="draft")
+        manifest.add_claim(
+            ClaimRecord(
+                claim_id="c1",
+                text="A very distinctive claim string XYZZY99.",
+                claim_type=ClaimType.EMPIRICAL,
+                verdict=ClaimVerdict.UNSUPPORTED,
+            )
+        )
+        _write_prior_artifact(run_dir, 17, "claim_manifest.json", manifest.to_json())
+        _write_prior_artifact(
+            run_dir, 19, "paper_revised.md", "# Test Paper\n\nSome content...\n"
+        )
+        exp_summary = {
+            "best_run": {"status": "completed", "metrics": {"accuracy": 0.95}},
+            "condition_summaries": {"baseline": {"metrics": {"accuracy": 0.95}}},
+            "metrics_summary": {"accuracy": {"min": 0.9, "max": 0.96, "mean": 0.93}},
+        }
+        _write_prior_artifact(run_dir, 14, "experiment_summary.json", json.dumps(exp_summary))
+
+        stage_dir = run_dir / "stage-20"
+        stage_dir.mkdir(parents=True, exist_ok=True)
+        llm = FakeLLMClient(json.dumps({"score_1_to_10": 9, "verdict": "accept"}))
+        rc_executor._execute_quality_gate(stage_dir, run_dir, rc_config, adapters, llm=llm)
+
+        assert "XYZZY99" in str(captured.get("paper_text", ""))
+        assert "Some content" in str(captured.get("paper_text", ""))
+
+    def test_quality_gate_ensemble_receives_target_venue(
+        self,
+        tmp_path: Path,
+        run_dir: Path,
+        rc_config: RCConfig,
+        adapters: AdapterBundle,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """P3-05: the ensemble should judge against the venue the paper
+        actually targets (config.export.target_conference), not an
+        implicit generic standard.
+        """
+        captured: dict[str, object] = {}
+
+        class _SpyEnsemble:
+            def __init__(self, llm_client: object = None) -> None:
+                del llm_client
+
+            async def review_paper(self, paper_path: object, paper_text: object = None, **kw):
+                del paper_path, kw
+                captured["paper_text"] = paper_text
+                return []
+
+            def area_chair_decision(self, reviews: object):
+                from berb.review.ensemble import Decision, MetaReview
+
+                del reviews
+                return MetaReview(
+                    reviews=[], average_score=8.0, score_std=0.0, max_score=8.0,
+                    min_score=8.0, score_distribution={}, consensus_decision=Decision.ACCEPT,
+                    confidence=1.0, meta_review_text="", acceptance_recommendation="accept",
+                    reviewer_conflicts=[],
+                )
+
+            def generate_review_report(self, reviews, meta_review, output_path=None):
+                del reviews, meta_review
+                if output_path is not None:
+                    output_path.write_text("ok", encoding="utf-8")
+                return "ok"
+
+        monkeypatch.setattr("berb.review.ensemble.AutomatedReviewerEnsemble", _SpyEnsemble)
+
+        _write_prior_artifact(
+            run_dir, 19, "paper_revised.md", "# Test Paper\n\nSome content...\n"
+        )
+        stage_dir = run_dir / "stage-20"
+        stage_dir.mkdir(parents=True, exist_ok=True)
+        llm = FakeLLMClient(json.dumps({"score_1_to_10": 9, "verdict": "accept"}))
+
+        rc_executor._execute_quality_gate(stage_dir, run_dir, rc_config, adapters, llm=llm)
+
+        paper_text = str(captured.get("paper_text", ""))
+        assert "Target Venue" in paper_text
+        assert rc_config.export.target_conference is not None
+
+
+class TestQualityGateClaimAdjudication:
+    """P2-02: stage 20 cross-references NOT_CHECKED claims (types the
+    stage-17 numeric-regex pass can't classify — comparative/causal, not
+    bare numbers) against the evidence registry via an LLM call.
+    """
+
+    def _setup(self, run_dir: Path) -> None:
+        from berb.integrity import ClaimManifest, ClaimRecord, ClaimType, ClaimVerdict
+
+        manifest = ClaimManifest(paper_stage="draft")
+        manifest.add_claim(
+            ClaimRecord(
+                claim_id="c1",
+                text="Our method substantially outperforms the baseline.",
+                claim_type=ClaimType.COMPARATIVE,
+                verdict=ClaimVerdict.NOT_CHECKED,
+            )
+        )
+        _write_prior_artifact(run_dir, 17, "claim_manifest.json", manifest.to_json())
+        _write_prior_artifact(
+            run_dir, 19, "paper_revised.md", "# Test Paper\n\nSome content...\n"
+        )
+        exp_summary = {
+            "best_run": {"status": "completed", "metrics": {"accuracy": 0.95}},
+            "condition_summaries": {"baseline": {"metrics": {"accuracy": 0.95}}},
+            "metrics_summary": {"accuracy": {"min": 0.9, "max": 0.96, "mean": 0.93}},
+        }
+        _write_prior_artifact(run_dir, 14, "experiment_summary.json", json.dumps(exp_summary))
+
+    def test_writes_claim_adjudication_when_manifest_present(
+        self,
+        tmp_path: Path,
+        run_dir: Path,
+        rc_config: RCConfig,
+        adapters: AdapterBundle,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # Ensemble output is irrelevant here; stub it out so the test
+        # exercises claim adjudication in isolation.
+        class _NoOpEnsemble:
+            def __init__(self, llm_client=None) -> None:
+                del llm_client
+
+            async def review_paper(self, *a, **kw):
+                return []
+
+            def area_chair_decision(self, reviews):
+                from berb.review.ensemble import Decision, MetaReview
+
+                return MetaReview(
+                    reviews=[], average_score=8.0, score_std=0.0, max_score=8.0,
+                    min_score=8.0, score_distribution={}, consensus_decision=Decision.ACCEPT,
+                    confidence=1.0, meta_review_text="", acceptance_recommendation="accept",
+                    reviewer_conflicts=[],
+                )
+
+            def generate_review_report(self, reviews, meta_review, output_path=None):
+                if output_path is not None:
+                    output_path.write_text("ok", encoding="utf-8")
+                return "ok"
+
+        monkeypatch.setattr("berb.review.ensemble.AutomatedReviewerEnsemble", _NoOpEnsemble)
+
+        def _fake_chat(messages, **kwargs):
+            from berb.llm.client import LLMResponse
+
+            prompt = messages[-1]["content"]
+            if "auditing a scientific claim" in prompt:
+                return LLMResponse(
+                    content=json.dumps({"status": "unsupported", "reasoning": "no such data"}),
+                    model="fake",
+                )
+            return LLMResponse(
+                content=json.dumps({"score_1_to_10": 9, "verdict": "accept"}), model="fake"
+            )
+
+        llm = FakeLLMClient("")
+        monkeypatch.setattr(llm, "chat", _fake_chat)
+
+        self._setup(run_dir)
+        stage_dir = run_dir / "stage-20"
+        stage_dir.mkdir(parents=True, exist_ok=True)
+
+        rc_executor._execute_quality_gate(stage_dir, run_dir, rc_config, adapters, llm=llm)
+
+        adjudication_path = stage_dir / "claim_adjudication.json"
+        assert adjudication_path.is_file()
+        data = json.loads(adjudication_path.read_text(encoding="utf-8"))
+        assert data[0]["claim_id"] == "c1"
+        assert data[0]["status"] == "unsupported"
+
+    def test_no_adjudication_file_without_manifest(
+        self, tmp_path: Path, run_dir: Path, rc_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
+        _write_prior_artifact(
+            run_dir, 19, "paper_revised.md", "# Test Paper\n\nSome content...\n"
+        )
+        stage_dir = run_dir / "stage-20"
+        stage_dir.mkdir(parents=True, exist_ok=True)
+        llm = FakeLLMClient(json.dumps({"score_1_to_10": 9, "verdict": "accept"}))
+
+        rc_executor._execute_quality_gate(stage_dir, run_dir, rc_config, adapters, llm=llm)
+
+        assert not (stage_dir / "claim_adjudication.json").exists()
+
+    def test_no_adjudication_without_llm(
+        self, tmp_path: Path, run_dir: Path, rc_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
+        self._setup(run_dir)
+        stage_dir = run_dir / "stage-20"
+        stage_dir.mkdir(parents=True, exist_ok=True)
+
+        result = rc_executor._execute_quality_gate(
+            stage_dir, run_dir, rc_config, adapters, llm=None
+        )
+
+        assert not (stage_dir / "claim_adjudication.json").exists()
+        assert result.status in (StageStatus.DONE, StageStatus.FAILED)
+
+
 def test_contracts_stage13_includes_experiment_final() -> None:
     assert "experiment_final/" in CONTRACTS[Stage.ITERATIVE_REFINE].output_files
 
@@ -1348,6 +2338,92 @@ class TestHypothesisGenDebate:
         assert not (stage_dir / "perspectives").exists()
 
 
+class TestHypothesisRepair:
+    """P2-02: the falsification-gate retry loop used to reset the
+    hypothesis text back to its unmodified original before round 2
+    (`_current_text = _ht  # would be repaired by LLM in production`),
+    so round 2 re-critiqued identical input and nothing was ever fixed.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _no_live_novelty_search(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr("berb.literature.search.search_papers_multi_query", lambda *a, **kw: [])
+
+    def test_hypothesis_repaired_after_hard_severity_issue(
+        self, tmp_path: Path, rc_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
+        from berb.llm.client import LLMResponse
+
+        _REVISED = (
+            "Our method improves top-1 test accuracy on CIFAR-10 by at "
+            "least 5%, measured over 5 seeds."
+        )
+
+        class _SmartLLM:
+            def __init__(self) -> None:
+                self.calls: list[list[dict]] = []
+                self._critic_calls = 0
+
+            def chat(self, messages, **kwargs):  # noqa: ANN001, ANN003
+                self.calls.append(messages)
+                prompt = messages[-1]["content"]
+                if "interrogative critic" in prompt:
+                    self._critic_calls += 1
+                    if self._critic_calls == 1:
+                        return LLMResponse(
+                            content=json.dumps(
+                                [
+                                    {
+                                        "action": "demand_falsification",
+                                        "question": "What is the specific metric?",
+                                        "severity": "hard",
+                                    }
+                                ]
+                            ),
+                            model="fake",
+                        )
+                    return LLMResponse(content="[]", model="fake")
+                if "falsification critic raised the following hard issues" in prompt:
+                    return LLMResponse(content=_REVISED, model="fake")
+                return LLMResponse(
+                    content="## Hypothesis 1\nOur method improves performance on "
+                    "benchmark tasks in some unspecified way.",
+                    model="fake",
+                )
+
+        run_dir = tmp_path / "run"
+        run_dir.mkdir()
+        stage_dir = run_dir / "stage-08"
+        stage_dir.mkdir(parents=True)
+        _write_prior_artifact(run_dir, 7, "synthesis.md", "# Synthesis\nGap found.")
+
+        llm = _SmartLLM()
+        result = rc_executor._execute_hypothesis_gen(
+            stage_dir, run_dir, rc_config, adapters, llm=llm
+        )
+
+        assert result.status == StageStatus.DONE
+        final_hypotheses = (stage_dir / "hypotheses.md").read_text(encoding="utf-8")
+        assert _REVISED in final_hypotheses
+
+        state = json.loads((stage_dir / "hypothesis_state.json").read_text(encoding="utf-8"))
+        assert any(h.get("repaired") for h in state["hypotheses"])
+        assert state["gate_passed"] is True
+
+    def test_repair_hypothesis_returns_original_on_llm_failure(self) -> None:
+        from berb.pipeline.stage_impls._synthesis import _repair_hypothesis
+
+        class _BrokenLLM:
+            def chat(self, messages, **kwargs):  # noqa: ANN001, ANN003
+                raise RuntimeError("LLM unavailable")
+
+        original = "Our method improves accuracy."
+        result = _repair_hypothesis(
+            _BrokenLLM(), original, [{"action": "clarify", "question": "How much?"}]
+        )
+        assert result == original
+
+
 class TestResultAnalysisDebate:
     @pytest.fixture(autouse=True)
     def _no_live_figure_generation(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1397,6 +2473,36 @@ class TestResultAnalysisDebate:
         assert result.status == StageStatus.DONE
         assert "analysis.md" in result.artifacts
         assert not (stage_dir / "perspectives").exists()
+
+    def test_result_analysis_writes_evidence_registry_before_stage17(
+        self, tmp_path: Path, rc_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
+        """P0-01: evidence_registry.json must exist after stage 14, not stage 20.
+
+        Previously it was only built in _execute_quality_gate (stage 20), so
+        stage 17's claim manifest builder always read a missing file on a
+        first-pass run and marked every numeric claim unsupported.
+        """
+        run_dir = tmp_path / "run"
+        run_dir.mkdir()
+        stage_dir = run_dir / "stage-14"
+        stage_dir.mkdir(parents=True)
+        exp_summary = {
+            "best_run": {"metrics": {"primary_metric": 0.95}},
+            "condition_summaries": {"baseline": {"metrics": {"accuracy": 0.95}}},
+            "metrics_summary": {"accuracy": {"min": 0.9, "max": 0.96, "mean": 0.93}},
+        }
+        _write_prior_artifact(run_dir, 14, "experiment_summary.json", json.dumps(exp_summary))
+
+        result = rc_executor._execute_result_analysis(
+            stage_dir, run_dir, rc_config, adapters, llm=None
+        )
+
+        assert result.status == StageStatus.DONE
+        registry_path = run_dir / "evidence_registry.json"
+        assert registry_path.is_file()
+        saved = json.loads(registry_path.read_text(encoding="utf-8"))
+        assert saved["record_count"] > 0
 
 
 class TestParseMetricsFromStdout:
@@ -2163,6 +3269,115 @@ class TestDataIntegrityBlock:
         # The prompt should contain anti-fabrication instructions
         all_prompts = " ".join(msg["content"] for call in llm.calls for msg in call)
         assert "Data Integrity" in all_prompts or "ONLY report numbers" in all_prompts
+
+
+class TestCitationPreVerificationGating:
+    """P0-02: the filtered bib_text from pre-verification must actually gate
+    which candidates.jsonl rows are offered to the drafting LLM as citable.
+    """
+
+    def _setup_run_dir(self, run_dir: Path) -> None:
+        _write_prior_artifact(run_dir, 16, "outline.md", "# Outline\n")
+        runs_dir = run_dir / "stage-12" / "runs"
+        runs_dir.mkdir(parents=True, exist_ok=True)
+        (runs_dir / "run-1.json").write_text(
+            json.dumps(
+                {
+                    "run_id": "run-1",
+                    "status": "completed",
+                    "metrics": {"best_loss": 0.123},
+                    "stdout": "best_loss: 0.123\n",
+                }
+            ),
+            encoding="utf-8",
+        )
+        _write_prior_artifact(
+            run_dir,
+            4,
+            "references.bib",
+            "@article{good2024paper,\n"
+            "  title = {A Good Paper},\n"
+            "  author = {Good, A.},\n"
+            "  year = {2024},\n"
+            "}\n\n"
+            "@article{fake2024hallu,\n"
+            "  title = {A Hallucinated Paper},\n"
+            "  author = {Fake, B.},\n"
+            "  year = {2024},\n"
+            "}\n",
+        )
+        candidates = [
+            {
+                "cite_key": "good2024paper",
+                "title": "A Good Paper",
+                "authors": [{"name": "Good, A."}],
+                "venue": "ICML",
+                "year": 2024,
+                "citation_count": 10,
+            },
+            {
+                "cite_key": "fake2024hallu",
+                "title": "A Hallucinated Paper",
+                "authors": [{"name": "Fake, B."}],
+                "venue": "ICML",
+                "year": 2024,
+                "citation_count": 0,
+            },
+        ]
+        _write_prior_artifact(
+            run_dir, 4, "candidates.jsonl", "\n".join(json.dumps(c) for c in candidates)
+        )
+
+    def test_hallucinated_cite_key_excluded_from_prompt(
+        self,
+        tmp_path: Path,
+        run_dir: Path,
+        rc_config: RCConfig,
+        adapters: AdapterBundle,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from berb.literature.verify import CitationResult, VerificationReport, VerifyStatus
+
+        def _fake_verify_citations(bib_text: str, **kwargs: object) -> VerificationReport:
+            return VerificationReport(
+                total=2,
+                verified=1,
+                suspicious=0,
+                hallucinated=1,
+                skipped=0,
+                results=[
+                    CitationResult(
+                        cite_key="good2024paper",
+                        title="A Good Paper",
+                        status=VerifyStatus.VERIFIED,
+                        confidence=0.9,
+                        method="doi",
+                    ),
+                    CitationResult(
+                        cite_key="fake2024hallu",
+                        title="A Hallucinated Paper",
+                        status=VerifyStatus.HALLUCINATED,
+                        confidence=0.0,
+                        method="title_search",
+                    ),
+                ],
+            )
+
+        monkeypatch.setattr(
+            "berb.literature.verify.verify_citations", _fake_verify_citations
+        )
+
+        self._setup_run_dir(run_dir)
+        stage_dir = run_dir / "stage-17"
+        stage_dir.mkdir(parents=True, exist_ok=True)
+
+        llm = FakeLLMClient("# Paper Title\n## Abstract\nSome abstract text.")
+        rc_executor._execute_paper_draft(stage_dir, run_dir, rc_config, adapters, llm=llm)
+
+        assert len(llm.calls) >= 1
+        all_prompts = " ".join(msg["content"] for call in llm.calls for msg in call)
+        assert "good2024paper" in all_prompts
+        assert "fake2024hallu" not in all_prompts
 
 
 # ── R4-3: Conference-Grade Title Guidelines Tests ────────────────────

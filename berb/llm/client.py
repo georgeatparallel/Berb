@@ -984,8 +984,28 @@ class LLMClient:
             )
 
         if self._normalize_wire_api(self.config.wire_api) == "responses":
-            return self._parse_responses_response(data, model)
-        return self._parse_chat_completions_response(data, model)
+            resp = self._parse_responses_response(data, model)
+        else:
+            resp = self._parse_chat_completions_response(data, model)
+        self._record_llm_cost(resp)
+        return resp
+
+    def _record_llm_cost(self, resp: LLMResponse) -> None:
+        """P0-05: record every LLM call for cost/budget accounting.
+
+        Single choke point _raw_call funnels every chat() call, retry, and
+        model-fallback attempt through exactly once.
+        CostTracker.record_from_llm_response previously had zero production
+        callers, so nothing was ever recorded despite the tracker existing.
+        """
+        try:
+            from .cost_tracker import get_cost_tracker
+
+            get_cost_tracker().record_from_llm_response(
+                resp.model, resp.prompt_tokens, resp.completion_tokens
+            )
+        except Exception:  # noqa: BLE001
+            logger.debug("Cost tracking failed", exc_info=True)
 
     def _apply_cached_prefix(
         self,

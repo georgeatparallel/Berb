@@ -419,6 +419,51 @@ def _execute_paper_revision(
 # ---------------------------------------------------------------------------
 
 
+def _build_ensemble_structured_context(run_dir: Path) -> str:
+    """Format the claim manifest + experiment plan for the review ensemble.
+
+    P1-01: this is ScholarPeer's "summary agent" output (claims/method/
+    evidence) — Berb already builds it at stage 17 (claim_manifest.json)
+    but no reviewer ever read it; the ensemble got raw paper text only.
+    """
+    parts: list[str] = []
+
+    manifest_path = _find_prior_file(run_dir, "claim_manifest.json")
+    if manifest_path is not None:
+        try:
+            from berb.integrity import ClaimManifest
+
+            manifest = ClaimManifest.load(manifest_path)
+            if manifest.claims:
+                lines = [
+                    f"Extracted claims ({manifest.total_claims} total, "
+                    f"{manifest.supported_claims} supported, "
+                    f"{manifest.unsupported_claims} unsupported):"
+                ]
+                for claim in manifest.claims[:40]:
+                    lines.append(
+                        f"- [{claim.claim_type.value}/{claim.verdict.value}] "
+                        f"{claim.text[:200]}"
+                    )
+                parts.append("\n".join(lines))
+        except Exception:  # noqa: BLE001
+            logger.debug("Structured context: claim manifest unavailable", exc_info=True)
+
+    exp_plan = _read_prior_artifact(run_dir, "exp_plan.yaml")
+    if exp_plan:
+        parts.append("Experiment plan:\n" + exp_plan[:3000])
+
+    if not parts:
+        return ""
+
+    return (
+        "=== STRUCTURED PAPER SUMMARY (auto-extracted; cross-check against "
+        "the prose below rather than trusting it blindly) ===\n\n"
+        + "\n\n".join(parts)
+        + "\n\n=== END STRUCTURED SUMMARY ===\n\n"
+    )
+
+
 @register_stage(
     stage=Stage.QUALITY_GATE,
     depends_on=frozenset({Stage.PAPER_REVISION}),
@@ -638,23 +683,188 @@ def _execute_quality_gate(
         json.dumps(_fabrication_info, indent=2), encoding="utf-8"
     )
 
-    # --- Research Integrity: emit evidence_registry.json (Phase 1) ---
-    try:
-        from berb.integrity import VerifiedEvidenceRegistry as _VER  # noqa: N814
+    # P2-03: surface stage 9's omitted-baseline check here. Informational
+    # only, not a veto — a missing baseline is a paper-quality concern, not
+    # a fabrication/integrity issue, so it doesn't carry P1-03's rollback
+    # weight. Logged so it's visible in the same place as the other gate
+    # signals rather than buried in stage-09 logs.
+    _omitted_baselines_path = _find_prior_file(run_dir, "omitted_baselines.json")
+    if _omitted_baselines_path is not None:
+        try:
+            _omitted_data = json.loads(_omitted_baselines_path.read_text(encoding="utf-8"))
+            _omitted_missing = _omitted_data.get("missing", [])
+            if _omitted_missing:
+                logger.warning(
+                    "Stage 20: %d method(s) from the literature corpus have no "
+                    "matching baseline in the experiment plan: %s",
+                    len(_omitted_missing),
+                    ", ".join(_omitted_missing),
+                )
+        except (json.JSONDecodeError, OSError):
+            pass
 
-        _evidence_reg = _VER.from_run_dir(run_dir)
-        if _evidence_reg.records:
-            _evidence_reg.save(run_dir / "evidence_registry.json")
-    except Exception:
-        logger.debug("Could not build evidence registry", exc_info=True)
+    # P2-02: claim-vs-evidence adjudication (technical-soundness half of
+    # ScholarPeer's Q&A engine, its single largest ablation at -26%).
+    # Stage 17's numeric-regex pass (_extract_numeric_claims) only resolves
+    # bare-number EMPIRICAL claims; comparative/causal claims it can't
+    # classify are left NOT_CHECKED forever. This targets that gap using an
+    # LLM cross-reference against the evidence registry — informational
+    # only, like the omitted-baselines check above, since an LLM verdict on
+    # claim-evidence alignment is not reliable enough to hard-gate on.
+    if llm is not None:
+        try:
+            _claim_manifest_path = _find_prior_file(run_dir, "claim_manifest.json")
+            if _claim_manifest_path is not None:
+                from berb.integrity import ClaimManifest, VerifiedEvidenceRegistry
+                from berb.review.interrogation import adjudicate_claims
 
-    if isinstance(score, (int, float)) and score < threshold:
+                _manifest = ClaimManifest.load(_claim_manifest_path)
+                _evidence_reg = VerifiedEvidenceRegistry.load(run_dir / "evidence_registry.json")
+                _verdicts = adjudicate_claims(llm, _manifest.claims, _evidence_reg)
+                if _verdicts:
+                    (stage_dir / "claim_adjudication.json").write_text(
+                        json.dumps(
+                            [
+                                {"claim_id": v.claim_id, "status": v.status.value,
+                                 "reasoning": v.reasoning}
+                                for v in _verdicts
+                            ],
+                            indent=2,
+                        ),
+                        encoding="utf-8",
+                    )
+                    _unsupported = [v for v in _verdicts if v.status.value == "unsupported"]
+                    if _unsupported:
+                        logger.warning(
+                            "Stage 20: claim adjudication found %d unsupported claim(s) "
+                            "not caught by stage 17's numeric check",
+                            len(_unsupported),
+                        )
+        except Exception:  # noqa: BLE001
+            logger.debug("Stage 20: claim adjudication skipped", exc_info=True)
+
+    # P1-03: 5-reviewer ensemble + Area Chair meta-review, now feeding the
+    # gate decision. Previously this ran at stage 22 (_execute_export_publish,
+    # AFTER export) inside a debug-swallowed try/except, and MetaReview was
+    # written to ensemble_review.md and read by nothing — a review nobody
+    # can act on. Moved here because stage 20 is the designated GATE with a
+    # PAPER_OUTLINE rollback target (stages.py GATE_ROLLBACK).
+    # Independent veto only — does not touch the numeric score path below —
+    # so wiring this in cannot make outcomes worse than before. Bounded to
+    # one veto per run via ensemble_veto_used.json so a paper can't loop
+    # forever if the ensemble keeps rejecting.
+    _ens_meta = None
+    if llm is not None:
+        try:
+            import asyncio
+
+            from berb.review.ensemble import AutomatedReviewerEnsemble, Decision
+
+            _ensemble = AutomatedReviewerEnsemble(llm_client=llm)
+            # P1-01: prepend the claim manifest + exp plan so every persona
+            # shares the structured signal via the existing cached_prefix
+            # mechanism (ensemble.py builds cached_prefix from paper_text) —
+            # no ensemble.py changes needed, this is purely what the caller
+            # hands it as the "paper".
+            _structured_context = _build_ensemble_structured_context(run_dir)
+            # P3-05: condition on the actually-targeted venue.
+            # config.export.target_conference already drives stage 22's
+            # template selection and NeurIPS-checklist generation — the
+            # internal review should judge against the same venue rather
+            # than a generic implicit standard.
+            try:
+                from berb.templates import get_template as _get_venue_template
+
+                _venue = _get_venue_template(config.export.target_conference)
+                _structured_context = (
+                    f"## Target Venue\nThis paper targets {_venue.display_name}. "
+                    f"Judge novelty, rigor, and presentation against that venue's "
+                    f"typical standards, not a generic bar.\n\n" + _structured_context
+                )
+            except Exception:  # noqa: BLE001
+                logger.debug("Stage 20: venue conditioning unavailable", exc_info=True)
+            _ens_reviews = asyncio.run(
+                _ensemble.review_paper(
+                    run_dir / "stage-19" / "paper_revised.md",
+                    paper_text=_structured_context + revised,
+                    use_batch=config.llm.batch_review_enabled,
+                )
+            )
+            _ens_meta = _ensemble.area_chair_decision(_ens_reviews)
+            # P3-03: cross-reviewer critique synthesis, purely additive —
+            # area_chair_decision's scoring math above is untouched.
+            try:
+                _ens_meta.critique_synthesis = asyncio.run(
+                    _ensemble.synthesize_critiques(_ens_reviews)
+                )
+            except Exception:  # noqa: BLE001
+                logger.debug("Stage 20: Critique synthesis skipped", exc_info=True)
+            _ensemble.generate_review_report(
+                _ens_reviews, _ens_meta, output_path=stage_dir / "ensemble_review.md"
+            )
+            logger.info(
+                "Stage 20: Ensemble review %.2f/10 (%s), %d conflict(s)",
+                _ens_meta.average_score,
+                _ens_meta.consensus_decision.value,
+                len(_ens_meta.reviewer_conflicts),
+            )
+        except Exception as _ens_exc:  # noqa: BLE001
+            logger.debug("Stage 20: Ensemble review skipped: %s", _ens_exc)
+
+    _ens_veto = False
+    _ens_veto_reason = ""
+    if _ens_meta is not None and _ens_meta.consensus_decision in (
+        Decision.REJECT,
+        Decision.STRONG_REJECT,
+    ):
+        _veto_marker = run_dir / "ensemble_veto_used.json"
+        if not _veto_marker.is_file():
+            _ens_veto = True
+            _ens_veto_reason = (
+                f"Ensemble consensus {_ens_meta.consensus_decision.value} "
+                f"({_ens_meta.average_score:.1f}/10)"
+            )
+            _veto_marker.write_text(
+                json.dumps(
+                    {
+                        "triggered_at": _utcnow_iso(),
+                        "consensus_decision": _ens_meta.consensus_decision.value,
+                        "average_score": _ens_meta.average_score,
+                    },
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+            logger.warning(
+                "Stage 20: %s — vetoing quality gate (one-time; further "
+                "ensemble rejects this run will not re-veto).",
+                _ens_veto_reason,
+            )
+        else:
+            logger.info(
+                "Stage 20: Ensemble consensus %s (%.1f/10) but veto already "
+                "used this run — proceeding.",
+                _ens_meta.consensus_decision.value,
+                _ens_meta.average_score,
+            )
+
+    _score_failed = isinstance(score, (int, float)) and score < threshold
+    if _score_failed or _ens_veto:
+        _fail_reason = (
+            f"score {score:.1f} < threshold {threshold:.1f}"
+            if _score_failed
+            else _ens_veto_reason
+        )
+        _gate_artifacts = ("quality_report.json", "fabrication_flags.json")
+        if (stage_dir / "ensemble_review.md").is_file():
+            _gate_artifacts = (*_gate_artifacts, "ensemble_review.md")
+        if (stage_dir / "claim_adjudication.json").is_file():
+            _gate_artifacts = (*_gate_artifacts, "claim_adjudication.json")
         if config.research.graceful_degradation:
             logger.warning(
-                "Quality gate DEGRADED: score %.1f < threshold %.1f — "
-                "continuing with sanitization (graceful_degradation=True)",
-                score,
-                threshold,
+                "Quality gate DEGRADED: %s — continuing with sanitization "
+                "(graceful_degradation=True)",
+                _fail_reason,
             )
             # Write degradation signal for downstream stages
             signal = {
@@ -662,6 +872,8 @@ def _execute_quality_gate(
                 "threshold": threshold,
                 "verdict": verdict,
                 "weaknesses": report.get("weaknesses", []),
+                "ensemble_veto": _ens_veto,
+                "ensemble_veto_reason": _ens_veto_reason,
                 "generated": _utcnow_iso(),
             }
             (run_dir / "degradation_signal.json").write_text(
@@ -670,23 +882,17 @@ def _execute_quality_gate(
             return StageResult(
                 stage=Stage.QUALITY_GATE,
                 status=StageStatus.DONE,
-                artifacts=("quality_report.json",),
+                artifacts=_gate_artifacts,
                 evidence_refs=("stage-20/quality_report.json",),
                 decision="degraded",
             )
-        logger.warning(
-            "Quality gate FAILED: score %.1f < threshold %.1f (verdict=%s)",
-            score,
-            threshold,
-            verdict,
-        )
+        logger.warning("Quality gate FAILED: %s (verdict=%s)", _fail_reason, verdict)
         return StageResult(
             stage=Stage.QUALITY_GATE,
             status=StageStatus.FAILED,
-            artifacts=("quality_report.json", "fabrication_flags.json"),
+            artifacts=_gate_artifacts,
             evidence_refs=("stage-20/quality_report.json",),
-            error=f"Quality score {score:.1f}/10 below threshold {threshold:.1f}. "
-            f"Paper needs revision before export.",
+            error=f"Quality gate failed: {_fail_reason}. Paper needs revision before export.",
         )
 
     logger.info(
@@ -694,10 +900,15 @@ def _execute_quality_gate(
         score,
         threshold,
     )
+    _passed_artifacts = ("quality_report.json", "fabrication_flags.json")
+    if (stage_dir / "ensemble_review.md").is_file():
+        _passed_artifacts = (*_passed_artifacts, "ensemble_review.md")
+    if (stage_dir / "claim_adjudication.json").is_file():
+        _passed_artifacts = (*_passed_artifacts, "claim_adjudication.json")
     return StageResult(
         stage=Stage.QUALITY_GATE,
         status=StageStatus.DONE,
-        artifacts=("quality_report.json", "fabrication_flags.json"),
+        artifacts=_passed_artifacts,
         evidence_refs=("stage-20/quality_report.json",),
     )
 
@@ -2302,9 +2513,13 @@ def _execute_export_publish(
                     len(invalid_keys),
                     ", ".join(sorted(invalid_keys)[:20]),
                 )
-                # BUG-176: Try to resolve missing citations before removing them.
-                # Parse cite_key → search query, look up via academic APIs,
-                # and add found entries to references.bib.
+                # P2-01: _resolve_missing_citations is diagnostic-only now —
+                # it used to inject its API-search match straight into
+                # references.bib/valid_keys, which repairs a model-invented
+                # citation into legitimacy instead of treating it as the
+                # hallucination it is. Every invented key is now stripped
+                # from the paper regardless of whether a plausible match was
+                # found; the match is logged for debugging only.
                 resolved_keys: set[str] = set()
                 new_bib_entries: list[str] = []
                 if len(invalid_keys) <= 30:  # Sanity: don't flood APIs
@@ -2312,15 +2527,16 @@ def _execute_export_publish(
                         invalid_keys, bib_text
                     )
                     if resolved_keys:
-                        valid_keys.update(resolved_keys)
-                        bib_text += "\n" + "\n\n".join(new_bib_entries) + "\n"
                         logger.info(
-                            "Stage 22: Resolved %d/%d missing citations via API lookup",
+                            "Stage 22: Found plausible matches for %d/%d invented "
+                            "citations via API lookup — NOT injecting into "
+                            "references.bib (P2-01: detection, not repair). "
+                            "Removing all invented citations from the paper.",
                             len(resolved_keys),
                             len(invalid_keys),
                         )
 
-                still_invalid = invalid_keys - resolved_keys
+                still_invalid = invalid_keys
                 if still_invalid:
                     # IMP-29: Remove remaining unresolvable citations from
                     # BOTH single-key and multi-key brackets.
@@ -2427,6 +2643,81 @@ def _execute_export_publish(
             "Stage 22: Exported references.bib with %d entries",
             len(valid_keys) if valid_keys else 0,
         )
+
+        # P2-01: invalid_citations.json lists cite_keys the LLM wrote in the
+        # paper that were never in references.bib at all — invented out of
+        # parametric memory, not merely mismatched. They've already been
+        # stripped from the prose (see the still_invalid handling above),
+        # but the draft process did fabricate a citation, and per P2-01 that
+        # is no longer silently repaired — it blocks export instead.
+        _invalid_citations_path = stage_dir / "invalid_citations.json"
+        if _invalid_citations_path.is_file():
+            try:
+                _invented_keys = json.loads(_invalid_citations_path.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                _invented_keys = []
+            if _invented_keys:
+                logger.error(
+                    "Stage 22: %d citation key(s) invented by the LLM (never in "
+                    "references.bib) — blocking export: %s",
+                    len(_invented_keys),
+                    ", ".join(_invented_keys[:20]),
+                )
+                return StageResult(
+                    stage=Stage.EXPORT_PUBLISH,
+                    status=StageStatus.FAILED,
+                    artifacts=tuple(artifacts),
+                    evidence_refs=tuple(f"stage-22/{a}" for a in artifacts),
+                    error=(
+                        f"E22_EXPORT_FAIL: {len(_invented_keys)} invented citation "
+                        f"key(s) found in draft: {', '.join(_invented_keys[:10])}"
+                    ),
+                )
+
+        # P0-03: verify citations here, not in stage 23. stages.py's own
+        # comment says hallucinated citations MUST block export, but
+        # CITATION_VERIFY (stage 23) depends on EXPORT_PUBLISH (stage 22) —
+        # it ran after export, so it could never actually block it. This
+        # must run AFTER _resolve_missing_citations above (not before, and
+        # not by reordering the stage graph): that step mutates the
+        # citation key-space by resolving/adding entries for LLM-invented
+        # keys, so verifying any earlier would miss exactly the
+        # hallucination-prone additions.
+        try:
+            from berb.literature.verify import verify_citations as _verify_export
+
+            _export_report = _verify_export(
+                bib_text, s2_api_key=getattr(config.llm, "s2_api_key", "") or ""
+            )
+            if _export_report.hallucinated > 0:
+                _halluc_keys = ", ".join(
+                    r.cite_key for r in _export_report.results if r.status.value == "hallucinated"
+                )
+                logger.error(
+                    "Stage 22: %d hallucinated citation(s) in references.bib — "
+                    "blocking export: %s",
+                    _export_report.hallucinated,
+                    _halluc_keys,
+                )
+                (stage_dir / "citation_verification_report.json").write_text(
+                    json.dumps(_export_report.to_dict(), indent=2), encoding="utf-8"
+                )
+                artifacts.append("citation_verification_report.json")
+                return StageResult(
+                    stage=Stage.EXPORT_PUBLISH,
+                    status=StageStatus.FAILED,
+                    artifacts=tuple(artifacts),
+                    evidence_refs=tuple(f"stage-22/{a}" for a in artifacts),
+                    error=(
+                        f"E22_EXPORT_FAIL: {_export_report.hallucinated} hallucinated "
+                        f"citation(s) found: {_halluc_keys}"
+                    ),
+                )
+        except Exception as _verify_exc:  # noqa: BLE001
+            logger.warning(
+                "Stage 22: citation verification failed, proceeding without gate: %s",
+                _verify_exc,
+            )
 
     # Conference template: generate .tex file
     try:
@@ -2765,40 +3056,9 @@ def _execute_export_publish(
                             )
                     except Exception as _halluc_exc:  # noqa: BLE001
                         logger.debug("Stage 22: Hallucination check skipped: %s", _halluc_exc)
-                # 5-reviewer ensemble + Area Chair meta-review: an additional,
-                # non-blocking, more structured perspective alongside the
-                # single-call peer_review from Stage 18 and the 7-dimension
-                # PDF review above. Does not replace either.
-                if _pdf_path.exists() and llm is not None:
-                    try:
-                        import asyncio
-
-                        from berb.review.ensemble import AutomatedReviewerEnsemble
-
-                        _ensemble = AutomatedReviewerEnsemble(llm_client=llm)
-                        _tex_text_e = tex_path.read_text(encoding="utf-8")
-                        _ens_reviews = asyncio.run(
-                            _ensemble.review_paper(
-                                tex_path,
-                                paper_text=_tex_text_e,
-                                use_batch=config.llm.batch_review_enabled,
-                            )
-                        )
-                        _ens_meta = _ensemble.area_chair_decision(_ens_reviews)
-                        _ensemble.generate_review_report(
-                            _ens_reviews,
-                            _ens_meta,
-                            output_path=stage_dir / "ensemble_review.md",
-                        )
-                        artifacts.append("ensemble_review.md")
-                        logger.info(
-                            "Stage 22: Ensemble review %.2f/10 (%s), %d conflict(s)",
-                            _ens_meta.average_score,
-                            _ens_meta.consensus_decision.value,
-                            len(_ens_meta.reviewer_conflicts),
-                        )
-                    except Exception as _ens_exc:  # noqa: BLE001
-                        logger.debug("Stage 22: Ensemble review skipped: %s", _ens_exc)
+                # P1-03: 5-reviewer ensemble moved to stage 20 (_execute_quality_gate)
+                # so its verdict can actually gate the pipeline instead of being
+                # computed on the already-exported paper and read by nothing.
                 # Humanitarian impact assessment: contribution-type classification
                 # and a broader-impact statement, non-blocking, informational only.
                 if _pdf_path.exists() and llm is not None:

@@ -367,6 +367,17 @@ class TestEmbeddings:
         backend = provider.backend
         assert backend in ("api", "sentence_transformers", "tfidf")
 
+    def test_explicit_backend_skips_autodetection(self) -> None:
+        """A forced backend must never attempt sentence-transformers import
+        (and its no-timeout model download) even if it's installed — this
+        is the safe path callers outside tests (e.g. review/ensemble.py's
+        synchronous diversity computation) rely on."""
+        provider = EmbeddingProvider(backend="tfidf")
+        assert provider.backend == "tfidf"
+        assert provider.dimension == 256
+        vec = provider.embed("hello world")
+        assert len(vec) == 256
+
 
 # ── Retriever ────────────────────────────────────────────────────────
 

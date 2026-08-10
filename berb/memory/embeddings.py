@@ -42,13 +42,25 @@ class EmbeddingProvider:
         api_base_url: str = "",
         api_key: str = "",
         cache_dir: Path | None = None,
+        backend: str | None = None,
     ) -> None:
+        """
+        Args:
+            backend: Force a specific backend ("api"|"sentence_transformers"
+                |"tfidf") instead of auto-detecting. Auto-detection tries
+                sentence-transformers if it happens to be installed, which
+                downloads a model from HuggingFace Hub on first use with no
+                timeout — a real hang hazard in network-restricted
+                environments. Callers that need guaranteed non-blocking
+                behavior (e.g. inside a synchronous pipeline stage) should
+                pass backend="tfidf" explicitly.
+        """
         self._model = model
         self._api_base_url = api_base_url
         self._api_key = api_key
         self._cache_dir = cache_dir
-        self._backend: str | None = None
-        self._dim: int = _TFIDF_DIM
+        self._backend: str | None = backend
+        self._dim: int = {"api": 1536, "sentence_transformers": 384}.get(backend, _TFIDF_DIM)
         self._local_model: Any = None
 
     @property

@@ -36,6 +36,85 @@ from berb.reasoning.multi_perspective import MultiPerspectiveMethod
 logger = logging.getLogger(__name__)
 
 
+def _repair_hypothesis(
+    llm: LLMClient, hypothesis_text: str, hard_issues: list[dict[str, Any]]
+) -> str:
+    """Revise a hypothesis to address the falsification critic's
+    hard-severity issues.
+
+    P2-02: this is the answer half of ScholarPeer's Q&A engine, applied at
+    the point where Berb has the earliest leverage (§0.2 inversion — fix
+    the hypothesis before an experiment gets designed for it, rather than
+    flagging it as a reviewer weakness afterward). Previously the retry
+    loop reset the text back to its unmodified original before the next
+    round, so round 2 re-critiqued the exact same input and never fixed
+    anything.
+    """
+    issue_lines = "\n".join(
+        f"- [{i.get('action', 'issue')}] {i.get('question', '')}" for i in hard_issues
+    )
+    prompt = (
+        "A falsification critic raised the following hard issues with this "
+        "research hypothesis. Revise the hypothesis to directly address "
+        "each issue — narrow overclaimed scope, add missing preconditions, "
+        "or make the claim falsifiable/testable as needed. Keep the "
+        "revision concise and preserve the hypothesis's core intent where "
+        "the criticism allows it. Return ONLY the revised hypothesis text, "
+        "no preamble or explanation.\n\n"
+        f"Original hypothesis:\n{hypothesis_text}\n\n"
+        f"Critic issues:\n{issue_lines}"
+    )
+    try:
+        resp = llm.chat([{"role": "user", "content": prompt}], max_tokens=1024)
+        revised = resp.content.strip()
+        return revised if revised else hypothesis_text
+    except Exception:  # noqa: BLE001
+        logger.debug("E1: Hypothesis repair failed, keeping prior text", exc_info=True)
+        return hypothesis_text
+
+
+def _build_domain_narrative(llm: LLMClient, run_dir: Path, topic: str) -> str:
+    """P3-04: compress the retrieved literature corpus into a chronological
+    "domain narrative" — the arc of progress in the sub-domain — mirroring
+    ScholarPeer's Sub-Domain Historian agent. Raw retrieved abstracts don't
+    let a model assess significance/novelty the way a senior researcher's
+    mental model of the field's trajectory does.
+    """
+    candidates_text = _read_prior_artifact(run_dir, "candidates.jsonl") or ""
+    if not candidates_text.strip():
+        return ""
+    rows: list[dict[str, Any]] = []
+    for line in candidates_text.strip().splitlines():
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(row, dict) and row.get("title"):
+            rows.append(row)
+    if not rows:
+        return ""
+    rows.sort(key=lambda r: r.get("year") or 0)
+    lines = [f"- ({r.get('year', '?')}) {r['title']}" for r in rows[:60]]
+    prompt = (
+        f"Below is a chronologically-sorted list of papers retrieved for "
+        f"the research topic: {topic!r}.\n\n"
+        + "\n".join(lines)
+        + "\n\nWrite a short (3-5 paragraph) chronological narrative of "
+        "how this sub-domain has progressed over time, based ONLY on the "
+        "titles and years given — do not invent details not implied by "
+        "the list. Identify the arc: what problem the field started with, "
+        "what major shifts occurred, and what the current frontier looks "
+        "like. This narrative will be used to help assess how novel and "
+        "significant new contributions to this topic would be."
+    )
+    try:
+        resp = llm.chat([{"role": "user", "content": prompt}], max_tokens=1536)
+        return resp.content.strip()
+    except Exception:  # noqa: BLE001
+        logger.debug("P3-04: domain narrative unavailable", exc_info=True)
+        return ""
+
+
 class _SimpleRouter:
     """Simple router adapter for LLMClient to work with MultiPerspectiveMethod."""
 
@@ -99,6 +178,23 @@ def _execute_synthesis(
         for path in sorted(Path(cards_path).glob("*.md"))[:24]:
             snippets.append(path.read_text(encoding="utf-8"))
         cards_context = "\n\n".join(snippets)
+
+    # P3-04: sub-domain historian — a chronological narrative of the
+    # field's progression, feeding this stage's synthesis (and stage 8
+    # transitively, since it reads synthesis.md) so novelty/significance
+    # assessment has more than raw unordered abstracts to work from.
+    domain_narrative = ""
+    if llm is not None:
+        domain_narrative = _build_domain_narrative(llm, run_dir, config.research.topic)
+        if domain_narrative:
+            (stage_dir / "domain_narrative.md").write_text(
+                domain_narrative, encoding="utf-8"
+            )
+            cards_context = (
+                f"## Domain Narrative (chronological arc of this sub-field)\n\n"
+                f"{domain_narrative}\n\n## Literature Cards\n\n{cards_context}"
+            )
+
     if llm is not None:
         _pm = prompts or PromptManager()
         _overlay = _get_evolution_overlay(run_dir, "synthesis")
@@ -136,10 +232,13 @@ Under-reported failure behavior under distribution shift.
 {_utcnow_iso()}
 """
     (stage_dir / "synthesis.md").write_text(synthesis_md, encoding="utf-8")
+    _synthesis_artifacts = ("synthesis.md", "domain_narrative.md") if domain_narrative else (
+        "synthesis.md",
+    )
     return StageResult(
         stage=Stage.SYNTHESIS,
         status=StageStatus.DONE,
-        artifacts=("synthesis.md",),
+        artifacts=_synthesis_artifacts,
         evidence_refs=("stage-07/synthesis.md",),
     )
 
@@ -323,7 +422,19 @@ def _execute_hypothesis_gen(
                             break
                         if _round == _max_rounds - 1:
                             break
-                        _current_text = _ht  # would be repaired by LLM in production
+                        _current_text = _repair_hypothesis(llm, _current_text, _hard)
+
+                    if _current_text != _ht:
+                        # P2-02: fold the repair back into hypotheses.md so
+                        # stage 9 designs an experiment for the REVISED
+                        # claim, not the one the critic already rejected.
+                        # _ht is a verbatim substring of hypotheses_md (it
+                        # came from splitting it), so a targeted replace is
+                        # safe; count=1 avoids touching a second occurrence
+                        # if the same truncated text recurs elsewhere.
+                        hypotheses_md = hypotheses_md.replace(_ht, _current_text, 1)
+                        _record["repaired"] = True
+                        _record["repaired_text"] = _current_text[:200]
 
                     _record["hard_issues"] = _hard if _hard else []
                     _record["soft_issues"] = _soft if _soft else []
@@ -332,6 +443,13 @@ def _execute_hypothesis_gen(
                     _hypothesis_records.append(_record)
                     _all_issues.extend(_hard)
                     _all_issues.extend(_soft)
+
+                if any(r.get("repaired") for r in _hypothesis_records):
+                    (stage_dir / "hypotheses.md").write_text(hypotheses_md, encoding="utf-8")
+                    logger.info(
+                        "E1: Repaired %d hypothesis(es) and rewrote hypotheses.md",
+                        sum(1 for r in _hypothesis_records if r.get("repaired")),
+                    )
 
                 _hypothesis_state["hypotheses"] = _hypothesis_records
                 _hypothesis_state["gate_passed"] = all(r["passed"] for r in _hypothesis_records)

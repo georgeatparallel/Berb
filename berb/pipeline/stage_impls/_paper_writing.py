@@ -2092,11 +2092,17 @@ def _execute_paper_draft(
     # F2.6: Build citation list from references.bib / candidates with cite_keys
     citation_instruction = ""
     bib_text = _read_prior_artifact(run_dir, "references.bib")
+    # P0-02: gates which candidates.jsonl rows become citable below. Without
+    # this, the pre-verification pass computed a hallucination-filtered
+    # bib_text and never used it — the prompt was built from unfiltered
+    # candidates.jsonl regardless of verification results.
+    verified_keys: set[str] | None = None
 
     # P3: Pre-verify citations before paper draft — remove hallucinated refs
     if bib_text and bib_text.strip():
         from berb.literature.verify import (
             filter_verified_bibtex,
+            parse_bibtex_entries,
         )
         from berb.literature.verify import (
             verify_citations as _verify_cit,
@@ -2115,6 +2121,7 @@ def _execute_paper_draft(
                     _pre_report.total,
                     _removed,
                 )
+            verified_keys = {e["key"] for e in parse_bibtex_entries(bib_text) if e.get("key")}
         except Exception as exc:
             logger.warning("P3: Pre-verification failed, using original bib: %s", exc)
 
@@ -2124,6 +2131,8 @@ def _execute_paper_draft(
         for row_text in candidates_text.strip().splitlines():
             row = _safe_json_loads(row_text, {})
             if isinstance(row, dict) and row.get("cite_key"):
+                if verified_keys is not None and row["cite_key"] not in verified_keys:
+                    continue
                 authors_info = ""
                 if isinstance(row.get("authors"), list) and row["authors"]:
                     first_author = row["authors"][0]

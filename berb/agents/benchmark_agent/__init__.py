@@ -16,9 +16,20 @@ The ``BenchmarkOrchestrator`` coordinates the four agents and produces a
 code generation).
 """
 
+from berb.agents.benchmark_agent.omissions import (
+    OmittedBaselines,
+    extract_corpus_method_names,
+    find_omitted_baselines,
+)
 from berb.agents.benchmark_agent.orchestrator import (
     BenchmarkOrchestrator,
     BenchmarkPlan,
 )
 
-__all__ = ["BenchmarkOrchestrator", "BenchmarkPlan"]
+__all__ = [
+    "BenchmarkOrchestrator",
+    "BenchmarkPlan",
+    "OmittedBaselines",
+    "extract_corpus_method_names",
+    "find_omitted_baselines",
+]

@@ -77,6 +77,7 @@ class ReviewerPersona:
     focus_areas: list[ReviewDimension]
     system_prompt: str
     weight: float = 1.0  # Weight in meta-review
+    max_tokens: int | None = None  # P3-01: per-persona compute budget override
 
 
 @dataclass
@@ -110,6 +111,8 @@ class MetaReview:
     meta_review_text: str
     acceptance_recommendation: str
     reviewer_conflicts: list[str]  # Areas where reviewers disagreed
+    review_diversity: float = 0.0  # 1 - mean pairwise cosine similarity (text space)
+    critique_synthesis: str = ""  # P3-03: deduplicated cross-reviewer critique clusters
 
 
 # Reviewer personas based on NeurIPS reviewer guidelines
@@ -217,6 +220,52 @@ Check for:
 A paper with code and detailed instructions should score 8-10.
 A paper with no code and vague details should score 3-5.""",
     ),
+    # P3-01: targets PAT's headline result (55.2% -> 89.7% recall on
+    # math/proof errors via a dedicated high-budget rigor reviewer). Berb
+    # had zero mathematical/logical verification anywhere before this.
+    # Reuses TECHNICAL_QUALITY rather than a new ReviewDimension — adding
+    # a 7th scoring dimension would change the weighted-average math and
+    # the hardcoded JSON schema in _build_review_prompt/_parse_review_content.
+    ReviewerPersona(
+        id="reviewer_6",
+        name="Proof & Derivation Checker",
+        focus_areas=[ReviewDimension.TECHNICAL_QUALITY],
+        weight=1.2,  # matches novelty's weight — a wrong proof invalidates the paper
+        max_tokens=8192,  # larger budget: the closest approximation available
+        # to PAT's "High Thinking" track for proof-heavy segments (no
+        # extended-thinking API is wired — see P3-02, deferred until this
+        # persona shows the ceiling is real).
+        system_prompt="""You are a rigorous theoretical reviewer for a top-tier conference (NeurIPS/ICML/ICLR/STOC/FOCS).
+Your ONLY job is mathematical and logical correctness — not novelty, not writing quality, not experiments.
+
+Verify every theorem, lemma, and derivation line by line. Do NOT accept a
+claim because it looks plausible; construct a counterexample or trace the
+algebra yourself before scoring it correct.
+
+Specifically hunt for:
+- Sign errors: missing or misplaced absolute value signs, wrong sign in an inequality
+- Inequality direction errors: an inequality that points the wrong way after a step
+- Off-by-one errors in indices, loop bounds, or sums/products
+- Overloaded or inconsistent notation (same symbol used for two different objects)
+- Invalid proof steps: an unjustified inference, a step that doesn't follow from the prior one
+- Unstated or violated assumptions (e.g. requiring convexity, boundedness, independence) that the proof silently relies on
+- Circular reasoning or reliance on the conclusion being proved
+
+Also flag "mathematically significant typos" — small errors that degrade
+rigor without necessarily invalidating the result (a missing subscript, a
+transposed digit in a constant, a swapped variable name).
+
+Distinguish severity:
+- Fatal: invalidates the main theorem or result (score 1-3)
+- Serious: invalidates a claim but the paper's core contribution may survive with a fix (score 4-6)
+- Minor: a typo or notational slip that doesn't affect correctness (score 7-8, note it as a weakness)
+- No issues found after careful line-by-line verification (score 9-10)
+
+For every issue you report, cite the specific equation, theorem number, or
+line where it occurs, and explain concretely why it is wrong — not just
+that it "seems off." If you construct a counterexample, state it
+explicitly.""",
+    ),
 ]
 
 
@@ -321,7 +370,7 @@ class AutomatedReviewerEnsemble:
                     {"role": "system", "content": persona.system_prompt},
                     {"role": "user", "content": self._build_review_prompt(persona)},
                 ],
-                "max_tokens": max_tokens,
+                "max_tokens": persona.max_tokens or max_tokens,
                 "temperature": temperature,
                 "cached_prefix": cached_prefix,
                 "cache_ttl": "1h",
@@ -478,6 +527,7 @@ Return ONLY the JSON object, no other text.
                     system=persona.system_prompt,
                     cached_prefix=f"PAPER TEXT:\n{paper_text}",
                     cache_ttl="1h",
+                    max_tokens=persona.max_tokens,
                 )
                 content = response.content if hasattr(response, "content") else str(response)
             except Exception as exc:  # noqa: BLE001
@@ -508,6 +558,42 @@ Return ONLY the JSON object, no other text.
             ),
         }
 
+    async def synthesize_critiques(self, reviews: list[Review]) -> str:
+        """P3-03: one LLM pass clustering the reviewers' free-text
+        strengths/weaknesses by underlying claim, mirroring PAT's Global
+        Synthesis stage. PAT's synthesis agent exists because naive
+        multi-pass review scaling degrades precision — 5 reviewers can
+        raise redundant or overlapping critiques that a reader has to
+        manually cross-reference. Does not touch score aggregation; purely
+        additive to the meta-review text.
+        """
+        if self._llm_client is None:
+            return ""
+        bullets = []
+        for r in reviews:
+            bullets.append(f"### {r.reviewer_name}")
+            bullets.extend(f"- (strength) {s}" for s in r.strengths)
+            bullets.extend(f"- (weakness) {w}" for w in r.weaknesses)
+        prompt = (
+            "Below are strengths/weaknesses from independent reviewers of "
+            "the same paper. Multiple reviewers may raise the same or "
+            "overlapping point in different words. Cluster them into a "
+            "short list of DISTINCT issues, deduplicating redundant "
+            "points and noting when multiple reviewers independently "
+            "agree on the same issue (stronger signal than a lone "
+            "reviewer). Do not invent new critiques — only synthesize "
+            "what is present below.\n\n" + "\n".join(bullets)
+        )
+        try:
+            response = self._llm_client.chat(
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=1024,
+            )
+            return response.content.strip() if hasattr(response, "content") else ""
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("Critique synthesis unavailable: %s", exc)
+            return ""
+
     def area_chair_decision(self, reviews: list[Review]) -> MetaReview:
         """Area Chair meta-review aggregating all reviews.
 
@@ -517,8 +603,8 @@ Return ONLY the JSON object, no other text.
         Returns:
             MetaReview with aggregated decision
         """
-        if len(reviews) != 5:
-            logger.warning(f"Expected 5 reviews, got {len(reviews)}")
+        if len(reviews) != len(self._personas):
+            logger.warning(f"Expected {len(self._personas)} reviews, got {len(reviews)}")
 
         # Calculate score statistics
         overall_scores = [r.overall_score for r in reviews]
@@ -598,6 +684,35 @@ Return ONLY the JSON object, no other text.
             reviews, avg_score, consensus, conflicts, recommendation
         )
 
+        # P1-02: Review Diversity Score (ScholarPeer) — score_std/conflicts
+        # above only measure disagreement in *score* space; 5 reviewers can
+        # emit near-identical prose and still look healthy there. This
+        # measures diversity in *text* space to catch that "artificial
+        # hivemind" mode collapse. Non-blocking: falls back to 0.0 (unknown)
+        # rather than failing the whole review on an embedding hiccup.
+        review_diversity = 0.0
+        try:
+            import itertools
+
+            from berb.memory.embeddings import EmbeddingProvider
+            from berb.memory.retriever import cosine_similarity
+
+            texts = [r.detailed_feedback for r in reviews if r.detailed_feedback]
+            if len(texts) >= 2:
+                # backend="tfidf": auto-detection would try
+                # sentence-transformers if installed and hang downloading a
+                # model with no timeout — unacceptable inside a synchronous
+                # pipeline stage. See EmbeddingProvider's backend docstring.
+                vectors = EmbeddingProvider(backend="tfidf").embed_batch(texts)
+                sims = [
+                    cosine_similarity(vectors[i], vectors[j])
+                    for i, j in itertools.combinations(range(len(vectors)), 2)
+                ]
+                if sims:
+                    review_diversity = round(1 - (sum(sims) / len(sims)), 3)
+        except Exception:  # noqa: BLE001
+            logger.debug("Review diversity score unavailable", exc_info=True)
+
         return MetaReview(
             reviews=reviews,
             average_score=round(avg_score, 2),
@@ -610,6 +725,7 @@ Return ONLY the JSON object, no other text.
             meta_review_text=meta_review_text,
             acceptance_recommendation=recommendation,
             reviewer_conflicts=conflicts,
+            review_diversity=review_diversity,
         )
 
     def _generate_meta_review_text(
@@ -652,7 +768,8 @@ Return ONLY the JSON object, no other text.
                 "",
                 "## Area Chair Recommendation",
                 "",
-                f"This paper receives an average score of {avg_score:.2f}/10 from 5 reviewers. ",
+                f"This paper receives an average score of {avg_score:.2f}/10 "
+                f"from {len(reviews)} reviewers. ",
                 f"The reviews show {'strong agreement' if len(conflicts) == 0 else 'notable disagreement'}.",
                 "",
                 "**Recommendation:** " + recommendation,
@@ -686,9 +803,17 @@ Return ONLY the JSON object, no other text.
             "",
             meta_review.meta_review_text,
             "",
-            "## Individual Reviews",
-            "",
         ]
+        if meta_review.critique_synthesis:
+            lines.extend(
+                [
+                    "## Cross-Reviewer Critique Synthesis",
+                    "",
+                    meta_review.critique_synthesis,
+                    "",
+                ]
+            )
+        lines.extend(["## Individual Reviews", ""])
 
         for i, review in enumerate(reviews, 1):
             lines.extend(

@@ -155,6 +155,44 @@ def test_build_request_uses_max_completion_tokens_for_new_models(
     assert body["temperature"] == 0.2
 
 
+def test_raw_call_records_cost_event(monkeypatch: pytest.MonkeyPatch):
+    """P0-05: _raw_call is the single choke point CostTracker.
+    record_from_llm_response must be reached through — previously it had
+    zero production callers, so no LLM call was ever recorded.
+    """
+    from berb.llm.cost_tracker import get_cost_tracker
+
+    tracker = get_cost_tracker()
+    tracker.reset()
+
+    response = {
+        "choices": [{"message": {"content": "x"}, "finish_reason": "stop"}],
+        "usage": {"prompt_tokens": 10, "completion_tokens": 5},
+    }
+    _, resp, _ = _capture_raw_call(monkeypatch, model="gpt-4o", response_data=response)
+
+    assert resp.prompt_tokens == 10
+    assert resp.completion_tokens == 5
+    report = tracker.to_report()
+    assert report["num_events"] == 1
+    assert tracker.total_tokens() == 15
+
+
+def test_raw_call_cost_recording_failure_does_not_raise(monkeypatch: pytest.MonkeyPatch):
+    """Cost tracking is best-effort: a broken tracker must never break a
+    real LLM call."""
+    from berb.llm import cost_tracker as cost_tracker_module
+
+    def _broken_get_tracker(*args: object, **kwargs: object) -> None:
+        raise RuntimeError("tracker unavailable")
+
+    monkeypatch.setattr(cost_tracker_module, "get_cost_tracker", _broken_get_tracker)
+
+    response = {"choices": [{"message": {"content": "x"}, "finish_reason": "stop"}]}
+    _, resp, _ = _capture_raw_call(monkeypatch, model="gpt-4o", response_data=response)
+    assert resp.content == "x"
+
+
 def test_build_request_uses_max_tokens_for_old_models(monkeypatch: pytest.MonkeyPatch):
     response = {"choices": [{"message": {"content": "x"}, "finish_reason": "stop"}]}
     body, _, _ = _capture_raw_call(monkeypatch, model="gpt-4.1", response_data=response)

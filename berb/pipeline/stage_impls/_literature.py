@@ -81,6 +81,36 @@ def _expand_search_queries(queries: list[str], topic: str) -> list[str]:
     return expanded
 
 
+# P2-04: ScholarPeer's literature-expansion agent does k=3 gap-driven
+# search rounds; Fig. 5 shows quality declining past k=3 as tangential
+# papers dilute the context window. Berb's version seeds each round from
+# the previous round's highest-cited new finds (no NLP/gap-analysis
+# available — using a real paper's own title as the next query is a
+# standard "find related work" technique, not a fabricated heuristic).
+_MAX_EXPANSION_ROUNDS = 3
+_MIN_NEW_CANDIDATES_TO_CONTINUE = 3
+
+
+def _seed_expansion_queries(
+    round_candidates: list[dict[str, Any]], seen_queries: set[str], *, max_new: int = 3
+) -> list[str]:
+    """Seed the next search round from titles of this round's highest-cited
+    new candidates, skipping titles already used as a query."""
+    ranked = sorted(
+        round_candidates, key=lambda c: c.get("citation_count", 0) or 0, reverse=True
+    )
+    new_queries: list[str] = []
+    for c in ranked:
+        title = str(c.get("title", "")).strip()
+        if not title or title.lower() in seen_queries:
+            continue
+        new_queries.append(title)
+        seen_queries.add(title.lower())
+        if len(new_queries) >= max_new:
+            break
+    return new_queries
+
+
 # ---------------------------------------------------------------------------
 # Stage executors
 # ---------------------------------------------------------------------------
@@ -388,49 +418,79 @@ def _execute_literature_collect(
     queries_data = _safe_json_loads(queries_text or "{}", {})
     queries: list[str] = queries_data.get("queries", [topic])
     year_min: int = queries_data.get("year_min", 2020)
+    # P2-04: only an upper bound existed before (year_min) — this keeps the
+    # pipeline from citing work published after its own experiments ran.
+    year_max: int = queries_data.get("year_max", 0)
 
-    # --- Try real API search first ---
+    # --- Try real API search first, k=3 gap-driven expansion rounds ---
     candidates: list[dict[str, Any]] = []
     bibtex_entries: list[str] = []
     real_search_succeeded = False
+    _seen_titles: set[str] = set()
+    _seen_queries: set[str] = {q.lower().strip() for q in queries}
 
     try:
         from berb.literature.search import (
             search_papers_multi_query,
         )
 
-        # Expand queries for broader coverage
-        expanded_queries = _expand_search_queries(queries, config.research.topic)
-        logger.info(
-            "[literature] Searching %d queries (expanded from %d) across OpenAlex → S2 → arXiv…",
-            len(expanded_queries),
-            len(queries),
-        )
         _pplx = config.perplexity
-        papers = search_papers_multi_query(
-            expanded_queries,
-            limit_per_query=40,
-            year_min=year_min,
-            s2_api_key=config.llm.s2_api_key,
-            perplexity_top_up=_pplx.enabled,
-            perplexity_min_candidates=_pplx.literature_min_candidates,
-            perplexity_min_failed_sources=_pplx.literature_min_failed_sources,
-            perplexity_domain_filter=list(_pplx.domain_filter) or None,
-            perplexity_recency_filter=_pplx.recency_filter or None,
-            perplexity_api_key=os.environ.get(_pplx.api_key_env, ""),
-        )
-        if papers:
-            real_search_succeeded = True
-            # Count by source
-            src_counts: dict[str, int] = {}
-            for p in papers:
-                src_counts[p.source] = src_counts.get(p.source, 0) + 1
-                d = p.to_dict()
-                d["collected_at"] = _utcnow_iso()
-                candidates.append(d)
-                bibtex_entries.append(p.to_bibtex())
-            src_str = ", ".join(f"{s}: {n}" for s, n in src_counts.items())
-            logger.info("[literature] Found %d papers (%s)", len(papers), src_str)
+        _round_queries = _expand_search_queries(queries, config.research.topic)
+        for _round in range(_MAX_EXPANSION_ROUNDS):
+            logger.info(
+                "[literature] Round %d/%d: searching %d queries across "
+                "OpenAlex → S2 → arXiv…",
+                _round + 1,
+                _MAX_EXPANSION_ROUNDS,
+                len(_round_queries),
+            )
+            papers = search_papers_multi_query(
+                _round_queries,
+                limit_per_query=40,
+                year_min=year_min,
+                year_max=year_max,
+                s2_api_key=config.llm.s2_api_key,
+                perplexity_top_up=_pplx.enabled and _round == 0,
+                perplexity_min_candidates=_pplx.literature_min_candidates,
+                perplexity_min_failed_sources=_pplx.literature_min_failed_sources,
+                perplexity_domain_filter=list(_pplx.domain_filter) or None,
+                perplexity_recency_filter=_pplx.recency_filter or None,
+                perplexity_api_key=os.environ.get(_pplx.api_key_env, ""),
+            )
+            _round_new: list[dict[str, Any]] = []
+            if papers:
+                real_search_succeeded = True
+                src_counts: dict[str, int] = {}
+                for p in papers:
+                    title_key = p.title.strip().lower()
+                    if title_key in _seen_titles:
+                        continue
+                    _seen_titles.add(title_key)
+                    src_counts[p.source] = src_counts.get(p.source, 0) + 1
+                    d = p.to_dict()
+                    d["collected_at"] = _utcnow_iso()
+                    candidates.append(d)
+                    bibtex_entries.append(p.to_bibtex())
+                    _round_new.append(d)
+                src_str = ", ".join(f"{s}: {n}" for s, n in src_counts.items())
+                logger.info(
+                    "[literature] Round %d: %d new papers (%s)",
+                    _round + 1,
+                    len(_round_new),
+                    src_str or "none",
+                )
+            if _round == _MAX_EXPANSION_ROUNDS - 1:
+                break
+            if len(_round_new) < _MIN_NEW_CANDIDATES_TO_CONTINUE:
+                logger.info(
+                    "[literature] Only %d new paper(s) this round — stopping "
+                    "expansion early (diminishing returns).",
+                    len(_round_new),
+                )
+                break
+            _round_queries = _seed_expansion_queries(_round_new, _seen_queries)
+            if not _round_queries:
+                break
     except Exception:  # noqa: BLE001
         logger.warning(
             "[rate-limit] Literature search failed — falling back to LLM",
@@ -701,6 +761,31 @@ def _execute_literature_screen(
     prompts: PromptManager | None = None,
 ) -> StageResult:
     candidates_text = _read_prior_artifact(run_dir, "candidates.jsonl") or ""
+
+    # P0-04: stage 4 falls back to letting the LLM invent the entire
+    # candidate corpus from parametric memory when every search source
+    # fails, and records that in search_meta.json — but nothing downstream
+    # checked the flag, so a fabricated literature corpus proceeded to
+    # publication indistinguishably from a real one. Screening the corpus
+    # is meaningless if the corpus itself doesn't exist; fail here rather
+    # than silently accept it, and roll back to LITERATURE_COLLECT
+    # (stages.py GATE_ROLLBACK) so a retry can hit real search sources.
+    _search_meta = _safe_json_loads(
+        _read_prior_artifact(run_dir, "search_meta.json") or "", {}
+    )
+    if isinstance(_search_meta, dict) and _search_meta.get("real_search") is False:
+        return StageResult(
+            stage=Stage.LITERATURE_SCREEN,
+            status=StageStatus.FAILED,
+            artifacts=(),
+            evidence_refs=(),
+            error=(
+                "E05_GATE_REJECT: literature search failed for all sources at "
+                "stage 4 — the candidate corpus was LLM-generated from "
+                "parametric memory, not retrieved. Refusing to screen a "
+                "fabricated corpus."
+            ),
+        )
 
     # --- P1-1: keyword relevance pre-filter ---
     # Before LLM screening, drop papers whose title+abstract share no keywords

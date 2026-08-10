@@ -35,6 +35,47 @@ logger = logging.getLogger(__name__)
 # pressure on the most restrictive API.
 _DEFAULT_SOURCES = ("openalex", "semantic_scholar", "arxiv")
 
+# P2-04: a ranking boost, not a hard filter — Berb's domains span beyond
+# ML (biomedical, life sciences, ...), so non-listed venues are never
+# excluded, just ranked slightly below an otherwise-similar top-tier paper.
+_TOP_TIER_VENUES = frozenset(
+    {
+        "neurips",
+        "nips",
+        "icml",
+        "iclr",
+        "cvpr",
+        "iccv",
+        "eccv",
+        "acl",
+        "emnlp",
+        "naacl",
+        "aaai",
+        "ijcai",
+        "kdd",
+        "www",
+        "sigir",
+        "nature",
+        "science",
+        "pnas",
+        "cell",
+        "jmlr",
+        "tpami",
+    }
+)
+
+
+def _venue_boost_factor(venue: str) -> float:
+    """Multiplicative citation-count boost for top-tier venues.
+
+    A small proportional nudge (not an additive constant) so a
+    near-zero-citation top-tier paper can never leapfrog a heavily-cited
+    paper from a smaller venue — it only breaks near-ties in the top
+    venue's favor.
+    """
+    v = (venue or "").lower()
+    return 1.1 if any(t in v for t in _TOP_TIER_VENUES) else 1.0
+
 
 CacheGet = Callable[[str, str, int], list[dict[str, object]] | None]
 CachePut = Callable[[str, str, int, list[dict[str, object]]], None]
@@ -107,6 +148,7 @@ def search_papers(
     limit: int = 20,
     sources: Sequence[str] = _DEFAULT_SOURCES,
     year_min: int = 0,
+    year_max: int = 0,
     deduplicate: bool = True,
     s2_api_key: str = "",
     failure_counter: dict[str, int] | None = None,
@@ -220,8 +262,18 @@ def search_papers(
     if deduplicate:
         all_papers = _deduplicate(all_papers)
 
-    # Sort by citation count descending, then year descending
-    all_papers.sort(key=lambda p: (p.citation_count, p.year), reverse=True)
+    # P2-04: upper date cutoff. Unlike ScholarPeer's use (review fairness —
+    # don't judge a submission by work published after it), Berb generates
+    # papers rather than reviewing them: this exists so the pipeline
+    # doesn't cite work published after its own experiments ran, which is
+    # a reproducibility property, not a fairness one. p.year == 0 (unknown)
+    # is never filtered out — missing metadata isn't evidence of violation.
+    if year_max > 0:
+        all_papers = [p for p in all_papers if p.year == 0 or p.year <= year_max]
+
+    # Sort by (venue-boosted) citation count descending, then year descending
+    all_papers.sort(key=lambda p: (p.citation_count * _venue_boost_factor(p.venue), p.year),
+                     reverse=True)
 
     return all_papers
 
@@ -232,6 +284,7 @@ def search_papers_multi_query(
     limit_per_query: int = 20,
     sources: Sequence[str] = _DEFAULT_SOURCES,
     year_min: int = 0,
+    year_max: int = 0,
     s2_api_key: str = "",
     inter_query_delay: float = 1.5,
     perplexity_top_up: bool = True,
@@ -265,6 +318,7 @@ def search_papers_multi_query(
             limit=limit_per_query,
             sources=sources,
             year_min=year_min,
+            year_max=year_max,
             s2_api_key=s2_api_key,
             deduplicate=False,  # we dedup globally below
             failure_counter=failure_counter,
@@ -296,7 +350,8 @@ def search_papers_multi_query(
             if top_up:
                 deduped = _deduplicate(deduped + top_up)
 
-    deduped.sort(key=lambda p: (p.citation_count, p.year), reverse=True)
+    deduped.sort(key=lambda p: (p.citation_count * _venue_boost_factor(p.venue), p.year),
+                 reverse=True)
     return deduped
 
 

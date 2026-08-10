@@ -745,6 +745,21 @@ Generated: {_utcnow_iso()}
         except Exception as _chart_exc:
             logger.warning("Stage 14: Early chart generation failed: %s", _chart_exc)
 
+    # --- Research Integrity: emit evidence_registry.json (Phase 1) ---
+    # Built here (not at stage 20) because VerifiedEvidenceRegistry.from_run_dir
+    # only reads experiment_summary.json, which this stage produces. Stage 17
+    # (claim manifest) reads evidence_registry.json back — building it at
+    # stage 20 left every first-pass numeric claim verdict "unsupported"
+    # because the file didn't exist yet when stage 17 ran.
+    try:
+        from berb.integrity import VerifiedEvidenceRegistry as _VER  # noqa: N814
+
+        _evidence_reg = _VER.from_run_dir(run_dir)
+        if _evidence_reg.records:
+            _evidence_reg.save(run_dir / "evidence_registry.json")
+    except Exception:
+        logger.debug("Could not build evidence registry", exc_info=True)
+
     return StageResult(
         stage=Stage.RESULT_ANALYSIS,
         status=StageStatus.DONE,
