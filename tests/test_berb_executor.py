@@ -1449,6 +1449,62 @@ class TestLiteratureCollectExpansionRounds:
         assert captured_kwargs.get("year_max") == 2023
 
 
+class TestExperimentDesignFalsificationGate:
+    """Regression: the E1 falsification-gate-reject path constructed
+    StageResult with error_code=/error_detail= kwargs that don't exist on
+    the dataclass (only stage/status/artifacts/error/decision/evidence_refs
+    do). That TypeError is NOT caught by the surrounding
+    except (json.JSONDecodeError, AttributeError) handler, so any run
+    whose hypothesis_state.json had gate_passed: false would crash the
+    stage outright instead of failing cleanly.
+    """
+
+    def test_gate_rejects_with_useful_error_not_typeerror(
+        self, tmp_path: Path, run_dir: Path, rc_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
+        _write_prior_artifact(run_dir, 1, "goal.md", "# Goal\nTest goal.")
+        _write_prior_artifact(run_dir, 8, "hypotheses.md", "# H1\nTest hypothesis.")
+        _write_prior_artifact(
+            run_dir,
+            8,
+            "hypothesis_state.json",
+            json.dumps(
+                {
+                    "gate_passed": False,
+                    "critic_transcript": "Falsification critic transcript: hard issue found.",
+                }
+            ),
+        )
+        stage_dir = run_dir / "stage-09"
+        stage_dir.mkdir(parents=True, exist_ok=True)
+
+        result = rc_executor._execute_experiment_design(
+            stage_dir, run_dir, rc_config, adapters, llm=None
+        )
+
+        assert result.status is StageStatus.FAILED
+        assert result.error is not None
+        assert "E09_GATE_REJECT" in result.error
+        assert "Falsification critic transcript" in result.error
+
+    def test_gate_passes_open_when_gate_passed_true(
+        self, tmp_path: Path, run_dir: Path, rc_config: RCConfig, adapters: AdapterBundle
+    ) -> None:
+        _write_prior_artifact(run_dir, 1, "goal.md", "# Goal\nTest goal.")
+        _write_prior_artifact(run_dir, 8, "hypotheses.md", "# H1\nTest hypothesis.")
+        _write_prior_artifact(
+            run_dir, 8, "hypothesis_state.json", json.dumps({"gate_passed": True})
+        )
+        stage_dir = run_dir / "stage-09"
+        stage_dir.mkdir(parents=True, exist_ok=True)
+
+        result = rc_executor._execute_experiment_design(
+            stage_dir, run_dir, rc_config, adapters, llm=None
+        )
+
+        assert result.status is not StageStatus.FAILED
+
+
 class TestExperimentDesignBaselineScout:
     """P2-03: stage 9's context preamble used to load only goal.md +
     hypotheses.md — candidates.jsonl (the corpus Berb itself retrieved)

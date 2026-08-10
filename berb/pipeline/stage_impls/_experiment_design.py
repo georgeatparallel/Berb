@@ -186,8 +186,10 @@ def _execute_experiment_design(
                     status=StageStatus.FAILED,
                     artifacts=(),
                     evidence_refs=(),
-                    error_code="E09_GATE_REJECT",
-                    error_detail=f"Falsification gate blocked: {_hs.get('critic_transcript', 'No transcript')[:500]}",
+                    error=(
+                        f"E09_GATE_REJECT: Falsification gate blocked: "
+                        f"{_hs.get('critic_transcript', 'No transcript')[:500]}"
+                    ),
                 )
         except (json.JSONDecodeError, AttributeError) as _hs_err:
             logger.warning(
