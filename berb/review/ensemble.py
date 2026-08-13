@@ -23,6 +23,7 @@ Usage:
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import re
@@ -269,6 +270,14 @@ explicitly.""",
 ]
 
 
+# A1-1 (tasks/hardening_plan_2026-08-13.md): bounds real concurrency once
+# the fan-out below is actually parallel, so restoring it doesn't send all
+# N personas' requests to the provider at once and trip rate limits.
+# ponytail: fixed bound, not configurable — REVIEWER_PERSONAS is a small,
+# fixed-size list (6); revisit if persona count grows enough to matter.
+_REVIEW_CONCURRENCY_LIMIT = 3
+
+
 class AutomatedReviewerEnsemble:
     """5-reviewer ensemble + Area Chair meta-review."""
 
@@ -280,6 +289,7 @@ class AutomatedReviewerEnsemble:
         """
         self._personas = REVIEWER_PERSONAS
         self._llm_client = llm_client
+        self._review_semaphore = asyncio.Semaphore(_REVIEW_CONCURRENCY_LIMIT)
 
     async def review_paper(
         self,
@@ -321,8 +331,6 @@ class AutomatedReviewerEnsemble:
             logger.info("Batch review unavailable or timed out — falling back to per-call reviews")
 
         # Generate reviews in parallel
-        import asyncio
-
         review_tasks = [self._generate_review(persona, paper_text) for persona in self._personas]
 
         reviews = await asyncio.gather(*review_tasks)
@@ -522,13 +530,23 @@ Return ONLY the JSON object, no other text.
         content = ""
         if self._llm_client is not None:
             try:
-                response = self._llm_client.chat(
-                    messages=[{"role": "user", "content": prompt}],
-                    system=persona.system_prompt,
-                    cached_prefix=f"PAPER TEXT:\n{paper_text}",
-                    cache_ttl="1h",
-                    max_tokens=persona.max_tokens,
-                )
+                # A1-1 (tasks/hardening_plan_2026-08-13.md): this was a
+                # synchronous call inside an async def, so the
+                # asyncio.gather() fan-out in review_paper() provided zero
+                # real parallelism — N personas ran back-to-back, blocking
+                # the event loop throughout. to_thread + the bounded
+                # semaphore restore actual concurrency without one
+                # persona's slow call starving the others, matching the
+                # pattern already used on the batch-API path in this file.
+                async with self._review_semaphore:
+                    response = await asyncio.to_thread(
+                        self._llm_client.chat,
+                        messages=[{"role": "user", "content": prompt}],
+                        system=persona.system_prompt,
+                        cached_prefix=f"PAPER TEXT:\n{paper_text}",
+                        cache_ttl="1h",
+                        max_tokens=persona.max_tokens,
+                    )
                 content = response.content if hasattr(response, "content") else str(response)
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Reviewer '%s' LLM call failed: %s", persona.name, exc)
@@ -585,7 +603,12 @@ Return ONLY the JSON object, no other text.
             "what is present below.\n\n" + "\n".join(bullets)
         )
         try:
-            response = self._llm_client.chat(
+            # Same blocking-in-async defect as _generate_review (A1-1) —
+            # a single call here, not part of a fan-out, but still blocks
+            # the event loop for its duration if anything else is running
+            # concurrently.
+            response = await asyncio.to_thread(
+                self._llm_client.chat,
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=1024,
             )

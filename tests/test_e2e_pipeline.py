@@ -144,13 +144,24 @@ class MockLLMClient:
         self.config.base_url = "http://mock"
         self.config.api_key = "mock-key"
 
-    async def chat(
+    def chat(
         self,
         messages: list[dict],
         model: str = "mock-model",
         **kwargs: Any,
     ) -> MagicMock:
-        """Mock chat completion."""
+        """Mock chat completion.
+
+        Synchronous, matching the real LLMClient.chat() — stage_impls call
+        `llm.chat(...)` directly, not `await llm.chat(...)`. Was `async def`
+        before A1-2 (tasks/hardening_plan_2026-08-13.md): that bug was
+        latent because `create_llm_client()` was never actually called for
+        non-"acp" providers, so every e2e test's `patch(
+        "berb.pipeline.executor.create_llm_client", return_value=llm)` was
+        dead code — execute_stage silently used a real (unmocked)
+        LLMClient.from_rc_config() instead. A1-2 made the patch take
+        effect, which is what surfaced this.
+        """
         self.calls.append({"messages": messages, "model": model, "kwargs": kwargs})
 
         # Generate appropriate response based on stage

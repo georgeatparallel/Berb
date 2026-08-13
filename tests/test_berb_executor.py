@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import re
 import sys
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, cast
@@ -317,7 +318,7 @@ def test_execute_stage_creates_stage_dir_writes_artifacts_and_meta(
 ) -> None:
     fake_llm = FakeLLMClientWithConfig("# Goal\n\nMocked goal body")
     monkeypatch.setattr(
-        "berb.pipeline.executor.LLMClient.from_rc_config",
+        "berb.llm.client.LLMClient.from_rc_config",
         lambda _config: fake_llm,
     )
 
@@ -521,7 +522,7 @@ def test_execute_stage_llm_client_creation_error_falls_back_without_crash(
     def boom(_config: RCConfig):
         raise RuntimeError("llm init failed")
 
-    monkeypatch.setattr("berb.pipeline.executor.LLMClient.from_rc_config", boom)
+    monkeypatch.setattr("berb.llm.client.LLMClient.from_rc_config", boom)
     result = rc_executor.execute_stage(
         Stage.TOPIC_INIT,
         run_dir=run_dir,
@@ -532,6 +533,94 @@ def test_execute_stage_llm_client_creation_error_falls_back_without_crash(
     )
     assert result.status == StageStatus.DONE
     assert (run_dir / "stage-01" / "goal.md").exists()
+
+
+class TestLLMFactoryNotBypassed:
+    """A1-2 (tasks/hardening_plan_2026-08-13.md): execute_stage must always
+    go through create_llm_client(), not construct LLMClient directly for
+    every provider except "acp" — the bypass meant configured
+    fallback_providers/NadirClaw routing never engaged outside ACP."""
+
+    def test_create_llm_client_is_always_called_not_bypassed(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        run_dir: Path,
+        rc_config: RCConfig,
+        adapters: AdapterBundle,
+    ) -> None:
+        fake_llm = FakeLLMClientWithConfig("# Goal\n\nMocked goal body")
+        calls: list[RCConfig] = []
+
+        def _fake_factory(config: RCConfig):
+            calls.append(config)
+            return fake_llm
+
+        monkeypatch.setattr("berb.pipeline.executor.create_llm_client", _fake_factory)
+
+        rc_executor.execute_stage(
+            Stage.TOPIC_INIT,
+            run_dir=run_dir,
+            run_id="run-factory",
+            config=rc_config,
+            adapters=adapters,
+            auto_approve_gates=True,
+        )
+
+        assert len(calls) == 1
+        assert adapters.llm is fake_llm
+
+    def test_missing_base_url_or_api_key_still_yields_none(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        run_dir: Path,
+        rc_config: RCConfig,
+        adapters: AdapterBundle,
+    ) -> None:
+        """Preserve the pre-A1-2 guard: a candidate with no base_url/api_key
+        must not be handed to stage impls as a usable client."""
+        misconfigured = SimpleNamespace()
+        misconfigured.config = SimpleNamespace(base_url="", api_key="")
+        monkeypatch.setattr(
+            "berb.pipeline.executor.create_llm_client", lambda _config: misconfigured
+        )
+
+        rc_executor.execute_stage(
+            Stage.TOPIC_INIT,
+            run_dir=run_dir,
+            run_id="run-noconfig",
+            config=rc_config,
+            adapters=adapters,
+            auto_approve_gates=True,
+        )
+
+        assert adapters.llm is None
+
+    def test_acp_provider_bypasses_the_base_url_guard(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        run_dir: Path,
+        rc_config: RCConfig,
+        adapters: AdapterBundle,
+    ) -> None:
+        """ACP spawns a subprocess agent, not an HTTP client — it has no
+        base_url/api_key to gate on, matching pre-A1-2 behavior."""
+        acp_config = replace(rc_config, llm=replace(rc_config.llm, provider="acp"))
+        acp_client = SimpleNamespace()
+        acp_client.config = SimpleNamespace(base_url="", api_key="")
+        monkeypatch.setattr(
+            "berb.pipeline.executor.create_llm_client", lambda _config: acp_client
+        )
+
+        rc_executor.execute_stage(
+            Stage.TOPIC_INIT,
+            run_dir=run_dir,
+            run_id="run-acp",
+            config=acp_config,
+            adapters=adapters,
+            auto_approve_gates=True,
+        )
+
+        assert adapters.llm is acp_client
 
 
 def test_execute_stage_executor_exception_returns_failed(
@@ -600,7 +689,7 @@ class TestStageHealth:
             Path(__file__).parent.parent / "configs" / "config.arc.example.yaml",
             check_paths=False,
         )
-        with patch("berb.pipeline.executor.LLMClient") as mock_llm_cls:
+        with patch("berb.llm.client.LLMClient") as mock_llm_cls:
             mock_client = MagicMock()
             mock_client.chat.return_value = MagicMock(
                 content='{"topic": "test", "research_questions": ["q1"]}'
@@ -630,7 +719,7 @@ class TestStageHealth:
             check_paths=False,
         )
 
-        with patch("berb.pipeline.executor.LLMClient") as mock_llm_cls:
+        with patch("berb.llm.client.LLMClient") as mock_llm_cls:
             mock_client = MagicMock()
             mock_client.chat.return_value = MagicMock(
                 content='{"topic": "test", "research_questions": ["q1"]}'
@@ -667,7 +756,7 @@ class TestStageHealth:
             check_paths=False,
         )
 
-        with patch("berb.pipeline.executor.LLMClient") as mock_llm_cls:
+        with patch("berb.llm.client.LLMClient") as mock_llm_cls:
             mock_client = MagicMock()
             mock_client.chat.return_value = MagicMock(
                 content='{"topic": "test", "sub_problems": []}'

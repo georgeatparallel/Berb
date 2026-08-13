@@ -18,7 +18,6 @@ from pathlib import Path
 from berb.adapters import AdapterBundle
 from berb.config import RCConfig
 from berb.llm import create_llm_client
-from berb.llm.client import LLMClient
 
 # Re-exported for backward compatibility: callers (e.g. packaging.py) import
 # _extract_paper_title from here rather than the _figure_helpers module it
@@ -180,11 +179,29 @@ def execute_stage(
 
     llm = None
     try:
+        # A1-2 (tasks/hardening_plan_2026-08-13.md): previously only the
+        # "acp" branch went through create_llm_client() — every other
+        # provider bypassed it via LLMClient.from_rc_config() directly, so
+        # configured fallback_providers (MultiProviderLLMClient) and
+        # NadirClaw/token-tracking (SmartLLMClient) never engaged outside
+        # ACP, even when set in config. The factory already branches on
+        # both internally; call it unconditionally.
+        candidate = create_llm_client(config)
         if config.llm.provider == "acp":
-            llm = create_llm_client(config)
+            # ACP spawns a subprocess agent rather than making HTTP calls,
+            # so it has no base_url/api_key to gate on — preserve the
+            # original ungated behavior for this provider.
+            llm = candidate
         else:
-            candidate = LLMClient.from_rc_config(config)
-            if candidate.config.base_url and candidate.config.api_key:
+            # Preserve the original guard: stage impls rely on llm=None
+            # when nothing is configured, not a client with an empty
+            # base_url/api_key that will fail on first real call.
+            candidate_config = getattr(candidate, "config", None)
+            if (
+                candidate_config is not None
+                and candidate_config.base_url
+                and candidate_config.api_key
+            ):
                 llm = candidate
     except Exception as _llm_exc:  # noqa: BLE001
         logger.warning("LLM client creation failed: %s", _llm_exc)
