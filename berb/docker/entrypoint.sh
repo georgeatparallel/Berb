@@ -43,7 +43,13 @@ if [ "${RC_SETUP_ONLY_NETWORK:-0}" = "1" ]; then
     elif ip route del default 2>/dev/null; then
         echo "[RC] Network disabled via route removal."
     else
-        echo "[RC] Warning: Could not disable network (no NET_ADMIN cap or ip route). Continuing with network."
+        # SECURITY: fail closed. The container was asked for setup_only
+        # isolation and neither mechanism worked (missing NET_ADMIN) — run
+        # with network still up is a silent isolation downgrade, not a
+        # convenience. Run with --cap-add=NET_ADMIN, or use network_policy:
+        # none/full if you accept experiment-phase network access.
+        echo "[RC] FATAL: Could not disable network (no NET_ADMIN cap or ip route)." >&2
+        exit 1
     fi
 fi
 

@@ -837,6 +837,7 @@ def _execute_code_generation(
                     if issue.severity == "error" and issue.category in (
                         "syntax",
                         "import",
+                        "security",
                     ):
                         _has_critical = True
         if _has_critical:

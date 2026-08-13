@@ -20,6 +20,8 @@ import re
 from datetime import UTC
 from pathlib import Path
 
+from berb.utils.sanitize import wrap_untrusted
+
 logger = logging.getLogger(__name__)
 
 # Maximum characters to extract for LLM-based metadata inference
@@ -221,7 +223,10 @@ def _llm_extract_metadata(
             },
             {
                 "role": "user",
-                "content": f"Extract metadata from this paper text:\n\n{text[:_MAX_TEXT_CHARS]}",
+                "content": (
+                    "Extract metadata from this paper text:\n\n"
+                    + wrap_untrusted(text[:_MAX_TEXT_CHARS], "PDF-extracted paper text")
+                ),
             },
         ]
         # Duck-type the LLM interface

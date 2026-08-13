@@ -28,6 +28,7 @@ from berb.pipeline._helpers import (
     _utcnow_iso,
     _write_jsonl,
 )
+from berb.utils.sanitize import wrap_untrusted
 from berb.pipeline.contracts import StageContract
 from berb.pipeline.registry import register_stage
 from berb.pipeline.stages import Stage, StageStatus
@@ -831,7 +832,7 @@ def _execute_literature_screen(
             topic=config.research.topic,
             domains=", ".join(config.research.domains) if config.research.domains else "general",
             quality_threshold=config.research.quality_threshold,
-            candidates_text=candidates_text,
+            candidates_text=wrap_untrusted(candidates_text, "candidate paper metadata"),
         )
         resp = _chat_with_prompt(
             llm,

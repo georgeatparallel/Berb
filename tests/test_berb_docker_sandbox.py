@@ -157,24 +157,39 @@ def test_factory_returns_docker_sandbox(mock_avail, mock_image, tmp_path: Path):
 
 
 @patch("berb.experiment.docker_sandbox.DockerSandbox.check_docker_available", return_value=False)
-def test_factory_falls_back_when_docker_unavailable(mock_avail, tmp_path: Path):
-    config = ExperimentConfig(mode="docker")
+def test_factory_falls_back_when_docker_unavailable_and_opted_in(mock_avail, tmp_path: Path):
+    """fallback_to_sandbox now defaults to False (SECURITY: fail closed —
+    see tasks/arch_hardening_plan.md S0-4); this test exercises the opt-in
+    fallback mechanism, which still exists for operators who want it."""
+    config = ExperimentConfig(
+        mode="docker", docker=DockerSandboxConfig(fallback_to_sandbox=True)
+    )
     sandbox = create_sandbox(config, tmp_path / "work")
-    # BUG-002: Should fall back to subprocess sandbox instead of raising
     from berb.experiment.sandbox import ExperimentSandbox
 
     assert isinstance(sandbox, ExperimentSandbox)
 
 
+@patch("berb.experiment.docker_sandbox.DockerSandbox.check_docker_available", return_value=False)
+def test_factory_raises_by_default_when_docker_unavailable(mock_avail, tmp_path: Path):
+    """SECURITY (S0-4): default is fail-closed — no silent downgrade to an
+    unisolated subprocess sandbox when Docker is unavailable."""
+    config = ExperimentConfig(mode="docker")
+    with pytest.raises(RuntimeError, match="not reachable"):
+        create_sandbox(config, tmp_path / "work")
+
+
 @patch("berb.experiment.docker_sandbox.DockerSandbox.ensure_image", return_value=False)
 @patch("berb.experiment.docker_sandbox.DockerSandbox.check_docker_available", return_value=True)
-def test_factory_falls_back_when_image_missing(mock_avail, mock_image, tmp_path: Path):
-    """P0 FIX: Factory should fall back to sandbox when image is missing."""
+def test_factory_falls_back_when_image_missing_and_opted_in(mock_avail, mock_image, tmp_path: Path):
+    """P0 FIX: Factory falls back to sandbox when image is missing, if the
+    operator opted in via fallback_to_sandbox=True (no longer the default)."""
     from berb.experiment.sandbox import ExperimentSandbox
 
-    config = ExperimentConfig(mode="docker")
+    config = ExperimentConfig(
+        mode="docker", docker=DockerSandboxConfig(fallback_to_sandbox=True)
+    )
     sandbox = create_sandbox(config, tmp_path / "work")
-    # P0 FIX: Should fall back to subprocess sandbox instead of raising
     assert isinstance(sandbox, ExperimentSandbox)
 
 

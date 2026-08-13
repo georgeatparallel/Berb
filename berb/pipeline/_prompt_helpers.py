@@ -15,6 +15,7 @@ from pathlib import Path
 from berb.config import RCConfig
 from berb.llm.client import LLMClient, LLMResponse
 from berb.pipeline._io_helpers import _read_prior_artifact
+from berb.utils.sanitize import wrap_untrusted  # noqa: F401  (re-exported)
 
 logger = logging.getLogger(__name__)
 

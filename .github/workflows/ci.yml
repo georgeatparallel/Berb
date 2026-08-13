@@ -99,3 +99,35 @@ jobs:
 
       - name: Mypy
         run: mypy berb/ --python-version 3.11
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+          pip install bandit pip-audit
+
+      # NON-BLOCKING for now: a baseline scan found 40 pre-existing medium
+      # findings (mostly urlopen-scheme and SQL-string-build false/low-risk
+      # positives) that haven't been triaged yet. Report visibility now,
+      # flip to blocking (drop continue-on-error) once the baseline is
+      # triaged and either fixed or explicitly # nosec'd with justification.
+      - name: Bandit (static security scan)
+        continue-on-error: true
+        run: bandit -r berb/ -ll
+
+      - name: pip-audit (dependency vulnerability scan)
+        continue-on-error: true
+        run: pip-audit --strict

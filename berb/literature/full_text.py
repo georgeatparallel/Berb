@@ -37,6 +37,8 @@ from dataclasses import dataclass, field
 from typing import Any
 from urllib.parse import urlparse
 
+from berb.web._ssrf import check_url_ssrf
+
 logger = logging.getLogger(__name__)
 
 
@@ -204,6 +206,10 @@ class FullTextExtractor:
 
         start_time = time.time()
 
+        ssrf_err = check_url_ssrf(url)
+        if ssrf_err:
+            return FullTextResult(url=url, success=False, error=f"Blocked by SSRF check: {ssrf_err}")
+
         # Detect source type
         source_type = self._detect_source_type(url)
 
@@ -351,7 +357,11 @@ class FullTextExtractor:
         if self._http_client is None:
             self._http_client = httpx.AsyncClient(
                 timeout=self.config.timeout,
-                follow_redirects=True,
+                # SSRF: redirects are NOT auto-followed — an allowlisted host
+                # could redirect to an internal address (e.g. 169.254.169.254
+                # cloud metadata). Each hop is validated below before it's
+                # fetched.
+                follow_redirects=False,
                 headers={
                     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
                     "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -360,7 +370,24 @@ class FullTextExtractor:
             )
 
         try:
-            response = await self._http_client.get(url)
+            current_url = url
+            response = None
+            for _ in range(5):
+                ssrf_err = check_url_ssrf(current_url)
+                if ssrf_err:
+                    return FullTextResult(
+                        url=url, success=False, error=f"Blocked by SSRF check: {ssrf_err}"
+                    )
+                response = await self._http_client.get(current_url)
+                if response.is_redirect:
+                    location = response.headers.get("location")
+                    if not location:
+                        break
+                    current_url = str(httpx.URL(current_url).join(location))
+                    continue
+                break
+            if response is None or response.is_redirect:
+                return FullTextResult(url=url, success=False, error="Too many redirects")
             response.raise_for_status()
             html = response.text
 

@@ -58,6 +58,7 @@ from berb.pipeline._prompt_helpers import (
     _get_evolution_overlay,
     _read_best_analysis,
     _topic_constraint_block,
+    wrap_untrusted,
 )
 from berb.pipeline.stages import Stage, StageStatus
 
@@ -182,6 +183,7 @@ __all__ = [
     "_get_evolution_overlay",
     "_read_best_analysis",
     "_topic_constraint_block",
+    "wrap_untrusted",
     # Metric helpers
     "_parse_metrics_from_stdout",
     "_collect_experiment_results",
