@@ -339,6 +339,14 @@ class IntegrityConfig:
 class SandboxConfig:
     python_path: str = DEFAULT_PYTHON_PATH
     gpu_required: bool = False
+    # SECURITY: which imports are permitted, on top of the validator's own
+    # SAFE_STDLIB | COMMON_SCIENCE set — see tasks/hardening_plan_2026-08-13.md
+    # S-2. "allowlist" (default): any import not in
+    # SAFE_STDLIB | COMMON_SCIENCE | allowed_imports is a blocking security
+    # error. "denylist": only BANNED_MODULES is blocking (Wave-0 behavior) —
+    # use this if allowlist mode rejects an import your experiments
+    # legitimately need and you can't wait to extend allowed_imports.
+    import_policy: str = "allowlist"
     allowed_imports: tuple[str, ...] = (
         "math",
         "random",
@@ -400,8 +408,13 @@ class DockerSandboxConfig:
     shm_size_mb: int = 2048
     container_python: str = "/usr/bin/python3"
     keep_containers: bool = False
-    # P0 FIX: Automatic fallback to sandbox when Docker unavailable
-    fallback_to_sandbox: bool = True  # Auto-fallback when Docker daemon/image unavailable
+    # SECURITY: default fails closed. mode="docker" requesting a container
+    # sandbox is a request for isolation; silently downgrading to a plain
+    # subprocess (no cgroup/namespace/network isolation) when Docker is
+    # unavailable is a silent security downgrade, not a convenience. Set
+    # this true only if you understand experiment code then runs with host
+    # privileges.
+    fallback_to_sandbox: bool = False
 
 
 @dataclass(frozen=True)
@@ -1321,6 +1334,7 @@ def _parse_experiment_config(data: dict[str, Any]) -> ExperimentConfig:
         sandbox=SandboxConfig(
             python_path=sandbox_data.get("python_path", DEFAULT_PYTHON_PATH),
             gpu_required=bool(sandbox_data.get("gpu_required", False)),
+            import_policy=sandbox_data.get("import_policy", SandboxConfig.import_policy),
             allowed_imports=tuple(
                 sandbox_data.get("allowed_imports", SandboxConfig.allowed_imports)
             ),

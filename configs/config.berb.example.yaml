@@ -204,6 +204,20 @@ experiment:
     python_path: ".venv/bin/python3"
     gpu_required: false
     max_memory_mb: 4096
+    # SECURITY (S-2, tasks/hardening_plan_2026-08-13.md): "allowlist" rejects
+    # any import outside the validator's SAFE_STDLIB/COMMON_SCIENCE set plus
+    # allowed_imports below. Switch to "denylist" only if allowlist mode
+    # rejects an import your experiments legitimately need faster than you
+    # can extend allowed_imports.
+    import_policy: "allowlist"
+    allowed_imports:
+      - "math"
+      - "random"
+      - "json"
+      - "csv"
+      - "numpy"
+      - "torch"
+      - "sklearn"
   # Docker sandbox settings (only used when mode: "docker")
   # Build image first: docker build -t berb/experiment:latest berb/docker/
   docker:

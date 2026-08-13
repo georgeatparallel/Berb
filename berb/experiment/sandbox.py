@@ -16,8 +16,91 @@ from typing import Protocol
 
 from berb.config import SandboxConfig
 from berb.experiment.metrics import is_metric_name
+from berb.experiment.validator import validate_code, validate_requirements
 
 logger = logging.getLogger(__name__)
+
+
+def check_code_security(
+    code: str,
+    *,
+    label: str = "code",
+    import_policy: str = "allowlist",
+    extra_allowed_imports: frozenset[str] = frozenset(),
+) -> str | None:
+    """Run AST security validation on *code*; return an error message if unsafe.
+
+    This is the single enforcement point for every sandbox backend — each
+    run()/run_project() implementation calls this before spawning a
+    subprocess, so LLM-generated code that trips a security rule (banned
+    import, eval/exec, __builtins__ escape, ...) never reaches subprocess.run.
+    Returns None if the code passes (or fails to parse — a syntax error
+    can't execute maliciously; it will surface as a runtime SyntaxError).
+
+    *import_policy*/*extra_allowed_imports* (S-2, tasks/hardening_plan_2026-08-13.md):
+    default here is "allowlist" — the boundary's own default, independent of
+    validate_security()'s conservative "denylist" default, since this
+    function *is* the actual security gate. Callers with a SandboxConfig
+    should pass its `import_policy`/`allowed_imports` through explicitly.
+    """
+    validation = validate_code(
+        code,
+        skip_imports=True,
+        import_policy=import_policy,
+        extra_allowed_imports=extra_allowed_imports,
+    )
+    security_errors = [i for i in validation.errors if i.category == "security"]
+    if not security_errors:
+        return None
+    details = "; ".join(f"line {i.line}: {i.message}" for i in security_errors)
+    return f"Security validation rejected {label}: {details}"
+
+
+def _scan_project_inputs(
+    project_dir: Path,
+    *,
+    import_policy: str = "allowlist",
+    extra_allowed_imports: frozenset[str] = frozenset(),
+) -> str | None:
+    """Validate every executable input in *project_dir* before it is copied
+    into a sandbox. Returns the first rejection message, or None if
+    everything passes.
+
+    S-3 (tasks/hardening_plan_2026-08-13.md): `check_code_security` only
+    scans `*.py` files. `pip install -r requirements.txt` is a separate
+    code-execution channel — pip runs arbitrary `setup.py` from any sdist
+    and honors VCS/URL/editable/index-url installs — that the .py scan
+    never sees. This checks requirements.txt at the same boundary, same
+    choke point, so a future third input type has one obvious home instead
+    of two copies to keep in sync between ExperimentSandbox and DockerSandbox.
+    """
+    for py_file in project_dir.rglob("*.py"):
+        try:
+            file_code = py_file.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        security_err = check_code_security(
+            file_code,
+            label=str(py_file.relative_to(project_dir)),
+            import_policy=import_policy,
+            extra_allowed_imports=extra_allowed_imports,
+        )
+        if security_err:
+            return security_err
+
+    req_path = project_dir / "requirements.txt"
+    if req_path.exists():
+        try:
+            req_text = req_path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            return None
+        validation = validate_requirements(req_text)
+        if not validation.ok:
+            details = "; ".join(f"line {i.line}: {i.message}" for i in validation.errors)
+            return f"Security validation rejected requirements.txt: {details}"
+
+    return None
+
 
 # Keys from the host environment that are safe to pass into experiment subprocesses.
 # Excludes all *_API_KEY, *_TOKEN, *_SECRET, and *_PASSWORD patterns.
@@ -53,11 +136,15 @@ _SAFE_ENV_KEYS: frozenset[str] = frozenset(
 _SECRET_PATTERNS = ("_API_KEY", "_TOKEN", "_SECRET", "_PASSWORD", "_CREDENTIAL")
 
 
-def _safe_subprocess_env() -> dict[str, str]:
+def safe_subprocess_env() -> dict[str, str]:
     """Return a sanitised copy of os.environ safe to pass to experiment subprocesses.
 
     Strips all credentials (API keys, tokens, secrets, passwords) to prevent
-    experiment code from exfiltrating host secrets.
+    experiment code from exfiltrating host secrets. Public (not `_`-prefixed)
+    because it's a shared security utility, used by both this module's own
+    sandbox subprocess calls and by `code_agent.py`'s CLI-agent subprocess
+    (S0-8, tasks/arch_hardening_plan.md) — a leading underscore would signal
+    "module-private" for something that's deliberately a cross-module seam.
     """
     safe: dict[str, str] = {}
     for key, value in os.environ.items():
@@ -342,6 +429,14 @@ class SandboxResult:
     elapsed_sec: float
     metrics: dict[str, object]
     timed_out: bool = False
+    # S-6 (tasks/hardening_plan_2026-08-13.md): set when this result is a
+    # security-policy rejection (check_code_security / validate_requirements),
+    # not an experiment crash. `returncode == -1` alone is indistinguishable
+    # from a real experiment failure — callers should branch on this field
+    # first, e.g. to skip a repair/refine loop that can't fix a policy
+    # refusal by regenerating code. `stderr` still carries the human-readable
+    # reason; this is just the typed signal that it's a rejection.
+    rejected_reason: str | None = None
 
 
 class SandboxProtocol(Protocol):
@@ -369,6 +464,23 @@ class ExperimentSandbox:
         self._counter_lock: threading.Lock = threading.Lock()
 
     def run(self, code: str, *, timeout_sec: int = 300) -> SandboxResult:
+        security_err = check_code_security(
+            code,
+            label="experiment code",
+            import_policy=self.config.import_policy,
+            extra_allowed_imports=frozenset(self.config.allowed_imports),
+        )
+        if security_err:
+            logger.error("Sandbox rejected code: %s", security_err)
+            return SandboxResult(
+                returncode=-1,
+                stdout="",
+                stderr=security_err,
+                elapsed_sec=0.0,
+                metrics={},
+                rejected_reason=security_err,
+            )
+
         script_path = self._next_script_path()
         self._write_script(script_path, code)
 
@@ -378,7 +490,7 @@ class ExperimentSandbox:
 
         result: SandboxResult
         try:
-            env = _safe_subprocess_env()
+            env = safe_subprocess_env()
             completed = subprocess.run(
                 command,
                 capture_output=True,
@@ -436,6 +548,22 @@ class ExperimentSandbox:
                 metrics={},
             )
 
+        rejection = _scan_project_inputs(
+            project_dir,
+            import_policy=self.config.import_policy,
+            extra_allowed_imports=frozenset(self.config.allowed_imports),
+        )
+        if rejection:
+            logger.error("Sandbox rejected project: %s", rejection)
+            return SandboxResult(
+                returncode=-1,
+                stdout="",
+                stderr=rejection,
+                elapsed_sec=0.0,
+                metrics={},
+                rejected_reason=rejection,
+            )
+
         # R5-4: Inject immutable experiment harness before copying project files
         self._inject_harness(sandbox_project)
 
@@ -481,7 +609,7 @@ class ExperimentSandbox:
 
         result: SandboxResult
         try:
-            env = _safe_subprocess_env()
+            env = safe_subprocess_env()
             completed = subprocess.run(
                 command,
                 capture_output=True,

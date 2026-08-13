@@ -374,6 +374,150 @@ def test_filename_collision_allows_safe_names():
     assert warnings == []
 
 
+# ---------------------------------------------------------------------------
+# S0-3: closed validator bypasses (tasks/arch_hardening_plan.md)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "code",
+    [
+        # import alias resolution
+        "import os as _o\n_o.system('id')",
+        "from os import system\nsystem('id')",
+        "from os import system as go\ngo('id')",
+        # attribute-chain escape (().__class__.__bases__...)
+        "x = ().__class__.__bases__[0]",
+        "y = (1).__class__.__mro__",
+        "z = object.__subclasses__",
+        # pickle.loads is arbitrary code execution
+        "import pickle\npickle.loads(b'x')",
+        # open() with an escaping literal path
+        "open('/etc/passwd', 'w')",
+        "open('../../escape.txt', 'w')",
+    ],
+)
+def test_validate_security_rejects_bypass_patterns(code):
+    result = validate_security(code)
+    assert result.ok is False
+    assert any(i.category == "security" for i in result.issues)
+
+
+def test_validate_security_still_allows_legitimate_code():
+    """Alias/attribute checks must not false-positive on ordinary code."""
+    code = (
+        "import numpy as np\n"
+        "from pathlib import Path as P\n"
+        "x = np.array([1, 2, 3])\n"
+        "p = P('results.json')\n"
+        "open(p, 'w').write('ok')\n"
+    )
+    result = validate_security(code)
+    assert result.ok is True
+
+
+# ---------------------------------------------------------------------------
+# S-1 (tasks/hardening_plan_2026-08-13.md): close remaining call-resolution
+# bypasses found by directly probing the S0-3 validator.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "code",
+    [
+        # string-computed getattr indirection — no dotted name in source
+        "import os\ngetattr(os, 'sys' + 'tem')('id')",
+        # forward-reference alias: the import appears AFTER the function that
+        # uses it in source order, but runs before the function is called
+        "def f():\n    _o.system('id')\nimport os as _o\nf()",
+        # dangerous name stashed as a value, then called indirectly
+        "import os\nd = {'x': os.system}\nd['x']('id')",
+        "import os\nf = os.system\nf('id')",
+        # setattr/delattr are as dangerous as getattr for dynamic dispatch
+        "class C:\n    pass\nsetattr(C, 'x', 1)",
+        "class C:\n    pass\ndelattr(C, 'x')",
+    ],
+)
+def test_validate_security_rejects_indirection_bypasses(code):
+    result = validate_security(code)
+    assert result.ok is False
+    assert any(i.category == "security" for i in result.issues)
+
+
+@pytest.mark.parametrize(
+    "code",
+    [
+        "import os\nos.popen('id')",
+        "import importlib as _i\n_i.import_module('os').system('id')",
+    ],
+)
+def test_validate_security_still_rejects_previously_caught_patterns(code):
+    """Guard against regressing the bypasses S0-3 already closed."""
+    result = validate_security(code)
+    assert result.ok is False
+
+
+# ---------------------------------------------------------------------------
+# S-2 (tasks/hardening_plan_2026-08-13.md): config-selected import allowlist
+# ---------------------------------------------------------------------------
+
+
+def test_validate_security_denylist_mode_is_the_function_default():
+    """Low-level function stays conservative — no surprise new rejections
+    for callers that don't opt in, only the security boundary defaults to
+    allowlist (see check_code_security)."""
+    result = validate_security("import mypkg")
+    assert result.ok is True
+
+
+def test_validate_security_allowlist_mode_rejects_unlisted_import():
+    result = validate_security("import mypkg", import_policy="allowlist")
+    assert result.ok is False
+    assert any("allowlist" in i.message for i in result.issues if i.category == "security")
+
+
+def test_validate_security_allowlist_mode_accepts_stdlib_and_science():
+    code = "import numpy\nimport json\nimport pathlib\n"
+    result = validate_security(code, import_policy="allowlist")
+    assert result.ok is True
+
+
+def test_validate_security_allowlist_mode_extra_allowed_imports():
+    result = validate_security(
+        "import mypkg", import_policy="allowlist", extra_allowed_imports=frozenset({"mypkg"})
+    )
+    assert result.ok is True
+
+
+def test_validate_security_allowlist_does_not_double_report_banned_module():
+    """A banned module under allowlist mode gets ONE issue, not two —
+    BANNED_MODULES and the allowlist check must not both fire."""
+    result = validate_security("import subprocess", import_policy="allowlist")
+    security_msgs = [i.message for i in result.issues if i.category == "security"]
+    assert len(security_msgs) == 1
+    assert "Banned module" in security_msgs[0]
+
+
+def test_validate_security_rejects_invalid_import_policy():
+    with pytest.raises(ValueError):
+        validate_security("import os", import_policy="bogus")
+
+
+def test_check_code_security_defaults_to_allowlist_mode():
+    """The actual sandbox boundary — check_code_security — defaults to
+    allowlist even though validate_security() itself defaults to denylist."""
+    from berb.experiment.sandbox import check_code_security
+
+    assert check_code_security("import mypkg") is not None
+    assert check_code_security("import numpy") is None
+
+
+def test_check_code_security_honors_extra_allowed_imports():
+    from berb.experiment.sandbox import check_code_security
+
+    assert check_code_security("import mypkg", extra_allowed_imports=frozenset({"mypkg"})) is None
+
+
 def test_filename_collision_multiple_shadows():
     """Multiple shadowing files should each produce a warning."""
     files = {"config.py": "", "logging.py": "", "main.py": ""}

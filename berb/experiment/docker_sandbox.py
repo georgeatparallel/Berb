@@ -26,6 +26,8 @@ from pathlib import Path
 from berb.config import DockerSandboxConfig
 from berb.experiment.sandbox import (
     SandboxResult,
+    _scan_project_inputs,
+    check_code_security,
     parse_metrics,
     validate_entry_point,
     validate_entry_point_resolved,
@@ -201,6 +203,18 @@ class DockerSandbox:
 
     def run(self, code: str, *, timeout_sec: int = 300) -> SandboxResult:
         """Run a single Python code string inside a container."""
+        security_err = check_code_security(code, label="experiment code")
+        if security_err:
+            logger.error("Sandbox rejected code: %s", security_err)
+            return SandboxResult(
+                returncode=-1,
+                stdout="",
+                stderr=security_err,
+                elapsed_sec=0.0,
+                metrics={},
+                rejected_reason=security_err,
+            )
+
         self._run_counter += 1
         staging = self.workdir / f"_docker_run_{self._run_counter}"
         staging.mkdir(parents=True, exist_ok=True)
@@ -241,6 +255,18 @@ class DockerSandbox:
                     stderr=err,
                     elapsed_sec=0.0,
                     metrics={},
+                )
+
+            rejection = _scan_project_inputs(project_dir)
+            if rejection:
+                logger.error("Sandbox rejected project: %s", rejection)
+                return SandboxResult(
+                    returncode=-1,
+                    stdout="",
+                    stderr=rejection,
+                    elapsed_sec=0.0,
+                    metrics={},
+                    rejected_reason=rejection,
                 )
 
             # Inject harness first (immutable)
@@ -484,9 +510,10 @@ class DockerSandbox:
         elif cfg.network_policy in ("setup_only", "pip_only"):
             # Network during Phase 0+1, disabled via iptables before Phase 2.
             # Run as host user so experiment can write results.json to volume.
-            # iptables requires NET_ADMIN but will gracefully degrade if
-            # the user lacks root — network remains available but the code
-            # has already been validated by the pipeline security check.
+            # SECURITY: fails closed (S0-4, tasks/arch_hardening_plan.md) —
+            # if iptables can't run (missing NET_ADMIN), entrypoint.sh exits
+            # 1 rather than continuing with network up. --cap-add=NET_ADMIN
+            # below is what makes iptables work in the first place.
             cmd.extend(["-e", "RC_SETUP_ONLY_NETWORK=1"])
             if user_id:
                 cmd.extend(["--user", user_id])

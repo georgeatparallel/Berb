@@ -21,8 +21,10 @@ def create_sandbox(config: ExperimentConfig, workdir: Path) -> SandboxProtocol:
     - ``"sandbox"`` → :class:`ExperimentSandbox` (subprocess)
     - ``"docker"``  → :class:`DockerSandbox`  (Docker container)
 
-    P0 FIX: Automatic fallback to sandbox when Docker is unavailable.
-    Controlled by `config.docker.fallback_to_sandbox` (default: True).
+    Optional fallback to subprocess sandbox when Docker is unavailable,
+    controlled by `config.docker.fallback_to_sandbox` — default `False`
+    (SECURITY, S0-4: fails closed rather than silently downgrading
+    isolation; see the field's own docstring in config.py).
     """
     if config.mode == "docker":
         from berb.experiment.docker_sandbox import DockerSandbox

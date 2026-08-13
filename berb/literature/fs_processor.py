@@ -42,8 +42,30 @@ from pathlib import Path
 from typing import Any
 
 from berb.literature.models import Paper
+from berb.utils.sanitize import (
+    format_untrusted_record,
+    safe_path_component,
+    sanitize_figure_id,
+    wrap_untrusted,
+)
 
 logger = logging.getLogger(__name__)
+
+
+def _safe_paper_id(paper: Any, fallback: str) -> str:
+    """Extract paper.paper_id (or dict "id") and sanitize it for filesystem use.
+
+    paper_id comes from external APIs (arXiv/OpenAlex/S2/user upload) — used
+    unsanitized as `{paper_id}.md`, an id of "../../../etc/x" escapes the
+    workspace. safe_path_component() does this stripping (via
+    sanitize_figure_id) plus a disambiguating digest suffix when
+    sanitization is lossy — S-5 (tasks/hardening_plan_2026-08-13.md):
+    sanitize_figure_id alone maps distinct DOIs like "10.1234/abc" and
+    "10.1234_abc" to the same filename, so two different papers would
+    silently overwrite each other's .md file.
+    """
+    raw = paper.paper_id if hasattr(paper, "paper_id") else paper.get("id", fallback)
+    return safe_path_component(str(raw), fallback=fallback)
 
 
 @dataclass
@@ -324,9 +346,7 @@ class FileSystemLiteratureProcessor:
             cluster_dir.mkdir(exist_ok=True)
 
             paper = papers[i]
-            paper_id = (
-                paper.paper_id if hasattr(paper, "paper_id") else paper.get("id", f"paper_{i}")
-            )
+            paper_id = _safe_paper_id(paper, f"paper_{i}")
             paper_file = cluster_dir / f"{paper_id}.md"
             paper_file.write_text(self._paper_to_markdown(paper))
 
@@ -372,11 +392,7 @@ class FileSystemLiteratureProcessor:
             for keyword in keywords[:-1]:
                 if keyword in title:
                     keyword_dir = topic_dir / keyword
-                    paper_id = (
-                        paper.paper_id
-                        if hasattr(paper, "paper_id")
-                        else paper.get("id", f"paper_{i}")
-                    )
+                    paper_id = _safe_paper_id(paper, f"paper_{i}")
                     paper_file = keyword_dir / f"{paper_id}.md"
                     paper_file.write_text(self._paper_to_markdown(paper))
                     assigned = True
@@ -384,9 +400,7 @@ class FileSystemLiteratureProcessor:
 
             if not assigned:
                 other_dir = topic_dir / "other"
-                paper_id = (
-                    paper.paper_id if hasattr(paper, "paper_id") else paper.get("id", f"paper_{i}")
-                )
+                paper_id = _safe_paper_id(paper, f"paper_{i}")
                 paper_file = other_dir / f"{paper_id}.md"
                 paper_file.write_text(self._paper_to_markdown(paper))
 
@@ -416,9 +430,7 @@ class FileSystemLiteratureProcessor:
             year_path.mkdir(exist_ok=True)
 
             for i, paper in enumerate(year_papers):
-                paper_id = (
-                    paper.paper_id if hasattr(paper, "paper_id") else paper.get("id", f"paper_{i}")
-                )
+                paper_id = _safe_paper_id(paper, f"paper_{i}")
                 paper_file = year_path / f"{paper_id}.md"
                 paper_file.write_text(self._paper_to_markdown(paper))
 
@@ -461,9 +473,7 @@ class FileSystemLiteratureProcessor:
             else:
                 tier = "low"
 
-            paper_id = (
-                paper.paper_id if hasattr(paper, "paper_id") else paper.get("id", f"paper_{i}")
-            )
+            paper_id = _safe_paper_id(paper, f"paper_{i}")
             paper_file = tiers[tier] / f"{paper_id}.md"
             paper_file.write_text(self._paper_to_markdown(paper))
 
@@ -491,8 +501,7 @@ class FileSystemLiteratureProcessor:
             prompt = f"""
 Summarize this paper in one paragraph (3-4 sentences):
 
-Title: {title}
-Abstract: {abstract}
+{format_untrusted_record({"Title": title, "Abstract": abstract}, "paper")}
 
 Provide a concise summary focusing on:
 1. Main contribution
@@ -505,18 +514,14 @@ Provide a concise summary focusing on:
                     messages=[{"role": "user", "content": prompt}],
                 )
 
-                paper_id = (
-                    paper.paper_id if hasattr(paper, "paper_id") else paper.get("id", f"paper_{i}")
-                )
+                paper_id = _safe_paper_id(paper, f"paper_{i}")
                 summary_file = summaries_dir / f"{paper_id}.md"
                 summary_file.write_text(f"# {title}\n\n{response.content}")
 
             except Exception as e:
                 logger.warning(f"Failed to summarize paper {title}: {e}")
                 # Fallback: use abstract as summary
-                paper_id = (
-                    paper.paper_id if hasattr(paper, "paper_id") else paper.get("id", f"paper_{i}")
-                )
+                paper_id = _safe_paper_id(paper, f"paper_{i}")
                 summary_file = summaries_dir / f"{paper_id}.md"
                 summary_file.write_text(
                     f"# {title}\n\n**Summary:** (Extraction failed)\n\n{abstract}"
@@ -550,8 +555,7 @@ Extract all claims from this paper. For each claim, include:
 3. Confidence level (high/medium/low)
 
 Paper:
-Title: {title}
-Abstract: {abstract}
+{format_untrusted_record({"Title": title, "Abstract": abstract}, "paper")}
 
 Format as JSON list:
 [
@@ -575,9 +579,7 @@ Format as JSON list:
                 else:
                     claims_data = {"raw": response.content}
 
-                paper_id = (
-                    paper.paper_id if hasattr(paper, "paper_id") else paper.get("id", f"paper_{i}")
-                )
+                paper_id = _safe_paper_id(paper, f"paper_{i}")
                 claims_file = claims_dir / f"{paper_id}.json"
                 claims_file.write_text(json.dumps(claims_data, indent=2))
 
@@ -629,7 +631,7 @@ Format as JSON list:
 Identify contradictions between these papers on topic: {topic}
 
 Papers:
-{papers_text}
+{wrap_untrusted(papers_text, "paper titles/abstracts")}
 
 List any contradictory findings, claims, or interpretations.
 """
@@ -639,7 +641,7 @@ List any contradictory findings, claims, or interpretations.
                     messages=[{"role": "user", "content": prompt}],
                 )
 
-                contradiction_file = contradictions_dir / f"{topic.replace('/', '_')}.md"
+                contradiction_file = contradictions_dir / f"{sanitize_figure_id(topic, fallback='topic')}.md"
                 contradiction_file.write_text(f"# Contradictions: {topic}\n\n{response.content}")
 
             except Exception as e:
@@ -669,8 +671,7 @@ List any contradictory findings, claims, or interpretations.
             prompt = f"""
 Extract the methodology from this paper:
 
-Title: {title}
-Abstract: {abstract}
+{format_untrusted_record({"Title": title, "Abstract": abstract}, "paper")}
 
 Describe:
 1. Research design
@@ -686,9 +687,7 @@ Format as structured markdown.
                     messages=[{"role": "user", "content": prompt}],
                 )
 
-                paper_id = (
-                    paper.paper_id if hasattr(paper, "paper_id") else paper.get("id", f"paper_{i}")
-                )
+                paper_id = _safe_paper_id(paper, f"paper_{i}")
                 method_file = methods_dir / f"{paper_id}.md"
                 method_file.write_text(f"# {title}\n\n{response.content}")
 

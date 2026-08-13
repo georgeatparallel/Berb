@@ -4108,6 +4108,80 @@ class TestStdoutFailureDetection:
         assert payload["status"] == "completed"
 
 
+class TestSecurityRejectionStatus:
+    """S-6 (tasks/hardening_plan_2026-08-13.md): a security-policy
+    rejection must land in run-1.json as status='rejected', distinct from
+    an ordinary crashed-experiment 'failed' — the sandbox never even
+    spawned a subprocess for rejected code, so treating it identically to
+    a crash misleads any consumer of this status field."""
+
+    def test_dangerous_code_marks_rejected_not_failed(self, tmp_path: Path) -> None:
+        from berb.pipeline.executor import _execute_experiment_run
+
+        run_dir = tmp_path / "run"
+        run_dir.mkdir()
+        (run_dir / "stage-10").mkdir()
+        exp_dir = run_dir / "stage-10" / "experiment"
+        exp_dir.mkdir()
+        (exp_dir / "main.py").write_text("import os\nos.system('id')\n", encoding="utf-8")
+        (run_dir / "stage-11").mkdir()
+        (run_dir / "stage-11" / "schedule.json").write_text("{}", encoding="utf-8")
+
+        stage_dir = run_dir / "stage-12"
+        stage_dir.mkdir()
+
+        data = {
+            "project": {"name": "rc-test", "mode": "docs-first"},
+            "research": {
+                "topic": "test",
+                "domains": ["ml"],
+                "daily_paper_count": 2,
+                "quality_threshold": 8.2,
+            },
+            "runtime": {"timezone": "UTC"},
+            "notifications": {
+                "channel": "local",
+                "on_stage_start": True,
+                "on_stage_fail": False,
+                "on_gate_required": True,
+            },
+            "knowledge_base": {"backend": "markdown", "root": str(tmp_path / "kb")},
+            "openclaw_bridge": {"use_memory": True, "use_message": True},
+            "llm": {
+                "provider": "openai-compatible",
+                "base_url": "http://localhost:1234/v1",
+                "api_key_env": "RC_TEST_KEY",
+                "primary_model": "fake-model",
+                "fallback_models": [],
+            },
+            "security": {"hitl_required_stages": [5, 9, 20]},
+            "experiment": {
+                "mode": "sandbox",
+                "time_budget_sec": 30,
+                "max_iterations": 1,
+                "metric_key": "primary_metric",
+                "metric_direction": "minimize",
+                "sandbox": {
+                    "python_path": sys.executable,
+                    "gpu_required": False,
+                    "max_memory_mb": 512,
+                    "allowed_imports": ["json"],
+                },
+            },
+        }
+        cfg = RCConfig.from_dict(
+            data, project_root=tmp_path, check_paths=False, check_security=False
+        )
+        adapters = AdapterBundle()
+
+        _execute_experiment_run(stage_dir, run_dir, cfg, adapters)
+
+        runs_dir = stage_dir / "runs"
+        payload = json.loads((runs_dir / "run-1.json").read_text())
+        assert payload["status"] == "rejected"
+        assert payload["status"] != "failed"
+
+
 class TestMetricValUndefined:
     """R6-3: metric_val should be initialized to None before conditional block."""
 

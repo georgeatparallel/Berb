@@ -8,6 +8,7 @@ enabling automated repair via LLM re-generation.
 from __future__ import annotations
 
 import ast
+import re
 import sys
 from dataclasses import dataclass, field
 from typing import Any
@@ -81,12 +82,47 @@ DANGEROUS_CALLS: frozenset[str] = frozenset(
         "os.unlink",
         "os.rmdir",
         "os.removedirs",
+        "os.rename",
+        "os.replace",
+        "os.truncate",
+        "os.chmod",
+        "os.chown",
+        "os.fork",
+        "os.forkpty",
+        "os.spawnl",
+        "os.spawnle",
+        "os.spawnlp",
+        "os.spawnlpe",
+        "os.spawnv",
+        "os.spawnve",
+        "os.spawnvp",
+        "os.spawnvpe",
+        "os.putenv",
         "subprocess.call",
         "subprocess.run",
         "subprocess.Popen",
         "subprocess.check_call",
         "subprocess.check_output",
         "shutil.rmtree",
+        # pickle.load(s) deserializes arbitrary bytecode — equivalent to eval().
+        "pickle.load",
+        "pickle.loads",
+    }
+)
+
+# Dunder attributes used in ().__class__.__bases__[0].__subclasses__()-style
+# sandbox-escape chains. Flagged unconditionally — legitimate experiment code
+# has no reason to touch these directly.
+ESCAPE_ATTRS: frozenset[str] = frozenset(
+    {
+        "__class__",
+        "__bases__",
+        "__base__",
+        "__subclasses__",
+        "__subclasshook__",
+        "__globals__",
+        "__mro__",
+        "__getattribute__",
     }
 )
 
@@ -101,6 +137,13 @@ DANGEROUS_BUILTINS: frozenset[str] = frozenset(
         "globals",
         "locals",
         "vars",
+        # String-computed attribute access can't be resolved statically —
+        # `getattr(os, 'sys'+'tem')('id')` reaches os.system without any
+        # dotted name ever appearing in the source. Banned outright rather
+        # than pattern-matched; see validator.py module docstring.
+        "getattr",
+        "setattr",
+        "delattr",
     }
 )
 
@@ -161,7 +204,9 @@ SAFE_STDLIB: frozenset[str] = frozenset(
         "operator",
         "os",  # os itself is ok, certain calls aren't
         "pathlib",
-        "pickle",
+        # pickle removed: pickle.load(s) is arbitrary code execution, see
+        # DANGEROUS_CALLS — the import itself is harmless, but treating it
+        # as unavailable steers the LLM toward json instead.
         "pprint",
         "random",
         "re",
@@ -224,15 +269,64 @@ COMMON_SCIENCE: frozenset[str] = frozenset(
 
 
 class _SecurityVisitor(ast.NodeVisitor):
-    """Walk AST to detect dangerous calls and imports."""
+    """Walk AST to detect dangerous calls and imports.
 
-    def __init__(self) -> None:
+    Alias resolution requires a whole-module view: `import os as _o` at the
+    bottom of a file still aliases a call to `_o.system(...)` inside a
+    function defined above it (the def runs later, at call time, after the
+    import has executed). A single top-down visit sees the call before the
+    import and misses this. Callers should collect aliases across the full
+    tree first via `_collect_aliases()` and pass them in, rather than relying
+    on this visitor's own incidental population during its single pass.
+    """
+
+    def __init__(
+        self,
+        *,
+        import_aliases: dict[str, str] | None = None,
+        from_aliases: dict[str, str] | None = None,
+        allowed_imports: frozenset[str] | None = None,
+    ) -> None:
         self.issues: list[ValidationIssue] = []
+        # alias -> real dotted module, from `import X as alias`
+        self._import_aliases: dict[str, str] = dict(import_aliases or {})
+        # local name -> "module.attr", from `from module import attr [as local]`
+        self._from_aliases: dict[str, str] = dict(from_aliases or {})
+        # id() of Attribute nodes already reported by visit_Call as a direct
+        # call target, so visit_Attribute's as-a-value check doesn't
+        # re-report the same node under a second message.
+        self._reported_call_func_ids: set[int] = set()
+        # None = denylist-only mode (BANNED_MODULES check only, Wave-0
+        # behavior). A frozenset = allowlist mode: any top-level import not
+        # in this set is rejected, on top of the BANNED_MODULES check.
+        self._allowed_imports: frozenset[str] | None = allowed_imports
+
+    def _canonical_name(self, node: ast.expr) -> str:
+        """Resolve any expression to its real dotted name, undoing import aliasing.
+
+        `import os as _o; _o.system(...)` and `from os import system; system(...)`
+        both resolve to "os.system" so they hit the same DANGEROUS_CALLS check
+        a direct `os.system(...)` would. Works on any expression, not just a
+        Call's func — used for both call targets and bare value references
+        (e.g. `d = {'x': os.system}`, caught by visit_Attribute).
+        """
+        raw = _resolve_call_name(node)
+        if raw in self._from_aliases:
+            return self._from_aliases[raw]
+        parts = raw.split(".")
+        if parts and parts[0] in self._import_aliases:
+            parts[0] = self._import_aliases[parts[0]]
+            return ".".join(parts)
+        return raw
 
     # -- function calls --
 
     def visit_Call(self, node: ast.Call) -> None:
-        name = _resolve_call_name(node.func)
+        name = self._canonical_name(node.func)
+        if isinstance(node.func, ast.Attribute):
+            # Mark so visit_Attribute's as-a-value check (below) doesn't
+            # double-report this exact node — this branch already covers it.
+            self._reported_call_func_ids.add(id(node.func))
         if name in DANGEROUS_BUILTINS:
             self.issues.append(
                 ValidationIssue(
@@ -263,19 +357,23 @@ class _SecurityVisitor(ast.NodeVisitor):
                     col=node.col_offset,
                 )
             )
-        # Detect getattr(__builtins__, <anything>) — encoding bypass pattern
-        elif name == "getattr" and len(node.args) >= 2:
-            first_arg = node.args[0]
-            if isinstance(first_arg, ast.Name) and first_arg.id in _BUILTINS_NAMES:
-                self.issues.append(
-                    ValidationIssue(
-                        severity="error",
-                        category="security",
-                        message="getattr() on __builtins__ is not allowed (encoding bypass)",
-                        line=node.lineno,
-                        col=node.col_offset,
+        # open()/pathlib .open() with a literal absolute or traversal path —
+        # can't validate dynamic paths statically, but a literal escape
+        # attempt is worth catching.
+        if name in ("open", "os.open") and node.args:
+            first = node.args[0]
+            if isinstance(first, ast.Constant) and isinstance(first.value, str):
+                raw_path = first.value.replace("\\", "/")
+                if raw_path.startswith("/") or ".." in raw_path.split("/"):
+                    self.issues.append(
+                        ValidationIssue(
+                            severity="error",
+                            category="security",
+                            message=f"open() with escaping path literal: {first.value!r}",
+                            line=node.lineno,
+                            col=node.col_offset,
+                        )
                     )
-                )
         self.generic_visit(node)
 
     # -- subscript access on __builtins__ --
@@ -296,6 +394,28 @@ class _SecurityVisitor(ast.NodeVisitor):
 
     # -- import statements --
 
+    def _check_import_policy(self, top: str, line: int, *, from_stmt: bool) -> None:
+        """S-2: reject unlisted imports outright when in allowlist mode.
+
+        `elif` against the BANNED_MODULES check in each caller — a banned
+        module is already covered by "Banned module import"; allowlist mode
+        only adds a *second* class of rejection for names that aren't banned
+        but also aren't recognized, so the two checks must not both fire for
+        the same import.
+        """
+        if self._allowed_imports is None or top in self._allowed_imports:
+            return
+        stmt = f"from {top}" if from_stmt else top
+        self.issues.append(
+            ValidationIssue(
+                severity="error",
+                category="security",
+                message=f"Import not in allowlist: {stmt} "
+                f"(add to sandbox.allowed_imports, or set sandbox.import_policy: denylist)",
+                line=line,
+            )
+        )
+
     def visit_Import(self, node: ast.Import) -> None:
         for alias in node.names:
             top = alias.name.split(".")[0]
@@ -308,6 +428,10 @@ class _SecurityVisitor(ast.NodeVisitor):
                         line=node.lineno,
                     )
                 )
+            else:
+                self._check_import_policy(top, node.lineno, from_stmt=False)
+            if alias.asname:
+                self._import_aliases[alias.asname] = alias.name
         self.generic_visit(node)
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
@@ -322,7 +446,67 @@ class _SecurityVisitor(ast.NodeVisitor):
                         line=node.lineno,
                     )
                 )
+            else:
+                self._check_import_policy(top, node.lineno, from_stmt=True)
+            for alias in node.names:
+                local = alias.asname or alias.name
+                self._from_aliases[local] = f"{node.module}.{alias.name}"
         self.generic_visit(node)
+
+    # -- dunder attribute-chain escapes (e.g. ().__class__.__bases__) --
+
+    def visit_Attribute(self, node: ast.Attribute) -> None:
+        if node.attr in ESCAPE_ATTRS:
+            self.issues.append(
+                ValidationIssue(
+                    severity="error",
+                    category="security",
+                    message=f"Attribute-chain escape pattern: .{node.attr}",
+                    line=node.lineno,
+                    col=node.col_offset,
+                )
+            )
+        # A dangerous dotted name used as a VALUE, not just as a call target
+        # — `d = {'x': os.system}` then `d['x']('id')`, or `f = os.system`.
+        # visit_Call already reports `os.system(...)` directly (and marks
+        # that exact node via _reported_call_func_ids), so skip re-reporting
+        # it here under a second message.
+        if isinstance(node.ctx, ast.Load) and id(node) not in self._reported_call_func_ids:
+            canonical = self._canonical_name(node)
+            if canonical in DANGEROUS_CALLS:
+                self.issues.append(
+                    ValidationIssue(
+                        severity="error",
+                        category="security",
+                        message=f"Reference to dangerous function: {canonical} "
+                        f"(assigning/storing it counts, not just calling it directly)",
+                        line=node.lineno,
+                        col=node.col_offset,
+                    )
+                )
+        self.generic_visit(node)
+
+
+def _collect_aliases(tree: ast.AST) -> tuple[dict[str, str], dict[str, str]]:
+    """Pre-scan the whole tree for import aliases before running security checks.
+
+    A single top-down AST visit sees `def f(): _o.system(...)` before a later
+    `import os as _o` in source order, even though at runtime the import
+    always executes before `f` is called. Collecting aliases from the whole
+    tree first, independent of source position, closes that gap.
+    """
+    import_aliases: dict[str, str] = {}
+    from_aliases: dict[str, str] = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.asname:
+                    import_aliases[alias.asname] = alias.name
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            for alias in node.names:
+                local = alias.asname or alias.name
+                from_aliases[local] = f"{node.module}.{alias.name}"
+    return import_aliases, from_aliases
 
 
 def _resolve_call_name(node: ast.expr) -> str:
@@ -385,15 +569,42 @@ def validate_syntax(code: str) -> CodeValidation:
     return result
 
 
-def validate_security(code: str) -> CodeValidation:
-    """Scan *code* AST for dangerous calls and imports."""
+def validate_security(
+    code: str,
+    *,
+    import_policy: str = "denylist",
+    extra_allowed_imports: frozenset[str] = frozenset(),
+) -> CodeValidation:
+    """Scan *code* AST for dangerous calls and imports.
+
+    *import_policy*: "denylist" (default here — see S-2 in
+    tasks/hardening_plan_2026-08-13.md) only rejects BANNED_MODULES.
+    "allowlist" additionally rejects any top-level import outside
+    ``SAFE_STDLIB | COMMON_SCIENCE | extra_allowed_imports``. The default is
+    deliberately conservative at this function level so calling this
+    directly never surprises a caller with new rejections; the actual
+    security boundary (``check_code_security`` in sandbox.py) opts into
+    "allowlist" explicitly.
+    """
     result = CodeValidation()
     try:
         tree = ast.parse(code)
     except SyntaxError:
         # If can't parse, skip security — syntax check will catch it.
         return result
-    visitor = _SecurityVisitor()
+    if import_policy not in ("denylist", "allowlist"):
+        raise ValueError(f"import_policy must be 'denylist' or 'allowlist', got {import_policy!r}")
+    allowed_imports = (
+        (SAFE_STDLIB | COMMON_SCIENCE | extra_allowed_imports)
+        if import_policy == "allowlist"
+        else None
+    )
+    import_aliases, from_aliases = _collect_aliases(tree)
+    visitor = _SecurityVisitor(
+        import_aliases=import_aliases,
+        from_aliases=from_aliases,
+        allowed_imports=allowed_imports,
+    )
     visitor.visit(tree)
     result.issues.extend(visitor.issues)
     return result
@@ -425,17 +636,94 @@ def validate_imports(
     return result
 
 
+# ---------------------------------------------------------------------------
+# requirements.txt validation (S-3, tasks/hardening_plan_2026-08-13.md)
+# ---------------------------------------------------------------------------
+
+# Any line starting with a pip option flag is rejected outright — no
+# legitimate PyPI package name starts with "-", so this can't false-positive
+# on a real requirement.
+_REQ_DANGEROUS_SUBSTRINGS: tuple[str, ...] = (
+    "git+",
+    "hg+",
+    "svn+",
+    "bzr+",
+    "http://",
+    "https://",
+    "file://",
+)
+
+# Plain `name[extra1,extra2]<specifier>[,<specifier>...]` — PyPI package name
+# rules (PEP 508 minus the URL/VCS/marker grammar this deliberately excludes)
+# plus a comma-separated PEP 440 version specifier list.
+_REQ_LINE_RE = re.compile(
+    r"^[A-Za-z0-9][A-Za-z0-9._-]*"
+    r"(\[\s*[A-Za-z0-9][A-Za-z0-9._-]*(\s*,\s*[A-Za-z0-9][A-Za-z0-9._-]*)*\s*\])?"
+    r"\s*"
+    r"((===|~=|[<>=!]=|[<>])\s*[A-Za-z0-9][A-Za-z0-9._*+!-]*"
+    r"(\s*,\s*(===|~=|[<>=!]=|[<>])\s*[A-Za-z0-9][A-Za-z0-9._*+!-]*)*)?"
+    r"$"
+)
+
+
+def validate_requirements(text: str) -> CodeValidation:
+    """Validate requirements.txt content against an allowlist grammar.
+
+    pip install is a code-execution channel the AST security scan never
+    sees: it runs arbitrary `setup.py` from any sdist, and honors VCS
+    installs (`git+https://...`), direct URLs, `-e`/`--editable`, and
+    `--index-url`/`--extra-index-url`/`--trusted-host` overrides. This
+    accepts only plain `name[extra]<version-specifier>` lines — the shape a
+    legitimate PyPI dependency actually has — and rejects everything else.
+
+    Ceiling: name+version allowlist only — a malicious package published
+    under an innocuous name on PyPI still installs. Pinning/hash-checking
+    (`--require-hashes`) is the upgrade path if that risk needs closing too.
+    """
+    result = CodeValidation()
+    for lineno, raw_line in enumerate(text.splitlines(), start=1):
+        line = raw_line.split("#", 1)[0].strip()
+        if not line:
+            continue
+        if line.startswith("-") or any(s in line.lower() for s in _REQ_DANGEROUS_SUBSTRINGS):
+            result.issues.append(
+                ValidationIssue(
+                    severity="error",
+                    category="security",
+                    message=f"requirements.txt line rejected: {raw_line.strip()!r} "
+                    f"(pip options, VCS installs, and direct URLs are not allowed — "
+                    f"only plain 'name==version' specifiers)",
+                    line=lineno,
+                )
+            )
+            continue
+        if not _REQ_LINE_RE.match(line):
+            result.issues.append(
+                ValidationIssue(
+                    severity="error",
+                    category="security",
+                    message=f"requirements.txt line does not match the allowed "
+                    f"'name[extra]<version-specifier>' grammar: {raw_line.strip()!r}",
+                    line=lineno,
+                )
+            )
+    return result
+
+
 def validate_code(
     code: str,
     *,
     available_packages: set[str] | None = None,
     skip_security: bool = False,
     skip_imports: bool = False,
+    import_policy: str = "denylist",
+    extra_allowed_imports: frozenset[str] = frozenset(),
 ) -> CodeValidation:
     """Run all validations and return a combined :class:`CodeValidation`.
 
     1. Syntax check (always)
-    2. Security scan (unless *skip_security*)
+    2. Security scan (unless *skip_security*) — *import_policy*/
+       *extra_allowed_imports* are forwarded to :func:`validate_security`.
     3. Import availability (unless *skip_imports*)
     """
     combined = CodeValidation()
@@ -449,7 +737,9 @@ def validate_code(
 
     # 2. Security
     if not skip_security:
-        security = validate_security(code)
+        security = validate_security(
+            code, import_policy=import_policy, extra_allowed_imports=extra_allowed_imports
+        )
         combined.issues.extend(security.issues)
 
     # 3. Import availability

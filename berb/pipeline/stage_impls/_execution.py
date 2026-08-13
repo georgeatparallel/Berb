@@ -211,7 +211,18 @@ def _execute_experiment_run(
                 for sig in ("FAIL:", "NaN/divergence", "Traceback (most recent")
             )
         )
-        if result.returncode == 0 and not result.timed_out and not _stdout_has_failure:
+        if result.rejected_reason:
+            # S-6 (tasks/hardening_plan_2026-08-13.md): a security-policy
+            # rejection (banned import, dangerous call, requirements.txt
+            # outside the allowlist grammar, ...) is not a crashed
+            # experiment — `returncode == -1` alone made the two
+            # indistinguishable, so a rejection fell into the ordinary
+            # "failed" bucket. Distinct status here so downstream consumers
+            # (stage 13's refine loop, dashboards) can tell "the code was
+            # never run" apart from "the code ran and broke".
+            run_status = "rejected"
+            logger.error("Stage 12: experiment code rejected by security policy: %s", result.stderr)
+        elif result.returncode == 0 and not result.timed_out and not _stdout_has_failure:
             run_status = "completed"
         elif result.timed_out and effective_metrics:
             run_status = "partial"

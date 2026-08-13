@@ -29,6 +29,7 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from berb.config import RCConfig
+from berb.experiment.sandbox import safe_subprocess_env
 
 logger = logging.getLogger(__name__)
 
@@ -424,7 +425,10 @@ class _CliAgentBase:
             "stdout": subprocess.PIPE,
             "stderr": subprocess.PIPE,
             "cwd": workdir,
-            "env": {**os.environ},
+            # SECURITY: strip credentials before handing the environment to
+            # a CLI agent that runs with Bash/Edit/Write access — the full
+            # host environment would let it exfiltrate every API key.
+            "env": safe_subprocess_env(),
         }
         if sys.platform == "win32":
             # On Windows, create a new process group so we can send
