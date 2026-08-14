@@ -1340,7 +1340,7 @@ class TestInventedCitationDetectionNotRepair:
         # _resolve_missing_citations claims to have found a plausible match
         # for the invented key — this must NOT leak into references.bib.
         monkeypatch.setattr(
-            "berb.pipeline.stage_impls._review_publish._resolve_missing_citations",
+            "berb.pipeline.stage_impls._export._resolve_missing_citations",
             lambda missing_keys, existing_bib: (
                 set(missing_keys),
                 [
@@ -1971,7 +1971,7 @@ class TestEnsembleStructuredContext:
             run_dir, 9, "exp_plan.yaml", "baselines:\n  - resnet50\nvariants:\n  - ours\n"
         )
 
-        from berb.pipeline.stage_impls._review_publish import (
+        from berb.pipeline.stage_impls._review import (
             _build_ensemble_structured_context,
         )
 
@@ -1982,7 +1982,7 @@ class TestEnsembleStructuredContext:
         assert "resnet50" in context
 
     def test_empty_when_nothing_present(self, tmp_path: Path, run_dir: Path) -> None:
-        from berb.pipeline.stage_impls._review_publish import (
+        from berb.pipeline.stage_impls._review import (
             _build_ensemble_structured_context,
         )
 

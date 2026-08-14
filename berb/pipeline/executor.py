@@ -110,15 +110,27 @@ from berb.pipeline.stage_impls._paper_writing import (  # noqa: E402,F401
     _write_paper_sections,
 )
 
-# Stages 18-23: Review & Publishing
-from berb.pipeline.stage_impls._review_publish import (  # noqa: E402,F401
+# Stages 18-20: Peer review, paper revision, quality gate
+from berb.pipeline.stage_impls._review import (  # noqa: E402,F401
     _collect_experiment_evidence,
-    _execute_citation_verify,
-    _execute_export_publish,
-    _execute_knowledge_archive,
     _execute_paper_revision,
     _execute_peer_review,
     _execute_quality_gate,
+)
+
+# Stage 21: Knowledge archive
+from berb.pipeline.stage_impls._archive import (  # noqa: E402,F401
+    _execute_knowledge_archive,
+)
+
+# Stage 22: Export & publish
+from berb.pipeline.stage_impls._export import (  # noqa: E402,F401
+    _execute_export_publish,
+)
+
+# Stage 23: Citation verify
+from berb.pipeline.stage_impls._citations import (  # noqa: E402,F401
+    _execute_citation_verify,
     _remove_bibtex_entries,
     _remove_citations_from_text,
 )
@@ -379,6 +391,6 @@ def execute_stage(
     return result
 
 
-from berb.pipeline.stage_impls._review_publish import (  # noqa: E402,F401
+from berb.pipeline.stage_impls._archive import (  # noqa: E402,F401
     _sanitize_fabricated_data,
 )

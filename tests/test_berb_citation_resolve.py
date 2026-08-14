@@ -52,7 +52,7 @@ class TestLoadSeminalPapersByKey:
     """Test the seminal papers index builder."""
 
     def test_loads_well_known_keys(self):
-        from berb.pipeline.stage_impls._review_publish import (
+        from berb.pipeline.stage_impls._citations import (
             _load_seminal_papers_by_key,
         )
 
@@ -63,7 +63,7 @@ class TestLoadSeminalPapersByKey:
         assert "srivastava2014dropout" in index
 
     def test_entries_have_required_fields(self):
-        from berb.pipeline.stage_impls._review_publish import (
+        from berb.pipeline.stage_impls._citations import (
             _load_seminal_papers_by_key,
         )
 
@@ -75,7 +75,7 @@ class TestLoadSeminalPapersByKey:
 
     def test_graceful_on_load_failure(self):
         """If _load_all raises, _load_seminal_papers_by_key returns {}."""
-        from berb.pipeline.stage_impls._review_publish import (
+        from berb.pipeline.stage_impls._citations import (
             _load_seminal_papers_by_key,
         )
 
@@ -96,7 +96,7 @@ class TestSeminalToBibtex:
     """Test BibTeX generation from seminal_papers.yaml entries."""
 
     def test_conference_paper(self):
-        from berb.pipeline.stage_impls._review_publish import _seminal_to_bibtex
+        from berb.pipeline.stage_impls._citations import _seminal_to_bibtex
 
         entry = {
             "title": "Deep Residual Learning for Image Recognition",
@@ -112,7 +112,7 @@ class TestSeminalToBibtex:
         assert "booktitle = {CVPR}" in bib
 
     def test_journal_paper(self):
-        from berb.pipeline.stage_impls._review_publish import _seminal_to_bibtex
+        from berb.pipeline.stage_impls._citations import _seminal_to_bibtex
 
         entry = {
             "title": "Dropout: A Simple Way to Prevent Neural Networks from Overfitting",
@@ -126,7 +126,7 @@ class TestSeminalToBibtex:
         assert "journal = {JMLR}" in bib
 
     def test_neurips_is_conference(self):
-        from berb.pipeline.stage_impls._review_publish import _seminal_to_bibtex
+        from berb.pipeline.stage_impls._citations import _seminal_to_bibtex
 
         entry = {
             "title": "Attention Is All You Need",
@@ -149,7 +149,7 @@ class TestResolveMissingCitations:
     def test_seminal_papers_resolved_without_api(self):
         """Foundational papers should be resolved from seminal_papers.yaml
         without any API calls."""
-        from berb.pipeline.stage_impls._review_publish import (
+        from berb.pipeline.stage_impls._citations import (
             _resolve_missing_citations,
         )
 
@@ -176,7 +176,7 @@ class TestResolveMissingCitations:
 
     def test_seminal_papers_not_duplicated_in_existing_bib(self):
         """If the key is already in existing_bib, don't add it again."""
-        from berb.pipeline.stage_impls._review_publish import (
+        from berb.pipeline.stage_impls._citations import (
             _resolve_missing_citations,
         )
 
@@ -194,7 +194,7 @@ class TestResolveMissingCitations:
 
     def test_garbage_results_rejected_by_similarity(self):
         """BUG-194 regression: unrelated search results must be rejected."""
-        from berb.pipeline.stage_impls._review_publish import (
+        from berb.pipeline.stage_impls._citations import (
             _resolve_missing_citations,
         )
 
@@ -224,7 +224,7 @@ class TestResolveMissingCitations:
 
     def test_year_mismatch_rejected(self):
         """Results with year > 1 year off from cite key are rejected."""
-        from berb.pipeline.stage_impls._review_publish import (
+        from berb.pipeline.stage_impls._citations import (
             _resolve_missing_citations,
         )
 
@@ -249,7 +249,7 @@ class TestResolveMissingCitations:
 
     def test_good_api_result_accepted(self):
         """A search result with matching author + title words should be accepted."""
-        from berb.pipeline.stage_impls._review_publish import (
+        from berb.pipeline.stage_impls._citations import (
             _resolve_missing_citations,
         )
 
@@ -278,7 +278,7 @@ class TestResolveMissingCitations:
 
     def test_empty_missing_keys_returns_empty(self):
         """No keys to resolve -> empty results."""
-        from berb.pipeline.stage_impls._review_publish import (
+        from berb.pipeline.stage_impls._citations import (
             _resolve_missing_citations,
         )
 
@@ -288,7 +288,7 @@ class TestResolveMissingCitations:
 
     def test_unparseable_keys_skipped(self):
         """Keys that don't match author-year pattern are skipped."""
-        from berb.pipeline.stage_impls._review_publish import (
+        from berb.pipeline.stage_impls._citations import (
             _resolve_missing_citations,
         )
 
@@ -299,7 +299,7 @@ class TestResolveMissingCitations:
 
     def test_import_failure_returns_seminal_only(self):
         """If search_papers can't be imported, seminal results still returned."""
-        from berb.pipeline.stage_impls._review_publish import (
+        from berb.pipeline.stage_impls._citations import (
             _resolve_missing_citations,
         )
 
@@ -318,7 +318,7 @@ class TestResolveMissingCitations:
 
     def test_search_exception_handled_gracefully(self):
         """If search_papers raises, the key is skipped (no crash)."""
-        from berb.pipeline.stage_impls._review_publish import (
+        from berb.pipeline.stage_impls._citations import (
             _resolve_missing_citations,
         )
 
@@ -334,7 +334,7 @@ class TestResolveMissingCitations:
     def test_bug194_he2016deep_not_replaced_with_jokowi(self):
         """BUG-194 exact regression: he2016deep must NEVER resolve to
         'Jokowi and the New Developmentalism'."""
-        from berb.pipeline.stage_impls._review_publish import (
+        from berb.pipeline.stage_impls._citations import (
             _resolve_missing_citations,
         )
 
@@ -350,7 +350,7 @@ class TestResolveMissingCitations:
     def test_bug194_vaswani2017attention_not_replaced_with_health_supplement(self):
         """BUG-194 exact regression: vaswani2017attention must resolve to
         'Attention Is All You Need', not health supplement garbage."""
-        from berb.pipeline.stage_impls._review_publish import (
+        from berb.pipeline.stage_impls._citations import (
             _resolve_missing_citations,
         )
 
@@ -365,7 +365,7 @@ class TestResolveMissingCitations:
     def test_bug194_srivastava2014dropout_not_replaced_with_cnn_sentence(self):
         """BUG-194 exact regression: srivastava2014dropout must resolve to
         Dropout paper, not CNN for Sentence Classification."""
-        from berb.pipeline.stage_impls._review_publish import (
+        from berb.pipeline.stage_impls._citations import (
             _resolve_missing_citations,
         )
 
@@ -379,7 +379,7 @@ class TestResolveMissingCitations:
 
     def test_multiple_seminal_and_api_mixed(self):
         """Mix of seminal keys (resolved locally) and API keys."""
-        from berb.pipeline.stage_impls._review_publish import (
+        from berb.pipeline.stage_impls._citations import (
             _resolve_missing_citations,
         )
 
@@ -408,7 +408,7 @@ class TestResolveMissingCitations:
 
     def test_no_results_from_api_skips(self):
         """If API returns empty list, key is skipped (not crashed)."""
-        from berb.pipeline.stage_impls._review_publish import (
+        from berb.pipeline.stage_impls._citations import (
             _resolve_missing_citations,
         )
 
@@ -422,7 +422,7 @@ class TestResolveMissingCitations:
     def test_close_year_accepted(self):
         """A result with year within 1 of the cite key year should be accepted
         (arXiv vs conference year difference)."""
-        from berb.pipeline.stage_impls._review_publish import (
+        from berb.pipeline.stage_impls._citations import (
             _resolve_missing_citations,
         )
 
@@ -449,7 +449,7 @@ class TestResolveMissingCitations:
     def test_completely_unrelated_title_rejected(self):
         """Even if year and author name match, completely unrelated title
         must be rejected."""
-        from berb.pipeline.stage_impls._review_publish import (
+        from berb.pipeline.stage_impls._citations import (
             _resolve_missing_citations,
         )
 
@@ -479,7 +479,7 @@ class TestResolveMissingCitations:
 
     def test_picks_best_result_from_multiple(self):
         """When API returns multiple results, the one with best overlap wins."""
-        from berb.pipeline.stage_impls._review_publish import (
+        from berb.pipeline.stage_impls._citations import (
             _resolve_missing_citations,
         )
 
