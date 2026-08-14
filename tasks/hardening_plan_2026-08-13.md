@@ -273,6 +273,12 @@ Both items were verified-open in the tree before this wave started. Small diffs,
 
 ---
 
+## Wave 2 progress
+
+- **A2-1** done — `_review_publish.py` (3617 lines) split into `_review.py`/`_archive.py`/`_citations.py`/`_export.py` exactly per the seams below. Delegated the mechanical extraction to a subagent; it correctly wired all 3 real cross-file dependencies but its own verification only ran `test_berb_executor.py` (218 passed) before reporting done — the full suite caught one real miss (`_CITATION_RESOLVE_MIN_SIMILARITY`, a module-level constant dropped between old and new file, `NameError` on first use, 10 test failures) that the narrower run didn't exercise. Fixed with a 4-line addition. **Lesson: a subagent's own "tests pass" claim for a no-logic-change refactor is only as good as which tests it ran — always confirm with the full suite yourself before trusting done.** Full suite after fix: 3999 passed.
+
+---
+
 # Wave 2 — High-severity architecture
 
 ### A2-1 · Split `_review_publish.py` (3617 lines, six `@register_stage` in one file)
