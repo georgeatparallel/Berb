@@ -179,9 +179,9 @@ def main():
     )
 
     SCI = {
-        "berb.validation", "berb.reasoning", "berb.research", "berb.memory",
+        "berb.validation", "berb.reasoning", "berb.memory",
         "berb.review", "berb.integrity", "berb.self_evolve", "berb.learning",
-        "berb.knowledge", "berb.audit", "berb.assessor", "berb.math", "berb.vision",
+        "berb.knowledge", "berb.audit", "berb.assessor", "berb.math",
         "berb.integrity.eval",
     }
 

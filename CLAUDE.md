@@ -52,9 +52,7 @@ Wired = reachable from `berb run` / `berb serve`. Verify with
 | `berb/agents/` | Benchmark agent, code searcher, figure critique agent | yes |
 | `berb/review/` | 5-reviewer + Area Chair peer review ensemble | yes |
 | `berb/integrity/` | Claim manifests, evidence tracking, finding reproduction | partial — `integrity.eval.finding_reproduction` is unwired |
-| `berb/memory/` | Shared memory coordination across pipeline stages | **no** — implemented and tested, but nothing constructs it |
-| `berb/research/` | Idea scoring, gap analysis, open-ended discovery, world model | **no** — no caller |
-| `berb/vision/` | VLM figure generation (Matplotlib/TikZ) | **no** — figure critique runs via `agents/figure_agent/` instead |
+| `berb/memory/` | Embeddings, retrieval, shared memory coordination | partial — `memory.embeddings`/`memory.retriever` are used by `review/ensemble.py` (review-diversity scoring); `memory.shared_memory` has no wired caller |
 
 Unwired capabilities that the docs used to claim as live: SearXNG
 (`literature/searxng_client.py`), grey literature (`literature/grey_search.py`),
