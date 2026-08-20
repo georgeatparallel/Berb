@@ -1,9 +1,5 @@
 """Typed adapter interfaces and deterministic recording stubs.
 
-Phase 2 Architecture Upgrade: Added LLMProvider, LiteratureSource,
-ExperimentSandbox, and ArtifactStore ports with Recording stubs for
-testing.
-
 # Author: Georgios-Chrysovalantis Chatzivantsidis
 """
 
@@ -51,62 +47,22 @@ class BrowserAdapter(Protocol):
 
 
 # ============================================================================
-# Port Protocols (Phase 2 — Hexagonal boundary for stage implementations)
+# Port Protocols
 # ============================================================================
 
 
 class LLMProvider(Protocol):
-    """Port: LLM inference. Stage implementations depend on this, not LLMClient."""
+    """Port: LLM inference, injected into stage implementations as ``adapters.llm``.
+
+    Most stage implementations receive an ``LLMClient`` directly as a
+    function parameter — that is the primary seam. ``adapters.llm`` mirrors
+    the same client instance (wired by the executor) for call paths that
+    thread the adapter bundle through instead, e.g.
+    ``stage_impls/_literature.py``'s PDF-ingestion helper.
+    """
 
     def chat(self, messages: list[dict[str, str]], **kwargs: Any) -> str: ...
     def complete(self, prompt: str, **kwargs: Any) -> str: ...
-
-
-@dataclass(frozen=True)
-class LiteratureResult:
-    """A single literature search result."""
-
-    title: str
-    authors: list[str]
-    abstract: str
-    source: str
-    url: str | None = None
-    year: int | None = None
-    doi: str | None = None
-
-
-class LiteratureSource(Protocol):
-    """Port: literature retrieval. Wraps arXiv, OpenAlex, Semantic Scholar, etc."""
-
-    def search(self, query: str, max_results: int = 10) -> list[LiteratureResult]: ...
-    def fetch_full_text(self, url: str) -> str | None: ...
-
-
-@dataclass(frozen=True)
-class SandboxResult:
-    """Result from an experiment sandbox execution."""
-
-    returncode: int
-    stdout: str
-    stderr: str
-    metrics: dict[str, float] | None = None
-    timed_out: bool = False
-
-
-class ExperimentSandbox(Protocol):
-    """Port: experiment execution. Wraps Docker, SSH, Colab, local sandbox."""
-
-    def execute(self, code: str, timeout_sec: int = 300) -> SandboxResult: ...
-    def setup(self) -> bool: ...
-    def teardown(self) -> None: ...
-
-
-class ArtifactStore(Protocol):
-    """Port: persistent artifact storage. Default: local filesystem."""
-
-    def read(self, path: str) -> str | None: ...
-    def write(self, path: str, content: str) -> bool: ...
-    def exists(self, path: str) -> bool: ...
 
 
 # ============================================================================
@@ -169,7 +125,7 @@ class RecordingBrowserAdapter:
 
 
 # ============================================================================
-# Recording stubs for new Port Protocols
+# Recording stub for the LLMProvider port
 # ============================================================================
 
 
@@ -184,57 +140,6 @@ class RecordingLLMProvider:
     def complete(self, prompt: str, **kwargs: Any) -> str:
         self.calls.append(("complete", prompt))
         return "Stub completion response"
-
-
-@dataclass
-class RecordingLiteratureSource:
-    search_calls: list[str] = field(default_factory=list)
-    fetch_calls: list[str] = field(default_factory=list)
-
-    def search(self, query: str, max_results: int = 10) -> list[LiteratureResult]:
-        self.search_calls.append(query)
-        return [
-            LiteratureResult(
-                title=f"Stub result for {query}",
-                authors=["Author A", "Author B"],
-                abstract="This is a stub abstract.",
-                source="recording",
-            )
-        ]
-
-    def fetch_full_text(self, url: str) -> str | None:
-        self.fetch_calls.append(url)
-        return f"Stub full text for {url}"
-
-
-@dataclass
-class RecordingExperimentSandbox:
-    execute_calls: list[str] = field(default_factory=list)
-
-    def execute(self, code: str, timeout_sec: int = 300) -> SandboxResult:
-        self.execute_calls.append(code)
-        return SandboxResult(returncode=0, stdout="Stub stdout", stderr="")
-
-    def setup(self) -> bool:
-        return True
-
-    def teardown(self) -> None:
-        pass
-
-
-@dataclass
-class RecordingArtifactStore:
-    _store: dict[str, str] = field(default_factory=dict)
-
-    def read(self, path: str) -> str | None:
-        return self._store.get(path)
-
-    def write(self, path: str, content: str) -> bool:
-        self._store[path] = content
-        return True
-
-    def exists(self, path: str) -> bool:
-        return path in self._store
 
 
 @dataclass
@@ -259,31 +164,22 @@ class MCPWebFetchAdapter:
 
 @dataclass
 class AdapterBundle:
-    """Wiring hub for all port adapters.
+    """Wiring hub for cross-cutting adapters, used by the pipeline runner
+    and threaded through to stage implementations.
 
-    Existing adapters (cron, message, memory, sessions, web_fetch, browser):
-      Used by the pipeline runner for cross-cutting concerns.
-
-    Port adapters (Phase 2 — hexagonal boundary for stage implementations):
-      llm:     LLMProvider — injected into stage implementations
-      lit:     LiteratureSource — wraps arXiv/OpenAlex/SemanticScholar
-      sandbox: ExperimentSandbox — wraps Docker/SSH/Colab/local
-      store:   ArtifactStore — local FS, future S3
+    llm (LLMProvider) is the one port stage implementations actually read
+    via the bundle (see LLMProvider's docstring); the rest exist purely for
+    the runner's own cross-cutting concerns (scheduling, notifications,
+    memory, sessions, web fetch, browsing).
     """
 
-    # Existing cross-cutting adapters
     cron: CronAdapter = field(default_factory=RecordingCronAdapter)
     message: MessageAdapter = field(default_factory=RecordingMessageAdapter)
     memory: MemoryAdapter = field(default_factory=RecordingMemoryAdapter)
     sessions: SessionsAdapter = field(default_factory=RecordingSessionsAdapter)
     web_fetch: WebFetchAdapter = field(default_factory=RecordingWebFetchAdapter)
     browser: BrowserAdapter = field(default_factory=RecordingBrowserAdapter)
-
-    # Port adapters (Phase 2)
     llm: LLMProvider = field(default_factory=RecordingLLMProvider)
-    lit: LiteratureSource = field(default_factory=RecordingLiteratureSource)
-    sandbox: ExperimentSandbox = field(default_factory=RecordingExperimentSandbox)
-    store: ArtifactStore = field(default_factory=RecordingArtifactStore)
 
     @classmethod
     def from_config(cls, config: object) -> AdapterBundle:

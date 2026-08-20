@@ -243,10 +243,8 @@ def execute_stage(
         except (ValueError, TypeError):
             # inspect.signature can fail for C extensions; assume no prompts.
             _accepts_prompts = False
-        # Phase 2: Port adapters are available via adapters.llm, adapters.lit,
-        # adapters.sandbox, adapters.store. Stage implementations that want to
-        # use port interfaces can access them through the AdapterBundle directly.
-        # This avoids signature changes to every stage function.
+        # adapters.llm mirrors the same LLMClient passed as `llm=` above, for
+        # the few call paths that thread the adapter bundle through instead.
         if _accepts_prompts:
             result = executor(stage_dir, run_dir, config, adapters, llm=llm, prompts=prompts)
         else:
