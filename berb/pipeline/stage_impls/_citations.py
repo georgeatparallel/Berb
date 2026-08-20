@@ -4,9 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
-import math
 import re
-from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -18,27 +16,15 @@ from berb.llm.client import LLMClient
 from berb.pipeline._domain import _detect_domain  # noqa: F401
 from berb.pipeline._helpers import (
     StageResult,
-    _build_context_preamble,
-    _chat_with_prompt,
     _collect_experiment_results,  # noqa: F401
-    _default_quality_report,
-    _extract_paper_title,
-    _find_prior_file,
-    _generate_framework_diagram_prompt,
-    _generate_neurips_checklist,
-    _get_evolution_overlay,
-    _read_best_analysis,
     _read_prior_artifact,
     _safe_json_loads,
     _topic_constraint_block,  # noqa: F401
-    _utcnow_iso,
-    reconcile_figure_refs,
-)
+    )
 from berb.pipeline.contracts import StageContract
 from berb.pipeline.registry import register_stage
 from berb.pipeline.stages import Stage, StageStatus
 from berb.prompts import PromptManager
-from berb.writing.anti_ai import AntiAIEncoder
 
 logger = logging.getLogger(__name__)
 
@@ -497,7 +483,9 @@ def _execute_citation_verify(
 
     # --- Relevance check: assess topical relevance of verified citations ---
     if llm is not None and report.results:
-        relevance_scores = _check_citation_relevance(llm, config.research.topic, report.results)
+        relevance_scores = _check_citation_relevance(
+            llm, config.research.topic, report.results
+        )
         for cr in report.results:
             score = relevance_scores.get(cr.cite_key)
             if score is not None:
@@ -519,12 +507,15 @@ def _execute_citation_verify(
     remaining = [
         cr
         for cr in report.results
-        if cr.cite_key not in low_relevance_keys and cr.status != VerifyStatus.HALLUCINATED
+        if cr.cite_key not in low_relevance_keys
+        and cr.status != VerifyStatus.HALLUCINATED
     ]
     if len(remaining) > MAX_CITATIONS:
         remaining.sort(
             key=lambda c: (
-                c.relevance_score if c.relevance_score is not None else _DEFAULT_RELEVANCE
+                c.relevance_score
+                if c.relevance_score is not None
+                else _DEFAULT_RELEVANCE
             ),
         )
         overflow = remaining[: len(remaining) - MAX_CITATIONS]
@@ -572,7 +563,9 @@ def _execute_citation_verify(
     if paper_text.strip():
         _vbib_keys = set(re.findall(r"@\w+\{([^,]+),", verified_bib))
         _cited_in_paper: set[str] = set()
-        _cited_in_paper.update(re.findall(r"\[([a-zA-Z]+\d{4}[a-zA-Z0-9_-]*)\]", paper_text))
+        _cited_in_paper.update(
+            re.findall(r"\[([a-zA-Z]+\d{4}[a-zA-Z0-9_-]*)\]", paper_text)
+        )
         for _cm in re.finditer(r"\\cite\{([^}]+)\}", paper_text):
             _cited_in_paper.update(k.strip() for k in _cm.group(1).split(","))
         # BUG-182: Also read stage-22/paper.tex for \cite{} keys
@@ -597,7 +590,9 @@ def _execute_citation_verify(
     # write a comment instead of an empty file to avoid "Missing or empty output" error.
     if not verified_bib.strip():
         verified_bib = "% All citations were filtered out during verification\n"
-        logger.warning("Stage 23: All BibTeX entries filtered out — writing placeholder")
+        logger.warning(
+            "Stage 23: All BibTeX entries filtered out — writing placeholder"
+        )
 
     (stage_dir / "references_verified.bib").write_text(verified_bib, encoding="utf-8")
 

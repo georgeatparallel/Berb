@@ -208,7 +208,11 @@ class WebSearchAgent:
         self._run_web_search(result, search_queries)
 
         # 3. Google Scholar search
-        if self.enable_scholar and self.scholar_client and self.scholar_client.available:
+        if (
+            self.enable_scholar
+            and self.scholar_client
+            and self.scholar_client.available
+        ):
             self._run_scholar_search(result, topic)
 
         # 4. Crawl top URLs for full content
@@ -241,7 +245,9 @@ class WebSearchAgent:
     def _run_web_search(self, result: WebSearchAgentResult, queries: list[str]) -> None:
         """Run web search across all queries."""
         try:
-            responses = self.web_client.search_multi(queries, max_results=self.max_web_results)
+            responses = self.web_client.search_multi(
+                queries, max_results=self.max_web_results
+            )
             for resp in responses:
                 result.web_results.extend(resp.results)
                 if resp.answer and not result.search_answer:
@@ -273,12 +279,18 @@ class WebSearchAgent:
                     if cr.has_content:
                         result.crawled_pages.append(cr)
             else:
-                crawl_results = asyncio.run(self.crawler.crawl_many(urls[: self.max_crawl_urls]))
-                result.crawled_pages.extend(cr for cr in crawl_results if cr.has_content)
+                crawl_results = asyncio.run(
+                    self.crawler.crawl_many(urls[: self.max_crawl_urls])
+                )
+                result.crawled_pages.extend(
+                    cr for cr in crawl_results if cr.has_content
+                )
         except Exception as exc:  # noqa: BLE001
             logger.warning("Crawling failed: %s", exc)
 
-    def _run_pdf_extraction(self, result: WebSearchAgentResult, urls: list[str]) -> None:
+    def _run_pdf_extraction(
+        self, result: WebSearchAgentResult, urls: list[str]
+    ) -> None:
         """Extract text from PDF URLs."""
         for url in urls[:5]:
             try:

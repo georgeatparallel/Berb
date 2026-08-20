@@ -23,7 +23,9 @@ class Intent(StrEnum):
 _INTENT_PATTERNS: list[tuple[Intent, re.Pattern[str]]] = [
     (
         Intent.HELP,
-        re.compile(r"(?:^\s*help\s*$|\bhow\s+to\b|\busage\b|帮助|怎么用)", re.IGNORECASE),
+        re.compile(
+            r"(?:^\s*help\s*$|\bhow\s+to\b|\busage\b|帮助|怎么用)", re.IGNORECASE
+        ),
     ),
     (
         Intent.START_PIPELINE,
@@ -35,7 +37,8 @@ _INTENT_PATTERNS: list[tuple[Intent, re.Pattern[str]]] = [
     (
         Intent.CHECK_STATUS,
         re.compile(
-            r"(?:\b(?:status|progress|stage|current)\b|阶段|进度|到哪|第几|哪一步)", re.IGNORECASE
+            r"(?:\b(?:status|progress|stage|current)\b|阶段|进度|到哪|第几|哪一步)",
+            re.IGNORECASE,
         ),
     ),
     (

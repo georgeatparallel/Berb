@@ -98,7 +98,9 @@ class ExperimentPoolIntegration:
         )
 
         self.evolutionary_search = DesignProposalEvolver() if use_evolution else None
-        self.react_agent = ExperimentReActAgent(model=react_agent_model) if use_react else None
+        self.react_agent = (
+            ExperimentReActAgent(model=react_agent_model) if use_react else None
+        )
         self.physics_guard = (
             PhysicsCodeGuard(model=physics_guard_model) if use_physics_guards else None
         )
@@ -197,7 +199,9 @@ class ExperimentPoolIntegration:
         if not self.evolutionary_search:
             raise ValueError("Evolutionary search not enabled")
 
-        logger.info(f"Running evolutionary search: pop={population_size}, gen={max_generations}")
+        logger.info(
+            f"Running evolutionary search: pop={population_size}, gen={max_generations}"
+        )
 
         result = await self.evolutionary_search.search(
             base_experiment=base_design,

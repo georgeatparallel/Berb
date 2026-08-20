@@ -80,7 +80,9 @@ class TestBenchmarkKnowledge:
             assert "keywords" in info, f"Domain {did} missing keywords"
             assert "standard_benchmarks" in info, f"Domain {did} missing benchmarks"
             assert "common_baselines" in info, f"Domain {did} missing baselines"
-            assert len(info["standard_benchmarks"]) > 0, f"Domain {did} has 0 benchmarks"
+            assert (
+                len(info["standard_benchmarks"]) > 0
+            ), f"Domain {did} has 0 benchmarks"
             assert len(info["common_baselines"]) > 0, f"Domain {did} has 0 baselines"
 
     def test_benchmark_entries_have_required_fields(self) -> None:
@@ -100,8 +102,12 @@ class TestBenchmarkKnowledge:
         for did, info in data["domains"].items():
             for bl in info["common_baselines"]:
                 assert "name" in bl, f"Baseline in {did} missing name"
-                assert "source" in bl, f"Baseline {bl.get('name')} in {did} missing source"
-                assert "paper" in bl, f"Baseline {bl.get('name')} in {did} missing paper"
+                assert (
+                    "source" in bl
+                ), f"Baseline {bl.get('name')} in {did} missing source"
+                assert (
+                    "paper" in bl
+                ), f"Baseline {bl.get('name')} in {did} missing paper"
 
 
 # ---------------------------------------------------------------------------
@@ -171,7 +177,9 @@ class TestSurveyor:
                 json.dumps(
                     {
                         "benchmarks": [{"name": "CustomDS", "tier": 2}],
-                        "baselines": [{"name": "CustomBL", "source": "custom", "paper": "X"}],
+                        "baselines": [
+                            {"name": "CustomBL", "source": "custom", "paper": "X"}
+                        ],
                         "rationale": "test",
                     }
                 )
@@ -257,7 +265,12 @@ class TestSelector:
     @pytest.fixture()
     def baselines(self) -> list[dict]:
         return [
-            {"name": "ResNet-18", "origin": "knowledge_base", "pip": [], "paper": "He et al."},
+            {
+                "name": "ResNet-18",
+                "origin": "knowledge_base",
+                "pip": [],
+                "paper": "He et al.",
+            },
             {
                 "name": "ViT-B/16",
                 "origin": "knowledge_base",
@@ -299,12 +312,18 @@ class TestSelector:
         filtered = agent._filter_benchmarks(benchmarks)
         ranked = agent._rank_benchmarks(filtered)
         # Knowledge base entries should precede HF entries of same tier
-        kb_indices = [i for i, b in enumerate(ranked) if b["origin"] == "knowledge_base"]
-        hf_indices = [i for i, b in enumerate(ranked) if b["origin"] == "huggingface_hub"]
+        kb_indices = [
+            i for i, b in enumerate(ranked) if b["origin"] == "knowledge_base"
+        ]
+        hf_indices = [
+            i for i, b in enumerate(ranked) if b["origin"] == "huggingface_hub"
+        ]
         if kb_indices and hf_indices:
             assert min(kb_indices) < min(hf_indices)
 
-    def test_execute_selects_minimum(self, benchmarks: list[dict], baselines: list[dict]) -> None:
+    def test_execute_selects_minimum(
+        self, benchmarks: list[dict], baselines: list[dict]
+    ) -> None:
         from berb.agents.benchmark_agent.selector import SelectorAgent
 
         llm = FakeLLM(
@@ -597,7 +616,9 @@ class TestOrchestrator:
             ),
             "def get_datasets(): pass",
             "def get_baselines(): pass",
-            json.dumps({"passed": True, "issues": [], "suggestions": [], "severity": "none"}),
+            json.dumps(
+                {"passed": True, "issues": [], "suggestions": [], "severity": "none"}
+            ),
         ]
 
         stage_dir = tmp_path / "benchmark_agent"

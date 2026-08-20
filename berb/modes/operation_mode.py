@@ -255,7 +255,10 @@ class AuditTrail:
         try:
             with open(self.filepath, "w", encoding="utf-8") as f:
                 json.dump(
-                    {"entries": self.entries, "updated_at": datetime.now(UTC).isoformat()},
+                    {
+                        "entries": self.entries,
+                        "updated_at": datetime.now(UTC).isoformat(),
+                    },
                     f,
                     indent=2,
                 )
@@ -358,7 +361,9 @@ class AuditTrail:
         Returns:
             List of audit entries for the stage
         """
-        return [entry for entry in self.entries if entry.get("stage_number") == stage_number]
+        return [
+            entry for entry in self.entries if entry.get("stage_number") == stage_number
+        ]
 
     def get_full_report(self) -> dict[str, Any]:
         """Get full audit trail report.
@@ -374,9 +379,15 @@ class AuditTrail:
                 "stage_completions": sum(
                     1 for e in self.entries if e["type"] == "stage_completion"
                 ),
-                "approvals": sum(1 for e in self.entries if e["type"] == "stage_approval"),
-                "rejections": sum(1 for e in self.entries if e["type"] == "stage_rejection"),
-                "feedback_entries": sum(1 for e in self.entries if e["type"] == "human_feedback"),
+                "approvals": sum(
+                    1 for e in self.entries if e["type"] == "stage_approval"
+                ),
+                "rejections": sum(
+                    1 for e in self.entries if e["type"] == "stage_rejection"
+                ),
+                "feedback_entries": sum(
+                    1 for e in self.entries if e["type"] == "human_feedback"
+                ),
             },
         }
 
@@ -483,9 +494,15 @@ class OperationModeManager:
             print("  [S] Skip this stage")
         print("  [E] Edit (provide feedback)")
         print("  [R] Reject and regenerate")
-        if summary.stage_number == 8 and self.collaborative_config.allow_hypothesis_edit:
+        if (
+            summary.stage_number == 8
+            and self.collaborative_config.allow_hypothesis_edit
+        ):
             print("  [H] Add additional hypothesis")
-        if summary.stage_number == 9 and self.collaborative_config.allow_experiment_override:
+        if (
+            summary.stage_number == 9
+            and self.collaborative_config.allow_experiment_override
+        ):
             print("  [O] Override experiment parameters")
         print()
 
@@ -528,7 +545,9 @@ class OperationModeManager:
                 action=FeedbackAction.REJECT,
                 feedback_text=feedback_text,
             )
-            self.audit_trail.record_rejection(summary.stage_number, feedback_text, "regenerate")
+            self.audit_trail.record_rejection(
+                summary.stage_number, feedback_text, "regenerate"
+            )
         elif action == "H" and summary.stage_number == 8:
             hypothesis = input("Enter additional hypothesis: ").strip()
             feedback = HumanFeedback(

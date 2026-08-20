@@ -62,9 +62,9 @@ class TestDefaultModelIds:
 
     def test_no_retired_deepseek_chat_anywhere(self):
         for name, preset in PROVIDER_PRESETS.items():
-            assert preset.get("default_model") != "deepseek-chat", (
-                f"{name} references retired DeepSeek model ID"
-            )
+            assert (
+                preset.get("default_model") != "deepseek-chat"
+            ), f"{name} references retired DeepSeek model ID"
 
     def test_cli_setup_deepseek_models_match_live_ids(self):
         from berb.cli import _PROVIDER_MODELS

@@ -160,7 +160,9 @@ class TestRateLimiterEdgeCases:
         assert 0.0 <= delay <= 60.0
 
         # Exponential growth
-        delays = [RateLimiter.backoff_delay(i, base=2.0, max_delay=60.0) for i in range(10)]
+        delays = [
+            RateLimiter.backoff_delay(i, base=2.0, max_delay=60.0) for i in range(10)
+        ]
         # Generally increasing (with jitter)
         assert delays[-1] >= delays[0]
 

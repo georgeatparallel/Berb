@@ -89,7 +89,9 @@ class PromptManager:
 
     def __init__(self, overrides_path: str | Path | None = None) -> None:
         # Deep-copy defaults so mutations don't leak across instances
-        self._stages: dict[str, dict[str, Any]] = {k: dict(v) for k, v in _DEFAULT_STAGES.items()}
+        self._stages: dict[str, dict[str, Any]] = {
+            k: dict(v) for k, v in _DEFAULT_STAGES.items()
+        }
         self._blocks: dict[str, str] = dict(_DEFAULT_BLOCKS)
         self._sub_prompts: dict[str, dict[str, Any]] = {
             k: dict(v) for k, v in _DEFAULT_SUB_PROMPTS.items()
@@ -1529,7 +1531,9 @@ _DEFAULT_STAGES: dict[str, dict[str, Any]] = {
     },
     # ── Phase B: Literature Discovery ────────────────────────────────────
     "search_strategy": {
-        "system": ("You design literature retrieval strategies and source verification plans."),
+        "system": (
+            "You design literature retrieval strategies and source verification plans."
+        ),
         "user": (
             "Create a merged search strategy package.\n"
             "Return a JSON object with keys: search_plan_yaml, sources.\n"

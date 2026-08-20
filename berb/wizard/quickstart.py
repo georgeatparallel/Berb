@@ -35,7 +35,9 @@ class QuickStartWizard:
             "Research domains (comma-separated: cv, nlp, rl, ml, ai4science)",
             default="ml",
         )
-        config["research"]["domains"] = [d.strip() for d in domains_str.split(",") if d.strip()]
+        config["research"]["domains"] = [
+            d.strip() for d in domains_str.split(",") if d.strip()
+        ]
 
         # 4. Experiment mode
         mode = self._choose(

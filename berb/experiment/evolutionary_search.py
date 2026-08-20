@@ -281,8 +281,12 @@ class DesignProposalEvolver:
         if hasattr(mutated, "variables") and mutated.variables:
             if random.random() < rate:
                 # Add control variable
-                mutated.variables["controlled"] = mutated.variables.get("controlled", [])
-                mutated.variables["controlled"].append(f"control_{random.randint(1, 100)}")
+                mutated.variables["controlled"] = mutated.variables.get(
+                    "controlled", []
+                )
+                mutated.variables["controlled"].append(
+                    f"control_{random.randint(1, 100)}"
+                )
                 mutations.append("variable_addition")
 
         return mutated
@@ -405,8 +409,12 @@ class DesignProposalEvolver:
                 if hasattr(child_design, "methodology"):
                     # Mix methodologies
                     child_design.methodology = (
-                        parent1.design.methodology[: len(parent1.design.methodology) // 2]
-                        + parent2.design.methodology[len(parent2.design.methodology) // 2 :]
+                        parent1.design.methodology[
+                            : len(parent1.design.methodology) // 2
+                        ]
+                        + parent2.design.methodology[
+                            len(parent2.design.methodology) // 2 :
+                        ]
                     )
 
         child = ExperimentVariant(

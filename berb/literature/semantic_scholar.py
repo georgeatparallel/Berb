@@ -366,7 +366,9 @@ def _parse_s2_paper(item: dict[str, Any]) -> Paper:
     ext_ids = item.get("externalIds") or {}
     authors_raw = item.get("authors") or []
     authors = tuple(
-        Author(name=a.get("name", "Unknown")) for a in authors_raw if isinstance(a, dict)
+        Author(name=a.get("name", "Unknown"))
+        for a in authors_raw
+        if isinstance(a, dict)
     )
     return Paper(
         paper_id=f"s2-{item.get('paperId', '')}",

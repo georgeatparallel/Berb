@@ -342,7 +342,9 @@ class HiddenConsistentEvaluation:
             )
 
             scores = self._parse_scores(response.content)
-            overall = self._compute_weighted_score(scores, self.selection_criteria.weights)
+            overall = self._compute_weighted_score(
+                scores, self.selection_criteria.weights
+            )
 
             results.append(
                 (
@@ -359,7 +361,9 @@ class HiddenConsistentEvaluation:
         # Select best
         best_paper, best_result = max(results, key=lambda x: x[1].overall_score)
 
-        logger.info(f"HCE selection: {best_paper.id} selected ({best_result.overall_score:.2f})")
+        logger.info(
+            f"HCE selection: {best_paper.id} selected ({best_result.overall_score:.2f})"
+        )
 
         return best_paper, best_result
 
@@ -390,7 +394,9 @@ class HiddenConsistentEvaluation:
         # from the deleted berb.validation package.
         claim_validity = 0.5
         citation_correctness = 0.5
-        logger.info("HCE hidden evaluation: automated checks skipped pending E8 integration")
+        logger.info(
+            "HCE hidden evaluation: automated checks skipped pending E8 integration"
+        )
 
         # LLM-based evaluation for remaining dimensions
         prompt = self._build_test_prompt(paper)

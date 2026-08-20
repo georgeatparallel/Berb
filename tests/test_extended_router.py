@@ -179,9 +179,9 @@ class TestExtendedNadirClawRouter:
             for provider in expected_providers:
                 # Not all providers need all tiers, but check common ones
                 if provider in [Provider.MINIMAX, Provider.QWEN, Provider.GLM]:
-                    assert provider in MODEL_ALTERNATIVES[tier], (
-                        f"{provider.value} missing for {tier}"
-                    )
+                    assert (
+                        provider in MODEL_ALTERNATIVES[tier]
+                    ), f"{provider.value} missing for {tier}"
 
 
 class TestCreateRouterFromConfig:
@@ -230,7 +230,10 @@ class TestCreateRouterFromConfig:
 
         assert router.cost_budget_usd == 5.00
         assert router.provider_weights["minimax"] == 0.30
-        assert router.role_models["multi_perspective"]["constructive"] == "xiaomi/mimo-v2.5-pro"
+        assert (
+            router.role_models["multi_perspective"]["constructive"]
+            == "xiaomi/mimo-v2.5-pro"
+        )
 
 
 class TestProviderSelection:
@@ -258,9 +261,9 @@ class TestProviderSelection:
 
         for model, expected_provider in test_cases:
             result = tracker._extract_provider(model)
-            assert result == expected_provider, (
-                f"Expected {expected_provider} for {model}, got {result}"
-            )
+            assert (
+                result == expected_provider
+            ), f"Expected {expected_provider} for {model}, got {result}"
 
 
 class TestRoleComplexityMapping:

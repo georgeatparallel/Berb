@@ -137,12 +137,14 @@ class HyperagentState:
             "total_tasks_executed": self.total_tasks_executed,
             "total_improvements": self.total_improvements,
             "cumulative_performance_gain": self.cumulative_performance_gain,
-            "current_task_result": self.current_task_result.to_dict()
-            if self.current_task_result
-            else None,
-            "last_improvement_result": self.last_improvement_result.to_dict()
-            if self.last_improvement_result
-            else None,
+            "current_task_result": (
+                self.current_task_result.to_dict() if self.current_task_result else None
+            ),
+            "last_improvement_result": (
+                self.last_improvement_result.to_dict()
+                if self.last_improvement_result
+                else None
+            ),
             "errors": self.errors,
             "metadata": self.metadata,
         }
@@ -297,7 +299,9 @@ class Hyperagent:
             return []
 
         current_domain = (
-            self.config.research.topic if hasattr(self.config, "research") else "unknown"
+            self.config.research.topic
+            if hasattr(self.config, "research")
+            else "unknown"
         )
         return self.memory.transfer_improvements(
             source_domain=current_domain,

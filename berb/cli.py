@@ -304,13 +304,17 @@ def cmd_run(args: argparse.Namespace) -> int:
     # against its own persisted topic.txt instead, falling back to the
     # dirname hash only for older runs saved before topic.txt existed.
     if resume and not output:
-        explicit_topic_hash = hashlib.sha256(topic.encode()).hexdigest()[:6] if topic else None
+        explicit_topic_hash = (
+            hashlib.sha256(topic.encode()).hexdigest()[:6] if topic else None
+        )
         artifacts_root = Path("artifacts")
         if artifacts_root.is_dir():
 
             def _is_candidate(d: Path) -> bool:
                 if not (
-                    d.is_dir() and d.name.startswith("rc-") and (d / "checkpoint.json").exists()
+                    d.is_dir()
+                    and d.name.startswith("rc-")
+                    and (d / "checkpoint.json").exists()
                 ):
                     return False
                 if explicit_topic_hash is None:
@@ -386,7 +390,9 @@ def cmd_run(args: argparse.Namespace) -> int:
         resumed = read_checkpoint(run_dir)
         if resumed is not None:
             from_stage = resumed
-            print(f"Resuming from checkpoint: Stage {int(from_stage)}: {from_stage.name}")
+            print(
+                f"Resuming from checkpoint: Stage {int(from_stage)}: {from_stage.name}"
+            )
 
     from berb import __version__
 
@@ -599,7 +605,9 @@ def cmd_serve(args: argparse.Namespace) -> int:
     host = cast(str, args.host) or config.server.host
     port = int(cast(int, args.port) or config.server.port)
 
-    bind_error = validate_server_bind(host, config.server.auth_token, config.server.insecure)
+    bind_error = validate_server_bind(
+        host, config.server.auth_token, config.server.insecure
+    )
     if bind_error:
         print(f"Error: {bind_error}", file=sys.stderr)
         return 1
@@ -631,7 +639,9 @@ def cmd_dashboard(args: argparse.Namespace) -> int:
     host = cast(str, args.host) or config.server.host
     port = int(cast(int, args.port) or config.server.port)
 
-    bind_error = validate_server_bind(host, config.server.auth_token, config.server.insecure)
+    bind_error = validate_server_bind(
+        host, config.server.auth_token, config.server.insecure
+    )
     if bind_error:
         print(f"Error: {bind_error}", file=sys.stderr)
         return 1
@@ -689,7 +699,11 @@ _PROVIDER_MODELS = {
     "openai": ("gpt-4o", ["gpt-4.1", "gpt-4o-mini"]),
     "openrouter": (
         "openai/gpt-4o",
-        ["openai/gpt-4.1", "anthropic/claude-sonnet-4-5-20250929", "openai/gpt-4o-mini"],
+        [
+            "openai/gpt-4.1",
+            "anthropic/claude-sonnet-4-5-20250929",
+            "openai/gpt-4o-mini",
+        ],
     ),
     "deepseek": ("deepseek-v4-flash", ["deepseek-v4-pro"]),
     "minimax": ("MiniMax-M2.5", ["MiniMax-M2.5-highspeed"]),
@@ -747,8 +761,12 @@ def cmd_init(args: argparse.Namespace) -> int:
 
     if provider == "acp":
         # ACP doesn't need base_url or api_key
-        content = content.replace('base_url: "https://openrouter.ai/api/v1"', 'base_url: ""')
-        content = content.replace('api_key_env: "OPENROUTER_API_KEY"', 'api_key_env: ""')
+        content = content.replace(
+            'base_url: "https://openrouter.ai/api/v1"', 'base_url: ""'
+        )
+        content = content.replace(
+            'api_key_env: "OPENROUTER_API_KEY"', 'api_key_env: ""'
+        )
     else:
         base_url = _PROVIDER_URLS.get(provider, "https://openrouter.ai/api/v1")
         content = content.replace(
@@ -761,7 +779,9 @@ def cmd_init(args: argparse.Namespace) -> int:
 
     if provider in _PROVIDER_MODELS:
         primary, fallbacks = _PROVIDER_MODELS[provider]
-        content = content.replace('primary_model: "openai/gpt-4o"', f'primary_model: "{primary}"')
+        content = content.replace(
+            'primary_model: "openai/gpt-4o"', f'primary_model: "{primary}"'
+        )
         # Replace fallback models block
         # NOTE: must match configs/config.arc.example.yaml's actual fallback
         # block, otherwise this replace() silently no-ops.
@@ -771,7 +791,9 @@ def cmd_init(args: argparse.Namespace) -> int:
             '    - "anthropic/claude-sonnet-4-5-20250929"\n'
             '    - "openai/gpt-4o-mini"'
         )
-        new_fallbacks = "  fallback_models:\n" + "".join(f'    - "{m}"\n' for m in fallbacks)
+        new_fallbacks = "  fallback_models:\n" + "".join(
+            f'    - "{m}"\n' for m in fallbacks
+        )
         content = content.replace(old_fallbacks, new_fallbacks.rstrip("\n"))
 
     dest.write_text(content, encoding="utf-8")
@@ -1012,7 +1034,9 @@ def cmd_literature(args: argparse.Namespace) -> int:
 
     done = sum(1 for r in results if r.status.value == "done")
     failed = sum(1 for r in results if r.status.value == "failed")
-    print(f"\nLiterature workflow complete: {done}/{len(results)} stages done, {failed} failed")
+    print(
+        f"\nLiterature workflow complete: {done}/{len(results)} stages done, {failed} failed"
+    )
 
     # Print output location
     print(f"\nResults saved to: {run_dir}")
@@ -1198,7 +1222,9 @@ def cmd_survey(args: argparse.Namespace) -> int:
         return 1
 
     run_id = _generate_run_id(args.topic)
-    output_path = Path(args.output) if args.output else Path(f"artifacts/survey-{run_id}.md")
+    output_path = (
+        Path(args.output) if args.output else Path(f"artifacts/survey-{run_id}.md")
+    )
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     citations_md = ""
@@ -1234,10 +1260,18 @@ def main(argv: list[str] | None = None) -> int:
         help="Config file (default: auto-detect config.arc.yaml or config.yaml)",
     )
     _ = run_p.add_argument("--output", "-o", help="Output directory")
-    _ = run_p.add_argument("--from-stage", help="Start from a specific stage (e.g. PAPER_OUTLINE)")
-    _ = run_p.add_argument("--auto-approve", action="store_true", help="Auto-approve gate stages")
-    _ = run_p.add_argument("--skip-preflight", action="store_true", help="Skip LLM preflight check")
-    _ = run_p.add_argument("--resume", action="store_true", help="Resume from last checkpoint")
+    _ = run_p.add_argument(
+        "--from-stage", help="Start from a specific stage (e.g. PAPER_OUTLINE)"
+    )
+    _ = run_p.add_argument(
+        "--auto-approve", action="store_true", help="Auto-approve gate stages"
+    )
+    _ = run_p.add_argument(
+        "--skip-preflight", action="store_true", help="Skip LLM preflight check"
+    )
+    _ = run_p.add_argument(
+        "--resume", action="store_true", help="Resume from last checkpoint"
+    )
     _ = run_p.add_argument(
         "--skip-noncritical-stage",
         action="store_true",
@@ -1248,7 +1282,9 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Disable graceful degradation: fail pipeline on quality gate failure",
     )
-    _ = run_p.add_argument("--upload", nargs="+", help="Upload PDFs/data files for inclusion")
+    _ = run_p.add_argument(
+        "--upload", nargs="+", help="Upload PDFs/data files for inclusion"
+    )
     _ = run_p.add_argument("--upload-dir", help="Upload directory of PDFs/data files")
     val_p = sub.add_parser("validate", help="Validate config file")
     _ = val_p.add_argument(
@@ -1275,21 +1311,33 @@ def main(argv: list[str] | None = None) -> int:
         "--force", action="store_true", help="Overwrite existing config.arc.yaml"
     )
 
-    _ = sub.add_parser("setup", help="Check and install optional tools (OpenCode, etc.)")
+    _ = sub.add_parser(
+        "setup", help="Check and install optional tools (OpenCode, etc.)"
+    )
 
     rpt_p = sub.add_parser("report", help="Generate human-readable run report")
-    _ = rpt_p.add_argument("--run-dir", required=True, help="Path to run artifacts directory")
+    _ = rpt_p.add_argument(
+        "--run-dir", required=True, help="Path to run artifacts directory"
+    )
     _ = rpt_p.add_argument("--output", "-o", help="Write report to file")
 
     # A: Web platform
     srv_p = sub.add_parser("serve", help="Start the web server")
-    _ = srv_p.add_argument("--config", "-c", default="config.yaml", help="Config file path")
-    _ = srv_p.add_argument("--host", default="", help="Host to bind (default from config)")
-    _ = srv_p.add_argument("--port", type=int, default=0, help="Port (default from config)")
+    _ = srv_p.add_argument(
+        "--config", "-c", default="config.yaml", help="Config file path"
+    )
+    _ = srv_p.add_argument(
+        "--host", default="", help="Host to bind (default from config)"
+    )
+    _ = srv_p.add_argument(
+        "--port", type=int, default=0, help="Port (default from config)"
+    )
     _ = srv_p.add_argument("--monitor-dir", help="Artifacts dir to monitor")
 
     dash_p = sub.add_parser("dashboard", help="Start dashboard-only server")
-    _ = dash_p.add_argument("--config", "-c", default="config.yaml", help="Config file path")
+    _ = dash_p.add_argument(
+        "--config", "-c", default="config.yaml", help="Config file path"
+    )
     _ = dash_p.add_argument("--host", default="", help="Host to bind")
     _ = dash_p.add_argument("--port", type=int, default=0, help="Port")
     _ = dash_p.add_argument("--monitor-dir", help="Artifacts dir to monitor")
@@ -1298,14 +1346,22 @@ def main(argv: list[str] | None = None) -> int:
     _ = wiz_p.add_argument("--output", "-o", help="Write config to file")
 
     # Headless runners for external apps
-    reasoner_p = sub.add_parser("run-reasoner", help="Run the Reasoner application headlessly")
-    _ = reasoner_p.add_argument("--problem", "-p", required=True, help="Problem statement to solve")
+    reasoner_p = sub.add_parser(
+        "run-reasoner", help="Run the Reasoner application headlessly"
+    )
+    _ = reasoner_p.add_argument(
+        "--problem", "-p", required=True, help="Problem statement to solve"
+    )
     _ = reasoner_p.add_argument(
         "--preset", default="multi-perspective-budget", help="Routing preset to run"
     )
-    _ = reasoner_p.add_argument("--output", "-o", help="Output JSON path for pipeline state")
     _ = reasoner_p.add_argument(
-        "--path", default=r"E:\Documents\Vibe-Coding\Reasoner", help="Path to Reasoner repository"
+        "--output", "-o", help="Output JSON path for pipeline state"
+    )
+    _ = reasoner_p.add_argument(
+        "--path",
+        default=r"E:\Documents\Vibe-Coding\Reasoner",
+        help="Path to Reasoner repository",
     )
     _ = reasoner_p.add_argument(
         "--sequential", action="store_true", help="Run perspectives sequentially"
@@ -1314,8 +1370,12 @@ def main(argv: list[str] | None = None) -> int:
         "--quiet", action="store_true", help="Suppress phase-by-phase logging"
     )
 
-    orchestrator_p = sub.add_parser("run-orchestrator", help="Run the AI Orchestrator headlessly")
-    _ = orchestrator_p.add_argument("--project", "-p", required=True, help="Project description")
+    orchestrator_p = sub.add_parser(
+        "run-orchestrator", help="Run the AI Orchestrator headlessly"
+    )
+    _ = orchestrator_p.add_argument(
+        "--project", "-p", required=True, help="Project description"
+    )
     _ = orchestrator_p.add_argument(
         "--budget", "-b", type=float, default=8.0, help="Max budget in USD"
     )
@@ -1341,7 +1401,9 @@ def main(argv: list[str] | None = None) -> int:
     _ = proj_p.add_argument("--name", "-n", help="Project name")
     _ = proj_p.add_argument("--names", nargs="*", help="Project names (for compare)")
     _ = proj_p.add_argument("--topic", "-t", help="Research topic")
-    _ = proj_p.add_argument("--config", "-c", default="config.yaml", help="Config file path")
+    _ = proj_p.add_argument(
+        "--config", "-c", default="config.yaml", help="Config file path"
+    )
 
     # C3: MCP integration
     mcp_p = sub.add_parser("mcp", help="MCP integration")
@@ -1352,16 +1414,22 @@ def main(argv: list[str] | None = None) -> int:
     _ = ovl_p.add_argument("--sync", action="store_true", help="Run sync")
     _ = ovl_p.add_argument("--status", action="store_true", help="Show status")
     _ = ovl_p.add_argument("--run-dir", help="Run artifacts directory")
-    _ = ovl_p.add_argument("--config", "-c", default="config.yaml", help="Config file path")
+    _ = ovl_p.add_argument(
+        "--config", "-c", default="config.yaml", help="Config file path"
+    )
 
     # D1: Research trend tracking
     trends_p = sub.add_parser("trends", help="Research trend tracking")
-    _ = trends_p.add_argument("--digest", action="store_true", help="Generate daily digest")
+    _ = trends_p.add_argument(
+        "--digest", action="store_true", help="Generate daily digest"
+    )
     _ = trends_p.add_argument("--analyze", action="store_true", help="Analyze trends")
     _ = trends_p.add_argument(
         "--suggest-topics", action="store_true", help="Suggest research topics"
     )
-    _ = trends_p.add_argument("--config", "-c", default="config.yaml", help="Config file path")
+    _ = trends_p.add_argument(
+        "--config", "-c", default="config.yaml", help="Config file path"
+    )
     _ = trends_p.add_argument("--domains", nargs="+", help="Override domains")
 
     # A1: New workflow commands
@@ -1370,7 +1438,9 @@ def main(argv: list[str] | None = None) -> int:
     _ = lit_p.add_argument("--preset", default="ml-conference", help="Preset to use")
     _ = lit_p.add_argument("--upload", nargs="+", help="Upload specific PDFs")
     _ = lit_p.add_argument("--upload-dir", help="Upload directory of PDFs")
-    _ = lit_p.add_argument("--min-papers", type=int, default=30, help="Minimum papers to find")
+    _ = lit_p.add_argument(
+        "--min-papers", type=int, default=30, help="Minimum papers to find"
+    )
     _ = lit_p.add_argument("--config", "-c", default=None, help="Config file path")
 
     write_p = sub.add_parser("write", help="Write paper from existing results")
@@ -1407,7 +1477,9 @@ def main(argv: list[str] | None = None) -> int:
 
     # D4: Conference deadline calendar
     cal_p = sub.add_parser("calendar", help="Conference deadline calendar")
-    _ = cal_p.add_argument("--upcoming", action="store_true", help="Show upcoming deadlines")
+    _ = cal_p.add_argument(
+        "--upcoming", action="store_true", help="Show upcoming deadlines"
+    )
     _ = cal_p.add_argument("--plan", help="Generate submission timeline for a venue")
     _ = cal_p.add_argument("--domains", nargs="+", help="Filter by domain")
 

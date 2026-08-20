@@ -71,7 +71,10 @@ def _cb_should_allow() -> bool:
             elapsed = time.monotonic() - _cb_open_since
             if elapsed >= _cb_cooldown_sec:
                 _cb_state = _CB_HALF_OPEN
-                logger.info("arXiv circuit breaker → HALF_OPEN (%.0fs cooldown elapsed)", elapsed)
+                logger.info(
+                    "arXiv circuit breaker → HALF_OPEN (%.0fs cooldown elapsed)",
+                    elapsed,
+                )
                 return True
             return False
         return True  # HALF_OPEN: allow probe

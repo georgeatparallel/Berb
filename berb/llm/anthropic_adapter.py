@@ -13,9 +13,7 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-_JSON_MODE_INSTRUCTION = (
-    "You MUST respond with valid JSON only. Do not include any text outside the JSON object."
-)
+_JSON_MODE_INSTRUCTION = "You MUST respond with valid JSON only. Do not include any text outside the JSON object."
 
 # Map Anthropic stop_reason → OpenAI finish_reason
 _STOP_REASON_MAP = {
@@ -31,7 +29,9 @@ class AnthropicAdapter:
 
     def __init__(self, base_url: str, api_key: str, timeout_sec: int = 300):
         if not HAS_HTTPX:
-            raise ImportError("httpx is required for Anthropic adapter. Install: pip install httpx")
+            raise ImportError(
+                "httpx is required for Anthropic adapter. Install: pip install httpx"
+            )
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.timeout_sec = timeout_sec
@@ -118,7 +118,9 @@ class AnthropicAdapter:
         if cached_prefix:
             from berb.llm.prompt_cache import build_cached_system_blocks
 
-            blocks = build_cached_system_blocks(cached_prefix, system_msg, ttl=cache_ttl)
+            blocks = build_cached_system_blocks(
+                cached_prefix, system_msg, ttl=cache_ttl
+            )
             body["system"] = (
                 blocks
                 if blocks is not None
@@ -130,7 +132,9 @@ class AnthropicAdapter:
         return body
 
     @staticmethod
-    def _parse_message_response(data: dict[str, Any], model: str, url: str = "") -> dict[str, Any]:
+    def _parse_message_response(
+        data: dict[str, Any], model: str, url: str = ""
+    ) -> dict[str, Any]:
         """Convert a raw Anthropic Messages API response into the
         OpenAI-compatible shape the rest of Berb expects.
 
@@ -152,7 +156,9 @@ class AnthropicAdapter:
         content = ""
         if "content" in data and data["content"]:
             text_parts = [
-                block.get("text", "") for block in data["content"] if block.get("type") == "text"
+                block.get("text", "")
+                for block in data["content"]
+                if block.get("type") == "text"
             ]
             content = "\n".join(text_parts)
 
@@ -177,7 +183,9 @@ class AnthropicAdapter:
                 # Pre-normalized (Anthropic uses cache_read_input_tokens, not
                 # OpenAI's prompt_tokens_details.cached_tokens) — see
                 # LLMClient._parse_chat_completions_response.
-                "cached_tokens": data.get("usage", {}).get("cache_read_input_tokens", 0),
+                "cached_tokens": data.get("usage", {}).get(
+                    "cache_read_input_tokens", 0
+                ),
             },
             "model": data.get("model", model),
         }
@@ -222,7 +230,9 @@ class AnthropicAdapter:
         url = f"{self.base_url}/v1/messages"
 
         try:
-            response = self._ensure_client().post(url, headers=self._headers(), json=body)
+            response = self._ensure_client().post(
+                url, headers=self._headers(), json=body
+            )
             response.raise_for_status()
             data = response.json()
         except httpx.HTTPStatusError as exc:
@@ -287,8 +297,11 @@ class AnthropicAdapter:
             except Exception:  # noqa: BLE001
                 pass
             raise urllib.error.HTTPError(
-                url, exc.response.status_code, f"{exc}: {detail}" if detail else str(exc),
-                dict(exc.response.headers), None,
+                url,
+                exc.response.status_code,
+                f"{exc}: {detail}" if detail else str(exc),
+                dict(exc.response.headers),
+                None,
             ) from exc
         except httpx.HTTPError as exc:
             raise urllib.error.URLError(str(exc)) from exc
@@ -313,8 +326,11 @@ class AnthropicAdapter:
             except Exception:  # noqa: BLE001
                 pass
             raise urllib.error.HTTPError(
-                url, exc.response.status_code, f"{exc}: {detail}" if detail else str(exc),
-                dict(exc.response.headers), None,
+                url,
+                exc.response.status_code,
+                f"{exc}: {detail}" if detail else str(exc),
+                dict(exc.response.headers),
+                None,
             ) from exc
         except httpx.HTTPError as exc:
             raise urllib.error.URLError(str(exc)) from exc
@@ -340,9 +356,11 @@ class AnthropicAdapter:
             except Exception:  # noqa: BLE001
                 pass
             raise urllib.error.HTTPError(
-                results_url, exc.response.status_code,
+                results_url,
+                exc.response.status_code,
                 f"{exc}: {detail}" if detail else str(exc),
-                dict(exc.response.headers), None,
+                dict(exc.response.headers),
+                None,
             ) from exc
         except httpx.HTTPError as exc:
             raise urllib.error.URLError(str(exc)) from exc
@@ -366,5 +384,7 @@ class AnthropicAdapter:
                     message, message.get("model", "")
                 )
             except urllib.error.HTTPError as exc:
-                logger.warning("Batch entry %s returned an error payload: %s", custom_id, exc)
+                logger.warning(
+                    "Batch entry %s returned an error payload: %s", custom_id, exc
+                )
         return results

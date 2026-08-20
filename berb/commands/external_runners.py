@@ -54,7 +54,9 @@ def run_reasoner_headless(
     """
     reasoner_path = Path(reasoner_dir).resolve()
     if not reasoner_path.exists() or not (reasoner_path / "main.py").exists():
-        raise FileNotFoundError(f"Reasoner repository or main.py not found at: {reasoner_path}")
+        raise FileNotFoundError(
+            f"Reasoner repository or main.py not found at: {reasoner_path}"
+        )
 
     cmd = [sys.executable, "main.py", "--problem", problem, "--preset", preset]
 
@@ -143,7 +145,9 @@ def run_orchestrator_headless(
     if extra_args:
         cmd.extend(extra_args)
 
-    logger.info(f"Running AI Orchestrator headlessly: {' '.join(cmd)} (cwd={orch_path})")
+    logger.info(
+        f"Running AI Orchestrator headlessly: {' '.join(cmd)} (cwd={orch_path})"
+    )
 
     res = subprocess.run(
         cmd,

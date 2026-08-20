@@ -215,12 +215,14 @@ class SciteClient:
         self.config = config or SciteConfig()
         self.http_client = http_client or httpx.AsyncClient(
             timeout=self.config.timeout_seconds,
-            headers={
-                "Authorization": f"Bearer {self.config.api_key}",
-                "Content-Type": "application/json",
-            }
-            if self.config.api_key
-            else {},
+            headers=(
+                {
+                    "Authorization": f"Bearer {self.config.api_key}",
+                    "Content-Type": "application/json",
+                }
+                if self.config.api_key
+                else {}
+            ),
         )
 
     async def search_with_smart_citations(
@@ -358,10 +360,14 @@ class SciteClient:
 
                 issues = []
                 if data.get("retracted_count", 0) > 0:
-                    issues.append(f"{data['retracted_count']} retracted references found")
+                    issues.append(
+                        f"{data['retracted_count']} retracted references found"
+                    )
 
                 if data.get("contradicted_count", 0) > 0:
-                    issues.append(f"{data['contradicted_count']} contradicted references found")
+                    issues.append(
+                        f"{data['contradicted_count']} contradicted references found"
+                    )
 
                 # Calculate overall score
                 total = data.get("total_references", 1)

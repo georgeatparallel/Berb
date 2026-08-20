@@ -263,9 +263,13 @@ class CitationVerifier:
                 else:
                     result.layers_failed.append(VerificationLayer.WEB_GROUND)
                     if web_status == "inaccurate":
-                        result.errors.append("Web-grounding check found the citation inaccurate")
+                        result.errors.append(
+                            "Web-grounding check found the citation inaccurate"
+                        )
                     else:
-                        result.warnings.append("Web-grounding check could not verify citation")
+                        result.warnings.append(
+                            "Web-grounding check could not verify citation"
+                        )
 
         # Calculate overall confidence
         result.confidence = self._calculate_confidence(result)
@@ -397,7 +401,9 @@ class CitationVerifier:
                         f"{a.get('given', '')} {a.get('family', '')}".strip()
                         for a in message.get("author", [])
                     ],
-                    "year": message.get("created", {}).get("date-parts", [[None]])[0][0],
+                    "year": message.get("created", {}).get("date-parts", [[None]])[0][
+                        0
+                    ],
                     "journal": message.get("container-title", [""])[0],
                     "publisher": message.get("publisher", ""),
                 }
@@ -424,7 +430,9 @@ class CitationVerifier:
                 return {
                     "source": "datacite",
                     "title": attributes.get("titles", [{}])[0].get("title", ""),
-                    "authors": [c.get("name", "") for c in attributes.get("creators", [])],
+                    "authors": [
+                        c.get("name", "") for c in attributes.get("creators", [])
+                    ],
                     "year": attributes.get("publicationYear"),
                     "publisher": attributes.get("publisher", ""),
                 }
@@ -458,7 +466,11 @@ class CitationVerifier:
                     return {
                         "source": "arxiv",
                         "title": title_match.group(1).strip(),
-                        "authors": [a.strip() for a in author_match[1:]] if author_match else [],
+                        "authors": (
+                            [a.strip() for a in author_match[1:]]
+                            if author_match
+                            else []
+                        ),
                         "year": int(date_match.group(1)) if date_match else None,
                     }
         except Exception as e:
@@ -549,7 +561,9 @@ Respond with just a number."""
         """
         import os
 
-        api_key = self.config.perplexity_api_key or os.environ.get("PERPLEXITY_API_KEY", "")
+        api_key = self.config.perplexity_api_key or os.environ.get(
+            "PERPLEXITY_API_KEY", ""
+        )
         if not api_key:
             return None
 
@@ -624,7 +638,9 @@ Respond with just a number."""
             VerificationLayer.WEB_GROUND: 0.25,
         }
 
-        confidence = sum(layer_weights.get(layer, 0.0) for layer in result.layers_passed)
+        confidence = sum(
+            layer_weights.get(layer, 0.0) for layer in result.layers_passed
+        )
 
         # Adjust for claim alignment
         if result.claim_alignment > 0:
@@ -698,12 +714,18 @@ def create_verifier_from_env() -> CitationVerifier:
 
     return CitationVerifier(
         VerifierConfig(
-            enable_format_check=os.environ.get("CITATION_ENABLE_FORMAT", "true").lower() == "true",
-            enable_api_check=os.environ.get("CITATION_ENABLE_API", "true").lower() == "true",
-            enable_info_check=os.environ.get("CITATION_ENABLE_INFO", "true").lower() == "true",
-            enable_content_check=os.environ.get("CITATION_ENABLE_CONTENT", "true").lower()
+            enable_format_check=os.environ.get("CITATION_ENABLE_FORMAT", "true").lower()
             == "true",
-            enable_web_check=os.environ.get("CITATION_ENABLE_WEB", "true").lower() == "true",
+            enable_api_check=os.environ.get("CITATION_ENABLE_API", "true").lower()
+            == "true",
+            enable_info_check=os.environ.get("CITATION_ENABLE_INFO", "true").lower()
+            == "true",
+            enable_content_check=os.environ.get(
+                "CITATION_ENABLE_CONTENT", "true"
+            ).lower()
+            == "true",
+            enable_web_check=os.environ.get("CITATION_ENABLE_WEB", "true").lower()
+            == "true",
             timeout=int(os.environ.get("CITATION_TIMEOUT", "30")),
         )
     )

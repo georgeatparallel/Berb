@@ -41,7 +41,9 @@ class TestDeepQueryClient:
         """Test successful DeepQuery search."""
         mock_resp = _mock_urlopen(
             {
-                "choices": [{"message": {"content": "CRISPR is a gene editing technology..."}}],
+                "choices": [
+                    {"message": {"content": "CRISPR is a gene editing technology..."}}
+                ],
                 "citations": ["https://example.com/paper1"],
                 "usage": {
                     "prompt_tokens": 100,
@@ -92,7 +94,11 @@ class TestDeepQueryClient:
         def _fake_urlopen(req, timeout=None):  # noqa: ANN001
             captured_payloads.append(json.loads(req.data.decode("utf-8")))
             return _mock_urlopen(
-                {"choices": [{"message": {"content": "response"}}], "citations": [], "usage": {}}
+                {
+                    "choices": [{"message": {"content": "response"}}],
+                    "citations": [],
+                    "usage": {},
+                }
             )
 
         monkeypatch.setattr(
@@ -108,14 +114,20 @@ class TestDeepQueryClient:
         client.search("test", model="reasoning")
         assert captured_payloads[-1]["model"] == "sonar-reasoning-pro"
 
-    def test_search_domain_and_recency_filters(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_search_domain_and_recency_filters(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Domain/recency filters should be forwarded in the request payload."""
         captured_payloads: list[dict] = []
 
         def _fake_urlopen(req, timeout=None):  # noqa: ANN001
             captured_payloads.append(json.loads(req.data.decode("utf-8")))
             return _mock_urlopen(
-                {"choices": [{"message": {"content": "response"}}], "citations": [], "usage": {}}
+                {
+                    "choices": [{"message": {"content": "response"}}],
+                    "citations": [],
+                    "usage": {},
+                }
             )
 
         monkeypatch.setattr(
@@ -135,13 +147,19 @@ class TestDeepQueryClient:
         assert payload["search_domain_filter"] == ["arxiv.org", "openreview.net"]
         assert payload["search_recency_filter"] == "month"
 
-    def test_search_parses_search_results_citations(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_search_parses_search_results_citations(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Newer Perplexity responses use search_results, not citations."""
         mock_resp = _mock_urlopen(
             {
                 "choices": [{"message": {"content": "response"}}],
                 "search_results": [
-                    {"title": "Paper A", "url": "https://a.example", "date": "2024-01-01"},
+                    {
+                        "title": "Paper A",
+                        "url": "https://a.example",
+                        "date": "2024-01-01",
+                    },
                 ],
                 "usage": {},
             }
@@ -158,7 +176,9 @@ class TestDeepQueryClient:
             {"title": "Paper A", "url": "https://a.example", "date": "2024-01-01"}
         ]
 
-    def test_search_raises_on_exhausted_retries(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_search_raises_on_exhausted_retries(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """search() raises RuntimeError instead of returning a broken result."""
         import urllib.error
 
@@ -172,7 +192,9 @@ class TestDeepQueryClient:
         with pytest.raises(RuntimeError, match="Perplexity search failed"):
             client.search("test", model="quick")
 
-    def test_circuit_breaker_trips_on_repeated_429(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_circuit_breaker_trips_on_repeated_429(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Three consecutive 429s should trip the breaker and raise cleanly."""
         import urllib.error
 
@@ -244,7 +266,11 @@ class TestDeepQueryClient:
         mock_resp = _mock_urlopen(
             {
                 "choices": [
-                    {"message": {"content": "INACCURATE: Paper says something different..."}}
+                    {
+                        "message": {
+                            "content": "INACCURATE: Paper says something different..."
+                        }
+                    }
                 ],
                 "citations": [],
                 "usage": {},
@@ -337,7 +363,10 @@ class TestDeepMindAIClient:
         mock_response = MagicMock()
         mock_response.json.return_value = {
             "choices": [
-                {"message": {"content": '{"research_question": "..."}'}, "finish_reason": "stop"}
+                {
+                    "message": {"content": '{"research_question": "..."}'},
+                    "finish_reason": "stop",
+                }
             ],
             "usage": {"total_tokens": 50000},
         }
@@ -382,7 +411,10 @@ class TestDeepMindAIClient:
         mock_response = MagicMock()
         mock_response.json.return_value = {
             "choices": [
-                {"message": {"content": "Synthesis of findings..."}, "finish_reason": "stop"}
+                {
+                    "message": {"content": "Synthesis of findings..."},
+                    "finish_reason": "stop",
+                }
             ],
             "usage": {"total_tokens": 100000},
         }

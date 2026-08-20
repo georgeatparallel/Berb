@@ -72,7 +72,10 @@ def _no_network_literature_search():
         # EXPORT_PUBLISH shells out to a real `pdflatex` subprocess; whether
         # it's installed/behaves varies by environment and has been observed
         # to hang (not just fail) when run as part of the full module.
-        patch("berb.export.multi_format.MultiFormatExporter._export_pdf", return_value=None),
+        patch(
+            "berb.export.multi_format.MultiFormatExporter._export_pdf",
+            return_value=None,
+        ),
     ):
         yield
 
@@ -454,7 +457,9 @@ class TestPhaseA_ResearchScoping:
         # Setup: Create prior artifact from Stage 1
         stage1_dir = run_dir / f"stage-{Stage.TOPIC_INIT:02d}"
         stage1_dir.mkdir(parents=True, exist_ok=True)
-        (stage1_dir / "goal.md").write_text("# Research Goal\n\nTest goal", encoding="utf-8")
+        (stage1_dir / "goal.md").write_text(
+            "# Research Goal\n\nTest goal", encoding="utf-8"
+        )
 
         stage_dir = run_dir / f"stage-{Stage.PROBLEM_DECOMPOSE:02d}"
         stage_dir.mkdir(parents=True, exist_ok=True)
@@ -501,7 +506,9 @@ class TestPhaseB_LiteratureDiscovery:
             stage_dir = run_dir / f"stage-{stage_num:02d}"
             stage_dir.mkdir(parents=True, exist_ok=True)
             (stage_dir / "goal.md").write_text("# Goal", encoding="utf-8")
-        (run_dir / "stage-02" / "problem_tree.md").write_text("# Problem Tree", encoding="utf-8")
+        (run_dir / "stage-02" / "problem_tree.md").write_text(
+            "# Problem Tree", encoding="utf-8"
+        )
 
         stage_dir = run_dir / f"stage-{Stage.SEARCH_STRATEGY:02d}"
         stage_dir.mkdir(parents=True, exist_ok=True)
@@ -529,7 +536,9 @@ class TestPhaseB_LiteratureDiscovery:
         for stage_num in range(1, 4):
             stage_dir = run_dir / f"stage-{stage_num:02d}"
             stage_dir.mkdir(parents=True, exist_ok=True)
-        (run_dir / "stage-03" / "search_plan.yaml").write_text("queries: [test]", encoding="utf-8")
+        (run_dir / "stage-03" / "search_plan.yaml").write_text(
+            "queries: [test]", encoding="utf-8"
+        )
 
         stage_dir = run_dir / f"stage-{Stage.LITERATURE_COLLECT:02d}"
         stage_dir.mkdir(parents=True, exist_ok=True)
@@ -826,9 +835,10 @@ class TestPhaseE_ExperimentExecution:
             )
 
         # Stage 12 may succeed or need refinement
-        assert result.status in [StageStatus.DONE, StageStatus.BLOCKED_APPROVAL], (
-            f"Stage failed: {result.error}"
-        )
+        assert result.status in [
+            StageStatus.DONE,
+            StageStatus.BLOCKED_APPROVAL,
+        ], f"Stage failed: {result.error}"
 
     def test_stage_13_iterative_refine(
         self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
@@ -843,7 +853,9 @@ class TestPhaseE_ExperimentExecution:
         (exp_dir / "main.py").write_text("print('test')", encoding="utf-8")
         runs_dir = run_dir / "stage-12" / "runs"
         runs_dir.mkdir(parents=True, exist_ok=True)
-        (runs_dir / "run-1.json").write_text('{"status": "completed"}', encoding="utf-8")
+        (runs_dir / "run-1.json").write_text(
+            '{"status": "completed"}', encoding="utf-8"
+        )
 
         stage_dir = run_dir / f"stage-{Stage.ITERATIVE_REFINE:02d}"
         stage_dir.mkdir(parents=True, exist_ok=True)
@@ -861,9 +873,10 @@ class TestPhaseE_ExperimentExecution:
             )
 
         # May complete or need more iterations
-        assert result.status in [StageStatus.DONE, StageStatus.BLOCKED_APPROVAL], (
-            f"Stage failed: {result.error}"
-        )
+        assert result.status in [
+            StageStatus.DONE,
+            StageStatus.BLOCKED_APPROVAL,
+        ], f"Stage failed: {result.error}"
 
 
 # ============================================================================
@@ -977,8 +990,12 @@ class TestPhaseG_PaperWriting:
         for stage_num in range(1, 16):
             stage_dir = run_dir / f"stage-{stage_num:02d}"
             stage_dir.mkdir(parents=True, exist_ok=True)
-        (run_dir / "stage-14" / "analysis.md").write_text("# Analysis", encoding="utf-8")
-        (run_dir / "stage-15" / "decision.md").write_text("# Decision: Continue", encoding="utf-8")
+        (run_dir / "stage-14" / "analysis.md").write_text(
+            "# Analysis", encoding="utf-8"
+        )
+        (run_dir / "stage-15" / "decision.md").write_text(
+            "# Decision: Continue", encoding="utf-8"
+        )
 
         stage_dir = run_dir / f"stage-{Stage.PAPER_OUTLINE:02d}"
         stage_dir.mkdir(parents=True, exist_ok=True)
@@ -1069,7 +1086,9 @@ class TestPhaseG_PaperWriting:
         for stage_num in range(1, 19):
             stage_dir = run_dir / f"stage-{stage_num:02d}"
             stage_dir.mkdir(parents=True, exist_ok=True)
-        (run_dir / "stage-17" / "paper_draft.md").write_text("# Paper Draft", encoding="utf-8")
+        (run_dir / "stage-17" / "paper_draft.md").write_text(
+            "# Paper Draft", encoding="utf-8"
+        )
         (run_dir / "stage-18" / "reviews.md").write_text("# Reviews", encoding="utf-8")
 
         stage_dir = run_dir / f"stage-{Stage.PAPER_REVISION:02d}"
@@ -1114,7 +1133,9 @@ class TestPhaseH_Finalization:
         for stage_num in range(1, 20):
             stage_dir = run_dir / f"stage-{stage_num:02d}"
             stage_dir.mkdir(parents=True, exist_ok=True)
-            (stage_dir / "paper_revised.md").write_text("# Revised Paper", encoding="utf-8")
+            (stage_dir / "paper_revised.md").write_text(
+                "# Revised Paper", encoding="utf-8"
+            )
 
         stage_dir = run_dir / f"stage-{Stage.QUALITY_GATE:02d}"
         stage_dir.mkdir(parents=True, exist_ok=True)
@@ -1142,7 +1163,9 @@ class TestPhaseH_Finalization:
         for stage_num in range(1, 21):
             stage_dir = run_dir / f"stage-{stage_num:02d}"
             stage_dir.mkdir(parents=True, exist_ok=True)
-            (stage_dir / "quality_report.json").write_text('{"passed": true}', encoding="utf-8")
+            (stage_dir / "quality_report.json").write_text(
+                '{"passed": true}', encoding="utf-8"
+            )
 
         stage_dir = run_dir / f"stage-{Stage.KNOWLEDGE_ARCHIVE:02d}"
         stage_dir.mkdir(parents=True, exist_ok=True)
@@ -1169,7 +1192,9 @@ class TestPhaseH_Finalization:
         for stage_num in range(1, 22):
             stage_dir = run_dir / f"stage-{stage_num:02d}"
             stage_dir.mkdir(parents=True, exist_ok=True)
-        (run_dir / "stage-19" / "paper_revised.md").write_text("# Revised Paper", encoding="utf-8")
+        (run_dir / "stage-19" / "paper_revised.md").write_text(
+            "# Revised Paper", encoding="utf-8"
+        )
 
         stage_dir = run_dir / f"stage-{Stage.EXPORT_PUBLISH:02d}"
         stage_dir.mkdir(parents=True, exist_ok=True)
@@ -1277,7 +1302,9 @@ class TestIntegration_FullPipeline:
                 print(f"  - {stage.name}: {error}")
 
         # At least 80% should complete in mocked environment
-        assert len(completed_stages) >= 18, f"Only {len(completed_stages)}/23 stages completed"
+        assert (
+            len(completed_stages) >= 18
+        ), f"Only {len(completed_stages)}/23 stages completed"
 
 
 # ============================================================================

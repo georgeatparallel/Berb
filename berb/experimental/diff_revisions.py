@@ -124,7 +124,9 @@ class DiffBasedReviser:
             validation_error=validation_error,
         )
 
-        logger.info(f"Diff revision: +{lines_added} -{lines_removed} lines, valid={is_valid}")
+        logger.info(
+            f"Diff revision: +{lines_added} -{lines_removed} lines, valid={is_valid}"
+        )
 
         return result
 

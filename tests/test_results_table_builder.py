@@ -21,7 +21,11 @@ def _make_registry(
     primary_metric: float | None = None,
 ) -> VerifiedRegistry:
     """Create a registry from simple condition → {seed: value} mapping."""
-    summary = {"best_run": {"metrics": {}}, "condition_summaries": {}, "metrics_summary": {}}
+    summary = {
+        "best_run": {"metrics": {}},
+        "condition_summaries": {},
+        "metrics_summary": {},
+    }
     for cond_name, seeds in conditions.items():
         for seed_idx, value in seeds.items():
             key = f"{cond_name}/{seed_idx}/metric"

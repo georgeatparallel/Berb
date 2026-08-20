@@ -136,7 +136,9 @@ def check_config_valid(config_path: str | Path) -> CheckResult:
     typed_data = {str(key): value for key, value in data_map.items()}
     result = validate_config(typed_data)
     if result.ok:
-        return CheckResult(name="config_valid", status="pass", detail="Config validation ok")
+        return CheckResult(
+            name="config_valid", status="pass", detail="Config validation ok"
+        )
     return CheckResult(
         name="config_valid",
         status="fail",
@@ -267,7 +269,9 @@ def _fetch_models(base_url: str, api_key: str = "") -> tuple[int, dict[str, obje
     with _urlopen(request, timeout=5) as response:
         raw_bytes = _read_response_bytes(response)
         payload_map = _load_json_mapping(raw_bytes.decode("utf-8") or "{}")
-        payload: dict[str, object] = {str(key): value for key, value in payload_map.items()}
+        payload: dict[str, object] = {
+            str(key): value for key, value in payload_map.items()
+        }
         return 200, payload
 
 

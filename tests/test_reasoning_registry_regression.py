@@ -103,9 +103,9 @@ class TestSingletonThreadSafety:
         await asyncio.gather(*tasks)
 
         # All should have same instance ID
-        assert len(set(created_instances)) == 1, (
-            "Multiple instances created under concurrent access!"
-        )
+        assert (
+            len(set(created_instances)) == 1
+        ), "Multiple instances created under concurrent access!"
 
     def test_concurrent_sync_access(self):
         """BUG-R001: Concurrent sync calls return same instance."""
@@ -134,9 +134,9 @@ class TestSingletonThreadSafety:
             t.join()
 
         # All should have same instance ID
-        assert len(set(created_instances)) == 1, (
-            "Multiple instances created under concurrent access!"
-        )
+        assert (
+            len(set(created_instances)) == 1
+        ), "Multiple instances created under concurrent access!"
 
     @pytest.mark.asyncio
     async def test_mixed_sync_async_access(self):
@@ -221,7 +221,9 @@ class TestAutoRegisterErrorHandling:
         """BUG-R002: auto_register_all() handles import errors gracefully."""
         # Mock one module to fail
         with patch.dict("sys.modules", {"berb.reasoning.bayesian": None}):
-            with patch("builtins.__import__", side_effect=ImportError("Simulated import error")):
+            with patch(
+                "builtins.__import__", side_effect=ImportError("Simulated import error")
+            ):
                 # Should not raise
                 auto_register_all()
 
@@ -275,7 +277,10 @@ class TestAutoRegisterErrorHandling:
             auto_register_all()
 
         # Should have warning about partial failure
-        assert "complete with errors" in caplog.text.lower() or "registered" in caplog.text.lower()
+        assert (
+            "complete with errors" in caplog.text.lower()
+            or "registered" in caplog.text.lower()
+        )
 
 
 # =============================================================================
@@ -502,7 +507,9 @@ class TestSyncAsyncMixingWarning:
             get_reasoner("bayesian", llm_client=None)
 
         # Should have warning about async context
-        assert "async context" in caplog.text.lower() or "get_async" in caplog.text.lower()
+        assert (
+            "async context" in caplog.text.lower() or "get_async" in caplog.text.lower()
+        )
 
     @pytest.mark.asyncio
     async def test_no_warning_for_async_call(self, caplog):
@@ -559,7 +566,9 @@ class TestAutoRegisterIdempotency:
             auto_register_all()
 
         # Should have idempotency message
-        assert "already called" in caplog.text.lower() or "skipping" in caplog.text.lower()
+        assert (
+            "already called" in caplog.text.lower() or "skipping" in caplog.text.lower()
+        )
 
     def test_auto_register_after_clear(self, caplog):
         """BUG-NEW-002: Can re-register after clear_singletons()."""
@@ -622,7 +631,9 @@ class TestFallbackDatetimeParsing:
 
         # Should return current time (within reason)
         assert dt.tzinfo == UTC
-        assert "unable to parse" in caplog.text.lower() or "invalid" in caplog.text.lower()
+        assert (
+            "unable to parse" in caplog.text.lower() or "invalid" in caplog.text.lower()
+        )
 
     def test_from_dict_with_space_separator(self):
         """BUG-NEW-003: from_dict handles space-separated datetime."""

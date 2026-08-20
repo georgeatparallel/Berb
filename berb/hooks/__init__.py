@@ -150,7 +150,11 @@ class SessionStartHook(BaseHook):
                 errors="replace",
                 timeout=5,
             )
-            branch = branch_result.stdout.strip() if branch_result.returncode == 0 else "unknown"
+            branch = (
+                branch_result.stdout.strip()
+                if branch_result.returncode == 0
+                else "unknown"
+            )
 
             # Get uncommitted changes
             status_result = subprocess.run(
@@ -161,7 +165,9 @@ class SessionStartHook(BaseHook):
                 errors="replace",
                 timeout=5,
             )
-            uncommitted = len([line for line in status_result.stdout.split("\n") if line.strip()])
+            uncommitted = len(
+                [line for line in status_result.stdout.split("\n") if line.strip()]
+            )
 
             return {
                 "branch": branch,
@@ -256,7 +262,9 @@ class SkillEvaluationHook(BaseHook):
         result.data["readiness"] = readiness
 
         # Build message
-        result.message = f"Found {len(applicable_skills)} applicable skills for {stage_id}"
+        result.message = (
+            f"Found {len(applicable_skills)} applicable skills for {stage_id}"
+        )
 
         # Warnings for missing dependencies
         for skill, ready in readiness.items():
@@ -390,7 +398,9 @@ class SessionEndHook(BaseHook):
         completed = context.get("completed_stages", [])
         total_stages = 23
         if len(completed) < total_stages:
-            reminders.append(f"Continue pipeline: {len(completed)}/{total_stages} stages complete")
+            reminders.append(
+                f"Continue pipeline: {len(completed)}/{total_stages} stages complete"
+            )
 
         # Check for low-confidence results
         if context.get("low_confidence_results"):
@@ -523,7 +533,9 @@ class SecurityGuardHook(BaseHook):
         import re
 
         errors = []
-        import_pattern = re.compile(r"^(?:from\s+(\S+)\s+)?import\s+(\S+)", re.MULTILINE)
+        import_pattern = re.compile(
+            r"^(?:from\s+(\S+)\s+)?import\s+(\S+)", re.MULTILINE
+        )
 
         for match in import_pattern.finditer(code):
             module = match.group(1) or match.group(2)

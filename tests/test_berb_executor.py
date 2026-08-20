@@ -18,7 +18,9 @@ from berb.pipeline.registry import get_registration
 from berb.pipeline.stages import Stage, StageStatus
 
 
-def _patch_stage_executor(monkeypatch: pytest.MonkeyPatch, stage: Stage, fn: object) -> None:
+def _patch_stage_executor(
+    monkeypatch: pytest.MonkeyPatch, stage: Stage, fn: object
+) -> None:
     """Temporarily replace a stage's registered executor function.
 
     execute_stage() looks up stage implementations via the plugin
@@ -46,7 +48,9 @@ class FakeLLMClient:
 class FakeLLMClientWithConfig(FakeLLMClient):
     def __init__(self, response_text: str = "mock response"):
         super().__init__(response_text=response_text)
-        self.config: SimpleNamespace = SimpleNamespace(base_url="http://fake", api_key="fake-key")
+        self.config: SimpleNamespace = SimpleNamespace(
+            base_url="http://fake", api_key="fake-key"
+        )
 
 
 @pytest.fixture()
@@ -78,7 +82,9 @@ def rc_config(tmp_path: Path) -> RCConfig:
         "security": {"hitl_required_stages": [5, 9, 20]},
         "experiment": {"mode": "sandbox"},
     }
-    return RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
+    return RCConfig.from_dict(
+        data, project_root=tmp_path, check_paths=False, check_security=False
+    )
 
 
 @pytest.fixture()
@@ -93,7 +99,9 @@ def run_dir(tmp_path: Path) -> Path:
     return path
 
 
-def _write_prior_artifact(run_dir: Path, stage_num: int, filename: str, content: str) -> None:
+def _write_prior_artifact(
+    run_dir: Path, stage_num: int, filename: str, content: str
+) -> None:
     stage_dir = run_dir / f"stage-{stage_num:02d}"
     stage_dir.mkdir(parents=True, exist_ok=True)
     (stage_dir / filename).write_text(content, encoding="utf-8")
@@ -175,7 +183,9 @@ def test_safe_filename_truncates_to_100_chars() -> None:
     assert cleaned == "x" * 100
 
 
-def test_build_context_preamble_basic_fields(rc_config: RCConfig, run_dir: Path) -> None:
+def test_build_context_preamble_basic_fields(
+    rc_config: RCConfig, run_dir: Path
+) -> None:
     text = rc_executor._build_context_preamble(rc_config, run_dir)
     assert "## Research Context" in text
     assert "test-driven science" in text
@@ -335,13 +345,19 @@ def test_execute_stage_creates_stage_dir_writes_artifacts_and_meta(
     assert "goal.md" in result.artifacts
     assert "hardware_profile.json" in result.artifacts
     assert (run_dir / "stage-01").is_dir()
-    assert (run_dir / "stage-01" / "goal.md").read_text(encoding="utf-8").startswith("# Goal")
+    assert (
+        (run_dir / "stage-01" / "goal.md")
+        .read_text(encoding="utf-8")
+        .startswith("# Goal")
+    )
     assert (run_dir / "stage-01" / "hardware_profile.json").exists()
     assert len(fake_llm.calls) == 1
 
     decision = cast(
         dict[str, Any],
-        json.loads((run_dir / "stage-01" / "decision.json").read_text(encoding="utf-8")),
+        json.loads(
+            (run_dir / "stage-01" / "decision.json").read_text(encoding="utf-8")
+        ),
     )
     assert decision["run_id"] == "run-1"
     assert decision["status"] == "done"
@@ -451,7 +467,9 @@ def test_execute_stage_gate_behavior_auto_approve_true_keeps_done(
         **_kwargs: object,
     ):
         _ = llm
-        (stage_dir / "shortlist.jsonl").write_text('{"title": "paper"}\n', encoding="utf-8")
+        (stage_dir / "shortlist.jsonl").write_text(
+            '{"title": "paper"}\n', encoding="utf-8"
+        )
         return rc_executor.StageResult(
             stage=Stage.LITERATURE_SCREEN,
             status=StageStatus.DONE,
@@ -469,7 +487,9 @@ def test_execute_stage_gate_behavior_auto_approve_true_keeps_done(
     )
     assert result.status == StageStatus.DONE
     memory_entries = getattr(adapters.memory, "entries", [])
-    assert any(ns == "gates" and "auto-approved" in content for ns, content in memory_entries)
+    assert any(
+        ns == "gates" and "auto-approved" in content for ns, content in memory_entries
+    )
 
 
 def test_execute_stage_gate_behavior_auto_approve_false_blocks(
@@ -490,7 +510,9 @@ def test_execute_stage_gate_behavior_auto_approve_false_blocks(
         **_kwargs: object,
     ):
         _ = llm
-        (stage_dir / "shortlist.jsonl").write_text('{"title": "paper"}\n', encoding="utf-8")
+        (stage_dir / "shortlist.jsonl").write_text(
+            '{"title": "paper"}\n', encoding="utf-8"
+        )
         return rc_executor.StageResult(
             stage=Stage.LITERATURE_SCREEN,
             status=StageStatus.DONE,
@@ -833,7 +855,9 @@ class TestIterativeRefine:
             llm=None,
         )
 
-        payload = json.loads((stage_dir / "refinement_log.json").read_text(encoding="utf-8"))
+        payload = json.loads(
+            (stage_dir / "refinement_log.json").read_text(encoding="utf-8")
+        )
         assert payload["skipped"] is True
         assert payload["mode"] == "simulated"
         assert result.status == StageStatus.DONE
@@ -858,10 +882,14 @@ class TestIterativeRefine:
             llm=None,
         )
 
-        original_code = (run_dir / "stage-10" / "experiment.py").read_text(encoding="utf-8")
+        original_code = (run_dir / "stage-10" / "experiment.py").read_text(
+            encoding="utf-8"
+        )
         final_code = (stage_dir / "experiment_final.py").read_text(encoding="utf-8")
         assert original_code == final_code
-        payload = json.loads((stage_dir / "refinement_log.json").read_text(encoding="utf-8"))
+        payload = json.loads(
+            (stage_dir / "refinement_log.json").read_text(encoding="utf-8")
+        )
         assert payload["stop_reason"] == "llm_unavailable"
         assert result.status == StageStatus.DONE
 
@@ -883,11 +911,15 @@ class TestIterativeRefine:
             "```"
         )
 
-        rc_executor._execute_iterative_refine(stage_dir, run_dir, rc_config, adapters, llm=llm)
+        rc_executor._execute_iterative_refine(
+            stage_dir, run_dir, rc_config, adapters, llm=llm
+        )
 
         assert (stage_dir / "experiment_v1").is_dir()
         assert (stage_dir / "experiment_final.py").exists()
-        payload = json.loads((stage_dir / "refinement_log.json").read_text(encoding="utf-8"))
+        payload = json.loads(
+            (stage_dir / "refinement_log.json").read_text(encoding="utf-8")
+        )
         assert isinstance(payload.get("iterations"), list)
         assert payload["iterations"]
 
@@ -947,7 +979,9 @@ class TestIterativeRefine:
             check_paths=False,
             check_security=False,
         )
-        llm = FakeLLMClient("```python\nfor _ in range(3):\n    print('val_loss: 0.5000')\n```")
+        llm = FakeLLMClient(
+            "```python\nfor _ in range(3):\n    print('val_loss: 0.5000')\n```"
+        )
 
         rc_executor._execute_iterative_refine(
             stage_dir,
@@ -957,7 +991,9 @@ class TestIterativeRefine:
             llm=llm,
         )
 
-        payload = json.loads((stage_dir / "refinement_log.json").read_text(encoding="utf-8"))
+        payload = json.loads(
+            (stage_dir / "refinement_log.json").read_text(encoding="utf-8")
+        )
         assert payload["converged"] is True
         assert payload["stop_reason"] == "no_improvement_for_2_iterations"
 
@@ -1067,8 +1103,12 @@ class TestIterativeRefine:
             llm=llm,
         )
 
-        payload = json.loads((stage_dir / "refinement_log.json").read_text(encoding="utf-8"))
-        assert any("sandbox" in iteration for iteration in payload.get("iterations", []))
+        payload = json.loads(
+            (stage_dir / "refinement_log.json").read_text(encoding="utf-8")
+        )
+        assert any(
+            "sandbox" in iteration for iteration in payload.get("iterations", [])
+        )
 
 
 class TestExportPublishCodePackage:
@@ -1079,7 +1119,9 @@ class TestExportPublishCodePackage:
         rc_config: RCConfig,
         adapters: AdapterBundle,
     ) -> None:
-        _write_prior_artifact(run_dir, 19, "paper_revised.md", "# Test Paper\n\nSome content...")
+        _write_prior_artifact(
+            run_dir, 19, "paper_revised.md", "# Test Paper\n\nSome content..."
+        )
         _write_prior_artifact(
             run_dir,
             13,
@@ -1089,7 +1131,9 @@ class TestExportPublishCodePackage:
         stage_dir = tmp_path / "run" / "stage-22"
         stage_dir.mkdir(parents=True, exist_ok=True)
 
-        rc_executor._execute_export_publish(stage_dir, run_dir, rc_config, adapters, llm=None)
+        rc_executor._execute_export_publish(
+            stage_dir, run_dir, rc_config, adapters, llm=None
+        )
 
         assert (stage_dir / "code" / "experiment.py").exists()
         assert (stage_dir / "code" / "README.md").exists()
@@ -1103,7 +1147,9 @@ class TestExportPublishCodePackage:
         rc_config: RCConfig,
         adapters: AdapterBundle,
     ) -> None:
-        _write_prior_artifact(run_dir, 19, "paper_revised.md", "# Test Paper\n\nSome content...")
+        _write_prior_artifact(
+            run_dir, 19, "paper_revised.md", "# Test Paper\n\nSome content..."
+        )
         _write_prior_artifact(
             run_dir,
             10,
@@ -1113,7 +1159,9 @@ class TestExportPublishCodePackage:
         stage_dir = tmp_path / "run" / "stage-22"
         stage_dir.mkdir(parents=True, exist_ok=True)
 
-        rc_executor._execute_export_publish(stage_dir, run_dir, rc_config, adapters, llm=None)
+        rc_executor._execute_export_publish(
+            stage_dir, run_dir, rc_config, adapters, llm=None
+        )
 
         code_text = (stage_dir / "code" / "experiment.py").read_text(encoding="utf-8")
         assert "val_loss: 0.1" in code_text
@@ -1125,7 +1173,9 @@ class TestExportPublishCodePackage:
         rc_config: RCConfig,
         adapters: AdapterBundle,
     ) -> None:
-        _write_prior_artifact(run_dir, 19, "paper_revised.md", "# Test Paper\n\nSome content...")
+        _write_prior_artifact(
+            run_dir, 19, "paper_revised.md", "# Test Paper\n\nSome content..."
+        )
         stage_dir = tmp_path / "run" / "stage-22"
         stage_dir.mkdir(parents=True, exist_ok=True)
 
@@ -1147,7 +1197,9 @@ class TestExportPublishCodePackage:
         rc_config: RCConfig,
         adapters: AdapterBundle,
     ) -> None:
-        _write_prior_artifact(run_dir, 19, "paper_revised.md", "# Test Paper\n\nSome content...")
+        _write_prior_artifact(
+            run_dir, 19, "paper_revised.md", "# Test Paper\n\nSome content..."
+        )
         _write_prior_artifact(
             run_dir,
             13,
@@ -1162,9 +1214,13 @@ class TestExportPublishCodePackage:
         stage_dir = tmp_path / "run" / "stage-22"
         stage_dir.mkdir(parents=True, exist_ok=True)
 
-        rc_executor._execute_export_publish(stage_dir, run_dir, rc_config, adapters, llm=None)
+        rc_executor._execute_export_publish(
+            stage_dir, run_dir, rc_config, adapters, llm=None
+        )
 
-        requirements = (stage_dir / "code" / "requirements.txt").read_text(encoding="utf-8")
+        requirements = (stage_dir / "code" / "requirements.txt").read_text(
+            encoding="utf-8"
+        )
         assert "numpy" in requirements
         assert "torch" in requirements
         assert "scikit-learn" in requirements
@@ -1188,7 +1244,9 @@ class TestExportPublishCodePackage:
         stage_dir = tmp_path / "run" / "stage-22"
         stage_dir.mkdir(parents=True, exist_ok=True)
 
-        rc_executor._execute_export_publish(stage_dir, run_dir, rc_config, adapters, llm=None)
+        rc_executor._execute_export_publish(
+            stage_dir, run_dir, rc_config, adapters, llm=None
+        )
 
         readme = (stage_dir / "code" / "README.md").read_text(encoding="utf-8")
         assert "My Great Paper" in readme
@@ -1232,7 +1290,11 @@ class TestExportCitationGate:
         adapters: AdapterBundle,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        from berb.literature.verify import CitationResult, VerificationReport, VerifyStatus
+        from berb.literature.verify import (
+            CitationResult,
+            VerificationReport,
+            VerifyStatus,
+        )
 
         def _fake_verify(bib_text: str, **kwargs: object) -> VerificationReport:
             return VerificationReport(
@@ -1281,7 +1343,11 @@ class TestExportCitationGate:
         adapters: AdapterBundle,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        from berb.literature.verify import CitationResult, VerificationReport, VerifyStatus
+        from berb.literature.verify import (
+            CitationResult,
+            VerificationReport,
+            VerifyStatus,
+        )
 
         def _fake_verify(bib_text: str, **kwargs: object) -> VerificationReport:
             return VerificationReport(
@@ -1377,7 +1443,9 @@ class TestInventedCitationDetectionNotRepair:
         assert result.error is not None
         assert "invented2099key" in result.error
         assert (stage_dir / "invalid_citations.json").is_file()
-        invalid = json.loads((stage_dir / "invalid_citations.json").read_text(encoding="utf-8"))
+        invalid = json.loads(
+            (stage_dir / "invalid_citations.json").read_text(encoding="utf-8")
+        )
         assert "invented2099key" in invalid
 
         bib_text = (stage_dir / "references.bib").read_text(encoding="utf-8")
@@ -1392,7 +1460,11 @@ class TestInventedCitationDetectionNotRepair:
         adapters: AdapterBundle,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        from berb.literature.verify import CitationResult, VerificationReport, VerifyStatus
+        from berb.literature.verify import (
+            CitationResult,
+            VerificationReport,
+            VerifyStatus,
+        )
 
         def _fake_verify(bib_text: str, **kwargs: object) -> VerificationReport:
             return VerificationReport(
@@ -1414,7 +1486,10 @@ class TestInventedCitationDetectionNotRepair:
 
         monkeypatch.setattr("berb.literature.verify.verify_citations", _fake_verify)
         _write_prior_artifact(
-            run_dir, 19, "paper_revised.md", "# Test Paper\n\nCites [good2024paper] here.\n"
+            run_dir,
+            19,
+            "paper_revised.md",
+            "# Test Paper\n\nCites [good2024paper] here.\n",
         )
         _write_prior_artifact(
             run_dir,
@@ -1458,7 +1533,11 @@ class TestLiteratureCollectExpansionRounds:
         )
 
     def test_stops_early_on_diminishing_returns(
-        self, tmp_path: Path, run_dir: Path, rc_config: RCConfig, adapters: AdapterBundle
+        self,
+        tmp_path: Path,
+        run_dir: Path,
+        rc_config: RCConfig,
+        adapters: AdapterBundle,
     ) -> None:
         call_count = {"n": 0}
 
@@ -1466,7 +1545,9 @@ class TestLiteratureCollectExpansionRounds:
             call_count["n"] += 1
             if call_count["n"] == 1:
                 # Round 1: plenty of new candidates -> should continue.
-                return [self._fake_paper(f"Round1 Paper {i}", 100 - i) for i in range(5)]
+                return [
+                    self._fake_paper(f"Round1 Paper {i}", 100 - i) for i in range(5)
+                ]
             # Round 2: below _MIN_NEW_CANDIDATES_TO_CONTINUE -> stop here.
             return [self._fake_paper("Round2 Paper", 1)]
 
@@ -1489,14 +1570,19 @@ class TestLiteratureCollectExpansionRounds:
         assert "Round2 Paper" in candidates_text
 
     def test_runs_all_three_rounds_when_each_finds_enough(
-        self, tmp_path: Path, run_dir: Path, rc_config: RCConfig, adapters: AdapterBundle
+        self,
+        tmp_path: Path,
+        run_dir: Path,
+        rc_config: RCConfig,
+        adapters: AdapterBundle,
     ) -> None:
         call_count = {"n": 0}
 
         def _fake_search(queries, **kwargs):  # noqa: ANN001, ANN003
             call_count["n"] += 1
             return [
-                self._fake_paper(f"R{call_count['n']} Paper {i}", 100 - i) for i in range(5)
+                self._fake_paper(f"R{call_count['n']} Paper {i}", 100 - i)
+                for i in range(5)
             ]
 
         import unittest.mock
@@ -1513,10 +1599,17 @@ class TestLiteratureCollectExpansionRounds:
         assert call_count["n"] == 3
 
     def test_year_max_from_queries_json_reaches_search(
-        self, tmp_path: Path, run_dir: Path, rc_config: RCConfig, adapters: AdapterBundle
+        self,
+        tmp_path: Path,
+        run_dir: Path,
+        rc_config: RCConfig,
+        adapters: AdapterBundle,
     ) -> None:
         _write_prior_artifact(
-            run_dir, 3, "queries.json", json.dumps({"queries": ["test"], "year_max": 2023})
+            run_dir,
+            3,
+            "queries.json",
+            json.dumps({"queries": ["test"], "year_max": 2023}),
         )
         captured_kwargs: dict[str, object] = {}
 
@@ -1549,7 +1642,11 @@ class TestExperimentDesignFalsificationGate:
     """
 
     def test_gate_rejects_with_useful_error_not_typeerror(
-        self, tmp_path: Path, run_dir: Path, rc_config: RCConfig, adapters: AdapterBundle
+        self,
+        tmp_path: Path,
+        run_dir: Path,
+        rc_config: RCConfig,
+        adapters: AdapterBundle,
     ) -> None:
         _write_prior_artifact(run_dir, 1, "goal.md", "# Goal\nTest goal.")
         _write_prior_artifact(run_dir, 8, "hypotheses.md", "# H1\nTest hypothesis.")
@@ -1577,7 +1674,11 @@ class TestExperimentDesignFalsificationGate:
         assert "Falsification critic transcript" in result.error
 
     def test_gate_passes_open_when_gate_passed_true(
-        self, tmp_path: Path, run_dir: Path, rc_config: RCConfig, adapters: AdapterBundle
+        self,
+        tmp_path: Path,
+        run_dir: Path,
+        rc_config: RCConfig,
+        adapters: AdapterBundle,
     ) -> None:
         _write_prior_artifact(run_dir, 1, "goal.md", "# Goal\nTest goal.")
         _write_prior_artifact(run_dir, 8, "hypotheses.md", "# H1\nTest hypothesis.")
@@ -1618,7 +1719,11 @@ class TestExperimentDesignBaselineScout:
         )
 
     def test_corpus_methods_injected_into_prompt(
-        self, tmp_path: Path, run_dir: Path, rc_config: RCConfig, adapters: AdapterBundle
+        self,
+        tmp_path: Path,
+        run_dir: Path,
+        rc_config: RCConfig,
+        adapters: AdapterBundle,
     ) -> None:
         self._write_common_artifacts(run_dir)
         stage_dir = run_dir / "stage-09"
@@ -1628,7 +1733,9 @@ class TestExperimentDesignBaselineScout:
             "```yaml\nbaselines:\n  - existing_baseline\nproposed_methods:\n"
             "  - ours\nablations: []\n```"
         )
-        rc_executor._execute_experiment_design(stage_dir, run_dir, rc_config, adapters, llm=llm)
+        rc_executor._execute_experiment_design(
+            stage_dir, run_dir, rc_config, adapters, llm=llm
+        )
 
         assert len(llm.calls) >= 1
         all_prompts = " ".join(msg["content"] for call in llm.calls for msg in call)
@@ -1636,7 +1743,11 @@ class TestExperimentDesignBaselineScout:
         assert "A survey of deep learning methods" not in all_prompts
 
     def test_omitted_baselines_written_when_plan_misses_corpus_method(
-        self, tmp_path: Path, run_dir: Path, rc_config: RCConfig, adapters: AdapterBundle
+        self,
+        tmp_path: Path,
+        run_dir: Path,
+        rc_config: RCConfig,
+        adapters: AdapterBundle,
     ) -> None:
         self._write_common_artifacts(run_dir)
         stage_dir = run_dir / "stage-09"
@@ -1659,7 +1770,11 @@ class TestExperimentDesignBaselineScout:
         assert "GPT-4" in data["missing"]
 
     def test_no_omitted_baselines_file_when_plan_covers_corpus(
-        self, tmp_path: Path, run_dir: Path, rc_config: RCConfig, adapters: AdapterBundle
+        self,
+        tmp_path: Path,
+        run_dir: Path,
+        rc_config: RCConfig,
+        adapters: AdapterBundle,
     ) -> None:
         self._write_common_artifacts(run_dir)
         stage_dir = run_dir / "stage-09"
@@ -1669,12 +1784,18 @@ class TestExperimentDesignBaselineScout:
             "```yaml\nbaselines:\n  - GPT-4\nproposed_methods:\n"
             "  - ours\nablations: []\n```"
         )
-        rc_executor._execute_experiment_design(stage_dir, run_dir, rc_config, adapters, llm=llm)
+        rc_executor._execute_experiment_design(
+            stage_dir, run_dir, rc_config, adapters, llm=llm
+        )
 
         assert not (stage_dir / "omitted_baselines.json").exists()
 
     def test_no_candidates_file_no_omitted_baselines_check(
-        self, tmp_path: Path, run_dir: Path, rc_config: RCConfig, adapters: AdapterBundle
+        self,
+        tmp_path: Path,
+        run_dir: Path,
+        rc_config: RCConfig,
+        adapters: AdapterBundle,
     ) -> None:
         """Backwards compat: no candidates.jsonl -> no corpus injection, no crash."""
         _write_prior_artifact(run_dir, 1, "goal.md", "# Goal\nTest goal.")
@@ -1701,7 +1822,11 @@ class TestLiteratureScreenRealSearchGate:
     """
 
     def test_screen_fails_when_search_was_synthetic(
-        self, tmp_path: Path, run_dir: Path, rc_config: RCConfig, adapters: AdapterBundle
+        self,
+        tmp_path: Path,
+        run_dir: Path,
+        rc_config: RCConfig,
+        adapters: AdapterBundle,
     ) -> None:
         _write_prior_artifact(
             run_dir,
@@ -1713,7 +1838,9 @@ class TestLiteratureScreenRealSearchGate:
             run_dir,
             4,
             "search_meta.json",
-            json.dumps({"real_search": False, "queries_used": [], "total_candidates": 1}),
+            json.dumps(
+                {"real_search": False, "queries_used": [], "total_candidates": 1}
+            ),
         )
         stage_dir = run_dir / "stage-05"
         stage_dir.mkdir(parents=True, exist_ok=True)
@@ -1728,7 +1855,11 @@ class TestLiteratureScreenRealSearchGate:
         assert not (stage_dir / "shortlist.jsonl").exists()
 
     def test_screen_proceeds_when_search_was_real(
-        self, tmp_path: Path, run_dir: Path, rc_config: RCConfig, adapters: AdapterBundle
+        self,
+        tmp_path: Path,
+        run_dir: Path,
+        rc_config: RCConfig,
+        adapters: AdapterBundle,
     ) -> None:
         _write_prior_artifact(
             run_dir,
@@ -1743,7 +1874,9 @@ class TestLiteratureScreenRealSearchGate:
             run_dir,
             4,
             "search_meta.json",
-            json.dumps({"real_search": True, "queries_used": ["q1"], "total_candidates": 3}),
+            json.dumps(
+                {"real_search": True, "queries_used": ["q1"], "total_candidates": 3}
+            ),
         )
         stage_dir = run_dir / "stage-05"
         stage_dir.mkdir(parents=True, exist_ok=True)
@@ -1756,7 +1889,11 @@ class TestLiteratureScreenRealSearchGate:
         assert (stage_dir / "shortlist.jsonl").exists()
 
     def test_screen_proceeds_when_search_meta_missing(
-        self, tmp_path: Path, run_dir: Path, rc_config: RCConfig, adapters: AdapterBundle
+        self,
+        tmp_path: Path,
+        run_dir: Path,
+        rc_config: RCConfig,
+        adapters: AdapterBundle,
     ) -> None:
         """Backwards compat: absent search_meta.json must not block screening."""
         _write_prior_artifact(
@@ -1788,7 +1925,9 @@ class TestQualityGateEnsembleVeto:
         def __init__(self, llm_client: object = None) -> None:
             del llm_client
 
-        async def review_paper(self, paper_path: object, paper_text: object = None, **kw: object):
+        async def review_paper(
+            self, paper_path: object, paper_text: object = None, **kw: object
+        ):
             del paper_path, paper_text, kw
             return []
 
@@ -1828,7 +1967,9 @@ class TestQualityGateEnsembleVeto:
             "condition_summaries": {"baseline": {"metrics": {"accuracy": 0.95}}},
             "metrics_summary": {"accuracy": {"min": 0.9, "max": 0.96, "mean": 0.93}},
         }
-        _write_prior_artifact(run_dir, 14, "experiment_summary.json", json.dumps(exp_summary))
+        _write_prior_artifact(
+            run_dir, 14, "experiment_summary.json", json.dumps(exp_summary)
+        )
 
     def _strict_config(self, tmp_path: Path) -> RCConfig:
         """rc_config fixture's shape, but graceful_degradation=False so a
@@ -1864,7 +2005,9 @@ class TestQualityGateEnsembleVeto:
             "security": {"hitl_required_stages": [5, 9, 20]},
             "experiment": {"mode": "sandbox"},
         }
-        return RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
+        return RCConfig.from_dict(
+            data, project_root=tmp_path, check_paths=False, check_security=False
+        )
 
     def test_quality_gate_blocks_on_ensemble_reject_consensus(
         self,
@@ -1874,7 +2017,8 @@ class TestQualityGateEnsembleVeto:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         monkeypatch.setattr(
-            "berb.review.ensemble.AutomatedReviewerEnsemble", self._FakeRejectingEnsemble
+            "berb.review.ensemble.AutomatedReviewerEnsemble",
+            self._FakeRejectingEnsemble,
         )
         self._setup_run_dir(run_dir)
         stage_dir = run_dir / "stage-20"
@@ -1922,7 +2066,8 @@ class TestQualityGateEnsembleVeto:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         monkeypatch.setattr(
-            "berb.review.ensemble.AutomatedReviewerEnsemble", self._FakeRejectingEnsemble
+            "berb.review.ensemble.AutomatedReviewerEnsemble",
+            self._FakeRejectingEnsemble,
         )
         self._setup_run_dir(run_dir)
         llm = FakeLLMClient(json.dumps({"score_1_to_10": 9, "verdict": "accept"}))
@@ -1930,7 +2075,9 @@ class TestQualityGateEnsembleVeto:
 
         stage_dir_1 = run_dir / "stage-20"
         stage_dir_1.mkdir(parents=True, exist_ok=True)
-        first = rc_executor._execute_quality_gate(stage_dir_1, run_dir, config, adapters, llm=llm)
+        first = rc_executor._execute_quality_gate(
+            stage_dir_1, run_dir, config, adapters, llm=llm
+        )
         assert first.status is StageStatus.FAILED
 
         # Simulate the rollback -> rewrite -> re-run: same run_dir, fresh
@@ -1964,11 +2111,12 @@ class TestEnsembleStructuredContext:
                 verdict=ClaimVerdict.SUPPORTED,
             )
         )
+        _write_prior_artifact(run_dir, 17, "claim_manifest.json", manifest.to_json())
         _write_prior_artifact(
-            run_dir, 17, "claim_manifest.json", manifest.to_json()
-        )
-        _write_prior_artifact(
-            run_dir, 9, "exp_plan.yaml", "baselines:\n  - resnet50\nvariants:\n  - ours\n"
+            run_dir,
+            9,
+            "exp_plan.yaml",
+            "baselines:\n  - resnet50\nvariants:\n  - ours\n",
         )
 
         from berb.pipeline.stage_impls._review import (
@@ -2005,7 +2153,9 @@ class TestEnsembleStructuredContext:
             def __init__(self, llm_client: object = None) -> None:
                 del llm_client
 
-            async def review_paper(self, paper_path: object, paper_text: object = None, **kw):
+            async def review_paper(
+                self, paper_path: object, paper_text: object = None, **kw
+            ):
                 del paper_path, kw
                 captured["paper_text"] = paper_text
                 return []
@@ -2034,7 +2184,9 @@ class TestEnsembleStructuredContext:
                     output_path.write_text("ok", encoding="utf-8")
                 return "ok"
 
-        monkeypatch.setattr("berb.review.ensemble.AutomatedReviewerEnsemble", _SpyEnsemble)
+        monkeypatch.setattr(
+            "berb.review.ensemble.AutomatedReviewerEnsemble", _SpyEnsemble
+        )
 
         manifest = ClaimManifest(paper_stage="draft")
         manifest.add_claim(
@@ -2054,12 +2206,16 @@ class TestEnsembleStructuredContext:
             "condition_summaries": {"baseline": {"metrics": {"accuracy": 0.95}}},
             "metrics_summary": {"accuracy": {"min": 0.9, "max": 0.96, "mean": 0.93}},
         }
-        _write_prior_artifact(run_dir, 14, "experiment_summary.json", json.dumps(exp_summary))
+        _write_prior_artifact(
+            run_dir, 14, "experiment_summary.json", json.dumps(exp_summary)
+        )
 
         stage_dir = run_dir / "stage-20"
         stage_dir.mkdir(parents=True, exist_ok=True)
         llm = FakeLLMClient(json.dumps({"score_1_to_10": 9, "verdict": "accept"}))
-        rc_executor._execute_quality_gate(stage_dir, run_dir, rc_config, adapters, llm=llm)
+        rc_executor._execute_quality_gate(
+            stage_dir, run_dir, rc_config, adapters, llm=llm
+        )
 
         assert "XYZZY99" in str(captured.get("paper_text", ""))
         assert "Some content" in str(captured.get("paper_text", ""))
@@ -2082,7 +2238,9 @@ class TestEnsembleStructuredContext:
             def __init__(self, llm_client: object = None) -> None:
                 del llm_client
 
-            async def review_paper(self, paper_path: object, paper_text: object = None, **kw):
+            async def review_paper(
+                self, paper_path: object, paper_text: object = None, **kw
+            ):
                 del paper_path, kw
                 captured["paper_text"] = paper_text
                 return []
@@ -2092,9 +2250,16 @@ class TestEnsembleStructuredContext:
 
                 del reviews
                 return MetaReview(
-                    reviews=[], average_score=8.0, score_std=0.0, max_score=8.0,
-                    min_score=8.0, score_distribution={}, consensus_decision=Decision.ACCEPT,
-                    confidence=1.0, meta_review_text="", acceptance_recommendation="accept",
+                    reviews=[],
+                    average_score=8.0,
+                    score_std=0.0,
+                    max_score=8.0,
+                    min_score=8.0,
+                    score_distribution={},
+                    consensus_decision=Decision.ACCEPT,
+                    confidence=1.0,
+                    meta_review_text="",
+                    acceptance_recommendation="accept",
                     reviewer_conflicts=[],
                 )
 
@@ -2104,7 +2269,9 @@ class TestEnsembleStructuredContext:
                     output_path.write_text("ok", encoding="utf-8")
                 return "ok"
 
-        monkeypatch.setattr("berb.review.ensemble.AutomatedReviewerEnsemble", _SpyEnsemble)
+        monkeypatch.setattr(
+            "berb.review.ensemble.AutomatedReviewerEnsemble", _SpyEnsemble
+        )
 
         _write_prior_artifact(
             run_dir, 19, "paper_revised.md", "# Test Paper\n\nSome content...\n"
@@ -2113,7 +2280,9 @@ class TestEnsembleStructuredContext:
         stage_dir.mkdir(parents=True, exist_ok=True)
         llm = FakeLLMClient(json.dumps({"score_1_to_10": 9, "verdict": "accept"}))
 
-        rc_executor._execute_quality_gate(stage_dir, run_dir, rc_config, adapters, llm=llm)
+        rc_executor._execute_quality_gate(
+            stage_dir, run_dir, rc_config, adapters, llm=llm
+        )
 
         paper_text = str(captured.get("paper_text", ""))
         assert "Target Venue" in paper_text
@@ -2147,7 +2316,9 @@ class TestQualityGateClaimAdjudication:
             "condition_summaries": {"baseline": {"metrics": {"accuracy": 0.95}}},
             "metrics_summary": {"accuracy": {"min": 0.9, "max": 0.96, "mean": 0.93}},
         }
-        _write_prior_artifact(run_dir, 14, "experiment_summary.json", json.dumps(exp_summary))
+        _write_prior_artifact(
+            run_dir, 14, "experiment_summary.json", json.dumps(exp_summary)
+        )
 
     def test_writes_claim_adjudication_when_manifest_present(
         self,
@@ -2170,9 +2341,16 @@ class TestQualityGateClaimAdjudication:
                 from berb.review.ensemble import Decision, MetaReview
 
                 return MetaReview(
-                    reviews=[], average_score=8.0, score_std=0.0, max_score=8.0,
-                    min_score=8.0, score_distribution={}, consensus_decision=Decision.ACCEPT,
-                    confidence=1.0, meta_review_text="", acceptance_recommendation="accept",
+                    reviews=[],
+                    average_score=8.0,
+                    score_std=0.0,
+                    max_score=8.0,
+                    min_score=8.0,
+                    score_distribution={},
+                    consensus_decision=Decision.ACCEPT,
+                    confidence=1.0,
+                    meta_review_text="",
+                    acceptance_recommendation="accept",
                     reviewer_conflicts=[],
                 )
 
@@ -2181,7 +2359,9 @@ class TestQualityGateClaimAdjudication:
                     output_path.write_text("ok", encoding="utf-8")
                 return "ok"
 
-        monkeypatch.setattr("berb.review.ensemble.AutomatedReviewerEnsemble", _NoOpEnsemble)
+        monkeypatch.setattr(
+            "berb.review.ensemble.AutomatedReviewerEnsemble", _NoOpEnsemble
+        )
 
         def _fake_chat(messages, **kwargs):
             from berb.llm.client import LLMResponse
@@ -2189,11 +2369,14 @@ class TestQualityGateClaimAdjudication:
             prompt = messages[-1]["content"]
             if "auditing a scientific claim" in prompt:
                 return LLMResponse(
-                    content=json.dumps({"status": "unsupported", "reasoning": "no such data"}),
+                    content=json.dumps(
+                        {"status": "unsupported", "reasoning": "no such data"}
+                    ),
                     model="fake",
                 )
             return LLMResponse(
-                content=json.dumps({"score_1_to_10": 9, "verdict": "accept"}), model="fake"
+                content=json.dumps({"score_1_to_10": 9, "verdict": "accept"}),
+                model="fake",
             )
 
         llm = FakeLLMClient("")
@@ -2203,7 +2386,9 @@ class TestQualityGateClaimAdjudication:
         stage_dir = run_dir / "stage-20"
         stage_dir.mkdir(parents=True, exist_ok=True)
 
-        rc_executor._execute_quality_gate(stage_dir, run_dir, rc_config, adapters, llm=llm)
+        rc_executor._execute_quality_gate(
+            stage_dir, run_dir, rc_config, adapters, llm=llm
+        )
 
         adjudication_path = stage_dir / "claim_adjudication.json"
         assert adjudication_path.is_file()
@@ -2212,7 +2397,11 @@ class TestQualityGateClaimAdjudication:
         assert data[0]["status"] == "unsupported"
 
     def test_no_adjudication_file_without_manifest(
-        self, tmp_path: Path, run_dir: Path, rc_config: RCConfig, adapters: AdapterBundle
+        self,
+        tmp_path: Path,
+        run_dir: Path,
+        rc_config: RCConfig,
+        adapters: AdapterBundle,
     ) -> None:
         _write_prior_artifact(
             run_dir, 19, "paper_revised.md", "# Test Paper\n\nSome content...\n"
@@ -2221,12 +2410,18 @@ class TestQualityGateClaimAdjudication:
         stage_dir.mkdir(parents=True, exist_ok=True)
         llm = FakeLLMClient(json.dumps({"score_1_to_10": 9, "verdict": "accept"}))
 
-        rc_executor._execute_quality_gate(stage_dir, run_dir, rc_config, adapters, llm=llm)
+        rc_executor._execute_quality_gate(
+            stage_dir, run_dir, rc_config, adapters, llm=llm
+        )
 
         assert not (stage_dir / "claim_adjudication.json").exists()
 
     def test_no_adjudication_without_llm(
-        self, tmp_path: Path, run_dir: Path, rc_config: RCConfig, adapters: AdapterBundle
+        self,
+        tmp_path: Path,
+        run_dir: Path,
+        rc_config: RCConfig,
+        adapters: AdapterBundle,
     ) -> None:
         self._setup(run_dir)
         stage_dir = run_dir / "stage-20"
@@ -2292,7 +2487,9 @@ class TestExtractTopicKeywords:
 
 class TestTopicConstraintBlock:
     def test_contains_topic(self) -> None:
-        block = rc_executor._topic_constraint_block("Transformer attention for time series")
+        block = rc_executor._topic_constraint_block(
+            "Transformer attention for time series"
+        )
         assert "Transformer attention for time series" in block
 
     def test_contains_prohibition(self) -> None:
@@ -2406,14 +2603,18 @@ class TestMultiPerspectiveGenerate:
         roles = {"critic": {"system": "Be critical.", "user": "Criticize {topic}."}}
         fake_llm = FakeLLMClient("critical analysis here")
         perspectives_dir = tmp_path / "perspectives"
-        rc_executor._multi_perspective_generate(fake_llm, roles, {"topic": "ml"}, perspectives_dir)
+        rc_executor._multi_perspective_generate(
+            fake_llm, roles, {"topic": "ml"}, perspectives_dir
+        )
         content = (perspectives_dir / "critic.md").read_text()
         assert content == "critical analysis here"
 
     def test_renders_variables_in_prompts(self, tmp_path: Path) -> None:
         roles = {"r1": {"system": "Sys for {topic}.", "user": "User for {topic}."}}
         fake_llm = FakeLLMClient("ok")
-        rc_executor._multi_perspective_generate(fake_llm, roles, {"topic": "RL"}, tmp_path / "p")
+        rc_executor._multi_perspective_generate(
+            fake_llm, roles, {"topic": "RL"}, tmp_path / "p"
+        )
         call = fake_llm.calls[0]
         assert "RL" in call[0]["content"]
 
@@ -2440,7 +2641,9 @@ class TestHypothesisGenDebate:
         # hits real academic-search APIs unless mocked — without this every
         # test in this class hangs retrying live network calls in a
         # sandboxed environment.
-        monkeypatch.setattr("berb.literature.search.search_papers_multi_query", lambda *a, **kw: [])
+        monkeypatch.setattr(
+            "berb.literature.search.search_papers_multi_query", lambda *a, **kw: []
+        )
 
     def test_hypothesis_gen_with_llm_creates_perspectives(
         self,
@@ -2492,7 +2695,9 @@ class TestHypothesisRepair:
 
     @pytest.fixture(autouse=True)
     def _no_live_novelty_search(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr("berb.literature.search.search_papers_multi_query", lambda *a, **kw: [])
+        monkeypatch.setattr(
+            "berb.literature.search.search_papers_multi_query", lambda *a, **kw: []
+        )
 
     def test_hypothesis_repaired_after_hard_severity_issue(
         self, tmp_path: Path, rc_config: RCConfig, adapters: AdapterBundle
@@ -2551,7 +2756,9 @@ class TestHypothesisRepair:
         final_hypotheses = (stage_dir / "hypotheses.md").read_text(encoding="utf-8")
         assert _REVISED in final_hypotheses
 
-        state = json.loads((stage_dir / "hypothesis_state.json").read_text(encoding="utf-8"))
+        state = json.loads(
+            (stage_dir / "hypothesis_state.json").read_text(encoding="utf-8")
+        )
         assert any(h.get("repaired") for h in state["hypotheses"])
         assert state["gate_passed"] is True
 
@@ -2637,7 +2844,9 @@ class TestResultAnalysisDebate:
             "condition_summaries": {"baseline": {"metrics": {"accuracy": 0.95}}},
             "metrics_summary": {"accuracy": {"min": 0.9, "max": 0.96, "mean": 0.93}},
         }
-        _write_prior_artifact(run_dir, 14, "experiment_summary.json", json.dumps(exp_summary))
+        _write_prior_artifact(
+            run_dir, 14, "experiment_summary.json", json.dumps(exp_summary)
+        )
 
         result = rc_executor._execute_result_analysis(
             stage_dir, run_dir, rc_config, adapters, llm=None
@@ -2687,7 +2896,9 @@ class TestParseMetricsFromStdout:
 
         stdout = "UCB (Adversarial) cumulative_regret: -3877.5323"
         metrics = _parse_metrics_from_stdout(stdout)
-        assert metrics["UCB (Adversarial) cumulative_regret"] == pytest.approx(-3877.5323)
+        assert metrics["UCB (Adversarial) cumulative_regret"] == pytest.approx(
+            -3877.5323
+        )
 
     def test_filters_log_lines(self) -> None:
         from berb.pipeline.executor import _parse_metrics_from_stdout
@@ -3057,7 +3268,9 @@ class TestLoadHardwareProfile:
         stage = run_dir / "stage-01"
         stage.mkdir()
         profile = {"has_gpu": True, "gpu_type": "mps", "tier": "limited"}
-        (stage / "hardware_profile.json").write_text(json.dumps(profile), encoding="utf-8")
+        (stage / "hardware_profile.json").write_text(
+            json.dumps(profile), encoding="utf-8"
+        )
         result = rc_executor._load_hardware_profile(run_dir)
         assert result is not None
         assert result["gpu_type"] == "mps"
@@ -3077,7 +3290,9 @@ class TestExpandSearchQueries:
 
     def test_adds_broader_queries(self) -> None:
         queries = ["gradient descent optimization algorithms"]
-        topic = "Comparing gradient descent optimization algorithms on benchmark functions"
+        topic = (
+            "Comparing gradient descent optimization algorithms on benchmark functions"
+        )
         result = rc_executor._expand_search_queries(queries, topic)
         assert len(result) > len(queries)
 
@@ -3179,7 +3394,9 @@ class TestComputeBudgetBlock:
         _write_prior_artifact(run_dir, 10, "exp_plan.yaml", "objectives: test")
 
         # Capture what the LLM receives
-        llm = FakeLLMClient("```filename:main.py\nimport numpy as np\nprint('best_loss: 0.1')\n```")
+        llm = FakeLLMClient(
+            "```filename:main.py\nimport numpy as np\nprint('best_loss: 0.1')\n```"
+        )
         stage_dir = run_dir / "stage-11"
         stage_dir.mkdir(parents=True, exist_ok=True)
 
@@ -3342,9 +3559,13 @@ class TestTimeoutAwareRefine:
             data, project_root=tmp_path, check_paths=False, check_security=False
         )
 
-        llm = FakeLLMClient("```python\nimport numpy as np\nprint('best_loss: 0.1')\n```")
+        llm = FakeLLMClient(
+            "```python\nimport numpy as np\nprint('best_loss: 0.1')\n```"
+        )
 
-        rc_executor._execute_iterative_refine(stage_dir, run_dir, cfg, adapters, llm=llm)
+        rc_executor._execute_iterative_refine(
+            stage_dir, run_dir, cfg, adapters, llm=llm
+        )
 
         # The LLM should have received the timeout-aware prompt
         assert len(llm.calls) >= 1
@@ -3360,7 +3581,11 @@ class TestDataIntegrityBlock:
     """Test paper draft blocked when no metrics exist (R4-2a)."""
 
     def test_paper_draft_blocked_with_no_metrics(
-        self, tmp_path: Path, run_dir: Path, rc_config: RCConfig, adapters: AdapterBundle
+        self,
+        tmp_path: Path,
+        run_dir: Path,
+        rc_config: RCConfig,
+        adapters: AdapterBundle,
     ) -> None:
         # Write prior artifacts with NO metrics
         _write_prior_artifact(run_dir, 16, "outline.md", "# Outline\n## Abstract\n")
@@ -3368,7 +3593,14 @@ class TestDataIntegrityBlock:
         runs_dir = run_dir / "stage-12" / "runs"
         runs_dir.mkdir(parents=True, exist_ok=True)
         (runs_dir / "run-1.json").write_text(
-            json.dumps({"run_id": "run-1", "status": "failed", "metrics": {}, "timed_out": True}),
+            json.dumps(
+                {
+                    "run_id": "run-1",
+                    "status": "failed",
+                    "metrics": {},
+                    "timed_out": True,
+                }
+            ),
             encoding="utf-8",
         )
 
@@ -3376,7 +3608,9 @@ class TestDataIntegrityBlock:
         stage_dir.mkdir(parents=True, exist_ok=True)
 
         llm = FakeLLMClient("should not be called")
-        result = rc_executor._execute_paper_draft(stage_dir, run_dir, rc_config, adapters, llm=llm)
+        result = rc_executor._execute_paper_draft(
+            stage_dir, run_dir, rc_config, adapters, llm=llm
+        )
 
         assert result.status == StageStatus.FAILED
         draft = (stage_dir / "paper_draft.md").read_text(encoding="utf-8")
@@ -3385,7 +3619,11 @@ class TestDataIntegrityBlock:
         assert len(llm.calls) == 0
 
     def test_paper_draft_proceeds_with_metrics(
-        self, tmp_path: Path, run_dir: Path, rc_config: RCConfig, adapters: AdapterBundle
+        self,
+        tmp_path: Path,
+        run_dir: Path,
+        rc_config: RCConfig,
+        adapters: AdapterBundle,
     ) -> None:
         _write_prior_artifact(run_dir, 16, "outline.md", "# Outline\n## Abstract\n")
         # Write experiment data with real metrics
@@ -3407,7 +3645,9 @@ class TestDataIntegrityBlock:
         stage_dir.mkdir(parents=True, exist_ok=True)
 
         llm = FakeLLMClient("# Paper Title\n## Abstract\nSome abstract text.")
-        rc_executor._execute_paper_draft(stage_dir, run_dir, rc_config, adapters, llm=llm)
+        rc_executor._execute_paper_draft(
+            stage_dir, run_dir, rc_config, adapters, llm=llm
+        )
 
         # Should proceed (LLM was called)
         assert len(llm.calls) >= 1
@@ -3481,9 +3721,15 @@ class TestCitationPreVerificationGating:
         adapters: AdapterBundle,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        from berb.literature.verify import CitationResult, VerificationReport, VerifyStatus
+        from berb.literature.verify import (
+            CitationResult,
+            VerificationReport,
+            VerifyStatus,
+        )
 
-        def _fake_verify_citations(bib_text: str, **kwargs: object) -> VerificationReport:
+        def _fake_verify_citations(
+            bib_text: str, **kwargs: object
+        ) -> VerificationReport:
             return VerificationReport(
                 total=2,
                 verified=1,
@@ -3517,7 +3763,9 @@ class TestCitationPreVerificationGating:
         stage_dir.mkdir(parents=True, exist_ok=True)
 
         llm = FakeLLMClient("# Paper Title\n## Abstract\nSome abstract text.")
-        rc_executor._execute_paper_draft(stage_dir, run_dir, rc_config, adapters, llm=llm)
+        rc_executor._execute_paper_draft(
+            stage_dir, run_dir, rc_config, adapters, llm=llm
+        )
 
         assert len(llm.calls) >= 1
         all_prompts = " ".join(msg["content"] for call in llm.calls for msg in call)
@@ -3547,7 +3795,11 @@ class TestTitleGuidelines:
         assert "5-sentence" in block or "problem" in block.lower()
 
     def test_title_guidelines_injected_into_paper_draft(
-        self, tmp_path: Path, run_dir: Path, rc_config: RCConfig, adapters: AdapterBundle
+        self,
+        tmp_path: Path,
+        run_dir: Path,
+        rc_config: RCConfig,
+        adapters: AdapterBundle,
     ) -> None:
         _write_prior_artifact(run_dir, 16, "outline.md", "# Outline\n")
         runs_dir = run_dir / "stage-12" / "runs"
@@ -3568,7 +3820,9 @@ class TestTitleGuidelines:
         stage_dir.mkdir(parents=True, exist_ok=True)
 
         llm = FakeLLMClient("# Paper Title\n## Abstract\nText.")
-        rc_executor._execute_paper_draft(stage_dir, run_dir, rc_config, adapters, llm=llm)
+        rc_executor._execute_paper_draft(
+            stage_dir, run_dir, rc_config, adapters, llm=llm
+        )
 
         all_prompts = " ".join(msg["content"] for call in llm.calls for msg in call)
         assert "Title" in all_prompts or "TITLE" in all_prompts
@@ -3610,7 +3864,9 @@ class TestConferenceWritingQuality:
         )
         # System prompt should mention key principles
         assert "NOVELTY" in sp.system or "novelty" in sp.system.lower()
-        assert "fabricate" in sp.system.lower() or "real experimental" in sp.system.lower()
+        assert (
+            "fabricate" in sp.system.lower() or "real experimental" in sp.system.lower()
+        )
 
 
 # ── R5-1 & R5-2: Bug Fixes Tests ────────────────────────────────────
@@ -3646,7 +3902,13 @@ class TestRefineTimeoutAndIterationCap:
         runs_dir = run_dir / "stage-12" / "runs"
         runs_dir.mkdir(parents=True, exist_ok=True)
         (runs_dir / "run-1.json").write_text(
-            json.dumps({"run_id": "run-1", "status": "completed", "metrics": {"best_loss": 0.5}}),
+            json.dumps(
+                {
+                    "run_id": "run-1",
+                    "status": "completed",
+                    "metrics": {"best_loss": 0.5},
+                }
+            ),
             encoding="utf-8",
         )
         exp_dir = run_dir / "stage-11" / "experiment"
@@ -3696,9 +3958,13 @@ class TestRefineTimeoutAndIterationCap:
         # LLM always returns same code — will trigger no_improvement early stop
         llm = FakeLLMClient("```python\nprint('best_loss: 0.5')\n```")
 
-        rc_executor._execute_iterative_refine(stage_dir, run_dir, cfg, adapters, llm=llm)
+        rc_executor._execute_iterative_refine(
+            stage_dir, run_dir, cfg, adapters, llm=llm
+        )
 
-        log = json.loads((stage_dir / "refinement_log.json").read_text(encoding="utf-8"))
+        log = json.loads(
+            (stage_dir / "refinement_log.json").read_text(encoding="utf-8")
+        )
         # Should have been allowed more than 3 iterations (capped at 7)
         assert log["max_iterations_executed"] == 7
         # But may have stopped early due to no_improvement_for_2_iterations
@@ -3823,7 +4089,9 @@ class TestExperimentHarness:
             h.log_result({"condition": "A", "value": 1.0})
             h.finalize()
 
-            results = json.loads((tmp_path / "results.json").read_text(encoding="utf-8"))
+            results = json.loads(
+                (tmp_path / "results.json").read_text(encoding="utf-8")
+            )
             assert results["metrics"]["accuracy"] == 0.95
             assert results["metrics"]["loss"] == 0.05
             assert len(results["results"]) == 1
@@ -3874,7 +4142,9 @@ class TestExperimentHarness:
         project = tmp_path / "project"
         project.mkdir()
         (project / "main.py").write_text("print('test: 1.0')\n", encoding="utf-8")
-        (project / "experiment_harness.py").write_text("# FAKE HARNESS", encoding="utf-8")
+        (project / "experiment_harness.py").write_text(
+            "# FAKE HARNESS", encoding="utf-8"
+        )
 
         sandbox.run_project(project, timeout_sec=5)
 
@@ -3906,7 +4176,9 @@ class TestStdoutTruncation:
         # Create a run with very long stdout
         runs_dir = run_dir / "stage-12" / "runs"
         runs_dir.mkdir(parents=True, exist_ok=True)
-        long_stdout = "\n".join(f"step {i}: loss={0.5 - i * 0.001:.6f}" for i in range(200))
+        long_stdout = "\n".join(
+            f"step {i}: loss={0.5 - i * 0.001:.6f}" for i in range(200)
+        )
         (runs_dir / "run-1.json").write_text(
             json.dumps(
                 {
@@ -3964,7 +4236,9 @@ class TestStdoutTruncation:
         )
 
         llm = FakeLLMClient("```python\nprint('best_loss: 0.3')\n```")
-        rc_executor._execute_iterative_refine(stage_dir, run_dir, cfg, adapters, llm=llm)
+        rc_executor._execute_iterative_refine(
+            stage_dir, run_dir, cfg, adapters, llm=llm
+        )
 
         # The LLM should have received truncated stdout, not all 200 lines
         assert len(llm.calls) >= 1
@@ -4044,7 +4318,9 @@ class TestNoImproveStreakFix:
 
         # LLM returns code that won't produce metrics in simulated mode
         llm = FakeLLMClient("```python\nprint('no metrics here')\n```")
-        rc_executor._execute_iterative_refine(stage_dir, run_dir, cfg, adapters, llm=llm)
+        rc_executor._execute_iterative_refine(
+            stage_dir, run_dir, cfg, adapters, llm=llm
+        )
 
         # Should abort after 3 consecutive no-metrics iterations
         log_path = stage_dir / "refinement_log.json"
@@ -4139,7 +4415,9 @@ class TestStdoutFailureDetection:
         (run_dir / "stage-10").mkdir()
         exp_dir = run_dir / "stage-10" / "experiment"
         exp_dir.mkdir()
-        (exp_dir / "main.py").write_text("print('primary_metric: 0.95')\n", encoding="utf-8")
+        (exp_dir / "main.py").write_text(
+            "print('primary_metric: 0.95')\n", encoding="utf-8"
+        )
         (run_dir / "stage-11").mkdir()
         (run_dir / "stage-11" / "schedule.json").write_text("{}", encoding="utf-8")
 
@@ -4212,7 +4490,9 @@ class TestSecurityRejectionStatus:
         (run_dir / "stage-10").mkdir()
         exp_dir = run_dir / "stage-10" / "experiment"
         exp_dir.mkdir()
-        (exp_dir / "main.py").write_text("import os\nos.system('id')\n", encoding="utf-8")
+        (exp_dir / "main.py").write_text(
+            "import os\nos.system('id')\n", encoding="utf-8"
+        )
         (run_dir / "stage-11").mkdir()
         (run_dir / "stage-11" / "schedule.json").write_text("{}", encoding="utf-8")
 
@@ -4284,7 +4564,9 @@ class TestMetricValUndefined:
         sandbox_pos = source.find("if validation.ok and config.experiment.mode")
         assert init_pos != -1, "metric_val = None not found"
         assert sandbox_pos != -1, "sandbox block not found"
-        assert init_pos < sandbox_pos, "metric_val = None should come before sandbox block"
+        assert (
+            init_pos < sandbox_pos
+        ), "metric_val = None should come before sandbox block"
 
 
 class TestConsecutiveEmptyMetrics:
@@ -4425,7 +4707,9 @@ class TestEvidenceBoundedWriting:
         )
         assert "EVIDENCE-BOUNDING RULES" in sp.system
         assert "title" in sp.system.lower()
-        assert "causal claim" in sp.system.lower() or "causal claims" in sp.system.lower()
+        assert (
+            "causal claim" in sp.system.lower() or "causal claims" in sp.system.lower()
+        )
 
     def test_hedging_language_guidance(self) -> None:
         """Should suggest hedged alternatives like 'Toward...' for partial data."""
@@ -4473,7 +4757,9 @@ class TestConditionCoverageDetection:
 
         exp_dir = run_dir / "stage-11" / "experiment"
         exp_dir.mkdir(parents=True, exist_ok=True)
-        (exp_dir / "main.py").write_text("print('primary_metric: 0.5')\n", encoding="utf-8")
+        (exp_dir / "main.py").write_text(
+            "print('primary_metric: 0.5')\n", encoding="utf-8"
+        )
 
         stage_dir = run_dir / "stage-13"
         stage_dir.mkdir(parents=True, exist_ok=True)
@@ -4516,7 +4802,9 @@ class TestConditionCoverageDetection:
         )
 
         llm = FakeLLMClient("```python\nprint('primary_metric: 0.3')\n```")
-        rc_executor._execute_iterative_refine(stage_dir, run_dir, cfg, adapters, llm=llm)
+        rc_executor._execute_iterative_refine(
+            stage_dir, run_dir, cfg, adapters, llm=llm
+        )
 
         assert len(llm.calls) >= 1
         user_msg = llm.calls[0][-1]["content"]
@@ -4549,7 +4837,9 @@ class TestConditionCoverageDetection:
 
         exp_dir = run_dir / "stage-11" / "experiment"
         exp_dir.mkdir(parents=True, exist_ok=True)
-        (exp_dir / "main.py").write_text("print('primary_metric: 0.5')\n", encoding="utf-8")
+        (exp_dir / "main.py").write_text(
+            "print('primary_metric: 0.5')\n", encoding="utf-8"
+        )
 
         stage_dir = run_dir / "stage-13"
         stage_dir.mkdir(parents=True, exist_ok=True)
@@ -4592,7 +4882,9 @@ class TestConditionCoverageDetection:
         )
 
         llm = FakeLLMClient("```python\nprint('primary_metric: 0.3')\n```")
-        rc_executor._execute_iterative_refine(stage_dir, run_dir, cfg, adapters, llm=llm)
+        rc_executor._execute_iterative_refine(
+            stage_dir, run_dir, cfg, adapters, llm=llm
+        )
 
         assert len(llm.calls) >= 1
         user_msg = llm.calls[0][-1]["content"]
@@ -4646,7 +4938,9 @@ class TestRefineFilePreservation:
         # Multi-file experiment project
         exp_dir = run_dir / "stage-11" / "experiment"
         exp_dir.mkdir(parents=True, exist_ok=True)
-        (exp_dir / "main.py").write_text("from helpers import foo\nprint('primary_metric: 0.5')\n")
+        (exp_dir / "main.py").write_text(
+            "from helpers import foo\nprint('primary_metric: 0.5')\n"
+        )
         (exp_dir / "helpers.py").write_text("def foo(): return 42\n")
         (exp_dir / "utils.py").write_text("def bar(): return 99\n")
 
@@ -4694,14 +4988,18 @@ class TestRefineFilePreservation:
         llm = FakeLLMClient(
             "```filename:main.py\nfrom helpers import foo\nprint('primary_metric: 0.3')\n```"
         )
-        rc_executor._execute_iterative_refine(stage_dir, run_dir, cfg, adapters, llm=llm)
+        rc_executor._execute_iterative_refine(
+            stage_dir, run_dir, cfg, adapters, llm=llm
+        )
 
         # Check that experiment_v1 has ALL files, not just main.py
         v1_dir = stage_dir / "experiment_v1"
         assert v1_dir.exists()
         v1_files = {f.name for f in v1_dir.glob("*.py")}
         assert "main.py" in v1_files
-        assert "helpers.py" in v1_files, "Supporting file helpers.py should be preserved"
+        assert (
+            "helpers.py" in v1_files
+        ), "Supporting file helpers.py should be preserved"
         assert "utils.py" in v1_files, "Supporting file utils.py should be preserved"
 
 
@@ -4840,14 +5138,17 @@ class TestValidateDraftQuality:
         draft = _build_draft(Method=_make_prose(200))
         result = rc_executor._validate_draft_quality(draft)
         assert any("Method" in w for w in result["overall_warnings"])
-        assert any("EXPAND" in d or "Expand" in d for d in result["revision_directives"])
+        assert any(
+            "EXPAND" in d or "Expand" in d for d in result["revision_directives"]
+        )
 
     def test_bullet_density_triggers_warning(self) -> None:
         """Bullet-heavy Method section triggers rewrite warning."""
         draft = _build_draft(Method=_make_bullets(1200))
         result = rc_executor._validate_draft_quality(draft)
         assert any(
-            "bullet" in w.lower() or "density" in w.lower() for w in result["overall_warnings"]
+            "bullet" in w.lower() or "density" in w.lower()
+            for w in result["overall_warnings"]
         )
         assert any("REWRITE" in d for d in result["revision_directives"])
 
@@ -4866,7 +5167,9 @@ class TestValidateDraftQuality:
         )
         result = rc_executor._validate_draft_quality(draft)
         bal = [w for w in result["overall_warnings"] if "imbalance" in w.lower()]
-        assert len(bal) >= 1, f"Expected balance warning, got: {result['overall_warnings']}"
+        assert (
+            len(bal) >= 1
+        ), f"Expected balance warning, got: {result['overall_warnings']}"
 
     def test_writes_json_to_stage_dir(self, tmp_path: Path) -> None:
         """Quality report is written as draft_quality.json."""

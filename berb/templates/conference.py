@@ -50,10 +50,14 @@ class ConferenceTemplate:
         preamble_extra = self.preamble_extra.replace("__TITLE__", title)
 
         style_line = (
-            f"\\usepackage{options}{{{self.style_package}}}\n" if self.style_package else ""
+            f"\\usepackage{options}{{{self.style_package}}}\n"
+            if self.style_package
+            else ""
         )
         style_comment = (
-            f"% Style file: {self.style_download_url}\n" if self.style_download_url else ""
+            f"% Style file: {self.style_download_url}\n"
+            if self.style_download_url
+            else ""
         )
 
         # BUG-51 fix: ICML's \begin{icmlauthorlist} is an environment that
@@ -103,7 +107,9 @@ class ConferenceTemplate:
         style_dir = _STYLES_DIR / self.name
         if not style_dir.is_dir():
             return []
-        return sorted(p for p in style_dir.iterdir() if p.suffix in {".sty", ".bst", ".cls"})
+        return sorted(
+            p for p in style_dir.iterdir() if p.suffix in {".sty", ".bst", ".cls"}
+        )
 
     def _render_authors(self, authors: str) -> str:
         if self.author_format == "icml":

@@ -37,7 +37,9 @@ class ConnectionManager:
     def disconnect(self, client_id: str) -> None:
         """Remove a disconnected client."""
         self._connections.pop(client_id, None)
-        logger.info("WebSocket disconnected: %s (total: %d)", client_id, self.active_count)
+        logger.info(
+            "WebSocket disconnected: %s (total: %d)", client_id, self.active_count
+        )
 
     async def broadcast(self, event: Event) -> None:
         """Send event to all connected clients."""

@@ -48,7 +48,9 @@ class TestTDDCodeGenerator:
 
         generator = TDDCodeGenerator(mock_client)
 
-        result = await generator.generate(requirement="Implement function x that returns 1")
+        result = await generator.generate(
+            requirement="Implement function x that returns 1"
+        )
 
         assert result.tests is not None
         assert result.implementation is not None
@@ -86,7 +88,9 @@ class TestTDDCodeGenerator:
             max_iterations=2,
         )
 
-        result = await generator.generate(requirement="Implement function x that returns 1")
+        result = await generator.generate(
+            requirement="Implement function x that returns 1"
+        )
 
         assert result.iterations == 2  # One repair iteration
         assert result.tests_pass is True

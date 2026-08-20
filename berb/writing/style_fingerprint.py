@@ -184,10 +184,14 @@ class StyleFingerprint(BaseModel):
         for section, ratio in self.section_ratios.items():
             lines.append(f"  - {section.replace('_', ' ').title()}: {ratio:.0%}")
 
-        lines.append(f"\n**Citation Density:** {self.citation_density:.1f} per 100 words")
+        lines.append(
+            f"\n**Citation Density:** {self.citation_density:.1f} per 100 words"
+        )
 
         if self.transition_patterns:
-            lines.append(f"\n**Common Transitions:** {', '.join(self.transition_patterns[:5])}")
+            lines.append(
+                f"\n**Common Transitions:** {', '.join(self.transition_patterns[:5])}"
+            )
 
         if self.sample_paragraphs:
             lines.append("\n**Example Paragraphs for Reference:**")
@@ -411,7 +415,9 @@ class StyleFingerprintEngine:
 
         # Fallback: use top authors regardless of language
         if len(authors) < self.num_target_authors:
-            logger.warning(f"Only found {len(authors)} authors, using regardless of language")
+            logger.warning(
+                f"Only found {len(authors)} authors, using regardless of language"
+            )
 
         return authors[: self.num_target_authors]
 
@@ -458,7 +464,9 @@ class StyleFingerprintEngine:
         profiles.sort(key=lambda a: a.total_citations, reverse=True)
         return profiles
 
-    async def _search_authors_openalex(self, domain: str, client: Any) -> list[AuthorProfile]:
+    async def _search_authors_openalex(
+        self, domain: str, client: Any
+    ) -> list[AuthorProfile]:
         """Search authors via OpenAlex.
 
         Args:
@@ -557,18 +565,26 @@ class StyleFingerprintEngine:
         # which both violated the field's semantics and could overshoot the
         # StyleFingerprint.avg_sentence_length Pydantic bound (le=50.0),
         # raising a ValidationError that silently killed the whole feature.
-        all_sentence_lengths = [len(s.split()) for sentences in all_sentences for s in sentences]
+        all_sentence_lengths = [
+            len(s.split()) for sentences in all_sentences for s in sentences
+        ]
         avg_sentence_length = (
             statistics.mean(all_sentence_lengths) if all_sentence_lengths else 25.0
         )
         avg_sentence_length = max(10.0, min(50.0, avg_sentence_length))
         sentence_length_std = (
-            statistics.stdev(all_sentence_lengths) if len(all_sentence_lengths) > 1 else 8.0
+            statistics.stdev(all_sentence_lengths)
+            if len(all_sentence_lengths) > 1
+            else 8.0
         )
 
         # Paragraph statistics
-        paragraph_lengths = [len(p) for paragraphs in all_paragraphs for p in paragraphs]
-        avg_paragraph_sentences = statistics.mean(paragraph_lengths) if paragraph_lengths else 4.5
+        paragraph_lengths = [
+            len(p) for paragraphs in all_paragraphs for p in paragraphs
+        ]
+        avg_paragraph_sentences = (
+            statistics.mean(paragraph_lengths) if paragraph_lengths else 4.5
+        )
 
         # Hedging frequency
         total_hedging = sum(all_hedging_counts)
@@ -785,7 +801,9 @@ class StyleFingerprintEngine:
         else:
             return FirstPersonUsage.FREQUENT
 
-    def _estimate_vocabulary_level(self, sentence_lengths: list[int]) -> VocabularyLevel:
+    def _estimate_vocabulary_level(
+        self, sentence_lengths: list[int]
+    ) -> VocabularyLevel:
         """Estimate vocabulary complexity level.
 
         Args:

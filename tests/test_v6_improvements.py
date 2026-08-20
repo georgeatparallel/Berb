@@ -43,9 +43,9 @@ class TestIMP13_ExtractPaperTitle:
             This paper presents...
         """)
         title = _extract_paper_title(md)
-        assert title == "A Novel Approach to Deep Reinforcement Learning", (
-            f"Expected H1 title, got: {title!r}"
-        )
+        assert (
+            title == "A Novel Approach to Deep Reinforcement Learning"
+        ), f"Expected H1 title, got: {title!r}"
         print(f"[IMP-13] PASS: extracted title = {title!r}")
 
     def test_skips_abstract_heading(self):
@@ -61,9 +61,9 @@ class TestIMP13_ExtractPaperTitle:
         """)
         title = _extract_paper_title(md)
         # "Abstract" should be skipped; the real title (before Abstract) is found
-        assert title == "A Real Title of at Least Four Words", (
-            f"Expected real title, got: {title!r}"
-        )
+        assert (
+            title == "A Real Title of at Least Four Words"
+        ), f"Expected real title, got: {title!r}"
         print(f"[IMP-13] PASS: skipped Abstract, got title = {title!r}")
 
     def test_title_after_abstract_not_found(self):
@@ -80,9 +80,9 @@ class TestIMP13_ExtractPaperTitle:
         """)
         title = _extract_paper_title(md)
         # Title after Abstract is not in the search region, so fallback
-        assert title == "Untitled Paper", (
-            f"Expected 'Untitled Paper' since title is after Abstract, got: {title!r}"
-        )
+        assert (
+            title == "Untitled Paper"
+        ), f"Expected 'Untitled Paper' since title is after Abstract, got: {title!r}"
         print(f"[IMP-13] PASS: title after Abstract not found, fallback = {title!r}")
 
     def test_fallback_untitled(self):
@@ -151,7 +151,9 @@ class TestIMP14_StripOrphanedCites:
             }
         """)
         result = self._run_cite_stripping(tex, bib)
-        assert r"\cite{real_key}" in result, f"Expected \\cite{{real_key}}, got: {result!r}"
+        assert (
+            r"\cite{real_key}" in result
+        ), f"Expected \\cite{{real_key}}, got: {result!r}"
         assert "missing_key" not in result, f"missing_key should be gone: {result!r}"
         print(f"[IMP-14] PASS: mixed keys → {result!r}")
 
@@ -205,9 +207,9 @@ class TestIMP14_StripOrphanedCites:
         assert r"\cite{c}" in result, f"Expected \\cite{{c}}, got: {result!r}"
         # b should not appear as a cite key
         assert r"\cite{b}" not in result, f"\\cite{{b}} should be gone: {result!r}"
-        assert r", b}" not in result and r"{b," not in result, (
-            f"b key should be stripped: {result!r}"
-        )
+        assert (
+            r", b}" not in result and r"{b," not in result
+        ), f"b key should be stripped: {result!r}"
         # \cite{d} should be entirely removed (d was the only key)
         assert r"\cite{d}" not in result, f"\\cite{{d}} should be gone: {result!r}"
         print(f"[IMP-14] PASS: multiple cites → {result!r}")
@@ -375,7 +377,9 @@ class TestIMP16_BootstrapCIFallback:
         vals = [0.8, 0.82, 0.79, 0.81, 0.83]
         ci_low, ci_high, used_fallback = self._compute_ci_with_fallback(vals)
         mean = statistics.mean(vals)
-        assert ci_low <= mean <= ci_high, f"CI [{ci_low}, {ci_high}] should contain mean {mean}"
+        assert (
+            ci_low <= mean <= ci_high
+        ), f"CI [{ci_low}, {ci_high}] should contain mean {mean}"
         assert not used_fallback, "Should NOT have used fallback for normal data"
         print(
             f"[IMP-16] PASS: normal data → CI=[{ci_low}, {ci_high}], mean={mean:.4f}, no fallback"
@@ -402,10 +406,12 @@ class TestIMP16_BootstrapCIFallback:
         fallback_low = round(mean - 1.96 * se, 6)
         fallback_high = round(mean + 1.96 * se, 6)
 
-        assert fallback_low <= mean <= fallback_high, (
-            f"Fallback CI [{fallback_low}, {fallback_high}] must contain mean {mean}"
+        assert (
+            fallback_low <= mean <= fallback_high
+        ), f"Fallback CI [{fallback_low}, {fallback_high}] must contain mean {mean}"
+        print(
+            f"[IMP-16] PASS: fallback CI=[{fallback_low}, {fallback_high}], mean={mean:.4f}"
         )
-        print(f"[IMP-16] PASS: fallback CI=[{fallback_low}, {fallback_high}], mean={mean:.4f}")
 
     def test_fallback_ci_always_contains_mean(self):
         """The normal-approximation fallback MUST always contain the mean."""
@@ -421,10 +427,12 @@ class TestIMP16_BootstrapCIFallback:
             se = std / (len(vals) ** 0.5)
             ci_low = round(mean - 1.96 * se, 6)
             ci_high = round(mean + 1.96 * se, 6)
-            assert ci_low <= mean <= ci_high, (
-                f"Fallback CI [{ci_low}, {ci_high}] must contain mean {mean} for vals={vals}"
-            )
-        print(f"[IMP-16] PASS: fallback always contains mean for {len(test_cases)} test cases")
+            assert (
+                ci_low <= mean <= ci_high
+            ), f"Fallback CI [{ci_low}, {ci_high}] must contain mean {mean} for vals={vals}"
+        print(
+            f"[IMP-16] PASS: fallback always contains mean for {len(test_cases)} test cases"
+        )
 
     def test_condition_check_logic(self):
         """Verify the condition `_ci_low > _mean or _ci_high < _mean` is correct.
@@ -438,8 +446,12 @@ class TestIMP16_BootstrapCIFallback:
         # Case 3: Mean inside CI
         assert not (3.0 > mean or 7.0 < mean), "Mean inside CI incorrectly flagged"
         # Case 4: Mean equals boundary
-        assert not (5.0 > mean or 7.0 < mean), "Mean at lower boundary incorrectly flagged"
-        assert not (3.0 > mean or 5.0 < mean), "Mean at upper boundary incorrectly flagged"
+        assert not (
+            5.0 > mean or 7.0 < mean
+        ), "Mean at lower boundary incorrectly flagged"
+        assert not (
+            3.0 > mean or 5.0 < mean
+        ), "Mean at upper boundary incorrectly flagged"
         print("[IMP-16] PASS: condition check logic correct for all cases")
 
     def test_min_sample_size(self):
@@ -447,9 +459,9 @@ class TestIMP16_BootstrapCIFallback:
         vals = [1.0, 2.0, 3.0]
         ci_low, ci_high, _ = self._compute_ci_with_fallback(vals)
         mean = statistics.mean(vals)
-        assert ci_low <= mean <= ci_high, (
-            f"CI [{ci_low}, {ci_high}] should contain mean {mean} for n=3"
-        )
+        assert (
+            ci_low <= mean <= ci_high
+        ), f"CI [{ci_low}, {ci_high}] should contain mean {mean} for n=3"
         print(f"[IMP-16] PASS: n=3 works → CI=[{ci_low}, {ci_high}], mean={mean:.4f}")
 
 
@@ -506,7 +518,9 @@ class TestIMP14_15_Integration:
         bib_keys = set(re.findall(r"@\w+\{([^,]+),", bib_text))
         missing = all_cite_keys - bib_keys
 
-        assert missing == {"ghost2024"}, f"Expected only ghost2024 missing, got {missing}"
+        assert missing == {
+            "ghost2024"
+        }, f"Expected only ghost2024 missing, got {missing}"
 
         def _filter_cite(m: re.Match[str]) -> str:
             keys = [k.strip() for k in m.group(1).split(",")]
@@ -519,10 +533,12 @@ class TestIMP14_15_Integration:
         tex_text = re.sub(r"  +", " ", tex_text)
         tex_text = re.sub(r" ([.,;:)])", r"\1", tex_text)
 
-        assert r"\cite{smith2024, jones2023}" in tex_text, (
-            f"Expected valid keys kept, got: {tex_text!r}"
-        )
-        assert "ghost2024" not in tex_text, f"ghost2024 should be stripped: {tex_text!r}"
+        assert (
+            r"\cite{smith2024, jones2023}" in tex_text
+        ), f"Expected valid keys kept, got: {tex_text!r}"
+        assert (
+            "ghost2024" not in tex_text
+        ), f"ghost2024 should be stripped: {tex_text!r}"
         print(f"[Integration] PASS: dedup + cite strip → {tex_text!r}")
 
 

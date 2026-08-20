@@ -232,8 +232,10 @@ Under-reported failure behavior under distribution shift.
 {_utcnow_iso()}
 """
     (stage_dir / "synthesis.md").write_text(synthesis_md, encoding="utf-8")
-    _synthesis_artifacts = ("synthesis.md", "domain_narrative.md") if domain_narrative else (
-        "synthesis.md",
+    _synthesis_artifacts = (
+        ("synthesis.md", "domain_narrative.md")
+        if domain_narrative
+        else ("synthesis.md",)
     )
     return StageResult(
         stage=Stage.SYNTHESIS,
@@ -286,7 +288,9 @@ def _execute_hypothesis_gen(
             )
 
             # Build context
-            problem = f"Research topic: {config.research.topic}\n\nSynthesis:\n{synthesis}"
+            problem = (
+                f"Research topic: {config.research.topic}\n\nSynthesis:\n{synthesis}"
+            )
             context = create_context(
                 stage_id="hypothesis_gen",
                 stage_name="Hypothesis Generation",
@@ -330,7 +334,9 @@ def _execute_hypothesis_gen(
                     hypotheses_parts = []
                     for i, candidate in enumerate(top_candidates, 1):
                         candidate_dict = (
-                            candidate.to_dict() if hasattr(candidate, "to_dict") else candidate
+                            candidate.to_dict()
+                            if hasattr(candidate, "to_dict")
+                            else candidate
                         )
                         hypotheses_parts.append(
                             f"## Hypothesis {i}\n\n{candidate_dict.get('content', candidate_dict.get('solution', ''))}"
@@ -341,10 +347,14 @@ def _execute_hypothesis_gen(
                     if scores:
                         hypotheses_md += "\n\n---\n\n## Perspective Scores\n\n"
                         for score in scores:
-                            score_dict = score.to_dict() if hasattr(score, "to_dict") else score
+                            score_dict = (
+                                score.to_dict() if hasattr(score, "to_dict") else score
+                            )
                             hypotheses_md += f"- {score_dict.get('perspective', 'unknown')}: {score_dict.get('total', 0):.1f}/10\n"
                 else:
-                    logger.warning("No top candidates from MultiPerspectiveMethod, using fallback")
+                    logger.warning(
+                        "No top candidates from MultiPerspectiveMethod, using fallback"
+                    )
                     hypotheses_md = _fallback_hypothesis_gen(
                         llm, prompts, config.research.topic, synthesis, stage_dir
                     )
@@ -355,7 +365,9 @@ def _execute_hypothesis_gen(
                 )
 
         except Exception as e:
-            logger.error("MultiPerspectiveMethod integration failed: %s", e, exc_info=True)
+            logger.error(
+                "MultiPerspectiveMethod integration failed: %s", e, exc_info=True
+            )
             hypotheses_md = _fallback_hypothesis_gen(
                 llm, prompts, config.research.topic, synthesis, stage_dir
             )
@@ -445,15 +457,21 @@ def _execute_hypothesis_gen(
                     _all_issues.extend(_soft)
 
                 if any(r.get("repaired") for r in _hypothesis_records):
-                    (stage_dir / "hypotheses.md").write_text(hypotheses_md, encoding="utf-8")
+                    (stage_dir / "hypotheses.md").write_text(
+                        hypotheses_md, encoding="utf-8"
+                    )
                     logger.info(
                         "E1: Repaired %d hypothesis(es) and rewrote hypotheses.md",
                         sum(1 for r in _hypothesis_records if r.get("repaired")),
                     )
 
                 _hypothesis_state["hypotheses"] = _hypothesis_records
-                _hypothesis_state["gate_passed"] = all(r["passed"] for r in _hypothesis_records)
-                _hypothesis_state["critic_transcript"] = _critic.format_issues(_all_issues)
+                _hypothesis_state["gate_passed"] = all(
+                    r["passed"] for r in _hypothesis_records
+                )
+                _hypothesis_state["critic_transcript"] = _critic.format_issues(
+                    _all_issues
+                )
 
                 logger.info(
                     "E1: Falsification gate %s (%d hypotheses, %d hard issues)",

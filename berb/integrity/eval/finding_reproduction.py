@@ -203,7 +203,9 @@ class KnownFindingDatabase:
                 continue
 
             # Search in title, description, key claim
-            searchable = f"{finding.title} {finding.description} {finding.key_claim}".lower()
+            searchable = (
+                f"{finding.title} {finding.description} {finding.key_claim}".lower()
+            )
 
             if query_lower in searchable:
                 matches.append(finding)
@@ -230,7 +232,9 @@ class KnownFindingDatabase:
 
         for finding in self._findings.values():
             by_domain[finding.domain] = by_domain.get(finding.domain, 0) + 1
-            by_difficulty[finding.difficulty] = by_difficulty.get(finding.difficulty, 0) + 1
+            by_difficulty[finding.difficulty] = (
+                by_difficulty.get(finding.difficulty, 0) + 1
+            )
 
         return {
             "total_findings": len(self._findings),
@@ -431,7 +435,11 @@ class FindingReproducer:
         if not self._reproduction_history:
             return 0.0
 
-        sum(1 for r in self._reproduction_history if r.status == ReproductionStatus.SUCCESS)
+        sum(
+            1
+            for r in self._reproduction_history
+            if r.status == ReproductionStatus.SUCCESS
+        )
 
         avg_confidence = sum(r.confidence for r in self._reproduction_history) / len(
             self._reproduction_history
@@ -444,13 +452,19 @@ class FindingReproducer:
         return {
             "total_attempts": len(self._reproduction_history),
             "successful": sum(
-                1 for r in self._reproduction_history if r.status == ReproductionStatus.SUCCESS
+                1
+                for r in self._reproduction_history
+                if r.status == ReproductionStatus.SUCCESS
             ),
             "partial": sum(
-                1 for r in self._reproduction_history if r.status == ReproductionStatus.PARTIAL
+                1
+                for r in self._reproduction_history
+                if r.status == ReproductionStatus.PARTIAL
             ),
             "failed": sum(
-                1 for r in self._reproduction_history if r.status == ReproductionStatus.FAILED
+                1
+                for r in self._reproduction_history
+                if r.status == ReproductionStatus.FAILED
             ),
             "avg_confidence": self.get_confidence_score(),
             "database_stats": self._database.get_statistics(),

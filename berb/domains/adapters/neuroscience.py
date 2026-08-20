@@ -18,11 +18,17 @@ class NeurosciencePromptAdapter(PromptAdapter):
     def get_code_generation_blocks(self, context: dict[str, Any]) -> PromptBlocks:
         domain = self.domain
         paradigm = domain.experiment_paradigm
-        (", ".join(domain.core_libraries) if domain.core_libraries else "numpy, scipy, brian2")
+        (
+            ", ".join(domain.core_libraries)
+            if domain.core_libraries
+            else "numpy, scipy, brian2"
+        )
 
         return PromptBlocks(
-            compute_budget=domain.compute_budget_guidance or self._default_compute_budget(),
-            dataset_guidance=domain.dataset_guidance or self._default_dataset_guidance(),
+            compute_budget=domain.compute_budget_guidance
+            or self._default_compute_budget(),
+            dataset_guidance=domain.dataset_guidance
+            or self._default_dataset_guidance(),
             hp_reporting=domain.hp_reporting_guidance or self._default_hp_reporting(),
             code_generation_hints=domain.code_generation_hints
             or self._default_code_hints(paradigm),

@@ -114,7 +114,9 @@ async def start_pipeline(req: PipelineStartRequest) -> PipelineStartResponse:
             from berb.adapters import AdapterBundle
             from berb.pipeline.runner import execute_pipeline
 
-            kb_root = Path(config.knowledge_base.root) if config.knowledge_base.root else None
+            kb_root = (
+                Path(config.knowledge_base.root) if config.knowledge_base.root else None
+            )
             if kb_root:
                 kb_root.mkdir(parents=True, exist_ok=True)
 
@@ -227,7 +229,11 @@ async def get_run(run_id: str) -> dict[str, Any]:
 
     # List stage directories
     stage_dirs = sorted(
-        [d.name for d in run_dir.iterdir() if d.is_dir() and d.name.startswith("stage-")]
+        [
+            d.name
+            for d in run_dir.iterdir()
+            if d.is_dir() and d.name.startswith("stage-")
+        ]
     )
     info["stages_completed"] = stage_dirs
 

@@ -364,10 +364,16 @@ class TestCitationVerifier:
         assert verifier._fuzzy_match("Deep Learning", "deep neural networks") is False
 
         # Good overlap test (2/3 = 67% - still below 0.7)
-        assert verifier._fuzzy_match("Deep Learning Methods", "deep learning approaches") is False
+        assert (
+            verifier._fuzzy_match("Deep Learning Methods", "deep learning approaches")
+            is False
+        )
 
         # Very high overlap (3/4 = 75% - above 0.7)
-        assert verifier._fuzzy_match("Deep Learning Methods", "deep learning methods are") is True
+        assert (
+            verifier._fuzzy_match("Deep Learning Methods", "deep learning methods are")
+            is True
+        )
 
         # Low similarity
         assert verifier._fuzzy_match("Deep Learning", "quantum physics") is False

@@ -114,10 +114,16 @@ class TestParseBibtexEntries:
 
 class TestTitleSimilarity:
     def test_identical(self) -> None:
-        assert title_similarity("Attention Is All You Need", "Attention Is All You Need") == 1.0
+        assert (
+            title_similarity("Attention Is All You Need", "Attention Is All You Need")
+            == 1.0
+        )
 
     def test_case_insensitive(self) -> None:
-        assert title_similarity("attention is all you need", "ATTENTION IS ALL YOU NEED") == 1.0
+        assert (
+            title_similarity("attention is all you need", "ATTENTION IS ALL YOU NEED")
+            == 1.0
+        )
 
     def test_high_similarity(self) -> None:
         sim = title_similarity(
@@ -196,7 +202,9 @@ class TestVerifyByArxivId:
 class TestVerifyByDoi:
     def test_verified_crossref(self) -> None:
         mock_resp = MagicMock()
-        mock_resp.read.return_value = json.dumps(SAMPLE_CROSSREF_RESPONSE).encode("utf-8")
+        mock_resp.read.return_value = json.dumps(SAMPLE_CROSSREF_RESPONSE).encode(
+            "utf-8"
+        )
         mock_resp.__enter__ = lambda s: s
         mock_resp.__exit__ = MagicMock(return_value=False)
 
@@ -323,7 +331,9 @@ class TestVerifyCitations:
         arxiv_resp.__exit__ = MagicMock(return_value=False)
 
         crossref_resp = MagicMock()
-        crossref_resp.read.return_value = json.dumps(SAMPLE_CROSSREF_RESPONSE).encode("utf-8")
+        crossref_resp.read.return_value = json.dumps(SAMPLE_CROSSREF_RESPONSE).encode(
+            "utf-8"
+        )
         crossref_resp.__enter__ = lambda s: s
         crossref_resp.__exit__ = MagicMock(return_value=False)
 
@@ -373,15 +383,21 @@ class TestVerifyCitations:
 
 class TestVerificationReport:
     def test_integrity_score(self) -> None:
-        report = VerificationReport(total=10, verified=7, suspicious=1, hallucinated=2, skipped=0)
+        report = VerificationReport(
+            total=10, verified=7, suspicious=1, hallucinated=2, skipped=0
+        )
         assert report.integrity_score == 0.7
 
     def test_integrity_score_with_skips(self) -> None:
-        report = VerificationReport(total=10, verified=6, suspicious=0, hallucinated=2, skipped=2)
+        report = VerificationReport(
+            total=10, verified=6, suspicious=0, hallucinated=2, skipped=2
+        )
         assert report.integrity_score == 0.75
 
     def test_integrity_score_all_skipped(self) -> None:
-        report = VerificationReport(total=3, verified=0, suspicious=0, hallucinated=0, skipped=3)
+        report = VerificationReport(
+            total=3, verified=0, suspicious=0, hallucinated=0, skipped=3
+        )
         assert report.integrity_score == 1.0
 
     def test_to_dict(self) -> None:

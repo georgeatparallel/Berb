@@ -72,7 +72,9 @@ def _import_submodule(package: str, name: str, namespace: dict[str, object]) -> 
         # Only swallow "this submodule does not exist"; a missing third-party
         # dependency inside a real submodule must keep propagating.
         if exc.name in (f"{package}.{name}", name):
-            raise AttributeError(f"module {package!r} has no attribute {name!r}") from None
+            raise AttributeError(
+                f"module {package!r} has no attribute {name!r}"
+            ) from None
         raise
     namespace[name] = module
     return module

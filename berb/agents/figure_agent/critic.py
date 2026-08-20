@@ -70,7 +70,9 @@ class CriticAgent(BaseAgent):
             for fig in rendered:
                 # BUG-38: skip non-dict entries
                 if not isinstance(fig, dict):
-                    self.logger.warning("Skipping non-dict rendered entry: %s", type(fig))
+                    self.logger.warning(
+                        "Skipping non-dict rendered entry: %s", type(fig)
+                    )
                     continue
                 figure_id = fig.get("figure_id", "unknown")
                 if not fig.get("success"):
@@ -142,7 +144,9 @@ class CriticAgent(BaseAgent):
         issues: list[dict[str, str]] = []
 
         # Dimension 1: Numerical accuracy
-        num_issues = self._check_numerical_accuracy(script_code, condition_summaries, metric_key)
+        num_issues = self._check_numerical_accuracy(
+            script_code, condition_summaries, metric_key
+        )
         issues.extend(num_issues)
 
         # Dimension 2: Text correctness

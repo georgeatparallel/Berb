@@ -122,7 +122,9 @@ class TestUTCTimeUtilities:
 
         # End in UTC+2
         tz_plus2 = timezone(timedelta(hours=2))
-        end = datetime(2026, 3, 29, 14, 0, 0, tzinfo=tz_plus2)  # Same instant as 12:00 UTC
+        end = datetime(
+            2026, 3, 29, 14, 0, 0, tzinfo=tz_plus2
+        )  # Same instant as 12:00 UTC
 
         elapsed = duration_seconds(start, end)
 

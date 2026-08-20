@@ -156,7 +156,9 @@ class LaTeXExporter:
             config: Exporter configuration
         """
         self.config = config or LaTeXExporterConfig()
-        self.template = self.TEMPLATES.get(self.config.template, self.TEMPLATES["article"])
+        self.template = self.TEMPLATES.get(
+            self.config.template, self.TEMPLATES["article"]
+        )
 
     async def export_latex_project(
         self,

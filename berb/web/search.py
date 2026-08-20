@@ -159,7 +159,9 @@ class WebSearchClient:
         if engine == "searxng":
             return self._search_searxng(query, limit, t0, **searxng_kwargs)
         elif engine == "tavily":
-            return self._search_tavily(query, limit, include_domains, exclude_domains, t0)
+            return self._search_tavily(
+                query, limit, include_domains, exclude_domains, t0
+            )
         elif engine == "duckduckgo":
             return self._search_duckduckgo(query, limit, t0)
 
@@ -173,9 +175,13 @@ class WebSearchClient:
         # Tavily is the primary engine (if SearXNG not configured)
         if self.api_key:
             try:
-                return self._search_tavily(query, limit, include_domains, exclude_domains, t0)
+                return self._search_tavily(
+                    query, limit, include_domains, exclude_domains, t0
+                )
             except Exception as exc:  # noqa: BLE001
-                logger.warning("Tavily search failed, falling back to DuckDuckGo: %s", exc)
+                logger.warning(
+                    "Tavily search failed, falling back to DuckDuckGo: %s", exc
+                )
 
         return self._search_duckduckgo(query, limit, t0)
 
@@ -303,12 +309,16 @@ class WebSearchClient:
         # 2. SearXNG fallback with google_scholar engine
         if self.searxng_url:
             try:
-                return self._search_searxng(query, limit, t0, engines=["google_scholar", "arxiv"])
+                return self._search_searxng(
+                    query, limit, t0, engines=["google_scholar", "arxiv"]
+                )
             except Exception as exc:  # noqa: BLE001
                 logger.warning("SearXNG scholar fallback failed: %s", exc)
 
         # 3. Last resort: standard web search (picks up Tavily / DDG)
-        logger.warning("All Scholar sources failed — falling back to generic web search")
+        logger.warning(
+            "All Scholar sources failed — falling back to generic web search"
+        )
         return self.search(query, max_results=limit)
 
     def search_multi(
@@ -389,7 +399,9 @@ class WebSearchClient:
     # DuckDuckGo fallback (no API key needed)
     # ------------------------------------------------------------------
 
-    def _search_duckduckgo(self, query: str, limit: int, t0: float) -> WebSearchResponse:
+    def _search_duckduckgo(
+        self, query: str, limit: int, t0: float
+    ) -> WebSearchResponse:
         """Fallback: scrape DuckDuckGo HTML search results."""
         encoded = quote_plus(query)
         url = f"https://html.duckduckgo.com/html/?q={encoded}"
@@ -408,7 +420,9 @@ class WebSearchClient:
         except Exception as exc:  # noqa: BLE001
             elapsed = time.monotonic() - t0
             logger.warning("DuckDuckGo search failed: %s", exc)
-            return WebSearchResponse(query=query, elapsed_seconds=elapsed, source="duckduckgo")
+            return WebSearchResponse(
+                query=query, elapsed_seconds=elapsed, source="duckduckgo"
+            )
 
         results = self._parse_ddg_html(html, limit)
         elapsed = time.monotonic() - t0
@@ -454,7 +468,9 @@ class WebSearchClient:
                 classes = self._get_attr(attrs, "class").split()
                 return cls in classes
 
-            def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+            def handle_starttag(
+                self, tag: str, attrs: list[tuple[str, str | None]]
+            ) -> None:
                 if tag == "a":
                     if self._has_class(attrs, "result__a"):
                         self._in_result_a = True
@@ -497,11 +513,15 @@ class WebSearchClient:
                 if _uddg:
                     _candidate = _unquote(_uddg[0])
                     if not is_safe_url(_candidate):
-                        logger.warning("SSRF: blocked DuckDuckGo redirect to %r", _candidate)
+                        logger.warning(
+                            "SSRF: blocked DuckDuckGo redirect to %r", _candidate
+                        )
                         continue
                     url = _candidate
                 else:
                     continue
-            results.append(SearchResult(title=title, url=url, snippet=snippet, source="duckduckgo"))
+            results.append(
+                SearchResult(title=title, url=url, snippet=snippet, source="duckduckgo")
+            )
 
         return results

@@ -85,7 +85,9 @@ class FeedbackHandler:
                 modifications=data.get("modifications"),
                 branch_name=str(data.get("branch_name", "")),
                 rollback_to=(
-                    int(data["rollback_to"]) if data.get("rollback_to") is not None else None
+                    int(data["rollback_to"])
+                    if data.get("rollback_to") is not None
+                    else None
                 ),
                 timestamp=str(data.get("timestamp", "")),
             )

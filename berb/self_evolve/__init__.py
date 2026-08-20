@@ -202,7 +202,10 @@ class ExperienceCollector:
                         # Apply filters
                         if stage and data.get("stage") != stage:
                             continue
-                        if experience_type and data.get("experience_type") != experience_type.value:
+                        if (
+                            experience_type
+                            and data.get("experience_type") != experience_type.value
+                        ):
                             continue
                         if date_from and data.get("timestamp", "")[:10] < date_from:
                             continue
@@ -260,7 +263,9 @@ class ExperienceCollector:
         total_cost = 0.0
 
         for exp in recent:
-            by_type[exp.experience_type.value] = by_type.get(exp.experience_type.value, 0) + 1
+            by_type[exp.experience_type.value] = (
+                by_type.get(exp.experience_type.value, 0) + 1
+            )
             total_quality += exp.quality_score
             total_cost += exp.cost_usd
 
@@ -319,11 +324,17 @@ class ExperienceAnalyzer:
                 error_counts[error_key] = error_counts.get(error_key, 0) + 1
 
         # Sort by frequency
-        common_errors = sorted(error_counts.items(), key=lambda x: x[1], reverse=True)[:10]
-        problematic_stages = sorted(stage_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+        common_errors = sorted(error_counts.items(), key=lambda x: x[1], reverse=True)[
+            :10
+        ]
+        problematic_stages = sorted(
+            stage_counts.items(), key=lambda x: x[1], reverse=True
+        )[:5]
 
         # Generate recommendations
-        recommendations = self._generate_recommendations(common_errors, problematic_stages)
+        recommendations = self._generate_recommendations(
+            common_errors, problematic_stages
+        )
 
         return {
             "total_failures": len(failures),
@@ -442,9 +453,13 @@ class ExperienceAnalyzer:
             )
 
         # Check for examples
-        example_count = sum(1 for e in high_quality if "example" in e.input_prompt.lower())
+        example_count = sum(
+            1 for e in high_quality if "example" in e.input_prompt.lower()
+        )
         if example_count > len(high_quality) * 0.5:
-            practices.append("Include examples in prompts (correlates with higher quality)")
+            practices.append(
+                "Include examples in prompts (correlates with higher quality)"
+            )
 
         return practices
 

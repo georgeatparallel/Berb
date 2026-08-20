@@ -95,7 +95,9 @@ class SshRemoteSandbox:
         for src_item in project_dir.iterdir():
             dest = staging / src_item.name
             if dest.name == "experiment_harness.py":
-                logger.warning("Project contains experiment_harness.py — skipping (immutable)")
+                logger.warning(
+                    "Project contains experiment_harness.py — skipping (immutable)"
+                )
                 continue
             if src_item.is_dir():
                 shutil.copytree(src_item, dest, dirs_exist_ok=True)
@@ -164,7 +166,9 @@ class SshRemoteSandbox:
     # Internals
     # ------------------------------------------------------------------
 
-    def _execute(self, staging_dir: Path, *, entry_point: str, timeout_sec: int) -> SandboxResult:
+    def _execute(
+        self, staging_dir: Path, *, entry_point: str, timeout_sec: int
+    ) -> SandboxResult:
         """Core execution flow for remote experiments.
 
         Steps:

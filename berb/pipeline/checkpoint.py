@@ -196,7 +196,9 @@ class CheckpointManager:
         return read_checkpoint(run_dir)
 
 
-def resume_from_checkpoint(run_dir: Path, default_stage: Stage = Stage.TOPIC_INIT) -> Stage:
+def resume_from_checkpoint(
+    run_dir: Path, default_stage: Stage = Stage.TOPIC_INIT
+) -> Stage:
     """Resolve the stage to resume from using checkpoint metadata."""
     next_stage = read_checkpoint(run_dir)
     return next_stage if next_stage is not None else default_stage

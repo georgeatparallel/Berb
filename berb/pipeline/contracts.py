@@ -332,7 +332,11 @@ CONTRACTS: dict[Stage, StageContract] = {
     Stage.ITERATIVE_REFINE: StageContract(
         stage=Stage.ITERATIVE_REFINE,
         input_files=("runs/",),
-        output_files=("refinement_log.json", "experiment_final/", "selection_bias.json"),
+        output_files=(
+            "refinement_log.json",
+            "experiment_final/",
+            "selection_bias.json",
+        ),
         dod="Edit-run-eval loop converged or max iterations reached",
         error_code="E13_REFINE_FAIL",
         max_retries=2,

@@ -267,7 +267,9 @@ def _parse_openalex_work(item: dict[str, Any]) -> Paper:
         url = openalex_id
 
     # Paper ID
-    paper_id = f"oalex-{openalex_id.split('/')[-1]}" if openalex_id else f"oalex-{title[:20]}"
+    paper_id = (
+        f"oalex-{openalex_id.split('/')[-1]}" if openalex_id else f"oalex-{title[:20]}"
+    )
 
     return Paper(
         paper_id=paper_id,

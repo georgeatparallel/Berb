@@ -108,9 +108,9 @@ class TestSelectionPenalty:
         """Ensure penalty is monotonically increasing with N."""
         penalties = [selection_penalty(n) for n in range(1, 20)]
         for i in range(1, len(penalties)):
-            assert penalties[i] >= penalties[i - 1], (
-                f"Penalty decreased at n={i + 1}: {penalties[i]} < {penalties[i - 1]}"
-            )
+            assert (
+                penalties[i] >= penalties[i - 1]
+            ), f"Penalty decreased at n={i + 1}: {penalties[i]} < {penalties[i - 1]}"
 
 
 class TestAdmitVerdictMatrix:
@@ -241,9 +241,9 @@ class TestAdmitVerdictMatrix:
         ev = self._make_ev(**ev_kwargs)
         cfg = GateConfig(**cfg_kwargs)
         verdict = admit(ev, cfg)
-        assert verdict == expected, (
-            f"FAIL [{desc}]: expected {expected.value}, got {verdict.value}\n  ev={ev}\n  cfg={cfg}"
-        )
+        assert (
+            verdict == expected
+        ), f"FAIL [{desc}]: expected {expected.value}, got {verdict.value}\n  ev={ev}\n  cfg={cfg}"
 
 
 class TestAdmitNegativeEffectBug:

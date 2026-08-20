@@ -60,7 +60,9 @@ class ReActTrajectory:
 
     def to_dict(self) -> list[dict[str, str]]:
         """Convert to dictionary."""
-        return [{"step": step.value, "content": content} for step, content in self.steps]
+        return [
+            {"step": step.value, "content": content} for step, content in self.steps
+        ]
 
 
 class ExperimentReActAgent:

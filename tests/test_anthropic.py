@@ -41,11 +41,15 @@ def test_anthropic_api() -> None:
     message = _create_message()
     usage = message.get("usage", {})
     content = message.get("content", [])
-    text_blocks = [block.get("text", "") for block in content if block.get("type") == "text"]
+    text_blocks = [
+        block.get("text", "") for block in content if block.get("type") == "text"
+    ]
 
     print(f"Status: stop_reason={message.get('stop_reason')}")
     print(f"Model: {message.get('model')}")
-    print(f"Usage: input={usage.get('input_tokens')}, output={usage.get('output_tokens')}")
+    print(
+        f"Usage: input={usage.get('input_tokens')}, output={usage.get('output_tokens')}"
+    )
     print(f"Response: {' '.join(text_blocks)}")
 
     assert message.get("type") == "message"

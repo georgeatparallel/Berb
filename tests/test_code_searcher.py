@@ -278,7 +278,9 @@ class TestCodeSearchResult:
                 evaluation_patterns=["error = norm(diff)"],
             ),
             repos_found=[
-                RepoInfo(full_name="test/repo", stars=100, html_url="https://example.com"),
+                RepoInfo(
+                    full_name="test/repo", stars=100, html_url="https://example.com"
+                ),
             ],
             queries_used=["test query"],
         )
@@ -314,7 +316,9 @@ class TestCodeSearchAgent:
                 score=10.0,
             ),
         ]
-        mock.get_readme.return_value = "# Physics Simulation\nA framework for physics sims."
+        mock.get_readme.return_value = (
+            "# Physics Simulation\nA framework for physics sims."
+        )
         mock.get_repo_tree.return_value = ["main.py", "solver.py", "requirements.txt"]
         mock.get_file_content.return_value = "import numpy as np\ndef solve(): pass"
         mock.request_count = 5

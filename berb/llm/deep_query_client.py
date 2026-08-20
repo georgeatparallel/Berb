@@ -421,7 +421,9 @@ Output: VERIFIED, UNVERIFIED, or INACCURATE with evidence."""
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _track_cost(self, model_name: str, usage: dict[str, Any], duration_ms: int) -> None:
+    def _track_cost(
+        self, model_name: str, usage: dict[str, Any], duration_ms: int
+    ) -> None:
         """Record cost via ExtendedReasoningCostTracker (best-effort).
 
         ``_calculate_cost`` keys Perplexity's per-search cost add-on off
@@ -733,7 +735,9 @@ Extract:
 Output as structured JSON.""",
         }
 
-        prompt = prompts.get(analysis_type, prompts["comprehensive"]).format(paper=paper_text)
+        prompt = prompts.get(analysis_type, prompts["comprehensive"]).format(
+            paper=paper_text
+        )
 
         messages = [
             {
@@ -780,7 +784,9 @@ Output as structured JSON.""",
         current_length = 0
 
         for paper in papers:
-            paper_text = f"=== {paper.get('title', 'Untitled')} ===\n\n{paper.get('text', '')}"
+            paper_text = (
+                f"=== {paper.get('title', 'Untitled')} ===\n\n{paper.get('text', '')}"
+            )
             if current_length + len(paper_text) > max_context:
                 logger.warning(f"Skipping paper '{paper.get('title')}' - context limit")
                 break

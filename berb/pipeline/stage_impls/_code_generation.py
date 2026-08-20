@@ -92,9 +92,13 @@ def _build_repair_context(
     known_modules = {f[:-3] for f in files if f.endswith(".py")}
     target_code = files[fname]
     imported = set(
-        re.findall(r"^(?:from|import)\s+([a-zA-Z_][a-zA-Z0-9_]*)", target_code, re.MULTILINE)
+        re.findall(
+            r"^(?:from|import)\s+([a-zA-Z_][a-zA-Z0-9_]*)", target_code, re.MULTILINE
+        )
     )
-    sibling_names = sorted(m for m in imported if m in known_modules and m + ".py" != fname)
+    sibling_names = sorted(
+        m for m in imported if m in known_modules and m + ".py" != fname
+    )
 
     blocks: list[str] = []
     used = 0
@@ -176,11 +180,13 @@ def _execute_code_generation(
             )
             if _net_policy == "none":
                 pkg_extras = (
-                    _base_pkgs + " (ONLY pre-installed packages — NO pip install available)"
+                    _base_pkgs
+                    + " (ONLY pre-installed packages — NO pip install available)"
                 )
             elif _net_policy in ("setup_only", "pip_only"):
                 pkg_extras = (
-                    _base_pkgs + ", and additional pip-installable packages via requirements.txt"
+                    _base_pkgs
+                    + ", and additional pip-installable packages via requirements.txt"
                 )
             else:
                 pkg_extras = (
@@ -233,7 +239,9 @@ def _execute_code_generation(
 
     # --- Dataset guidance + setup script + HP reporting (docker/sandbox modes) ---
     extra_guidance = ""
-    _net_policy = getattr(getattr(config, "docker", None), "network_policy", "setup_only")
+    _net_policy = getattr(
+        getattr(config, "docker", None), "network_policy", "setup_only"
+    )
     if config.experiment.mode in ("sandbox", "docker"):
         _net_policy = (
             config.experiment.docker.network_policy
@@ -301,7 +309,8 @@ def _execute_code_generation(
                     "\n\n## BenchmarkAgent Selections (USE THESE)\n"
                     "The following datasets, baselines, and code snippets were "
                     "automatically selected and validated by the BenchmarkAgent. "
-                    "You MUST use these selections in your experiment code.\n\n" + _bp_block
+                    "You MUST use these selections in your experiment code.\n\n"
+                    + _bp_block
                 )
                 logger.info(
                     "BA: Injected benchmark plan (%d benchmarks, %d baselines)",
@@ -378,7 +387,9 @@ def _execute_code_generation(
         from berb.data import detect_frameworks, load_framework_docs
 
         _hypothesis_text = _read_prior_artifact(run_dir, "hypotheses.md") or ""
-        _fw_ids = detect_frameworks(config.research.topic, _hypothesis_text, exp_plan or "")
+        _fw_ids = detect_frameworks(
+            config.research.topic, _hypothesis_text, exp_plan or ""
+        )
         if _fw_ids:
             _fw_docs = load_framework_docs(_fw_ids, max_chars=8000)
             if _fw_docs:
@@ -573,7 +584,11 @@ def _execute_code_generation(
                 _oc_cfg.complexity_threshold,
             )
 
-    if not _beast_mode_used and config.experiment.code_agent.enabled and llm is not None:
+    if (
+        not _beast_mode_used
+        and config.experiment.code_agent.enabled
+        and llm is not None
+    ):
         # ── F-02: Advanced Code Agent path ────────────────────────────────
         from berb.pipeline.code_agent import CodeAgent as _CodeAgent
 
@@ -784,7 +799,9 @@ def _execute_code_generation(
                 issues=[i for i in validation.issues if i.severity == "error"]
             )
             issues_text = format_issues_for_llm(errors_only)
-            validation_log.append(f"File {fname} attempt {repair_attempt}: {validation.summary()}")
+            validation_log.append(
+                f"File {fname} attempt {repair_attempt}: {validation.summary()}"
+            )
             logger.info(
                 "Code validation failed for %s (attempt %d/%d): %s",
                 fname,
@@ -917,7 +934,11 @@ def _execute_code_generation(
             code,
             re.MULTILINE,
         ):
-            if _m not in _known_modules and _m not in _stdlib_and_common and not _m.startswith("_"):
+            if (
+                _m not in _known_modules
+                and _m not in _stdlib_and_common
+                and not _m.startswith("_")
+            ):
                 logger.warning(
                     "BUG-184: %s imports '%s' which is not in generated "
                     "files — experiment may crash on import",
@@ -937,10 +958,14 @@ def _execute_code_generation(
         if all_valid:
             report_lines.append(f"**Status**: PASSED after {attempt} total repair(s)\n")
         else:
-            report_lines.append(f"**Status**: FAILED after {attempt} total repair attempt(s)\n")
+            report_lines.append(
+                f"**Status**: FAILED after {attempt} total repair attempt(s)\n"
+            )
         for entry in validation_log:
             report_lines.append(f"- {entry}")
-        (stage_dir / "validation_report.md").write_text("\n".join(report_lines), encoding="utf-8")
+        (stage_dir / "validation_report.md").write_text(
+            "\n".join(report_lines), encoding="utf-8"
+        )
 
     # --- R10-Fix6: Code complexity and quality check ---
     from berb.experiment.validator import (
@@ -964,7 +989,9 @@ def _execute_code_generation(
                     fname,
                 )
     if _total_ub_fixes:
-        logger.info("Stage 10: auto-fixed %d total UnboundLocalError risks", _total_ub_fixes)
+        logger.info(
+            "Stage 10: auto-fixed %d total UnboundLocalError risks", _total_ub_fixes
+        )
 
     complexity_warnings: list[str] = []
     for fname, code in files.items():
@@ -1010,7 +1037,9 @@ def _execute_code_generation(
             len(critical_deep),
         )
         repair_issues = "\n".join(f"- {w}" for w in critical_deep)
-        all_code_ctx = "\n\n".join(f"```filename:{f}\n{c}\n```" for f, c in files.items())
+        all_code_ctx = "\n\n".join(
+            f"```filename:{f}\n{c}\n```" for f, c in files.items()
+        )
         repair_prompt = (
             f"CRITICAL CODE QUALITY ISSUES FOUND:\n{repair_issues}\n\n"
             f"Fix ALL these issues in the code below. Return the complete "
@@ -1100,7 +1129,9 @@ def _execute_code_generation(
     # --- P1.4: LLM Code Review (Stage 10.5) ---
     # Skip when CodeAgent is active — Phase 4 review already covers this.
     if llm is not None and not _code_agent_active:
-        all_code_review = "\n\n".join(f"# --- {fname} ---\n{code}" for fname, code in files.items())
+        all_code_review = "\n\n".join(
+            f"# --- {fname} ---\n{code}" for fname, code in files.items()
+        )
         if len(all_code_review) > 12000:
             all_code_review = all_code_review[:12000] + "\n... [truncated]"
         review_prompt = (
@@ -1136,7 +1167,9 @@ def _execute_code_generation(
             )
             # Extract JSON from LLM response (may be wrapped in markdown fences)
             _review_text = (
-                review_resp.content if hasattr(review_resp, "content") else str(review_resp)
+                review_resp.content
+                if hasattr(review_resp, "content")
+                else str(review_resp)
             )
             # Strip markdown JSON fences if present
             _review_text = _review_text.strip()
@@ -1185,7 +1218,9 @@ def _execute_code_generation(
                         f"Fix ALL critical issues. Return complete corrected files "
                         f"using ```filename:xxx.py format.\n\n"
                         f"Current code:\n"
-                        + "\n\n".join(f"```filename:{f}\n{c}\n```" for f, c in files.items())
+                        + "\n\n".join(
+                            f"```filename:{f}\n{c}\n```" for f, c in files.items()
+                        )
                     )
                     try:
                         fix_resp = _chat_with_prompt(
@@ -1252,7 +1287,9 @@ def _execute_code_generation(
         _main_block = f"# --- {_entry_file} (FULL — entry point) ---\n{_main_code}"
         # Cap main.py at 12000 chars to stay within token budget
         if len(_main_block) > 12000:
-            _main_block = _main_block[:12000] + "\n... [main.py truncated at 12000 chars]"
+            _main_block = (
+                _main_block[:12000] + "\n... [main.py truncated at 12000 chars]"
+            )
 
         # For other files, include imports + function/class signatures
         _other_summaries = []
@@ -1391,10 +1428,13 @@ def _execute_code_generation(
                             )
                         ]
                         if _slines:
-                            _rc_sigs.append(f"# {_fn} imports+signatures:\n" + "\n".join(_slines))
-                    recheck_code = (
-                        "FILES:\n" + "\n".join(_rc_inv) + "\n\n"
-                        f"# main.py (FULL):\n{_rc_main}\n\n" + "\n".join(_rc_sigs)
+                            _rc_sigs.append(
+                                f"# {_fn} imports+signatures:\n" + "\n".join(_slines)
+                            )
+                    recheck_code = "FILES:\n" + "\n".join(
+                        _rc_inv
+                    ) + "\n\n" f"# main.py (FULL):\n{_rc_main}\n\n" + "\n".join(
+                        _rc_sigs
                     )
                     recheck_resp = llm.chat(
                         [
@@ -1414,11 +1454,11 @@ def _execute_code_generation(
                         max_tokens=1024,
                     )
                     recheck_data = _safe_json_loads(recheck_resp.content, {})
-                    if isinstance(recheck_data, dict) and recheck_data.get("aligned", False):
+                    if isinstance(recheck_data, dict) and recheck_data.get(
+                        "aligned", False
+                    ):
                         alignment_ok = True
-                        alignment_note = (
-                            f"Regenerated after alignment check (attempt {_regen_attempt})"
-                        )
+                        alignment_note = f"Regenerated after alignment check (attempt {_regen_attempt})"
                         logger.info(
                             "Stage 10: Code aligned after regen attempt %d",
                             _regen_attempt,
@@ -1461,7 +1501,9 @@ def _execute_code_generation(
                     json.dumps(abl_data, indent=2), encoding="utf-8"
                 )
                 # --- Attempt ablation repair ---
-                all_code_ctx = "\n\n".join(f"```filename:{f}\n{c}\n```" for f, c in files.items())
+                all_code_ctx = "\n\n".join(
+                    f"```filename:{f}\n{c}\n```" for f, c in files.items()
+                )
                 dup_details = abl_data.get("details", "unknown")
                 abl_repair_prompt = (
                     f"ABLATION REPAIR REQUIRED — duplicate conditions detected:\n"

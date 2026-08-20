@@ -449,7 +449,9 @@ class CodeGenAgent(BaseAgent):
             for fig_spec in figures:
                 # BUG-36: skip non-dict entries (LLM may return strings)
                 if not isinstance(fig_spec, dict):
-                    self.logger.warning("Skipping non-dict fig_spec: %s", type(fig_spec))
+                    self.logger.warning(
+                        "Skipping non-dict fig_spec: %s", type(fig_spec)
+                    )
                     continue
                 figure_id = fig_spec.get("figure_id", "unknown")
                 chart_type = fig_spec.get("chart_type", "bar_comparison")
@@ -530,7 +532,10 @@ class CodeGenAgent(BaseAgent):
         else:
             data_source = {}
 
-        from berb.agents.figure_agent.style_config import DEFAULT_FIGURE_HEIGHT, FIGURE_WIDTH
+        from berb.agents.figure_agent.style_config import (
+            DEFAULT_FIGURE_HEIGHT,
+            FIGURE_WIDTH,
+        )
 
         width = FIGURE_WIDTH.get(width_key, FIGURE_WIDTH["single_column"])
         height = DEFAULT_FIGURE_HEIGHT
@@ -691,11 +696,16 @@ class CodeGenAgent(BaseAgent):
 
         # Skip degenerate data (all zeros, all identical)
         if _is_degenerate_data(values):
-            logger.warning("Skipping degenerate bar chart: all values are identical or zero")
+            logger.warning(
+                "Skipping degenerate bar chart: all values are identical or zero"
+            )
             return ""
 
         # Humanize empty/raw labels
-        if not y_label or y_label.lower().replace("_", "") in ("primarymetric", "metric"):
+        if not y_label or y_label.lower().replace("_", "") in (
+            "primarymetric",
+            "metric",
+        ):
             y_label = _humanize_label(metric_key)
         if not x_label:
             x_label = "Method"
@@ -801,7 +811,9 @@ class CodeGenAgent(BaseAgent):
         # Skip degenerate heatmaps (all values identical)
         all_vals = [v for row in data_matrix for v in row]
         if _is_degenerate_data(all_vals):
-            logger.warning("Skipping degenerate heatmap: all values are identical or zero")
+            logger.warning(
+                "Skipping degenerate heatmap: all values are identical or zero"
+            )
             return ""
 
         # Also skip single-row heatmaps (meaningless)
@@ -893,7 +905,9 @@ class CodeGenAgent(BaseAgent):
                     "metrics": {
                         k: v
                         for k, v in (cdata.get("metrics") or {}).items()
-                        if not any(t in k.lower() for t in ["time", "elapsed", "runtime"])
+                        if not any(
+                            t in k.lower() for t in ["time", "elapsed", "runtime"]
+                        )
                     },
                     "ci95_low": cdata.get("ci95_low"),
                     "ci95_high": cdata.get("ci95_high"),
@@ -972,7 +986,9 @@ class CodeGenAgent(BaseAgent):
                     "metrics": {
                         k: v
                         for k, v in (cdata.get("metrics") or {}).items()
-                        if not any(t in k.lower() for t in ["time", "elapsed", "runtime"])
+                        if not any(
+                            t in k.lower() for t in ["time", "elapsed", "runtime"]
+                        )
                     },
                 }
 

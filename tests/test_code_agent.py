@@ -176,7 +176,9 @@ class TestPhase1Architecture:
         # First call should be code_generation, not the architecture planning prompt
         first_call_user = llm.calls[0]["messages"][0]["content"]
         # The architecture planning prompt has "Design the architecture" phrasing
-        assert "design the architecture for an experiment" not in first_call_user.lower()
+        assert (
+            "design the architecture for an experiment" not in first_call_user.lower()
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -264,7 +266,9 @@ class TestPhase2ExecFix:
         review = '{"verdict": "APPROVE", "score": 5, "critical_issues": []}'
         llm = FakeLLM(responses=[code, code, code, code, review])
 
-        always_crash = FakeSandbox(results=[FakeSandboxResult(returncode=1, stderr="RuntimeError")])
+        always_crash = FakeSandbox(
+            results=[FakeSandboxResult(returncode=1, stderr="RuntimeError")]
+        )
 
         agent = CodeAgent(
             llm=llm,
@@ -307,8 +311,12 @@ class TestPhase3TreeSearch:
 
         sandbox = FakeSandbox(
             results=[
-                FakeSandboxResult(returncode=0, stdout="metric: 0.5", metrics={"metric": 0.5}),
-                FakeSandboxResult(returncode=0, stdout="metric: 0.9", metrics={"metric": 0.9}),
+                FakeSandboxResult(
+                    returncode=0, stdout="metric: 0.5", metrics={"metric": 0.5}
+                ),
+                FakeSandboxResult(
+                    returncode=0, stdout="metric: 0.9", metrics={"metric": 0.9}
+                ),
             ]
         )
 
@@ -432,7 +440,9 @@ class TestPhase4Review:
                 "suggestions": [],
             }
         )
-        fixed = '```filename:main.py\nimport random\nrandom.seed(42)\nprint("m: 1")\n```'
+        fixed = (
+            '```filename:main.py\nimport random\nrandom.seed(42)\nprint("m: 1")\n```'
+        )
         review2 = '{"verdict": "APPROVE", "score": 8, "critical_issues": []}'
         llm = FakeLLM(responses=[code, review1, fixed, review2])
 

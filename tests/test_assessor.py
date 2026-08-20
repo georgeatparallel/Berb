@@ -66,7 +66,13 @@ class FailingLLM:
 
 class TestRubrics:
     def test_all_five_dimensions_present(self):
-        assert set(RUBRICS.keys()) == {"novelty", "rigor", "clarity", "impact", "experiments"}
+        assert set(RUBRICS.keys()) == {
+            "novelty",
+            "rigor",
+            "clarity",
+            "impact",
+            "experiments",
+        }
 
     def test_rubric_is_frozen(self):
         r = RUBRICS["novelty"]

@@ -483,7 +483,9 @@ class ObsidianExporter:
             lines.append("")
             for ref in card["references"]:
                 if isinstance(ref, dict):
-                    lines.append(f"- {ref.get('title', 'Untitled')}: {ref.get('url', '')}")
+                    lines.append(
+                        f"- {ref.get('title', 'Untitled')}: {ref.get('url', '')}"
+                    )
                 else:
                     lines.append(f"- {ref}")
             lines.append("")
@@ -510,7 +512,9 @@ class ObsidianExporter:
             for key, value in metrics.items():
                 if isinstance(value, (int, float)):
                     lines.append(
-                        f"{key}: {value:.4f}" if isinstance(value, float) else f"{key}: {value}"
+                        f"{key}: {value:.4f}"
+                        if isinstance(value, float)
+                        else f"{key}: {value}"
                     )
 
             lines.append("---")
@@ -562,7 +566,9 @@ class ObsidianExporter:
             lines.append(f'title: "{draft.get("title", "Untitled")}"')
             lines.append("type: paper-draft")
             lines.append(f"date: {datetime.now().isoformat()}")
-            lines.append(f"tags: [{self.config.tag_prefix}paper, {self.config.tag_prefix}draft]")
+            lines.append(
+                f"tags: [{self.config.tag_prefix}paper, {self.config.tag_prefix}draft]"
+            )
 
             # Authors
             authors = draft.get("authors", [])
@@ -747,6 +753,7 @@ def create_exporter_from_env() -> ObsidianExporter:
             writing_folder=os.environ.get("OBSIDIAN_WRITING_FOLDER", "Writing"),
             papers_folder=os.environ.get("OBSIDIAN_PAPERS_FOLDER", "Papers"),
             auto_export=os.environ.get("OBSIDIAN_AUTO_EXPORT", "").lower() == "true",
-            create_links=os.environ.get("OBSIDIAN_CREATE_LINKS", "true").lower() != "false",
+            create_links=os.environ.get("OBSIDIAN_CREATE_LINKS", "true").lower()
+            != "false",
         )
     )

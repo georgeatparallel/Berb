@@ -23,7 +23,9 @@ class TestWebGroundLayerNoOp:
     """No PERPLEXITY_API_KEY configured — Layer 5 must no-op, not fail."""
 
     @pytest.mark.asyncio
-    async def test_no_api_key_skips_layer_silently(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    async def test_no_api_key_skips_layer_silently(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.delenv("PERPLEXITY_API_KEY", raising=False)
         config = VerifierConfig(
             enable_format_check=True,
@@ -40,7 +42,9 @@ class TestWebGroundLayerNoOp:
         assert VerificationLayer.WEB_GROUND not in result.layers_failed
 
     @pytest.mark.asyncio
-    async def test_disabled_flag_skips_layer(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    async def test_disabled_flag_skips_layer(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setenv("PERPLEXITY_API_KEY", "fake-key")
         config = VerifierConfig(
             enable_format_check=True,
@@ -129,7 +133,9 @@ class TestWebGroundLayerWithKey:
         verifier = CitationVerifier(self._config())
 
         with patch("berb.llm.deep_query_client.DeepQueryClient") as mock_client_cls:
-            mock_client_cls.return_value.verify_citation.side_effect = RuntimeError("API down")
+            mock_client_cls.return_value.verify_citation.side_effect = RuntimeError(
+                "API down"
+            )
             result = await verifier.verify(
                 {"doi": "10.1038/s41586-021-03819-2", "title": "Some Paper"}
             )

@@ -14,7 +14,10 @@ from berb.web.search import SearchResult, WebSearchClient, WebSearchResponse
 class TestSearchResult:
     def test_to_dict(self):
         r = SearchResult(
-            title="Test", url="https://example.com", snippet="A snippet", source="tavily"
+            title="Test",
+            url="https://example.com",
+            snippet="A snippet",
+            source="tavily",
         )
         d = r.to_dict()
         assert d["title"] == "Test"
@@ -131,7 +134,9 @@ class TestWebSearchClient:
             client = WebSearchClient(api_key="test-key")
             import time
 
-            response = client._search_tavily("test query", 10, None, None, time.monotonic())
+            response = client._search_tavily(
+                "test query", 10, None, None, time.monotonic()
+            )
             assert response.source == "tavily"
             assert len(response.results) == 1
             assert response.results[0].title == "Tavily Result"
@@ -150,4 +155,6 @@ class TestWebSearchClient:
         assert len(responses) == 2
         # Second query should have same URL deduped
         if responses[0].results:
-            assert all(r.url != responses[0].results[0].url for r in responses[1].results)
+            assert all(
+                r.url != responses[0].results[0].url for r in responses[1].results
+            )

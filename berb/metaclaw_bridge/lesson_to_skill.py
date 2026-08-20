@@ -164,10 +164,16 @@ def convert_lessons_to_skills(
         if _severity_at_least(getattr(lesson, "severity", ""), min_severity)
     ]
     if not filtered:
-        logger.info("No lessons at severity >= %s (total lessons: %d)", min_severity, len(lessons))
+        logger.info(
+            "No lessons at severity >= %s (total lessons: %d)",
+            min_severity,
+            len(lessons),
+        )
         return []
 
-    logger.info("Converting %d lessons (severity >= %s) to skills", len(filtered), min_severity)
+    logger.info(
+        "Converting %d lessons (severity >= %s) to skills", len(filtered), min_severity
+    )
 
     skills_path = Path(skills_dir).expanduser()
     skills_path.mkdir(parents=True, exist_ok=True)
@@ -203,7 +209,9 @@ def convert_lessons_to_skills(
         # Map category using our mapping if needed
         if skill["category"] not in LESSON_CATEGORY_TO_SKILL_CATEGORY.values():
             lesson_cat = skill.get("category", "pipeline")
-            skill["category"] = LESSON_CATEGORY_TO_SKILL_CATEGORY.get(lesson_cat, "research")
+            skill["category"] = LESSON_CATEGORY_TO_SKILL_CATEGORY.get(
+                lesson_cat, "research"
+            )
         path = _write_skill(skills_path, skill)
         if path is not None:
             created.append(skill["name"])

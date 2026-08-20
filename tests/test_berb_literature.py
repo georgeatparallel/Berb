@@ -203,7 +203,9 @@ class TestSemanticScholar:
         assert p.source == "semantic_scholar"
         assert p.citation_count == 42
 
-    def test_search_semantic_scholar_mock(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_search_semantic_scholar_mock(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Mock urllib to return sample S2 response."""
         # Reset S2 circuit breaker (may be tripped from prior test API calls)
         from berb.literature.semantic_scholar import _reset_circuit_breaker
@@ -226,7 +228,9 @@ class TestSemanticScholar:
         assert len(papers) == 1
         assert papers[0].title == "Test Paper on Transformers"
 
-    def test_search_semantic_scholar_network_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_search_semantic_scholar_network_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Should return empty list on network error."""
         from berb.literature.semantic_scholar import _reset_circuit_breaker
 
@@ -239,7 +243,9 @@ class TestSemanticScholar:
             lambda *a, **kw: (_ for _ in ()).throw(urllib.error.URLError("timeout")),
         )
         # Patch sleep to speed up test
-        monkeypatch.setattr("berb.literature.semantic_scholar.time.sleep", lambda _: None)
+        monkeypatch.setattr(
+            "berb.literature.semantic_scholar.time.sleep", lambda _: None
+        )
         papers = search_semantic_scholar("test", limit=5)
         assert papers == []
 
@@ -367,13 +373,17 @@ class TestArxiv:
 class TestDeduplication:
     def test_dedup_by_doi(self) -> None:
         p1 = _make_paper(paper_id="s2-1", doi="10.1234/a", citation_count=100)
-        p2 = _make_paper(paper_id="arxiv-1", doi="10.1234/a", citation_count=50, source="arxiv")
+        p2 = _make_paper(
+            paper_id="arxiv-1", doi="10.1234/a", citation_count=50, source="arxiv"
+        )
         result = _deduplicate([p1, p2])
         assert len(result) == 1
         assert result[0].citation_count == 100  # keeps higher
 
     def test_dedup_by_arxiv_id(self) -> None:
-        p1 = _make_paper(paper_id="s2-1", doi="", arxiv_id="2401.00001", citation_count=10)
+        p1 = _make_paper(
+            paper_id="s2-1", doi="", arxiv_id="2401.00001", citation_count=10
+        )
         p2 = _make_paper(
             paper_id="arxiv-1",
             doi="",
@@ -405,8 +415,12 @@ class TestDeduplication:
         assert result[0].citation_count == 10
 
     def test_dedup_no_duplicates(self) -> None:
-        p1 = _make_paper(paper_id="s2-1", title="Paper A", doi="10.1/a", arxiv_id="1111.11111")
-        p2 = _make_paper(paper_id="s2-2", title="Paper B", doi="10.1/b", arxiv_id="2222.22222")
+        p1 = _make_paper(
+            paper_id="s2-1", title="Paper A", doi="10.1/a", arxiv_id="1111.11111"
+        )
+        p2 = _make_paper(
+            paper_id="s2-2", title="Paper B", doi="10.1/b", arxiv_id="2222.22222"
+        )
         result = _deduplicate([p1, p2])
         assert len(result) == 2
 
@@ -426,9 +440,13 @@ class TestPapersToBibtex:
 
 
 class TestSearchPapers:
-    def test_search_papers_combines_sources(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_search_papers_combines_sources(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Mock both S2 and arXiv to verify combined search."""
-        s2_paper = _make_paper(paper_id="s2-1", source="semantic_scholar", citation_count=100)
+        s2_paper = _make_paper(
+            paper_id="s2-1", source="semantic_scholar", citation_count=100
+        )
         arxiv_paper = _make_paper(
             paper_id="arxiv-1",
             title="Different Paper",
@@ -460,7 +478,9 @@ class TestSearchPapers:
         assert "semantic_scholar" in _DEFAULT_SOURCES
         assert "arxiv" in _DEFAULT_SOURCES
 
-    def test_s2_failure_does_not_block_others(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_s2_failure_does_not_block_others(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """When S2 fails, other sources should still return results."""
         arxiv_paper = _make_paper(
             paper_id="arxiv-ok",
@@ -487,7 +507,9 @@ class TestSearchPapers:
         assert len(papers) >= 1
         assert papers[0].source == "arxiv"
 
-    def test_search_papers_unknown_source(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_search_papers_unknown_source(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setattr("berb.literature.search.time.sleep", lambda _: None)
         papers = search_papers("test", sources=["unknown_source"])
         assert papers == []
@@ -527,9 +549,13 @@ class TestPerplexityTopUp:
     cascade (OpenAlex/S2/arXiv) under-delivers — never a 4th parallel
     source in the default per-query loop."""
 
-    def test_not_triggered_when_cascade_sufficient(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_not_triggered_when_cascade_sufficient(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         papers = [
-            _make_paper(paper_id=f"p{i}", title=f"Paper {i}", doi=f"10.{i}/unique", arxiv_id="")
+            _make_paper(
+                paper_id=f"p{i}", title=f"Paper {i}", doi=f"10.{i}/unique", arxiv_id=""
+            )
             for i in range(15)
         ]
         monkeypatch.setattr(
@@ -550,10 +576,14 @@ class TestPerplexityTopUp:
         assert not top_up_called
         assert len(result) == 15
 
-    def test_triggered_on_low_candidate_count(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_triggered_on_low_candidate_count(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setattr(
             "berb.literature.search.search_papers",
-            lambda *a, **kw: [_make_paper(paper_id="only-one", doi="10.1/only", arxiv_id="")],
+            lambda *a, **kw: [
+                _make_paper(paper_id="only-one", doi="10.1/only", arxiv_id="")
+            ],
         )
         monkeypatch.setattr("berb.literature.search.time.sleep", lambda _: None)
 
@@ -574,7 +604,9 @@ class TestPerplexityTopUp:
         assert "perplexity" in sources
         assert len(result) == 2
 
-    def test_triggered_on_multiple_source_failures(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_triggered_on_multiple_source_failures(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Even with enough raw candidates, 2+ failed sources should trigger
         top-up — a simultaneous-outage signal, not just a count threshold."""
 
@@ -582,9 +614,16 @@ class TestPerplexityTopUp:
             failure_counter = kw.get("failure_counter")
             if failure_counter is not None:
                 failure_counter["openalex"] = failure_counter.get("openalex", 0) + 1
-                failure_counter["semantic_scholar"] = failure_counter.get("semantic_scholar", 0) + 1
+                failure_counter["semantic_scholar"] = (
+                    failure_counter.get("semantic_scholar", 0) + 1
+                )
             return [
-                _make_paper(paper_id=f"p{i}", title=f"Paper {i}", doi=f"10.{i}/unique", arxiv_id="")
+                _make_paper(
+                    paper_id=f"p{i}",
+                    title=f"Paper {i}",
+                    doi=f"10.{i}/unique",
+                    arxiv_id="",
+                )
                 for i in range(15)
             ]
 
@@ -633,7 +672,9 @@ class TestPerplexityTopUp:
         monkeypatch.delenv("PERPLEXITY_API_KEY", raising=False)
         assert search_perplexity("test query") == []
 
-    def test_search_perplexity_parses_papers(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_search_perplexity_parses_papers(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         from berb.literature.perplexity_search import search_perplexity
         from berb.llm.deep_query_client import DeepQueryResult
 
@@ -664,7 +705,9 @@ class TestPerplexityTopUp:
         assert papers[0].source == "perplexity"
         assert papers[0].authors[0].name == "Smith, J."
 
-    def test_search_perplexity_unparseable_response(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_search_perplexity_unparseable_response(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         from berb.literature.perplexity_search import search_perplexity
         from berb.llm.deep_query_client import DeepQueryResult
 
@@ -960,7 +1003,9 @@ class TestCacheTTL:
         assert _SOURCE_TTL["semantic_scholar"] == 86400 * 3
 
         # Put and get immediately — should hit
-        put_cache("test", "arxiv", 10, [{"paper_id": "x", "title": "Y"}], cache_base=tmp_path)
+        put_cache(
+            "test", "arxiv", 10, [{"paper_id": "x", "title": "Y"}], cache_base=tmp_path
+        )
         result = get_cached("test", "arxiv", 10, cache_base=tmp_path)
         assert result is not None
         assert len(result) == 1

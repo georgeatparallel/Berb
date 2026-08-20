@@ -22,8 +22,10 @@ class PhysicsPromptAdapter(PromptAdapter):
         code_hints = domain.code_generation_hints or self._default_code_hints(paradigm)
 
         return PromptBlocks(
-            compute_budget=domain.compute_budget_guidance or self._default_compute_budget(),
-            dataset_guidance=domain.dataset_guidance or self._default_dataset_guidance(),
+            compute_budget=domain.compute_budget_guidance
+            or self._default_compute_budget(),
+            dataset_guidance=domain.dataset_guidance
+            or self._default_dataset_guidance(),
             hp_reporting=domain.hp_reporting_guidance or self._default_hp_reporting(),
             code_generation_hints=code_hints,
             output_format_guidance=self._output_format(paradigm),
@@ -43,9 +45,7 @@ class PhysicsPromptAdapter(PromptAdapter):
         )
 
         if domain.standard_baselines:
-            design_context += (
-                f"\nStandard reference methods: {', '.join(domain.standard_baselines)}\n"
-            )
+            design_context += f"\nStandard reference methods: {', '.join(domain.standard_baselines)}\n"
 
         stats = (
             ", ".join(domain.statistical_tests)

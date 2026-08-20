@@ -40,7 +40,9 @@ class TestOpenRouterOnly:
         from berb.llm import PROVIDER_PRESETS
 
         assert "openrouter" in PROVIDER_PRESETS
-        assert PROVIDER_PRESETS["openrouter"]["base_url"] == "https://openrouter.ai/api/v1"
+        assert (
+            PROVIDER_PRESETS["openrouter"]["base_url"] == "https://openrouter.ai/api/v1"
+        )
 
     def test_llm_client_uses_config_base_url(self):
         """Test LLM client uses base_url from config."""
@@ -353,7 +355,9 @@ class TestSpecificationPattern:
         from berb.literature.specification import PaperFilter
 
         filter_builder = PaperFilter()
-        spec = filter_builder.from_year(2020).to_year(2026).with_min_citations(50).build()
+        spec = (
+            filter_builder.from_year(2020).to_year(2026).with_min_citations(50).build()
+        )
 
         paper = Mock()
         paper.year = 2023

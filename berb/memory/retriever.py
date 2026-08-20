@@ -105,7 +105,9 @@ class MemoryRetriever:
                 created = datetime.fromisoformat(entry.created_at)
             except (ValueError, TypeError):
                 created = now
-            decay = time_decay_weight(created, half_life_days=self._half_life_days, now=now)
+            decay = time_decay_weight(
+                created, half_life_days=self._half_life_days, now=now
+            )
 
             # Normalized access frequency
             norm_access = entry.access_count / max_access

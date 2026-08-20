@@ -223,7 +223,9 @@ class TestOpenRouterProvider:
     def test_vision_support(self):
         """Test vision support detection."""
         vision_models = [m for m in OPENROUTER_MODELS.values() if m.supports_vision]
-        non_vision_models = [m for m in OPENROUTER_MODELS.values() if not m.supports_vision]
+        non_vision_models = [
+            m for m in OPENROUTER_MODELS.values() if not m.supports_vision
+        ]
 
         assert len(vision_models) > 0
         assert len(non_vision_models) > 0

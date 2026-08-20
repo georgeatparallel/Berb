@@ -149,7 +149,9 @@ class CodeSearchAgent:
         -------
         CodeSearchResult
         """
-        logger.info("Code search started for: %.60s (domain=%s)", topic, domain.domain_id)
+        logger.info(
+            "Code search started for: %.60s (domain=%s)", topic, domain.domain_id
+        )
 
         # 1. Check cache
         cached = self._cache.get(domain.domain_id, topic)
@@ -179,11 +181,7 @@ class CodeSearchAgent:
             try:
                 repos = self._github.search_repos(queries[0], max_results=10)
                 # Filter: recent, well-starred
-                repos = [
-                    r
-                    for r in repos
-                    if r.stars >= 10  # minimum quality threshold
-                ]
+                repos = [r for r in repos if r.stars >= 10]  # minimum quality threshold
                 result.repos_found = repos[: self._max_repos * 2]
             except Exception:
                 logger.warning("Repo search failed, continuing", exc_info=True)

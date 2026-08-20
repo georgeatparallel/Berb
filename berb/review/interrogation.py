@@ -44,7 +44,9 @@ _STATUS_MAP = {
 }
 
 
-def adjudicate_claim(llm: LLMClient, claim: ClaimRecord, evidence_context: str) -> Verdict:
+def adjudicate_claim(
+    llm: LLMClient, claim: ClaimRecord, evidence_context: str
+) -> Verdict:
     """Cross-reference a single claim's text against recorded evidence."""
     prompt = (
         "You are auditing a scientific claim against the experiment's own "
@@ -58,13 +60,17 @@ def adjudicate_claim(llm: LLMClient, claim: ClaimRecord, evidence_context: str) 
         '"supported"|"unsupported"|"cannot_determine", "reasoning": "..."}'
     )
     try:
-        resp = llm.chat([{"role": "user", "content": prompt}], json_mode=True, max_tokens=512)
+        resp = llm.chat(
+            [{"role": "user", "content": prompt}], json_mode=True, max_tokens=512
+        )
         parsed = json.loads(resp.content)
         status = _STATUS_MAP.get(
             str(parsed.get("status", "")).lower(), ClaimVerdict.CANNOT_DETERMINE
         )
         return Verdict(
-            claim_id=claim.claim_id, status=status, reasoning=str(parsed.get("reasoning", ""))
+            claim_id=claim.claim_id,
+            status=status,
+            reasoning=str(parsed.get("reasoning", "")),
         )
     except Exception:  # noqa: BLE001
         logger.debug("Claim adjudication failed for %s", claim.claim_id, exc_info=True)
@@ -95,5 +101,7 @@ def adjudicate_claims(
     if not to_check:
         return []
     evidence_lines = [f"- {r.label}: {r.value}" for r in registry.records.values()][:50]
-    evidence_context = "\n".join(evidence_lines) if evidence_lines else "(no recorded evidence)"
+    evidence_context = (
+        "\n".join(evidence_lines) if evidence_lines else "(no recorded evidence)"
+    )
     return [adjudicate_claim(llm, c, evidence_context) for c in to_check]

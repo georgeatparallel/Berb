@@ -179,7 +179,9 @@ class PreMortemMethod(ReasoningMethod):
 
         # Extract proposed design from context
         proposed_design = (
-            context.get("proposed_design") or context.get("design") or context.get("solution")
+            context.get("proposed_design")
+            or context.get("design")
+            or context.get("solution")
         )
         if not proposed_design:
             return ReasoningResult.error_result(
@@ -378,7 +380,9 @@ Output JSON format:
         provider = self._get_provider("constructive")
 
         design_str = self._format_design(proposed_design)
-        narratives_str = "\n\n".join([self._format_narrative(n) for n in failure_narratives])
+        narratives_str = "\n\n".join(
+            [self._format_narrative(n) for n in failure_narratives]
+        )
         root_causes_str = "\n\n".join([self._format_root_cause(c) for c in root_causes])
         signals_str = "\n\n".join([self._format_signal(s) for s in early_signals])
 
@@ -561,7 +565,9 @@ Severity: {signal.severity}"""
             self.router.track_cost(
                 method="pre_mortem",
                 phase="all",
-                model=self.router.role_models.get("narrative", self.router.complex_model),
+                model=self.router.role_models.get(
+                    "narrative", self.router.complex_model
+                ),
                 input_tokens=estimated_input,
                 output_tokens=estimated_output,
                 duration_ms=int(duration_sec * 1000),
@@ -577,7 +583,9 @@ class _LLMClientProvider:
 
     def __init__(self, llm_client: Any) -> None:
         self.llm_client = llm_client
-        self.model = getattr(getattr(llm_client, "config", None), "primary_model", "unknown")
+        self.model = getattr(
+            getattr(llm_client, "config", None), "primary_model", "unknown"
+        )
 
     async def complete(self, prompt: str) -> Any:
         import asyncio
@@ -591,7 +599,9 @@ class _LLMClientProvider:
 
         loop = asyncio.get_event_loop()
         with ThreadPoolExecutor() as executor:
-            result = await loop.run_in_executor(executor, lambda: self.llm_client.chat(messages))
+            result = await loop.run_in_executor(
+                executor, lambda: self.llm_client.chat(messages)
+            )
         if inspect.isawaitable(result):
             return await result
         return result

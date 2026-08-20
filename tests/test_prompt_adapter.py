@@ -186,7 +186,9 @@ class TestGetAdapter:
             if profile is None:
                 continue
             adapter = get_adapter(profile)
-            assert isinstance(adapter, MLPromptAdapter), f"{domain_id} should use MLPromptAdapter"
+            assert isinstance(
+                adapter, MLPromptAdapter
+            ), f"{domain_id} should use MLPromptAdapter"
 
     def test_generic_domain_gets_generic_adapter(self):
         profile = get_generic_profile()

@@ -73,7 +73,9 @@ def _paper_section(run_dir: Path) -> str:
     if draft_path.exists():
         text = draft_path.read_text(encoding="utf-8")
         word_count = len(text.split())
-        lines.append(f"- Draft: `{draft_path.relative_to(run_dir)}` (~{word_count} words)")
+        lines.append(
+            f"- Draft: `{draft_path.relative_to(run_dir)}` (~{word_count} words)"
+        )
     else:
         lines.append("- Draft: not generated")
 
@@ -195,7 +197,9 @@ def _cost_section(run_dir: Path) -> str:
     by_stage = loaded.get("by_stage")
     if isinstance(by_stage, dict) and by_stage:
         top = sorted(by_stage.items(), key=lambda kv: kv[1], reverse=True)[:5]
-        lines.append("- Top stages: " + ", ".join(f"stage {k} ${v:,.4f}" for k, v in top))
+        lines.append(
+            "- Top stages: " + ", ".join(f"stage {k} ${v:,.4f}" for k, v in top)
+        )
 
     by_phase = loaded.get("by_phase")
     if isinstance(by_phase, dict) and by_phase:

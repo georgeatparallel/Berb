@@ -28,7 +28,9 @@ def test_validate_checkpoint_checksum_accepts_valid() -> None:
     }
     import hashlib
 
-    checksum_data = f"{data['last_completed_stage']}:{data['last_completed_name']}:{data['run_id']}"
+    checksum_data = (
+        f"{data['last_completed_stage']}:{data['last_completed_name']}:{data['run_id']}"
+    )
     data["checksum"] = hashlib.sha256(checksum_data.encode()).hexdigest()[:16]
 
     assert validate_checkpoint_checksum(data) is True
@@ -121,7 +123,9 @@ class TestReplaceWithRetry:
         assert dst.read_text(encoding="utf-8") == "content"
         assert not src.exists()
 
-    def test_retries_and_succeeds_after_transient_permission_error(self, tmp_path: Path) -> None:
+    def test_retries_and_succeeds_after_transient_permission_error(
+        self, tmp_path: Path
+    ) -> None:
         src = tmp_path / "src.tmp"
         dst = tmp_path / "dst.json"
         src.write_text("content", encoding="utf-8")
@@ -153,7 +157,10 @@ class TestReplaceWithRetry:
         def always_fails(self: Path, target: Path) -> Path:
             raise PermissionError("[WinError 5] Access is denied")
 
-        with patch.object(Path, "replace", always_fails), patch("berb.utils.atomic.time.sleep"):
+        with (
+            patch.object(Path, "replace", always_fails),
+            patch("berb.utils.atomic.time.sleep"),
+        ):
             with pytest.raises(PermissionError):
                 _replace_with_retry(src, dst, attempts=3, base_delay_sec=0.01)
 
@@ -168,7 +175,10 @@ class TestReplaceWithRetry:
                 raise PermissionError("[WinError 5] Access is denied")
             return real_replace(self, target)
 
-        with patch.object(Path, "replace", flaky_replace), patch("berb.utils.atomic.time.sleep"):
+        with (
+            patch.object(Path, "replace", flaky_replace),
+            patch("berb.utils.atomic.time.sleep"),
+        ):
             write_checkpoint(tmp_path, Stage.EXPERIMENT_DESIGN, "test-flaky")
 
         cp_path = tmp_path / "checkpoint.json"

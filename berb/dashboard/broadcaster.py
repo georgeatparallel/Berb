@@ -37,20 +37,26 @@ class DashboardBroadcaster:
             prev = self._prev_snapshots.get(snap.run_id)
             if prev is None:
                 # New run discovered
-                await self._manager.broadcast(Event(type=EventType.RUN_DISCOVERED, data=d))
+                await self._manager.broadcast(
+                    Event(type=EventType.RUN_DISCOVERED, data=d)
+                )
             else:
                 # Check for stage changes
                 if d["current_stage"] != prev.get("current_stage"):
                     await self._manager.broadcast(
                         Event(
-                            type=EventType.STAGE_COMPLETE
-                            if d["current_stage"] > prev.get("current_stage", 0)
-                            else EventType.RUN_STATUS_CHANGED,
+                            type=(
+                                EventType.STAGE_COMPLETE
+                                if d["current_stage"] > prev.get("current_stage", 0)
+                                else EventType.RUN_STATUS_CHANGED
+                            ),
                             data=d,
                         )
                     )
                 elif d["status"] != prev.get("status"):
-                    await self._manager.broadcast(Event(type=EventType.RUN_STATUS_CHANGED, data=d))
+                    await self._manager.broadcast(
+                        Event(type=EventType.RUN_STATUS_CHANGED, data=d)
+                    )
                 # Check for metric updates
                 if d["metrics"] and d["metrics"] != prev.get("metrics"):
                     await self._manager.broadcast(

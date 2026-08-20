@@ -206,7 +206,12 @@ class AgenticSandbox:
 
         logger.info("Starting agentic container: %s", container)
         subprocess.run(
-            cmd, check=True, capture_output=True, text=True, encoding="utf-8", errors="replace"
+            cmd,
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
         )
 
     def _docker_exec(

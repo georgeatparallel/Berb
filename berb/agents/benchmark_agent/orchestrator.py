@@ -128,7 +128,9 @@ class BenchmarkPlan:
         if self.selected_baselines:
             parts.append("\n## Selected Baselines")
             for bl in self.selected_baselines:
-                parts.append(f"- **{bl.get('name', 'Unknown')}**: {bl.get('paper', 'N/A')}")
+                parts.append(
+                    f"- **{bl.get('name', 'Unknown')}**: {bl.get('paper', 'N/A')}"
+                )
                 if bl.get("source"):
                     parts.append(f"  Code: `{bl['source']}`")
 
@@ -305,7 +307,9 @@ class BenchmarkOrchestrator(AgentOrchestrator):
 
             # Validate
             self.logger.info(
-                "Phase 4: Validating code (iteration %d/%d)", iteration + 1, self.max_iterations
+                "Phase 4: Validating code (iteration %d/%d)",
+                iteration + 1,
+                self.max_iterations,
             )
             val_result = self._validator.execute(
                 {

@@ -38,7 +38,9 @@ class ClaimWithEvidence(BaseModel):
     """
 
     claim_text: str
-    evidence_type: Literal["experimental", "theoretical", "empirical", "survey"] = "experimental"
+    evidence_type: Literal["experimental", "theoretical", "empirical", "survey"] = (
+        "experimental"
+    )
     confidence: float = Field(default=0.8, ge=0.0, le=1.0)
     page_number: int | None = None
     supporting_data: str = ""
@@ -218,7 +220,9 @@ class ReadingNotesCollection(BaseModel):
         Returns:
             List of matching notes
         """
-        return [n for n in self.notes.values() if n.contribution_type == contribution_type]
+        return [
+            n for n in self.notes.values() if n.contribution_type == contribution_type
+        ]
 
     def get_high_quality_notes(
         self,
@@ -412,7 +416,9 @@ class StructuredNotesGenerator:
             extraction = await self._multi_perspective_extraction(paper_text, topic)
         else:
             # Fallback to heuristic extraction
-            extraction = await self._heuristic_extraction(paper_metadata, paper_text, topic)
+            extraction = await self._heuristic_extraction(
+                paper_metadata, paper_text, topic
+            )
 
         # Build note
         note = PaperReadingNote(
@@ -497,21 +503,31 @@ class StructuredNotesGenerator:
 
         # Run each perspective
         for perspective_name, perspective_def in self.NOTE_PERSPECTIVES.items():
-            problem = self._build_perspective_problem(paper_text, topic, perspective_def)
+            problem = self._build_perspective_problem(
+                paper_text, topic, perspective_def
+            )
 
             try:
                 result = await self._run_perspective(problem, perspective_name)
 
                 # Extract relevant content based on perspective
                 if perspective_name == "methodologist":
-                    extraction["methodology"] = self._extract_section(result.content, "methodology")
+                    extraction["methodology"] = self._extract_section(
+                        result.content, "methodology"
+                    )
                 elif perspective_name == "critic":
-                    extraction["limitations"] = self._extract_list(result.content, "limitations")
+                    extraction["limitations"] = self._extract_list(
+                        result.content, "limitations"
+                    )
                 elif perspective_name == "synthesizer":
-                    extraction["key_findings"] = self._extract_list(result.content, "findings")
+                    extraction["key_findings"] = self._extract_list(
+                        result.content, "findings"
+                    )
                     extraction["claims"] = self._extract_claims(result.content)
                 elif perspective_name == "connector":
-                    extraction["relevance"] = self._extract_section(result.content, "relevance")
+                    extraction["relevance"] = self._extract_section(
+                        result.content, "relevance"
+                    )
 
             except Exception as e:
                 logger.warning(f"Perspective {perspective_name} failed: {e}")
@@ -807,7 +823,9 @@ Organize your response with clear sections for each question."""
     def _infer_contribution_type(
         self,
         extraction: dict[str, Any],
-    ) -> Literal["background", "methodology", "comparison", "supporting", "contrasting"]:
+    ) -> Literal[
+        "background", "methodology", "comparison", "supporting", "contrasting"
+    ]:
         """Infer contribution type from extraction.
 
         Args:

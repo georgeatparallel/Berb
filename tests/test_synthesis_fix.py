@@ -106,7 +106,8 @@ class TestFallbackHypothesisGen:
 
         # Mock _multi_perspective_generate to return empty
         with patch(
-            "berb.pipeline.stage_impls._synthesis._multi_perspective_generate", return_value={}
+            "berb.pipeline.stage_impls._synthesis._multi_perspective_generate",
+            return_value={},
         ):
             result = _fallback_hypothesis_gen(
                 llm=llm,
@@ -200,7 +201,8 @@ class TestAdversarialValidation:
 
             # Mock both functions to avoid actual LLM calls
             with patch(
-                "berb.pipeline.stage_impls._synthesis._multi_perspective_generate", return_value={}
+                "berb.pipeline.stage_impls._synthesis._multi_perspective_generate",
+                return_value={},
             ):
                 with patch(
                     "berb.pipeline.stage_impls._synthesis._default_hypotheses",

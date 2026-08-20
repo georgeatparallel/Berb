@@ -38,8 +38,7 @@ class TestDiffBasedReviser:
     async def test_revise_success(self):
         """Test successful diff-based revision."""
         mock_client = AsyncMock()
-        mock_client.chat.return_value = MagicMock(
-            content="""```diff
+        mock_client.chat.return_value = MagicMock(content="""```diff
 --- a/module.py
 +++ b/module.py
 @@ -1,4 +1,6 @@
@@ -48,8 +47,7 @@ class TestDiffBasedReviser:
 +    if not name:
 +        raise ValueError("Name cannot be empty")
 +    return f"Hello, {name}!"
-```"""
-        )
+```""")
 
         reviser = DiffBasedReviser(mock_client)
 
@@ -70,15 +68,13 @@ class TestDiffBasedReviser:
     async def test_revise_invalid_syntax(self):
         """Test revision with invalid Python syntax."""
         mock_client = AsyncMock()
-        mock_client.chat.return_value = MagicMock(
-            content="""```diff
+        mock_client.chat.return_value = MagicMock(content="""```diff
 --- a/module.py
 +++ b/module.py
 @@ -1 +1 @@
 -def x(): pass
 +def x(: invalid
-```"""
-        )
+```""")
 
         reviser = DiffBasedReviser(mock_client, validate_patches=True)
 
@@ -246,7 +242,9 @@ class TestIsDiffWorthwhile:
 
     def test_large_changes_not_worthwhile(self):
         """Test diff not worthwhile for large changes."""
-        assert is_diff_worthwhile(original_lines=100, estimated_change_lines=60) is False
+        assert (
+            is_diff_worthwhile(original_lines=100, estimated_change_lines=60) is False
+        )
 
     def test_medium_changes_worthwhile(self):
         """Test diff worthwhile for medium changes."""

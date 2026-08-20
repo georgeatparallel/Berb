@@ -60,7 +60,9 @@ class EmbeddingProvider:
         self._api_key = api_key
         self._cache_dir = cache_dir
         self._backend: str | None = backend
-        self._dim: int = {"api": 1536, "sentence_transformers": 384}.get(backend, _TFIDF_DIM)
+        self._dim: int = {"api": 1536, "sentence_transformers": 384}.get(
+            backend, _TFIDF_DIM
+        )
         self._local_model: Any = None
 
     @property

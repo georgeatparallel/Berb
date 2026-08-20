@@ -127,7 +127,9 @@ async def _run_and_checkpoint(
         auto_approve_gates=auto_approve_gates,
     )
     elapsed = _time.monotonic() - t0
-    logger.debug("Stage %s finished in %.2fs (status=%s)", stage, elapsed, result.status)
+    logger.debug(
+        "Stage %s finished in %.2fs (status=%s)", stage, elapsed, result.status
+    )
 
     if result.status == StageStatus.DONE:
         if checkpoint_mgr:

@@ -208,7 +208,9 @@ class FullTextExtractor:
 
         ssrf_err = check_url_ssrf(url)
         if ssrf_err:
-            return FullTextResult(url=url, success=False, error=f"Blocked by SSRF check: {ssrf_err}")
+            return FullTextResult(
+                url=url, success=False, error=f"Blocked by SSRF check: {ssrf_err}"
+            )
 
         # Detect source type
         source_type = self._detect_source_type(url)
@@ -376,7 +378,9 @@ class FullTextExtractor:
                 ssrf_err = check_url_ssrf(current_url)
                 if ssrf_err:
                     return FullTextResult(
-                        url=url, success=False, error=f"Blocked by SSRF check: {ssrf_err}"
+                        url=url,
+                        success=False,
+                        error=f"Blocked by SSRF check: {ssrf_err}",
                     )
                 response = await self._http_client.get(current_url)
                 if response.is_redirect:
@@ -387,7 +391,9 @@ class FullTextExtractor:
                     continue
                 break
             if response is None or response.is_redirect:
-                return FullTextResult(url=url, success=False, error="Too many redirects")
+                return FullTextResult(
+                    url=url, success=False, error="Too many redirects"
+                )
             response.raise_for_status()
             html = response.text
 
@@ -478,8 +484,12 @@ class FullTextExtractor:
     def _html_to_text(self, html: str) -> str:
         """Convert HTML to plain text (basic)."""
         # Remove scripts and styles
-        html = re.sub(r"<script[^>]*>.*?</script>", "", html, flags=re.DOTALL | re.IGNORECASE)
-        html = re.sub(r"<style[^>]*>.*?</style>", "", html, flags=re.DOTALL | re.IGNORECASE)
+        html = re.sub(
+            r"<script[^>]*>.*?</script>", "", html, flags=re.DOTALL | re.IGNORECASE
+        )
+        html = re.sub(
+            r"<style[^>]*>.*?</style>", "", html, flags=re.DOTALL | re.IGNORECASE
+        )
 
         # Remove HTML tags
         text = re.sub(r"<[^>]+>", " ", html)

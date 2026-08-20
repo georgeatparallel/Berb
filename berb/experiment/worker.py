@@ -207,9 +207,9 @@ class ExperimentWorkerImpl(ExperimentWorker):
         return WorkerStatus(
             worker_id=self.worker_id,
             is_busy=self._is_busy,
-            current_experiment=self._current_context.experiment_id
-            if self._current_context
-            else None,
+            current_experiment=(
+                self._current_context.experiment_id if self._current_context else None
+            ),
             completed_count=self._completed_count,
             failed_count=self._failed_count,
             last_heartbeat=self._last_heartbeat,

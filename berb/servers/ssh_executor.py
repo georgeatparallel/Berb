@@ -69,7 +69,11 @@ class SSHExecutor:
         except TimeoutError:
             proc.kill()
             await proc.wait()
-            return {"success": False, "error": f"Timeout after {timeout}s", "returncode": -1}
+            return {
+                "success": False,
+                "error": f"Timeout after {timeout}s",
+                "returncode": -1,
+            }
 
         return {
             "success": proc.returncode == 0,

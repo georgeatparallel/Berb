@@ -197,7 +197,9 @@ class AdaptiveTemperatureClient:
 
             except Exception as e:  # noqa: BLE001
                 last_error = e
-                logger.warning(f"Adaptive temp: retry {retry_count} failed (temp={temp:.2f}): {e}")
+                logger.warning(
+                    f"Adaptive temp: retry {retry_count} failed (temp={temp:.2f}): {e}"
+                )
 
         # All retries failed
         raise RuntimeError(f"All retries failed: {last_error}")
@@ -245,7 +247,9 @@ class AdaptiveTemperatureClient:
         return {
             "total_requests": self._total_requests,
             "retry_distribution": dict(self._retry_counts),
-            "zero_retry_rate": self._retry_counts.get(0, 0) / total if total > 0 else 0.0,
+            "zero_retry_rate": (
+                self._retry_counts.get(0, 0) / total if total > 0 else 0.0
+            ),
             "avg_retry_reduction": self._avg_retry_reduction,
         }
 

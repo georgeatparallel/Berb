@@ -214,7 +214,9 @@ class LlmCodeAgent:
         )
         # Higher max_tokens for reasoning models
         _code_max_tokens = sp.max_tokens or 8192
-        if any(self._config.llm.primary_model.startswith(p) for p in ("gpt-5", "o3", "o4")):
+        if any(
+            self._config.llm.primary_model.startswith(p) for p in ("gpt-5", "o3", "o4")
+        ):
             _code_max_tokens = max(_code_max_tokens, 16384)
 
         try:
@@ -346,7 +348,9 @@ class LlmCodeAgent:
         )
 
         start = time.monotonic()
-        all_files_ctx = "\n\n".join(f"```filename:{f}\n{c}\n```" for f, c in files.items())
+        all_files_ctx = "\n\n".join(
+            f"```filename:{f}\n{c}\n```" for f, c in files.items()
+        )
         try:
             rp = self._pm.sub_prompt(
                 "code_repair",
@@ -539,7 +543,9 @@ class _CliAgentBase:
         files_listing = "\n".join(
             f"  - {fname} ({len(code)} chars)" for fname, code in current_files.items()
         )
-        summaries_text = "\n".join(run_summaries[:10]) if run_summaries else "(no prior runs)"
+        summaries_text = (
+            "\n".join(run_summaries[:10]) if run_summaries else "(no prior runs)"
+        )
         return (
             "You are improving experiment code for a research paper.\n\n"
             f"TOPIC: {topic}\n"

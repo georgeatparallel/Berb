@@ -265,7 +265,10 @@ _KEYWORD_RULES: list[tuple[list[str], str]] = [
         ],
         "ml_graph",
     ),
-    (["tabular", "xgboost", "lightgbm", "catboost", "feature engineering"], "ml_tabular"),
+    (
+        ["tabular", "xgboost", "lightgbm", "catboost", "feature engineering"],
+        "ml_tabular",
+    ),
     (
         [
             "generative adversarial",
@@ -344,7 +347,15 @@ _KEYWORD_RULES: list[tuple[list[str], str]] = [
     ),
     # Physics
     (
-        ["molecular dynamics", "n-body", "lennard-jones", "force field", "jax-md", "ase", "openmm"],
+        [
+            "molecular dynamics",
+            "n-body",
+            "lennard-jones",
+            "force field",
+            "jax-md",
+            "ase",
+            "openmm",
+        ],
         "physics_simulation",
     ),
     (
@@ -363,11 +374,24 @@ _KEYWORD_RULES: list[tuple[list[str], str]] = [
         "physics_pde",
     ),
     (
-        ["quantum mechanics", "schrodinger", "hamiltonian", "wavefunction", "density functional"],
+        [
+            "quantum mechanics",
+            "schrodinger",
+            "hamiltonian",
+            "wavefunction",
+            "density functional",
+        ],
         "physics_quantum",
     ),
     (
-        ["physics", "simulation", "integrator", "conservation", "energy drift", "symplectic"],
+        [
+            "physics",
+            "simulation",
+            "integrator",
+            "conservation",
+            "energy drift",
+            "symplectic",
+        ],
         "physics_simulation",
     ),
     # Chemistry
@@ -410,10 +434,20 @@ _KEYWORD_RULES: list[tuple[list[str], str]] = [
         "biology_singlecell",
     ),
     (
-        ["genomics", "genome", "variant calling", "sequencing", "biopython", "alignment"],
+        [
+            "genomics",
+            "genome",
+            "variant calling",
+            "sequencing",
+            "biopython",
+            "alignment",
+        ],
         "biology_genomics",
     ),
-    (["protein", "alphafold", "protein folding", "amino acid", "esm"], "biology_protein"),
+    (
+        ["protein", "alphafold", "protein folding", "amino acid", "esm"],
+        "biology_protein",
+    ),
     (["biology", "bioinformatics", "omics"], "biology_general"),
     # Economics
     (
@@ -430,7 +464,10 @@ _KEYWORD_RULES: list[tuple[list[str], str]] = [
         ],
         "economics_empirical",
     ),
-    (["economics", "economic", "market", "equilibrium", "utility", "welfare"], "economics_general"),
+    (
+        ["economics", "economic", "market", "equilibrium", "utility", "welfare"],
+        "economics_general",
+    ),
     # Mathematics
     (
         [
@@ -447,7 +484,13 @@ _KEYWORD_RULES: list[tuple[list[str], str]] = [
         "mathematics_numerical",
     ),
     (
-        ["optimization", "convex", "linear programming", "gradient-free", "evolutionary algorithm"],
+        [
+            "optimization",
+            "convex",
+            "linear programming",
+            "gradient-free",
+            "evolutionary algorithm",
+        ],
         "mathematics_optimization",
     ),
     (

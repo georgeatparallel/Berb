@@ -29,7 +29,15 @@ class _FakeLLM:
         self._response = response
         self.calls: list[dict[str, Any]] = []
 
-    def chat(self, messages, *, system=None, max_tokens=None, temperature=None, json_mode=False):
+    def chat(
+        self,
+        messages,
+        *,
+        system=None,
+        max_tokens=None,
+        temperature=None,
+        json_mode=False,
+    ):
         self.calls.append(
             {
                 "messages": messages,
@@ -131,7 +139,10 @@ class TestPlannerAgent:
         from berb.agents.figure_agent.planner import PlannerAgent
 
         agent = PlannerAgent(_FakeLLM())
-        assert agent._detect_domain("Image classification with CIFAR-10") == "classification"
+        assert (
+            agent._detect_domain("Image classification with CIFAR-10")
+            == "classification"
+        )
 
     def test_domain_detection_rl(self):
         from berb.agents.figure_agent.planner import PlannerAgent
@@ -303,7 +314,10 @@ class TestCodeGenAgent:
                         "chart_type": "bar_comparison",
                         "title": "Results",
                         "caption": "Main results.",
-                        "data_source": {"type": "condition_comparison", "metric": "primary_metric"},
+                        "data_source": {
+                            "type": "condition_comparison",
+                            "metric": "primary_metric",
+                        },
                         "x_label": "Method",
                         "y_label": "Accuracy",
                         "width": "single_column",
@@ -440,7 +454,10 @@ class TestCodeGenAgent:
                 "chart_type": "bar_comparison",
                 "title": f"Figure {i}",
                 "caption": f"Caption {i}.",
-                "data_source": {"type": "condition_comparison", "metric": "primary_metric"},
+                "data_source": {
+                    "type": "condition_comparison",
+                    "metric": "primary_metric",
+                },
                 "x_label": "X",
                 "y_label": "Y",
                 "width": "single_column",
@@ -610,10 +627,10 @@ class TestCriticAgent:
             )
         )
         agent = CriticAgent(llm)
-        script = (
-            "values = [0.85, 0.78, 0.80]\nax.bar(x, values)\nfig.savefig('out.png')\nplt.close(fig)"
+        script = "values = [0.85, 0.78, 0.80]\nax.bar(x, values)\nfig.savefig('out.png')\nplt.close(fig)"
+        issues = agent._check_numerical_accuracy(
+            script, _SAMPLE_CONDITIONS, "primary_metric"
         )
-        issues = agent._check_numerical_accuracy(script, _SAMPLE_CONDITIONS, "primary_metric")
         # Values 0.85 and 0.78 are in script → should pass
         assert not any(i["severity"] == "critical" for i in issues)
 
@@ -622,14 +639,18 @@ class TestCriticAgent:
 
         agent = CriticAgent(_FakeLLM())
         script = "values = [0.99, 0.98, 0.97]"  # Wrong values
-        issues = agent._check_numerical_accuracy(script, _SAMPLE_CONDITIONS, "primary_metric")
+        issues = agent._check_numerical_accuracy(
+            script, _SAMPLE_CONDITIONS, "primary_metric"
+        )
         assert any(i["severity"] == "critical" for i in issues)
 
     def test_text_correctness_missing_labels(self):
         from berb.agents.figure_agent.critic import CriticAgent
 
         agent = CriticAgent(_FakeLLM())
-        script = "fig, ax = plt.subplots()\nax.bar([0], [1])"  # Missing labels + savefig
+        script = (
+            "fig, ax = plt.subplots()\nax.bar([0], [1])"  # Missing labels + savefig
+        )
         issues = agent._check_text_correctness(script, {})
         types = {i["message"] for i in issues}
         assert any("x-axis" in t for t in types)
@@ -855,10 +876,12 @@ class TestIntegratorAgent:
     def test_section_ordering(self):
         from berb.agents.figure_agent.integrator import IntegratorAgent
 
-        assert IntegratorAgent._section_order("method") < IntegratorAgent._section_order("results")
-        assert IntegratorAgent._section_order("results") < IntegratorAgent._section_order(
-            "analysis"
-        )
+        assert IntegratorAgent._section_order(
+            "method"
+        ) < IntegratorAgent._section_order("results")
+        assert IntegratorAgent._section_order(
+            "results"
+        ) < IntegratorAgent._section_order("analysis")
 
 
 # =========================================================================

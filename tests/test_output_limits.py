@@ -99,7 +99,9 @@ class TestValidateResponseLength:
     def test_valid_short_response(self):
         """Test valid short response."""
         content = "This is a short response."  # ~7 tokens
-        is_valid, estimated, limit = validate_response_length(content, Stage.QUALITY_GATE)
+        is_valid, estimated, limit = validate_response_length(
+            content, Stage.QUALITY_GATE
+        )
 
         assert is_valid is True
         assert estimated <= limit
@@ -108,7 +110,9 @@ class TestValidateResponseLength:
         """Test invalid long response."""
         # Generate content exceeding limit
         content = "test " * 3000  # ~1500 tokens, exceeds 500 limit
-        is_valid, estimated, limit = validate_response_length(content, Stage.QUALITY_GATE)
+        is_valid, estimated, limit = validate_response_length(
+            content, Stage.QUALITY_GATE
+        )
 
         assert is_valid is False
         assert estimated > limit
@@ -124,7 +128,9 @@ class TestValidateResponseLength:
     def test_returns_limit_info(self):
         """Test returns limit information."""
         content = "test"
-        is_valid, estimated, limit = validate_response_length(content, Stage.PAPER_DRAFT)
+        is_valid, estimated, limit = validate_response_length(
+            content, Stage.PAPER_DRAFT
+        )
 
         assert limit == 8000  # PAPER_DRAFT limit
 

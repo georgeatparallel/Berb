@@ -521,18 +521,26 @@ class FileSystemQueryEngine:
 
         stats = {
             "total_papers": index.get("total_papers", 0),
-            "topic_clusters": len(list(self.workspace.by_topic.iterdir()))
-            if self.workspace.by_topic.exists()
-            else 0,
-            "summaries": len(list(self.workspace.summaries.glob("*.md")))
-            if self.workspace.summaries.exists()
-            else 0,
-            "claims": len(list(self.workspace.claims.glob("*.json")))
-            if self.workspace.claims.exists()
-            else 0,
-            "methods": len(list(self.workspace.methods.glob("*.md")))
-            if self.workspace.methods.exists()
-            else 0,
+            "topic_clusters": (
+                len(list(self.workspace.by_topic.iterdir()))
+                if self.workspace.by_topic.exists()
+                else 0
+            ),
+            "summaries": (
+                len(list(self.workspace.summaries.glob("*.md")))
+                if self.workspace.summaries.exists()
+                else 0
+            ),
+            "claims": (
+                len(list(self.workspace.claims.glob("*.json")))
+                if self.workspace.claims.exists()
+                else 0
+            ),
+            "methods": (
+                len(list(self.workspace.methods.glob("*.md")))
+                if self.workspace.methods.exists()
+                else 0
+            ),
         }
 
         return stats

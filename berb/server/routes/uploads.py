@@ -88,7 +88,9 @@ def _compute_sha256(content: bytes) -> str:
 
 @router.post("/uploads", summary="Upload one or more files")
 async def upload_files(
-    files: list[UploadFile] = File(..., description="Files to upload (PDF, CSV, JSON, etc.)"),
+    files: list[UploadFile] = File(
+        ..., description="Files to upload (PDF, CSV, JSON, etc.)"
+    ),
 ) -> dict:
     """Upload one or more files for a research run.
 

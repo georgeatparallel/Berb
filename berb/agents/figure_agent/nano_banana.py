@@ -170,7 +170,11 @@ class NanoBananaAgent(BaseAgent):
                             "description": description,
                             "output_path": str(output_path),
                             "path": str(output_path),
-                            "title": description[:80] if description else f"Figure {figure_id}",
+                            "title": (
+                                description[:80]
+                                if description
+                                else f"Figure {figure_id}"
+                            ),
                             "caption": description or "",
                             "prompt": prompt,
                             "success": True,
@@ -368,9 +372,7 @@ class NanoBananaAgent(BaseAgent):
             logger.error("Invalid Gemini model name: %r", self._model)
             return False
 
-        url = (
-            f"https://generativelanguage.googleapis.com/v1beta/models/{self._model}:generateContent"
-        )
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self._model}:generateContent"
 
         payload = {
             "contents": [{"parts": [{"text": prompt}]}],

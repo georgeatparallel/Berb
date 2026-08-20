@@ -30,12 +30,14 @@ def _make_papers(n: int = 10) -> list[dict[str, Any]]:
         papers.append(
             {
                 "title": f"Transformer attention mechanism for graph neural networks part {i}",
-                "authors": [
-                    {"name": "Alice Smith"},
-                    {"name": "Bob Jones"},
-                ]
-                if i % 2 == 0
-                else ["Alice Smith", "Charlie Brown"],
+                "authors": (
+                    [
+                        {"name": "Alice Smith"},
+                        {"name": "Bob Jones"},
+                    ]
+                    if i % 2 == 0
+                    else ["Alice Smith", "Charlie Brown"]
+                ),
                 "abstract": (
                     "We propose a transformer-based attention approach for "
                     "graph neural networks using contrastive learning on ImageNet "
@@ -238,7 +240,9 @@ class TestOpportunityFinder:
     def test_heuristic_empty_trends(self):
         finder = OpportunityFinder()
         result = asyncio.run(
-            finder.find_opportunities({"rising_keywords": [], "method_trends": []}, ["ml"])
+            finder.find_opportunities(
+                {"rising_keywords": [], "method_trends": []}, ["ml"]
+            )
         )
         assert result == []
 
@@ -276,7 +280,9 @@ class TestOpportunityFinder:
         finder = OpportunityFinder()
         trend_analysis = {
             "rising_keywords": [{"keyword": f"kw{i}", "count": 10} for i in range(10)],
-            "method_trends": [{"method": f"method{i}", "mention_count": 5} for i in range(10)],
+            "method_trends": [
+                {"method": f"method{i}", "mention_count": 5} for i in range(10)
+            ],
         }
         result = asyncio.run(finder.find_opportunities(trend_analysis, ["ml"]))
         assert len(result) <= 5
@@ -335,7 +341,9 @@ class TestDailyDigest:
             digest = DailyDigest(fm)
             result_path = asyncio.run(digest.generate_and_save(tmp_path, ["ml"]))
         assert result_path.exists()
-        assert result_path.read_text(encoding="utf-8").startswith("## Daily Paper Digest")
+        assert result_path.read_text(encoding="utf-8").startswith(
+            "## Daily Paper Digest"
+        )
 
     def test_author_formatting_dict(self):
         fm = FeedManager(sources=("arxiv",))
@@ -414,7 +422,8 @@ class TestAutoTopicGenerator:
         trend = {"rising_keywords": [], "paper_count": 50}
         score = AutoTopicGenerator._score_candidate(opp, trend)
         expected = round(
-            0.4 * score["novelty"] + 0.3 * score["feasibility"] + 0.3 * score["impact"], 3
+            0.4 * score["novelty"] + 0.3 * score["feasibility"] + 0.3 * score["impact"],
+            3,
         )
         assert score["overall"] == expected
 

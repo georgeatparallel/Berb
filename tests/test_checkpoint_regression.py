@@ -11,7 +11,9 @@ from unittest.mock import patch
 
 import pytest
 
-from berb.pipeline.checkpoint import validate_checkpoint_checksum as _validate_checkpoint_checksum
+from berb.pipeline.checkpoint import (
+    validate_checkpoint_checksum as _validate_checkpoint_checksum,
+)
 from berb.pipeline.checkpoint import write_checkpoint as _write_checkpoint
 from berb.pipeline.stages import Stage
 
@@ -44,9 +46,9 @@ class TestCheckpointDurability:
                 _write_checkpoint(run_dir, Stage.TOPIC_INIT, "test-run-123")
 
             expected_min_calls = 2 if hasattr(os, "O_DIRECTORY") else 1
-            assert len(fsync_calls) >= expected_min_calls, (
-                f"Expected >={expected_min_calls} fsync calls, got {len(fsync_calls)}"
-            )
+            assert (
+                len(fsync_calls) >= expected_min_calls
+            ), f"Expected >={expected_min_calls} fsync calls, got {len(fsync_calls)}"
 
     def test_checkpoint_write_includes_flush(self):
         """BUG-003 REGRESSION: Verify flush is called before fsync."""
@@ -122,7 +124,7 @@ class TestCheckpointDurability:
 
             # Mock json.dumps to raise an exception
             with patch("json.dumps", side_effect=Exception("Simulated error")):
-                with pytest.raises(Exception):  # noqa: B017 — mocked side_effect is a bare Exception
+                with pytest.raises(Exception):  # noqa: B017 - mocked side_effect is a bare Exception
                     _write_checkpoint(run_dir, Stage.TOPIC_INIT, "test-run-789")
 
             # No temp files should remain

@@ -48,7 +48,9 @@ class TestNeuroscienceProfiles:
         profile = get_profile("neuroscience_computational")
         assert profile is not None
         assert len(profile.standard_baselines) >= 2
-        assert any("LIF" in b or "Integrate-and-Fire" in b for b in profile.standard_baselines)
+        assert any(
+            "LIF" in b or "Integrate-and-Fire" in b for b in profile.standard_baselines
+        )
 
     def test_imaging_profile_exists(self):
         profile = get_profile("neuroscience_imaging")
@@ -78,17 +80,27 @@ class TestNeuroscienceKeywordDetection:
 
     def test_brian2(self):
         assert (
-            _keyword_detect("network model implemented in brian2") == "neuroscience_computational"
+            _keyword_detect("network model implemented in brian2")
+            == "neuroscience_computational"
         )
 
     def test_hodgkin_huxley(self):
-        assert _keyword_detect("Hodgkin-Huxley neuron model") == "neuroscience_computational"
+        assert (
+            _keyword_detect("Hodgkin-Huxley neuron model")
+            == "neuroscience_computational"
+        )
 
     def test_integrate_and_fire(self):
-        assert _keyword_detect("leaky integrate-and-fire model") == "neuroscience_computational"
+        assert (
+            _keyword_detect("leaky integrate-and-fire model")
+            == "neuroscience_computational"
+        )
 
     def test_izhikevich(self):
-        assert _keyword_detect("Izhikevich neuron dynamics") == "neuroscience_computational"
+        assert (
+            _keyword_detect("Izhikevich neuron dynamics")
+            == "neuroscience_computational"
+        )
 
     def test_neural_decoding(self):
         assert (
@@ -109,10 +121,14 @@ class TestNeuroscienceKeywordDetection:
         assert _keyword_detect("EEG classification for BCI") == "neuroscience_imaging"
 
     def test_nilearn(self):
-        assert _keyword_detect("brain parcellation with nilearn") == "neuroscience_imaging"
+        assert (
+            _keyword_detect("brain parcellation with nilearn") == "neuroscience_imaging"
+        )
 
     def test_mne_python(self):
-        assert _keyword_detect("ERP analysis using mne-python") == "neuroscience_imaging"
+        assert (
+            _keyword_detect("ERP analysis using mne-python") == "neuroscience_imaging"
+        )
 
     def test_generic_neuroscience(self):
         result = _keyword_detect("neuroscience of learning and memory")

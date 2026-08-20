@@ -102,18 +102,24 @@ class SurveyorAgent(BaseAgent):
                 name = b.get("name", "")
                 if name not in seen_bench:
                     seen_bench.add(name)
-                    benchmarks.append({**b, "source_domain": did, "origin": "knowledge_base"})
+                    benchmarks.append(
+                        {**b, "source_domain": did, "origin": "knowledge_base"}
+                    )
             for bl in info.get("common_baselines", []):
                 name = bl.get("name", "")
                 if name not in seen_base:
                     seen_base.add(name)
-                    baselines.append({**bl, "source_domain": did, "origin": "knowledge_base"})
+                    baselines.append(
+                        {**bl, "source_domain": did, "origin": "knowledge_base"}
+                    )
 
         return {"benchmarks": benchmarks, "baselines": baselines}
 
     # -- HuggingFace Hub ---------------------------------------------------
 
-    def _search_hf_datasets(self, topic: str, domain_ids: list[str]) -> list[dict[str, Any]]:
+    def _search_hf_datasets(
+        self, topic: str, domain_ids: list[str]
+    ) -> list[dict[str, Any]]:
         """Search HuggingFace Hub for relevant datasets."""
         if not self._enable_hf:
             return []
@@ -288,7 +294,9 @@ class SurveyorAgent(BaseAgent):
         # 1. Match domains from knowledge base
         domain_ids = self._match_domains(topic)
         if hypothesis:
-            domain_ids = list(dict.fromkeys(domain_ids + self._match_domains(hypothesis)))
+            domain_ids = list(
+                dict.fromkeys(domain_ids + self._match_domains(hypothesis))
+            )
         self.logger.info("Matched domains: %s", domain_ids)
 
         # 2. Get local candidates

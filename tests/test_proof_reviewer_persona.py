@@ -11,7 +11,11 @@ import asyncio
 import json
 from unittest.mock import MagicMock
 
-from berb.review.ensemble import REVIEWER_PERSONAS, AutomatedReviewerEnsemble, ReviewDimension
+from berb.review.ensemble import (
+    REVIEWER_PERSONAS,
+    AutomatedReviewerEnsemble,
+    ReviewDimension,
+)
 
 _VALID_REVIEW_JSON = json.dumps(
     {
@@ -43,7 +47,10 @@ def test_proof_persona_present_and_distinct_from_experimental_rigor() -> None:
     proof_persona = next(p for p in REVIEWER_PERSONAS if p.id == "reviewer_6")
     rigor_persona = next(p for p in REVIEWER_PERSONAS if p.id == "reviewer_3")
     assert proof_persona.name != rigor_persona.name
-    assert "proof" in proof_persona.name.lower() or "derivation" in proof_persona.name.lower()
+    assert (
+        "proof" in proof_persona.name.lower()
+        or "derivation" in proof_persona.name.lower()
+    )
 
 
 def test_proof_persona_reuses_technical_quality_dimension() -> None:

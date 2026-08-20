@@ -75,7 +75,9 @@ async def _ssh_command(host: str, command: str) -> str:
     )
     stdout, stderr = await proc.communicate()
     if proc.returncode != 0:
-        raise RuntimeError(f"SSH command failed (rc={proc.returncode}): {stderr.decode().strip()}")
+        raise RuntimeError(
+            f"SSH command failed (rc={proc.returncode}): {stderr.decode().strip()}"
+        )
     return stdout.decode()
 
 
@@ -86,7 +88,9 @@ def _parse_status_output(raw: str, server: ServerEntry) -> dict[str, Any]:
 
     # GPU section
     if len(sections) >= 1:
-        gpu_lines = [line.strip() for line in sections[0].strip().splitlines() if line.strip()]
+        gpu_lines = [
+            line.strip() for line in sections[0].strip().splitlines() if line.strip()
+        ]
         gpus = []
         for line in gpu_lines:
             parts = [p.strip() for p in line.split(",")]

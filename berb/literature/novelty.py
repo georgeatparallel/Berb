@@ -243,8 +243,12 @@ def _check_perplexity_novelty(
         from berb.llm.deep_query_client import DeepQueryClient
 
         client = DeepQueryClient(api_key=key)
-        prompt = _NOVELTY_PROMPT_TEMPLATE.format(topic=topic, hypotheses=hypotheses_text[:6000])
-        result = client.search(prompt, model="reasoning", max_tokens=2000, temperature=0.1)
+        prompt = _NOVELTY_PROMPT_TEMPLATE.format(
+            topic=topic, hypotheses=hypotheses_text[:6000]
+        )
+        result = client.search(
+            prompt, model="reasoning", max_tokens=2000, temperature=0.1
+        )
     except RuntimeError as exc:
         logger.warning("Perplexity novelty check failed: %s", exc)
         return None
@@ -352,7 +356,9 @@ def check_novelty(
             similarity_threshold,
         )
     except Exception:  # noqa: BLE001
-        logger.warning("Real novelty search failed, checking pipeline papers only", exc_info=True)
+        logger.warning(
+            "Real novelty search failed, checking pipeline papers only", exc_info=True
+        )
 
     # Also check papers already collected by the pipeline
     if papers_already_seen:
@@ -411,8 +417,14 @@ def check_novelty(
     # matching against retrieved candidates alone would miss) ---
     pplx_result: dict[str, Any] | None = None
     if perplexity_check:
-        pplx_result = _check_perplexity_novelty(topic, hypotheses_text, api_key=perplexity_api_key)
-        if pplx_result and not pplx_result["likely_novel"] and pplx_result["confidence"] >= 0.6:
+        pplx_result = _check_perplexity_novelty(
+            topic, hypotheses_text, api_key=perplexity_api_key
+        )
+        if (
+            pplx_result
+            and not pplx_result["likely_novel"]
+            and pplx_result["confidence"] >= 0.6
+        ):
             # Perplexity found the same idea already published with
             # reasonable confidence — don't let a locally-computed "high"
             # novelty score wave this through unexamined.

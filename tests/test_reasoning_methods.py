@@ -210,7 +210,9 @@ class TestBayesianMethod:
             {"name": "H1", "prior": 0.5, "description": "Test hypothesis 1"},
             {"name": "H2", "prior": 0.3, "description": "Test hypothesis 2"},
         ]
-        sample_context.input_data["evidence"] = [{"name": "E1", "description": "Test evidence"}]
+        sample_context.input_data["evidence"] = [
+            {"name": "E1", "description": "Test evidence"}
+        ]
         method = BayesianMethod()
         result = await method.execute(sample_context)
         assert isinstance(result, ReasoningResult)
@@ -275,7 +277,9 @@ class TestResearchMethod:
     """Test Research reasoning method."""
 
     @pytest.mark.asyncio
-    async def test_execute_with_mock(self, mock_llm_client, mock_search_client, sample_context):
+    async def test_execute_with_mock(
+        self, mock_llm_client, mock_search_client, sample_context
+    ):
         """Test research execution with mocks."""
         method = ResearchMethod(
             llm_client=mock_llm_client,
@@ -436,7 +440,9 @@ class TestReasoningIntegration:
         }
 
         all_types = set(MethodType)
-        assert implemented_types == all_types, "Not all MethodType values have implementations"
+        assert (
+            implemented_types == all_types
+        ), "Not all MethodType values have implementations"
 
 
 # ============== Error Handling Tests ==============

@@ -28,11 +28,11 @@ from berb.pipeline._helpers import (
     _utcnow_iso,
     _write_jsonl,
 )
-from berb.utils.sanitize import wrap_untrusted
 from berb.pipeline.contracts import StageContract
 from berb.pipeline.registry import register_stage
 from berb.pipeline.stages import Stage, StageStatus
 from berb.prompts import PromptManager
+from berb.utils.sanitize import wrap_untrusted
 
 logger = logging.getLogger(__name__)
 
@@ -145,7 +145,10 @@ def _execute_search_strategy(
         _pm = prompts or PromptManager()
         _overlay = _get_evolution_overlay(run_dir, "search_strategy")
         sp = _pm.for_stage(
-            "search_strategy", evolution_overlay=_overlay, topic=topic, problem_tree=problem_tree
+            "search_strategy",
+            evolution_overlay=_overlay,
+            topic=topic,
+            problem_tree=problem_tree,
         )
         resp = _chat_with_prompt(
             llm,
@@ -221,7 +224,9 @@ def _execute_search_strategy(
             try:
                 response = adapters.web_fetch.fetch(str(src.get("url", "")))
                 src["status"] = (
-                    "verified" if response.status_code in (200, 301, 302, 405) else "unreachable"
+                    "verified"
+                    if response.status_code in (200, 301, 302, 405)
+                    else "unreachable"
                 )
                 src["http_status"] = response.status_code
             except Exception:  # noqa: BLE001
@@ -301,7 +306,9 @@ def _execute_search_strategy(
     def _extract_keywords(text: str) -> list[str]:
         """Extract meaningful keywords from text, removing stop words."""
         return [
-            w for w in re.split(r"[^a-zA-Z0-9]+", text) if w.lower() not in _stop and len(w) > 1
+            w
+            for w in re.split(r"[^a-zA-Z0-9]+", text)
+            if w.lower() not in _stop and len(w) > 1
         ]
 
     _MAX_QUERY_LEN = 60  # characters — beyond this, shorten to keywords
@@ -551,7 +558,9 @@ def _execute_literature_collect(
                     )
                     _injected += 1
             if _injected:
-                logger.info("Stage 4: Injected %d seminal papers from seed library", _injected)
+                logger.info(
+                    "Stage 4: Injected %d seminal papers from seed library", _injected
+                )
     except Exception:  # noqa: BLE001
         logger.debug("Seminal paper injection skipped", exc_info=True)
 
@@ -561,7 +570,10 @@ def _execute_literature_collect(
         _pm = prompts or PromptManager()
         _overlay = _get_evolution_overlay(run_dir, "literature_collect")
         sp = _pm.for_stage(
-            "literature_collect", evolution_overlay=_overlay, topic=topic, plan_text=plan_text
+            "literature_collect",
+            evolution_overlay=_overlay,
+            topic=topic,
+            plan_text=plan_text,
         )
         resp = _chat_with_prompt(
             llm,
@@ -599,7 +611,9 @@ def _execute_literature_collect(
 
             # Convert Google Scholar papers into candidates
             for sp in web_result.scholar_papers:
-                _existing_titles = {str(c.get("title", "")).lower().strip() for c in candidates}
+                _existing_titles = {
+                    str(c.get("title", "")).lower().strip() for c in candidates
+                }
                 if sp.title.lower().strip() not in _existing_titles:
                     lit_paper = sp.to_literature_paper()
                     d = lit_paper.to_dict()
@@ -636,7 +650,9 @@ def _execute_literature_collect(
     # set correctly in the search block above. Overwriting would mislabel
     # LLM-hallucinated or seminal papers as "real search" results.
     if not candidates:
-        logger.warning("Stage 4: All literature searches failed — using placeholder papers")
+        logger.warning(
+            "Stage 4: All literature searches failed — using placeholder papers"
+        )
         candidates = [
             {
                 "id": f"candidate-{idx + 1}",
@@ -670,7 +686,11 @@ def _execute_literature_collect(
                     _a0 = (
                         _authors[0]
                         if isinstance(_authors[0], str)
-                        else (_authors[0].get("name", "") if isinstance(_authors[0], dict) else "")
+                        else (
+                            _authors[0].get("name", "")
+                            if isinstance(_authors[0], dict)
+                            else ""
+                        )
                     )
                     _surname = _a0.split()[-1].lower() if _a0.strip() else "unknown"
                 _yr = c.get("year", 2024)
@@ -713,7 +733,9 @@ def _execute_literature_collect(
         bib_content = "\n\n".join(bibtex_entries) + "\n"
         (stage_dir / "references.bib").write_text(bib_content, encoding="utf-8")
         artifacts.append("references.bib")
-        logger.info("Stage 4: Wrote %d BibTeX entries to references.bib", len(bibtex_entries))
+        logger.info(
+            "Stage 4: Wrote %d BibTeX entries to references.bib", len(bibtex_entries)
+        )
 
     # Write search metadata
     (stage_dir / "search_meta.json").write_text(
@@ -791,7 +813,9 @@ def _execute_literature_screen(
     # --- P1-1: keyword relevance pre-filter ---
     # Before LLM screening, drop papers whose title+abstract share no keywords
     # with the research topic.  This catches cross-domain noise cheaply.
-    topic_keywords = _extract_topic_keywords(config.research.topic, config.research.domains)
+    topic_keywords = _extract_topic_keywords(
+        config.research.topic, config.research.domains
+    )
     filtered_rows: list[dict[str, Any]] = []
     dropped_count = 0
     for raw_line in candidates_text.strip().splitlines():
@@ -814,7 +838,9 @@ def _execute_literature_screen(
     if not filtered_rows:
         filtered_rows = _parse_jsonl_rows(candidates_text)
     # Rebuild candidates_text from filtered rows
-    candidates_text = "\n".join(json.dumps(r, ensure_ascii=False) for r in filtered_rows)
+    candidates_text = "\n".join(
+        json.dumps(r, ensure_ascii=False) for r in filtered_rows
+    )
     logger.info(
         "Domain pre-filter: kept %d, dropped %d (keywords: %s)",
         len(filtered_rows),
@@ -830,7 +856,11 @@ def _execute_literature_screen(
             "literature_screen",
             evolution_overlay=_overlay,
             topic=config.research.topic,
-            domains=", ".join(config.research.domains) if config.research.domains else "general",
+            domains=(
+                ", ".join(config.research.domains)
+                if config.research.domains
+                else "general"
+            ),
             quality_threshold=config.research.quality_threshold,
             candidates_text=wrap_untrusted(candidates_text, "candidate paper metadata"),
         )
@@ -954,9 +984,13 @@ def _execute_knowledge_extract(
                     fallback_providers=llm.config.fallback_providers or [],
                 )
                 fast_llm = LLMClient(fast_config)
-                logger.info("Stage 6: Using fast model %s for batch processing", FAST_MODEL)
+                logger.info(
+                    "Stage 6: Using fast model %s for batch processing", FAST_MODEL
+                )
             except Exception as e:
-                logger.warning("Stage 6: Could not switch to fast model, using default: %s", e)
+                logger.warning(
+                    "Stage 6: Could not switch to fast model, using default: %s", e
+                )
                 fast_llm = llm
         else:
             logger.debug(
@@ -978,18 +1012,24 @@ def _execute_knowledge_extract(
             )
 
             # Format batch as JSONL
-            batch_jsonl = "\n".join(json.dumps(row, ensure_ascii=False) for row in batch_rows)
+            batch_jsonl = "\n".join(
+                json.dumps(row, ensure_ascii=False) for row in batch_rows
+            )
 
             # Add web context only to first batch
             batch_shortlist = batch_jsonl
             if batch_idx == 0 and web_context:
                 batch_shortlist = (
-                    batch_shortlist + "\n\n--- Web Search Context ---\n" + web_context[:2_000]
+                    batch_shortlist
+                    + "\n\n--- Web Search Context ---\n"
+                    + web_context[:2_000]
                 )
 
             try:
                 sp = _pm.for_stage(
-                    "knowledge_extract", evolution_overlay=_overlay, shortlist=batch_shortlist
+                    "knowledge_extract",
+                    evolution_overlay=_overlay,
+                    shortlist=batch_shortlist,
                 )
                 resp = _chat_with_prompt(
                     fast_llm,
@@ -1001,9 +1041,15 @@ def _execute_knowledge_extract(
                 )
                 payload = _safe_json_loads(resp.content, {})
                 if isinstance(payload, dict) and isinstance(payload.get("cards"), list):
-                    batch_cards = [item for item in payload["cards"] if isinstance(item, dict)]
+                    batch_cards = [
+                        item for item in payload["cards"] if isinstance(item, dict)
+                    ]
                     all_cards.extend(batch_cards)
-                    logger.info("Stage 6: Batch %d extracted %d cards", batch_num, len(batch_cards))
+                    logger.info(
+                        "Stage 6: Batch %d extracted %d cards",
+                        batch_num,
+                        len(batch_cards),
+                    )
                 else:
                     logger.warning("Stage 6: Batch %d returned no cards", batch_num)
             except Exception as e:

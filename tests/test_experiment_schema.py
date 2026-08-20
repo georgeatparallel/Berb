@@ -65,9 +65,15 @@ class TestUniversalExperimentPlan:
     def test_to_legacy_format(self):
         plan = UniversalExperimentPlan(
             conditions=[
-                Condition(name="ResNet-18", role="reference", description="Standard baseline"),
-                Condition(name="OurMethod", role="proposed", description="Our new method"),
-                Condition(name="OurMethod-NoAttn", role="variant", varies_from="OurMethod"),
+                Condition(
+                    name="ResNet-18", role="reference", description="Standard baseline"
+                ),
+                Condition(
+                    name="OurMethod", role="proposed", description="Our new method"
+                ),
+                Condition(
+                    name="OurMethod-NoAttn", role="variant", varies_from="OurMethod"
+                ),
             ],
             evaluation=EvaluationSpec(
                 primary_metric=MetricSpec(name="accuracy", direction="maximize"),

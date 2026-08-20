@@ -146,7 +146,9 @@ class BestFirstDiversePolicy:
         # Rule 1: Bootstrap — grow independent trees
         if len(roots) < config.num_roots:
             logger.debug(
-                "Policy: bootstrap — creating root %d/%d", len(roots) + 1, config.num_roots
+                "Policy: bootstrap — creating root %d/%d",
+                len(roots) + 1,
+                config.num_roots,
             )
             return None
 
@@ -156,11 +158,14 @@ class BestFirstDiversePolicy:
             buggy_leaves = [
                 leaf
                 for leaf in leaves
-                if leaf.is_buggy is True and _debug_depth(leaf, journal) < config.max_debug_depth
+                if leaf.is_buggy is True
+                and _debug_depth(leaf, journal) < config.max_debug_depth
             ]
             if buggy_leaves:
                 selected = self._rng.choice(buggy_leaves)
-                logger.debug("Policy: repair — selected buggy leaf %s", selected.node_id[:8])
+                logger.debug(
+                    "Policy: repair — selected buggy leaf %s", selected.node_id[:8]
+                )
                 return selected
 
         # Rule 3: Exploit with diversity

@@ -104,9 +104,11 @@ class BioRxivClient:
                     result = GreyLiteratureResult(
                         title=item.get("title", ""),
                         authors=item.get("authors", "").split("; "),
-                        year=int(item.get("date", "")[:4])
-                        if item.get("date")
-                        else datetime.now().year,
+                        year=(
+                            int(item.get("date", "")[:4])
+                            if item.get("date")
+                            else datetime.now().year
+                        ),
                         source="bioRxiv",
                         url=item.get("link", ""),
                         doi=item.get("doi", ""),
@@ -184,9 +186,11 @@ class MedRxivClient:
                     result = GreyLiteratureResult(
                         title=item.get("title", ""),
                         authors=item.get("authors", "").split("; "),
-                        year=int(item.get("date", "")[:4])
-                        if item.get("date")
-                        else datetime.now().year,
+                        year=(
+                            int(item.get("date", "")[:4])
+                            if item.get("date")
+                            else datetime.now().year
+                        ),
                         source="medRxiv",
                         url=item.get("link", ""),
                         doi=item.get("doi", ""),
@@ -257,9 +261,11 @@ class ClinicalTrialsClient:
                 result = GreyLiteratureResult(
                     title=id_module.get("briefTitle", ""),
                     authors=[],  # Clinical trials don't have traditional authors
-                    year=int(status_module.get("startDate", "")[:4])
-                    if status_module.get("startDate")
-                    else datetime.now().year,
+                    year=(
+                        int(status_module.get("startDate", "")[:4])
+                        if status_module.get("startDate")
+                        else datetime.now().year
+                    ),
                     source="ClinicalTrials.gov",
                     url=f"https://clinicaltrials.gov/study/{id_module.get('nctId', '')}",
                     doi=None,
@@ -345,9 +351,11 @@ class ZenodoClient:
                 result = GreyLiteratureResult(
                     title=metadata.get("title", ""),
                     authors=authors,
-                    year=int(metadata.get("publication_date", "")[:4])
-                    if metadata.get("publication_date")
-                    else datetime.now().year,
+                    year=(
+                        int(metadata.get("publication_date", "")[:4])
+                        if metadata.get("publication_date")
+                        else datetime.now().year
+                    ),
                     source="Zenodo",
                     url=item.get("links", {}).get("self_html", ""),
                     doi=metadata.get("doi", ""),
@@ -417,9 +425,11 @@ class SSRNClient:
                 result = GreyLiteratureResult(
                     title=item.get("title", ""),
                     authors=author_names,
-                    year=int(item.get("date_posted", "")[:4])
-                    if item.get("date_posted")
-                    else datetime.now().year,
+                    year=(
+                        int(item.get("date_posted", "")[:4])
+                        if item.get("date_posted")
+                        else datetime.now().year
+                    ),
                     source="SSRN",
                     url=item.get("paper_url", ""),
                     doi=item.get("doi", ""),
@@ -489,7 +499,9 @@ class GreyLiteratureSearch:
         self._biorxiv = BioRxivClient()
         self._medrxiv = MedRxivClient()
         self._clinical = ClinicalTrialsClient()
-        self._zenodo = ZenodoClient(api_key=api_keys.get("zenodo") if api_keys else None)
+        self._zenodo = ZenodoClient(
+            api_key=api_keys.get("zenodo") if api_keys else None
+        )
         self._ssrn = SSRNClient(api_key=api_keys.get("ssrn") if api_keys else None)
         self._dart = DARTEuropeClient()
 

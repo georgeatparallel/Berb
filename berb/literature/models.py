@@ -163,7 +163,9 @@ class Paper:
         return {
             "paper_id": self.paper_id,
             "title": self.title,
-            "authors": [{"name": a.name, "affiliation": a.affiliation} for a in self.authors],
+            "authors": [
+                {"name": a.name, "affiliation": a.affiliation} for a in self.authors
+            ],
             "year": self.year,
             "abstract": self.abstract,
             "venue": self.venue,

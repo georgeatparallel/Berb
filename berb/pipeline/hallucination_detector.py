@@ -365,7 +365,9 @@ class HallucinationDetector:
         """Classify claim type."""
         text_lower = claim_text.lower()
 
-        if any(word in text_lower for word in ["outperform", "surpass", "exceed", "better"]):
+        if any(
+            word in text_lower for word in ["outperform", "surpass", "exceed", "better"]
+        ):
             return "performance"
         elif any(word in text_lower for word in ["novel", "first", "propose"]):
             return "novelty"
@@ -404,19 +406,27 @@ class HallucinationDetector:
                 )
             )
             if citation_support:
-                needs_llm_check.append((len(verifications) - 1, claim, citation_support))
+                needs_llm_check.append(
+                    (len(verifications) - 1, claim, citation_support)
+                )
 
         if needs_llm_check and self._llm_client is not None:
             try:
                 verdicts = self._llm_verify_claims_batch(needs_llm_check)
             except Exception as exc:  # noqa: BLE001
-                logger.debug("LLM claim verification failed, keeping heuristic result: %s", exc)
+                logger.debug(
+                    "LLM claim verification failed, keeping heuristic result: %s", exc
+                )
                 verdicts = {}
             for idx, (supported, confidence, reason) in verdicts.items():
                 v = verifications[idx]
                 v.supported = supported
                 v.confidence = confidence
-                v.issues = [] if supported else [reason or "Citation does not support this claim"]
+                v.issues = (
+                    []
+                    if supported
+                    else [reason or "Citation does not support this claim"]
+                )
 
         return verifications
 
@@ -505,7 +515,9 @@ class HallucinationDetector:
         for match in figure_pattern.finditer(paper_text):
             figure_text = match.group(0)
             # Extract caption for comparison
-            caption_match = re.search(r"\\caption\{([^}]+)\}", figure_text, re.IGNORECASE)
+            caption_match = re.search(
+                r"\\caption\{([^}]+)\}", figure_text, re.IGNORECASE
+            )
             if caption_match:
                 figures.append(
                     {
@@ -544,7 +556,9 @@ class HallucinationDetector:
         tables = []
         for match in table_pattern.finditer(paper_text):
             table_text = match.group(0)
-            caption_match = re.search(r"\\caption\{([^}]+)\}", table_text, re.IGNORECASE)
+            caption_match = re.search(
+                r"\\caption\{([^}]+)\}", table_text, re.IGNORECASE
+            )
             if caption_match:
                 tables.append(
                     {
@@ -640,7 +654,9 @@ class HallucinationDetector:
         supported_claims = sum(1 for v in claim_verifications if v.supported)
         unsupported_claims = total_claims - supported_claims
 
-        citation_accuracy = verified_citations / total_citations if total_citations > 0 else 1.0
+        citation_accuracy = (
+            verified_citations / total_citations if total_citations > 0 else 1.0
+        )
         claim_accuracy = supported_claims / total_claims if total_claims > 0 else 1.0
 
         # Collect all issues
@@ -663,7 +679,9 @@ class HallucinationDetector:
                         "type": "unsupported_claim",
                         "severity": "major",
                         "claim": v.claim_text[:100],
-                        "description": v.issues[0] if v.issues else "No citation support",
+                        "description": (
+                            v.issues[0] if v.issues else "No citation support"
+                        ),
                     }
                 )
 
@@ -709,7 +727,9 @@ class HallucinationDetector:
                 f"Verify or remove {hallucinated_citations} unverified citations"
             )
         if unsupported_claims > 0:
-            recommendations.append(f"Add citation support for {unsupported_claims} claims")
+            recommendations.append(
+                f"Add citation support for {unsupported_claims} claims"
+            )
         if duplicated_figures:
             recommendations.append("Review and differentiate duplicated figures")
         if self_contradictions:
@@ -752,14 +772,17 @@ class HallucinationDetector:
             return {"error": "No verifications performed"}
 
         scores = [r.overall_score for r in self._verification_history]
-        hallucination_counts = [r.hallucinated_citations for r in self._verification_history]
+        hallucination_counts = [
+            r.hallucinated_citations for r in self._verification_history
+        ]
 
         return {
             "total_papers_verified": len(self._verification_history),
             "avg_overall_score": sum(scores) / len(scores),
             "min_score": min(scores),
             "max_score": max(scores),
-            "avg_hallucinated_citations": sum(hallucination_counts) / len(hallucination_counts),
+            "avg_hallucinated_citations": sum(hallucination_counts)
+            / len(hallucination_counts),
             "papers_with_hallucinations": sum(
                 1 for r in self._verification_history if r.has_hallucinations
             ),

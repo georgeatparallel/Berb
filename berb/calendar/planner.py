@@ -90,5 +90,7 @@ class SubmissionPlanner:
             "Milestones:",
         ]
         for ms in plan["milestones"]:
-            lines.append(f"  [{ms['date']}] {ms['stage']} ({ms['days_left']} days left)")
+            lines.append(
+                f"  [{ms['date']}] {ms['stage']} ({ms['days_left']} days left)"
+            )
         return "\n".join(lines)

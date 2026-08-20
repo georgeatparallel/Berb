@@ -420,7 +420,9 @@ class TestSearXNGClientIntegration:
     @pytest.mark.asyncio
     async def test_cache_flow(self):
         """Test caching flow."""
-        config = SearXNGConfig(base_url="http://test", cache_enabled=True, cache_ttl=3600)
+        config = SearXNGConfig(
+            base_url="http://test", cache_enabled=True, cache_ttl=3600
+        )
         client = SearXNGClient(config)
 
         # Set cache

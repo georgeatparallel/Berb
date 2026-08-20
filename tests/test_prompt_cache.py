@@ -20,7 +20,12 @@ class TestModelNeedsExplicitCacheControl:
 
     @pytest.mark.parametrize(
         "model",
-        ["openai/gpt-4o", "deepseek/deepseek-v3", "x-ai/grok-4", "google/gemini-2.5-pro"],
+        [
+            "openai/gpt-4o",
+            "deepseek/deepseek-v3",
+            "x-ai/grok-4",
+            "google/gemini-2.5-pro",
+        ],
     )
     def test_automatic_cache_models(self, model):
         assert model_needs_explicit_cache_control(model) is False

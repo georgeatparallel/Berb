@@ -495,7 +495,9 @@ class CodeAgent:
         if not files or not isinstance(files, list):
             return False
         # Need at least 2 files with generation_order
-        has_order = sum(1 for f in files if isinstance(f, dict) and "generation_order" in f)
+        has_order = sum(
+            1 for f in files if isinstance(f, dict) and "generation_order" in f
+        )
         return has_order >= 2
 
     # ── Phase 2a: Sequential File Generation ─────────────────────────────
@@ -531,7 +533,9 @@ class CodeAgent:
             if not file_name:
                 continue
 
-            self._log_event(f"  Generating {file_name} (order={file_spec.get('generation_order')})")
+            self._log_event(
+                f"  Generating {file_name} (order={file_spec.get('generation_order')})"
+            )
 
             # Build dependency context
             deps = file_spec.get("dependencies", [])
@@ -547,7 +551,11 @@ class CodeAgent:
                             + "\n"
                         )
                     if dep in generated_files:
-                        dep_code += f"\n### {dep}\n```python\n" + generated_files[dep] + "\n```\n"
+                        dep_code += (
+                            f"\n### {dep}\n```python\n"
+                            + generated_files[dep]
+                            + "\n```\n"
+                        )
 
             if not dep_summaries:
                 dep_summaries = "(no dependencies yet)"
@@ -595,7 +603,9 @@ class CodeAgent:
                 first_key = next(iter(generated_files))
                 generated_files["main.py"] = generated_files.pop(first_key)
 
-        self._log_event(f"  Sequential generation complete: {len(generated_files)} files")
+        self._log_event(
+            f"  Sequential generation complete: {len(generated_files)} files"
+        )
         return generated_files
 
     @staticmethod
@@ -722,7 +732,9 @@ class CodeAgent:
                 self._log_event(f"  CRITICAL: {c}")
 
             if attempt >= self._cfg.hard_validation_max_repairs:
-                self._log_event("  Max repair attempts reached — proceeding with warnings")
+                self._log_event(
+                    "  Max repair attempts reached — proceeding with warnings"
+                )
                 return files
 
             # Targeted repair: ask LLM to fix specific critical issues
@@ -763,7 +775,9 @@ class CodeAgent:
             syn = validate_syntax(code)
             if not syn.ok:
                 for issue in syn.errors:
-                    critical.append(f"[{fname}] Syntax error: {issue.message} (line {issue.line})")
+                    critical.append(
+                        f"[{fname}] Syntax error: {issue.message} (line {issue.line})"
+                    )
 
         # 2. Class quality — some are critical
         class_warns = check_class_quality(files)
@@ -818,7 +832,9 @@ class CodeAgent:
                     warnings.append(w)
 
         # 6. Cross-file import consistency — check local imports resolve
-        known_modules = {fname.replace(".py", "") for fname in files if fname.endswith(".py")}
+        known_modules = {
+            fname.replace(".py", "") for fname in files if fname.endswith(".py")
+        }
         for fname, code in files.items():
             if not fname.endswith(".py"):
                 continue
@@ -878,7 +894,10 @@ class CodeAgent:
                                 and len(test.comparators) == 1
                             ):
                                 comp = test.comparators[0]
-                                if isinstance(comp, ast.Constant) and comp.value == "__main__":
+                                if (
+                                    isinstance(comp, ast.Constant)
+                                    and comp.value == "__main__"
+                                ):
                                     has_main_guard = True
                                     break
                 if not has_main_guard:
@@ -954,7 +973,9 @@ class CodeAgent:
         if fixed:
             merged = dict(files)
             merged.update(fixed)
-            self._log_event(f"  Repair updated {len(fixed)} file(s): {', '.join(sorted(fixed))}")
+            self._log_event(
+                f"  Repair updated {len(fixed)} file(s): {', '.join(sorted(fixed))}"
+            )
             return merged
 
         self._log_event("  WARNING: Repair produced no extractable files")
@@ -1154,7 +1175,9 @@ class CodeAgent:
         context_lines = code_lines[start:end]
 
         # Number the lines for the LLM
-        numbered = "\n".join(f"{start + i + 1:4d} | {line}" for i, line in enumerate(context_lines))
+        numbered = "\n".join(
+            f"{start + i + 1:4d} | {line}" for i, line in enumerate(context_lines)
+        )
 
         # Build compact dependency context (summaries only)
         dep_summaries = ""
@@ -1168,9 +1191,7 @@ class CodeAgent:
                 )
                 for cls in summary.get("classes", []):
                     methods = ", ".join(m["name"] for m in cls.get("methods", []))
-                    dep_summaries += (
-                        f"  class {cls['name']}({', '.join(cls.get('bases', []))}): [{methods}]\n"
-                    )
+                    dep_summaries += f"  class {cls['name']}({', '.join(cls.get('bases', []))}): [{methods}]\n"
 
         prompt = (
             f"Fix the runtime error in `{target_file}` at line {error_line}.\n\n"
@@ -1243,8 +1264,12 @@ class CodeAgent:
         )
 
         # Fall back to sequential generation
-        if not self._cfg.sequential_generation or not hasattr(self, "_phase2_sequential_generate"):
-            self._log_event("  Tree search deprecated — falling back to single-shot generation")
+        if not self._cfg.sequential_generation or not hasattr(
+            self, "_phase2_sequential_generate"
+        ):
+            self._log_event(
+                "  Tree search deprecated — falling back to single-shot generation"
+            )
             files = self._phase2_generate_and_fix(
                 topic,
                 exp_plan,
@@ -1354,7 +1379,9 @@ class CodeAgent:
 
             review = self._parse_json(resp.content)
             if not isinstance(review, dict) or not review:
-                self._log_event(f"  Review round {r + 1}: could not parse JSON, skipping")
+                self._log_event(
+                    f"  Review round {r + 1}: could not parse JSON, skipping"
+                )
                 break
 
             verdict = review.get("verdict", "APPROVE")
@@ -1477,7 +1504,9 @@ class CodeAgent:
         for tname in target_files:
             code = files.get(tname, "")
             imported = set(
-                re.findall(r"^(?:from|import)\s+([a-zA-Z_][a-zA-Z0-9_]*)", code, re.MULTILINE)
+                re.findall(
+                    r"^(?:from|import)\s+([a-zA-Z_][a-zA-Z0-9_]*)", code, re.MULTILINE
+                )
             )
             needed |= {f"{m}.py" for m in imported if m in known_modules}
 

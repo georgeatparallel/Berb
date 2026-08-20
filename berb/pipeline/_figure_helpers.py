@@ -108,7 +108,9 @@ def _extract_paper_title(md_text: str) -> str:
     return bold_fallback or "Untitled Paper"
 
 
-def _generate_neurips_checklist(has_experiments: bool = True, has_code: bool = True) -> str:
+def _generate_neurips_checklist(
+    has_experiments: bool = True, has_code: bool = True
+) -> str:
     """Generate a NeurIPS-style checklist for the paper."""
     import textwrap
 
@@ -179,7 +181,9 @@ def _multi_perspective_generate(
         except Exception:  # noqa: BLE001
             continue
         results[role_name] = resp.content
-        (perspectives_dir / f"{role_name}.md").write_text(resp.content, encoding="utf-8")
+        (perspectives_dir / f"{role_name}.md").write_text(
+            resp.content, encoding="utf-8"
+        )
     return results
 
 
@@ -196,7 +200,9 @@ def _synthesize_perspectives(
     """
     if not perspectives:
         return ""
-    formatted = "\n\n".join(f"## {name}\n{content}" for name, content in perspectives.items())
+    formatted = "\n\n".join(
+        f"## {name}\n{content}" for name, content in perspectives.items()
+    )
     sp = prompt_manager.for_stage(stage_name, perspectives=formatted)
     resp = llm.chat([{"role": "user", "content": sp.user}], system=sp.system)
     return resp.content

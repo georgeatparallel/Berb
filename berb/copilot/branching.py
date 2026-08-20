@@ -52,7 +52,9 @@ class BranchManager:
             "created_at": datetime.now(UTC).isoformat(),
             "status": "active",
         }
-        (branch_dir / "branch_meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
+        (branch_dir / "branch_meta.json").write_text(
+            json.dumps(meta, indent=2), encoding="utf-8"
+        )
 
         logger.info("Created branch '%s' from stage %d", name, from_stage)
         return str(branch_dir)

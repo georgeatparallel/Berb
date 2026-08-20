@@ -77,10 +77,14 @@ class PromptAdapter(ABC):
                 parts.append(f"- `{fname}`: {desc}")
 
         if self.domain.core_libraries:
-            parts.append(f"\n## Core Libraries: {', '.join(self.domain.core_libraries)}")
+            parts.append(
+                f"\n## Core Libraries: {', '.join(self.domain.core_libraries)}"
+            )
 
         if self.domain.code_generation_hints:
-            parts.append(f"\n## Domain-Specific Hints\n{self.domain.code_generation_hints}")
+            parts.append(
+                f"\n## Domain-Specific Hints\n{self.domain.code_generation_hints}"
+            )
 
         return "\n".join(parts)
 
@@ -125,10 +129,18 @@ class GenericPromptAdapter(PromptAdapter):
     def get_code_generation_blocks(self, context: dict[str, Any]) -> PromptBlocks:
         domain = self.domain
         paradigm = domain.experiment_paradigm
-        libs = ", ".join(domain.core_libraries) if domain.core_libraries else "numpy, scipy"
+        libs = (
+            ", ".join(domain.core_libraries)
+            if domain.core_libraries
+            else "numpy, scipy"
+        )
 
-        code_hints = domain.code_generation_hints or self._default_code_hints(paradigm, libs)
-        dataset_guidance = domain.dataset_guidance or self._default_dataset_guidance(paradigm)
+        code_hints = domain.code_generation_hints or self._default_code_hints(
+            paradigm, libs
+        )
+        dataset_guidance = domain.dataset_guidance or self._default_dataset_guidance(
+            paradigm
+        )
         hp_guidance = domain.hp_reporting_guidance or self._default_hp_guidance()
 
         return PromptBlocks(
@@ -144,18 +156,14 @@ class GenericPromptAdapter(PromptAdapter):
         terminology = domain.condition_terminology
         paradigm = domain.experiment_paradigm
 
-        design_context = (
-            f"This is a {domain.display_name} experiment.\nExperiment paradigm: {paradigm}\n"
-        )
+        design_context = f"This is a {domain.display_name} experiment.\nExperiment paradigm: {paradigm}\n"
         if terminology:
             design_context += "Terminology:\n"
             for key, term in terminology.items():
                 design_context += f"  - {key}: {term}\n"
 
         if domain.standard_baselines:
-            design_context += (
-                f"Standard baselines in this domain: {', '.join(domain.standard_baselines)}\n"
-            )
+            design_context += f"Standard baselines in this domain: {', '.join(domain.standard_baselines)}\n"
 
         stats = (
             ", ".join(domain.statistical_tests)

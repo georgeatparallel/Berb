@@ -34,7 +34,15 @@ _FRAMEWORK_REGISTRY: dict[str, dict[str, Any]] = {
     },
     "peft": {
         "file": "peft.md",
-        "keywords": ["peft", "lora", "qlora", "adapter", "low-rank", "parameter-efficient", "dora"],
+        "keywords": [
+            "peft",
+            "lora",
+            "qlora",
+            "adapter",
+            "low-rank",
+            "parameter-efficient",
+            "dora",
+        ],
     },
     "transformers_training": {
         "file": "transformers_training.md",

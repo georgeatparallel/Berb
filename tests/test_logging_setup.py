@@ -38,9 +38,7 @@ def test_record_outside_a_run_still_formats() -> None:
     record = _record("berb.cli")
     assert record.run_id == "-"
     assert record.stage == "--"
-    formatted = logging.Formatter(
-        "[%(run_id)s|%(stage)s] %(message)s"
-    ).format(record)
+    formatted = logging.Formatter("[%(run_id)s|%(stage)s] %(message)s").format(record)
     assert formatted == "[-|--] hello"
 
 

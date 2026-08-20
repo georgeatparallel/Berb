@@ -176,9 +176,11 @@ class AcquirerAgent(BaseAgent):
                     [
                         f"    # Download {name}",
                         "    try:",
-                        "        from ogb.nodeproppred import PygNodePropPredDataset"
-                        if "Node" in api
-                        else "        from ogb.graphproppred import PygGraphPropPredDataset",
+                        (
+                            "        from ogb.nodeproppred import PygNodePropPredDataset"
+                            if "Node" in api
+                            else "        from ogb.graphproppred import PygGraphPropPredDataset"
+                        ),
                         f"        {api}",
                         f'        print(f"Downloaded {name}")',
                         "    except Exception as e:",
@@ -272,8 +274,12 @@ class AcquirerAgent(BaseAgent):
             return self._make_result(False, error="No benchmarks selected")
 
         # 1. Generate data loading code
-        self.logger.info("Generating data loading code for %d datasets", len(benchmarks))
-        data_loader_code = self._strip_fences(self._generate_data_loader(benchmarks, topic))
+        self.logger.info(
+            "Generating data loading code for %d datasets", len(benchmarks)
+        )
+        data_loader_code = self._strip_fences(
+            self._generate_data_loader(benchmarks, topic)
+        )
 
         # 2. Generate baseline code
         baseline_code = ""
@@ -299,7 +305,8 @@ class AcquirerAgent(BaseAgent):
         }
 
         self.logger.info(
-            "Acquirer complete: %d code artifacts generated", sum(1 for v in result.values() if v)
+            "Acquirer complete: %d code artifacts generated",
+            sum(1 for v in result.values() if v),
         )
 
         return self._make_result(True, data=result)

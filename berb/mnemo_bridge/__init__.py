@@ -243,7 +243,9 @@ class MnemoBridge:
                 entry_number=data.get("entry_number", 0),
             )
 
-            logger.debug(f"Ingested to session {result.session_id}, entry {result.entry_number}")
+            logger.debug(
+                f"Ingested to session {result.session_id}, entry {result.entry_number}"
+            )
 
             return result
 
@@ -392,7 +394,9 @@ class MnemoBridge:
         lines = [f"\n\n== {section_title} ==\n"]
 
         for i, chunk in enumerate(chunks, 1):
-            lines.append(f"\n[{i}] Source: {chunk.source} (Relevance: {chunk.relevance:.2f})")
+            lines.append(
+                f"\n[{i}] Source: {chunk.source} (Relevance: {chunk.relevance:.2f})"
+            )
             lines.append(f"    {chunk.content}")
 
         lines.append("\n== End Context ==\n\n")

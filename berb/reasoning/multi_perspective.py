@@ -108,7 +108,10 @@ class PerspectiveScore:
     def total(self) -> float:
         """Calculate total score (0-10)."""
         return (
-            self.logical_consistency + self.evidence_support + self.feasibility + self.novelty
+            self.logical_consistency
+            + self.evidence_support
+            + self.feasibility
+            + self.novelty
         ) / 4.0
 
     def to_dict(self) -> dict[str, Any]:
@@ -216,7 +219,9 @@ class MultiPerspectiveMethod(ReasoningMethod):
             scores = await self._critique_and_score(perspectives, problem)
 
             # Select top-k candidates
-            top_candidates = self._select_top_candidates(perspectives, scores, self.top_k)
+            top_candidates = self._select_top_candidates(
+                perspectives, scores, self.top_k
+            )
 
             # Generate steel-man arguments for weakest
             await self._generate_steel_man(perspectives, scores)
@@ -261,7 +266,9 @@ class MultiPerspectiveMethod(ReasoningMethod):
 
         if self.parallel:
             # Run all perspectives concurrently
-            tasks = [self._generate_single_perspective(p, problem) for p in perspectives]
+            tasks = [
+                self._generate_single_perspective(p, problem) for p in perspectives
+            ]
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
             # Filter out exceptions
@@ -409,7 +416,9 @@ JSON format: {{"solution": "...", "key_insights": ["simplification1", "simplific
         if json_match:
             try:
                 data = json.loads(json_match.group())
-                content = data.get("solution", data.get("critique", data.get("analysis", "")))
+                content = data.get(
+                    "solution", data.get("critique", data.get("analysis", ""))
+                )
                 insights = data.get("key_insights", [])
                 return content, insights
             except json.JSONDecodeError:
@@ -590,7 +599,9 @@ What is the most compelling case for this perspective, even if you disagree?"""
             self.router.track_cost(
                 method="multi_perspective",
                 phase="all",
-                model=self.router.role_models.get("constructive", self.router.mid_model),
+                model=self.router.role_models.get(
+                    "constructive", self.router.mid_model
+                ),
                 input_tokens=estimated_input,
                 output_tokens=estimated_output,
                 duration_ms=int(duration_sec * 1000),
@@ -609,7 +620,9 @@ class _LLMClientProvider:
 
     def __init__(self, llm_client: Any) -> None:
         self.llm_client = llm_client
-        self.model = getattr(getattr(llm_client, "config", None), "primary_model", "unknown")
+        self.model = getattr(
+            getattr(llm_client, "config", None), "primary_model", "unknown"
+        )
 
     async def complete(self, prompt: str) -> Any:
         messages = [{"role": "user", "content": prompt}]
@@ -620,7 +633,9 @@ class _LLMClientProvider:
 
         loop = asyncio.get_event_loop()
         with ThreadPoolExecutor() as executor:
-            result = await loop.run_in_executor(executor, lambda: self.llm_client.chat(messages))
+            result = await loop.run_in_executor(
+                executor, lambda: self.llm_client.chat(messages)
+            )
         if inspect.isawaitable(result):
             return await result
         return result
@@ -637,7 +652,9 @@ class _FallbackProvider:
 
         @dataclass
         class MockResponse:
-            content: str = '{"solution": "Fallback solution", "key_insights": ["fallback"]}'
+            content: str = (
+                '{"solution": "Fallback solution", "key_insights": ["fallback"]}'
+            )
             tokens: int = 0
             cost: float = 0.0
 

@@ -52,7 +52,15 @@ class TestResearchMode:
 
 class TestFeedback:
     def test_feedback_actions_defined(self):
-        expected = {"approve", "modify", "retry", "skip", "discuss", "branch", "rollback"}
+        expected = {
+            "approve",
+            "modify",
+            "retry",
+            "skip",
+            "discuss",
+            "branch",
+            "rollback",
+        }
         assert FEEDBACK_ACTIONS == expected
 
     def test_feedback_frozen(self):
@@ -169,7 +177,9 @@ class TestFeedbackHandler:
 
     def test_wait_for_feedback_timeout(self, tmp_path: Path):
         handler = FeedbackHandler(tmp_path)
-        result = handler.wait_for_feedback(stage=1, timeout_sec=0, poll_interval_sec=0.01)
+        result = handler.wait_for_feedback(
+            stage=1, timeout_sec=0, poll_interval_sec=0.01
+        )
         assert result is None
 
     def test_wait_for_feedback_finds_response(self, tmp_path: Path):
@@ -215,7 +225,9 @@ class TestBranchManager:
         assert (Path(branch_path) / "stage-02" / "result.txt").exists()
         assert (Path(branch_path) / "branch_meta.json").exists()
 
-        meta = json.loads((Path(branch_path) / "branch_meta.json").read_text(encoding="utf-8"))
+        meta = json.loads(
+            (Path(branch_path) / "branch_meta.json").read_text(encoding="utf-8")
+        )
         assert meta["name"] == "exp_alt"
         assert meta["from_stage"] == 2
 

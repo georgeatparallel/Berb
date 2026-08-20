@@ -20,7 +20,9 @@ def run_dir(tmp_path: Path) -> Path:
 def _write_experiment_summary(run_dir: Path, data: dict) -> None:
     stage14 = run_dir / "stage-14"
     stage14.mkdir(parents=True, exist_ok=True)
-    (stage14 / "experiment_summary.json").write_text(json.dumps(data, indent=2), encoding="utf-8")
+    (stage14 / "experiment_summary.json").write_text(
+        json.dumps(data, indent=2), encoding="utf-8"
+    )
 
 
 def test_sanitize_replaces_unverified_numbers(run_dir: Path) -> None:
@@ -220,8 +222,12 @@ def test_sanitize_unicode_hyphen_model_names_preserved(run_dir: Path) -> None:
         "| ResNet\u201150 (teacher) | 0.91 |\n"
     )
     sanitized, report = _sanitize_fabricated_data(paper, run_dir)
-    assert "ResNet\u201134" in sanitized, "Model name with U+2011 hyphen should not be sanitized"
-    assert "ResNet\u201150" in sanitized, "Model name with U+2011 hyphen should not be sanitized"
+    assert (
+        "ResNet\u201134" in sanitized
+    ), "Model name with U+2011 hyphen should not be sanitized"
+    assert (
+        "ResNet\u201150" in sanitized
+    ), "Model name with U+2011 hyphen should not be sanitized"
 
 
 def test_prose_sanitization_preserves_introduction(run_dir: Path) -> None:
@@ -304,7 +310,12 @@ def test_sanitize_reads_promoted_best_data(run_dir: Path) -> None:
         json.dumps(
             {
                 "metrics_summary": {
-                    "primary_metric": {"min": 73.07, "max": 78.93, "mean": 75.56, "count": 3}
+                    "primary_metric": {
+                        "min": 73.07,
+                        "max": 78.93,
+                        "mean": 75.56,
+                        "count": 3,
+                    }
                 },
                 "best_run": {"metrics": {"primary_metric": 78.93}},
                 "condition_summaries": {
@@ -349,7 +360,9 @@ def test_sanitize_rejects_regressed_refine_data(run_dir: Path) -> None:
                     "FeatureKD": {"metrics": {"metric": 0.7452}},
                     "Teacher": {"metrics": {"metric": 0.7431}},
                 },
-                "metrics_summary": {"metric": {"mean": 0.7442, "min": 0.7431, "max": 0.7452}},
+                "metrics_summary": {
+                    "metric": {"mean": 0.7442, "min": 0.7431, "max": 0.7452}
+                },
             },
             indent=2,
         ),
@@ -364,14 +377,18 @@ def test_sanitize_rejects_regressed_refine_data(run_dir: Path) -> None:
                 "FeatureKD": {"metrics": {"metric": 0.6930}},
                 "Teacher": {"metrics": {"metric": 0.7292}},
             },
-            "metrics_summary": {"metric": {"mean": 0.7111, "min": 0.6930, "max": 0.7292}},
+            "metrics_summary": {
+                "metric": {"mean": 0.7111, "min": 0.6930, "max": 0.7292}
+            },
         },
     )
     # v3 sandbox data in refinement_log
     stage13 = run_dir / "stage-13_v2"
     stage13.mkdir(parents=True, exist_ok=True)
     (stage13 / "refinement_log.json").write_text(
-        json.dumps({"iterations": [{"sandbox": {"metrics": {"primary_metric": 0.6930}}}]}),
+        json.dumps(
+            {"iterations": [{"sandbox": {"metrics": {"primary_metric": 0.6930}}}]}
+        ),
         encoding="utf-8",
     )
     # Paper fabricates v3 numbers

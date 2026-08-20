@@ -64,10 +64,24 @@ _ALLOWED_NODES: tuple[type[ast.AST], ...] = (
     ast.Tuple,
     ast.List,
     # Operators
-    ast.Add, ast.Sub, ast.Mult, ast.Div, ast.FloorDiv, ast.Mod, ast.Pow,
-    ast.USub, ast.UAdd, ast.Not,
-    ast.Eq, ast.NotEq, ast.Lt, ast.LtE, ast.Gt, ast.GtE,
-    ast.And, ast.Or,
+    ast.Add,
+    ast.Sub,
+    ast.Mult,
+    ast.Div,
+    ast.FloorDiv,
+    ast.Mod,
+    ast.Pow,
+    ast.USub,
+    ast.UAdd,
+    ast.Not,
+    ast.Eq,
+    ast.NotEq,
+    ast.Lt,
+    ast.LtE,
+    ast.Gt,
+    ast.GtE,
+    ast.And,
+    ast.Or,
 )
 """AST nodes permitted inside a verifiable mathematical expression.
 
@@ -112,7 +126,6 @@ def _safe_eval_expr(expr: str, namespace: dict[str, Any]) -> float:
         namespace,
     )
     return float(result)
-
 
 
 @dataclass
@@ -383,7 +396,9 @@ Provide:
         results = await asyncio.gather(*[test_one(tc) for tc in test_cases])
 
         all_converged = all(r.get("converged", False) for r in results)
-        convergence_rate = sum(1 for r in results if r.get("converged", False)) / len(results)
+        convergence_rate = sum(1 for r in results if r.get("converged", False)) / len(
+            results
+        )
 
         return {
             "test_results": results,
@@ -503,7 +518,9 @@ Format as a list of conditions.
 
         # Parse as list
         lines = response.content.strip().split("\n")
-        conditions = [line.strip().lstrip("-*•").strip() for line in lines if line.strip()]
+        conditions = [
+            line.strip().lstrip("-*•").strip() for line in lines if line.strip()
+        ]
 
         return conditions[:10]  # Limit to 10 conditions
 
@@ -554,7 +571,13 @@ Format as a list of conditions.
         # whitelisted calls) before any evaluation happens.
         try:
             return _safe_eval_expr(expr, namespace)
-        except (ValueError, SyntaxError, TypeError, ZeroDivisionError, AttributeError) as e:
+        except (
+            ValueError,
+            SyntaxError,
+            TypeError,
+            ZeroDivisionError,
+            AttributeError,
+        ) as e:
             logger.warning("Expression evaluation failed: %s - %s", expr, e)
             return float("nan")
 

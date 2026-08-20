@@ -127,7 +127,9 @@ def test_build_run_command_specific_gpus(tmp_path: Path):
 
 
 def test_harness_injection(tmp_path: Path):
-    harness_src = Path(__file__).parent.parent / "berb" / "experiment" / "harness_template.py"
+    harness_src = (
+        Path(__file__).parent.parent / "berb" / "experiment" / "harness_template.py"
+    )
     if not harness_src.exists():
         pytest.skip("harness_template.py not found")
 
@@ -149,15 +151,23 @@ def test_factory_returns_experiment_sandbox(tmp_path: Path):
 
 
 @patch("berb.experiment.docker_sandbox.DockerSandbox.ensure_image", return_value=True)
-@patch("berb.experiment.docker_sandbox.DockerSandbox.check_docker_available", return_value=True)
+@patch(
+    "berb.experiment.docker_sandbox.DockerSandbox.check_docker_available",
+    return_value=True,
+)
 def test_factory_returns_docker_sandbox(mock_avail, mock_image, tmp_path: Path):
     config = ExperimentConfig(mode="docker")
     sandbox = create_sandbox(config, tmp_path / "work")
     assert isinstance(sandbox, DockerSandbox)
 
 
-@patch("berb.experiment.docker_sandbox.DockerSandbox.check_docker_available", return_value=False)
-def test_factory_falls_back_when_docker_unavailable_and_opted_in(mock_avail, tmp_path: Path):
+@patch(
+    "berb.experiment.docker_sandbox.DockerSandbox.check_docker_available",
+    return_value=False,
+)
+def test_factory_falls_back_when_docker_unavailable_and_opted_in(
+    mock_avail, tmp_path: Path
+):
     """fallback_to_sandbox now defaults to False (SECURITY: fail closed —
     see tasks/arch_hardening_plan.md S0-4); this test exercises the opt-in
     fallback mechanism, which still exists for operators who want it."""
@@ -170,7 +180,10 @@ def test_factory_falls_back_when_docker_unavailable_and_opted_in(mock_avail, tmp
     assert isinstance(sandbox, ExperimentSandbox)
 
 
-@patch("berb.experiment.docker_sandbox.DockerSandbox.check_docker_available", return_value=False)
+@patch(
+    "berb.experiment.docker_sandbox.DockerSandbox.check_docker_available",
+    return_value=False,
+)
 def test_factory_raises_by_default_when_docker_unavailable(mock_avail, tmp_path: Path):
     """SECURITY (S0-4): default is fail-closed — no silent downgrade to an
     unisolated subprocess sandbox when Docker is unavailable."""
@@ -180,8 +193,13 @@ def test_factory_raises_by_default_when_docker_unavailable(mock_avail, tmp_path:
 
 
 @patch("berb.experiment.docker_sandbox.DockerSandbox.ensure_image", return_value=False)
-@patch("berb.experiment.docker_sandbox.DockerSandbox.check_docker_available", return_value=True)
-def test_factory_falls_back_when_image_missing_and_opted_in(mock_avail, mock_image, tmp_path: Path):
+@patch(
+    "berb.experiment.docker_sandbox.DockerSandbox.check_docker_available",
+    return_value=True,
+)
+def test_factory_falls_back_when_image_missing_and_opted_in(
+    mock_avail, mock_image, tmp_path: Path
+):
     """P0 FIX: Factory falls back to sandbox when image is missing, if the
     operator opted in via fallback_to_sandbox=True (no longer the default)."""
     from berb.experiment.sandbox import ExperimentSandbox
@@ -194,7 +212,10 @@ def test_factory_falls_back_when_image_missing_and_opted_in(mock_avail, mock_ima
 
 
 @patch("berb.experiment.docker_sandbox.DockerSandbox.ensure_image", return_value=False)
-@patch("berb.experiment.docker_sandbox.DockerSandbox.check_docker_available", return_value=True)
+@patch(
+    "berb.experiment.docker_sandbox.DockerSandbox.check_docker_available",
+    return_value=True,
+)
 def test_factory_raises_when_fallback_disabled(mock_avail, mock_image, tmp_path: Path):
     """P0 FIX: Factory should raise when fallback_to_sandbox is False."""
     config = ExperimentConfig(
@@ -240,7 +261,9 @@ def test_docker_run_timeout(mock_run, tmp_path: Path):
 
 
 def test_detect_pip_packages(tmp_path: Path):
-    (tmp_path / "main.py").write_text("import torchdiffeq\nimport numpy\nfrom PIL import Image\n")
+    (tmp_path / "main.py").write_text(
+        "import torchdiffeq\nimport numpy\nfrom PIL import Image\n"
+    )
     detected = DockerSandbox._detect_pip_packages(tmp_path)
     # torchdiffeq and PIL/Pillow are now in builtin → skipped
     # numpy should be skipped (builtin)
@@ -456,7 +479,9 @@ def test_run_project_rejects_absolute_path(mock_run: MagicMock, tmp_path: Path):
 
 @patch.object(DockerSandbox, "_remove_container")
 @patch("subprocess.run")
-def test_cleanup_on_normal_exit(mock_run: MagicMock, mock_remove: MagicMock, tmp_path: Path):
+def test_cleanup_on_normal_exit(
+    mock_run: MagicMock, mock_remove: MagicMock, tmp_path: Path
+):
     """_remove_container is called on normal successful exit."""
     mock_run.return_value = subprocess.CompletedProcess(
         args=["docker", "run"],
@@ -494,7 +519,9 @@ def test_cleanup_on_timeout(
 
 @patch.object(DockerSandbox, "_remove_container")
 @patch("subprocess.run")
-def test_cleanup_on_exception(mock_run: MagicMock, mock_remove: MagicMock, tmp_path: Path):
+def test_cleanup_on_exception(
+    mock_run: MagicMock, mock_remove: MagicMock, tmp_path: Path
+):
     """_remove_container is called even when subprocess.run raises an unexpected exception."""
     mock_run.side_effect = OSError("Docker daemon not responding")
     cfg = DockerSandboxConfig(network_policy="none")

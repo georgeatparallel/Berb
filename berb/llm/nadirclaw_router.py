@@ -284,7 +284,9 @@ class ContextOptimizer:
         original_tokens = self._estimate_tokens(messages)
         optimized_tokens = self._estimate_tokens(optimized)
         tokens_saved = original_tokens - optimized_tokens
-        savings_pct = (tokens_saved / original_tokens * 100) if original_tokens > 0 else 0
+        savings_pct = (
+            (tokens_saved / original_tokens * 100) if original_tokens > 0 else 0
+        )
 
         return OptimizationResult(
             messages=optimized,
@@ -538,7 +540,9 @@ class NadirClawRouter:
         if self._cache_enabled:
             self._cache_set(prompt, selection)
 
-        logger.info(f"NadirClaw routing: {tier} tier → {model} (latency={latency_ms}ms)")
+        logger.info(
+            f"NadirClaw routing: {tier} tier → {model} (latency={latency_ms}ms)"
+        )
 
         return selection
 

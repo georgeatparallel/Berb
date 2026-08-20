@@ -9,7 +9,9 @@ fallback below the minimum-cacheable-chars floor.
 from __future__ import annotations
 
 from berb.llm.client import LLMClient, LLMConfig
-from berb.llm.prompt_cache import build_cached_system_blocks, model_needs_explicit_cache_control
+from berb.llm.prompt_cache import (
+    model_needs_explicit_cache_control,
+)
 
 
 def _client() -> LLMClient:
@@ -38,7 +40,9 @@ class TestApplyCachedPrefix:
             {"role": "user", "content": "review this"},
         ]
 
-        out = client._apply_cached_prefix(msgs, "anthropic/claude-sonnet-4.5", "x" * 5000, "5m")
+        out = client._apply_cached_prefix(
+            msgs, "anthropic/claude-sonnet-4.5", "x" * 5000, "5m"
+        )
 
         blocks = out[0]["content"]
         assert len(blocks) == 2
@@ -61,7 +65,9 @@ class TestApplyCachedPrefix:
         client = _client()
         msgs = [{"role": "user", "content": "review this"}]
 
-        out = client._apply_cached_prefix(msgs, "anthropic/claude-sonnet-4.5", "short", "5m")
+        out = client._apply_cached_prefix(
+            msgs, "anthropic/claude-sonnet-4.5", "short", "5m"
+        )
 
         assert isinstance(out[0]["content"], str)
         assert out[0]["content"] == "short"
@@ -71,7 +77,9 @@ class TestApplyCachedPrefix:
         original = [{"role": "user", "content": "review this"}]
         msgs = [dict(m) for m in original]
 
-        client._apply_cached_prefix(msgs, "anthropic/claude-sonnet-4.5", "x" * 5000, "5m")
+        client._apply_cached_prefix(
+            msgs, "anthropic/claude-sonnet-4.5", "x" * 5000, "5m"
+        )
 
         assert original == [{"role": "user", "content": "review this"}]
 
@@ -115,7 +123,9 @@ class TestParseChatCompletionsCachedTokens:
             },
         }
 
-        resp = client._parse_chat_completions_response(data, "anthropic/claude-sonnet-4.5")
+        resp = client._parse_chat_completions_response(
+            data, "anthropic/claude-sonnet-4.5"
+        )
 
         assert resp.cached_tokens == 900
 
@@ -124,7 +134,11 @@ class TestParseChatCompletionsCachedTokens:
         data = {
             "model": "openai/gpt-4o",
             "choices": [{"message": {"content": "hi"}, "finish_reason": "stop"}],
-            "usage": {"prompt_tokens": 100, "completion_tokens": 10, "total_tokens": 110},
+            "usage": {
+                "prompt_tokens": 100,
+                "completion_tokens": 10,
+                "total_tokens": 110,
+            },
         }
 
         resp = client._parse_chat_completions_response(data, "openai/gpt-4o")

@@ -73,7 +73,10 @@ def get_cached(
         age_sec = time.time() - ts
         if age_sec > effective_ttl:
             logger.debug(
-                "Cache expired for key %s (age=%.0fs > ttl=%.0fs)", key, age_sec, effective_ttl
+                "Cache expired for key %s (age=%.0fs > ttl=%.0fs)",
+                key,
+                age_sec,
+                effective_ttl,
             )
             return None
         papers = data.get("papers", [])

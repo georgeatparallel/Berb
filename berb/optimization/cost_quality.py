@@ -120,17 +120,33 @@ class CostQualityOptimizer:
         """Load model cost information."""
         return {
             # Budget tier
-            "gpt-4o-mini": {"tier": ModelTier.BUDGET, "input_per_1m": 0.15, "output_per_1m": 0.60},
+            "gpt-4o-mini": {
+                "tier": ModelTier.BUDGET,
+                "input_per_1m": 0.15,
+                "output_per_1m": 0.60,
+            },
             "claude-3-haiku": {
                 "tier": ModelTier.BUDGET,
                 "input_per_1m": 0.25,
                 "output_per_1m": 1.25,
             },
             # Mid tier
-            "gpt-4o": {"tier": ModelTier.MID, "input_per_1m": 2.50, "output_per_1m": 10.0},
-            "claude-3-sonnet": {"tier": ModelTier.MID, "input_per_1m": 3.00, "output_per_1m": 15.0},
+            "gpt-4o": {
+                "tier": ModelTier.MID,
+                "input_per_1m": 2.50,
+                "output_per_1m": 10.0,
+            },
+            "claude-3-sonnet": {
+                "tier": ModelTier.MID,
+                "input_per_1m": 3.00,
+                "output_per_1m": 15.0,
+            },
             # Premium tier
-            "o1": {"tier": ModelTier.PREMIUM, "input_per_1m": 15.0, "output_per_1m": 60.0},
+            "o1": {
+                "tier": ModelTier.PREMIUM,
+                "input_per_1m": 15.0,
+                "output_per_1m": 60.0,
+            },
             "claude-3-opus": {
                 "tier": ModelTier.PREMIUM,
                 "input_per_1m": 15.0,
@@ -445,7 +461,11 @@ class CostQualityOptimizer:
         if records:
             # Use data-driven recommendation
             correlation = next(
-                (c for c in self.analyze_cost_quality_correlations() if c.stage_name == stage_name),
+                (
+                    c
+                    for c in self.analyze_cost_quality_correlations()
+                    if c.stage_name == stage_name
+                ),
                 None,
             )
 
@@ -478,12 +498,14 @@ class CostQualityOptimizer:
             "model_tier": optimal_tier.value,
             "importance": importance,
             "data_driven": len(records) > 0,
-            "historical_avg_quality": sum(r.quality_score for r in records) / len(records)
-            if records
-            else None,
-            "historical_avg_cost": sum(r.cost_usd for r in records) / len(records)
-            if records
-            else None,
+            "historical_avg_quality": (
+                sum(r.quality_score for r in records) / len(records)
+                if records
+                else None
+            ),
+            "historical_avg_cost": (
+                sum(r.cost_usd for r in records) / len(records) if records else None
+            ),
         }
 
     def get_cost_breakdown(self) -> dict[str, Any]:

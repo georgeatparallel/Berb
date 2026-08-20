@@ -197,7 +197,9 @@ class RebuttalLetter(BaseModel):
                 )
 
                 if response.changes_made:
-                    lines.append(f"**Changes made:** {', '.join(response.changes_made)}")
+                    lines.append(
+                        f"**Changes made:** {', '.join(response.changes_made)}"
+                    )
                     lines.append("")
 
         lines.extend(
@@ -331,7 +333,9 @@ class RebuttalGenerator:
 
         if len(comments) < 2:
             # Fall back to line breaks
-            comments = [c.strip() for c in review_text.split("\n") if c.strip() and len(c) > 20]
+            comments = [
+                c.strip() for c in review_text.split("\n") if c.strip() and len(c) > 20
+            ]
 
         return comments[:20]  # Limit to 20 comments per review
 
@@ -439,7 +443,9 @@ class RebuttalGenerator:
 
         # Generate response
         if self.llm_provider:
-            response_text = await self._generate_llm_response(comment, paper_text, strategy)
+            response_text = await self._generate_llm_response(
+                comment, paper_text, strategy
+            )
         else:
             response_text = self._generate_template_response(comment, strategy)
 

@@ -60,8 +60,7 @@ security:
   hitl_required_stages: [5, 9, 20]
 experiment:
   mode: simulated
-""".strip()
-        + "\n",
+""".strip() + "\n",
         encoding="utf-8",
     )
     return config_path
@@ -105,7 +104,9 @@ def test_valid_config_data_helper_returns_expected_baseline_shape():
 
 
 def test_validate_config_with_valid_data_returns_ok_true(tmp_path: Path):
-    result = validate_config(_valid_config_data(), project_root=tmp_path, check_paths=False)
+    result = validate_config(
+        _valid_config_data(), project_root=tmp_path, check_paths=False
+    )
 
     assert isinstance(result, ValidationResult)
     assert result.ok is True
@@ -312,7 +313,9 @@ def test_security_config_defaults_match_expected_values():
 def test_experiment_config_defaults_mode_is_docker():
     defaults = ExperimentConfig()
 
-    assert defaults.mode == "docker"  # P0 fix: "simulated" silently produces fake results
+    assert (
+        defaults.mode == "docker"
+    )  # P0 fix: "simulated" silently produces fake results
     assert defaults.metric_direction == "minimize"
 
 
@@ -357,7 +360,9 @@ def test_check_paths_false_skips_missing_kb_root_validation(tmp_path: Path):
 
 
 def test_path_validation_missing_kb_root_is_error(tmp_path: Path):
-    result = validate_config(_valid_config_data(), project_root=tmp_path, check_paths=True)
+    result = validate_config(
+        _valid_config_data(), project_root=tmp_path, check_paths=True
+    )
 
     assert result.ok is False
     assert any(error.startswith("Missing path:") for error in result.errors)
@@ -371,7 +376,10 @@ def test_validate_config_missing_kb_subdirs_emits_warnings(tmp_path: Path):
 
     assert result.ok is True
     assert len(result.warnings) == 6
-    assert all(warning.startswith("Missing recommended kb subdir:") for warning in result.warnings)
+    assert all(
+        warning.startswith("Missing recommended kb subdir:")
+        for warning in result.warnings
+    )
 
 
 def test_rcconfig_from_dict_uses_default_security_when_missing(tmp_path: Path):
@@ -399,7 +407,9 @@ class TestUnwiredConfigSections:
     """
 
     def test_no_warning_when_unwired_sections_absent(self, tmp_path: Path):
-        result = validate_config(_valid_config_data(), project_root=tmp_path, check_paths=False)
+        result = validate_config(
+            _valid_config_data(), project_root=tmp_path, check_paths=False
+        )
 
         assert result.ok is True
         assert not [w for w in result.warnings if "nothing reads it" in w]
@@ -413,7 +423,10 @@ class TestUnwiredConfigSections:
 
         # A warning, never an error — existing configs must keep loading.
         assert result.ok is True
-        assert any(f"'{section}' is configured but nothing reads it" in w for w in result.warnings)
+        assert any(
+            f"'{section}' is configured but nothing reads it" in w
+            for w in result.warnings
+        )
 
     def test_empty_section_does_not_warn(self, tmp_path: Path):
         """`memory: {}` expresses no intent, so it is not a false promise."""
@@ -435,7 +448,8 @@ class TestUnwiredConfigSections:
 
         assert config.skills.enabled is True  # still parsed, still loadable
         assert any(
-            "'skills' is configured but nothing reads it" in r.message for r in caplog.records
+            "'skills' is configured but nothing reads it" in r.message
+            for r in caplog.records
         )
 
     def test_every_listed_section_is_a_real_rcconfig_field(self):

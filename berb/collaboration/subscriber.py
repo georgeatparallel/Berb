@@ -34,7 +34,9 @@ class ArtifactSubscriber:
         Returns:
             List of matching literature artifacts.
         """
-        return self._repo.search(topic, artifact_type="literature_summary", max_results=max_results)
+        return self._repo.search(
+            topic, artifact_type="literature_summary", max_results=max_results
+        )
 
     def find_similar_experiments(
         self,
@@ -50,7 +52,9 @@ class ArtifactSubscriber:
         Returns:
             List of matching experiment artifacts.
         """
-        return self._repo.search(query, artifact_type="experiment_results", max_results=max_results)
+        return self._repo.search(
+            query, artifact_type="experiment_results", max_results=max_results
+        )
 
     def find_code_templates(
         self,
@@ -66,7 +70,9 @@ class ArtifactSubscriber:
         Returns:
             List of matching code template artifacts.
         """
-        return self._repo.search(query, artifact_type="code_template", max_results=max_results)
+        return self._repo.search(
+            query, artifact_type="code_template", max_results=max_results
+        )
 
     def import_best_practices(
         self,
@@ -89,7 +95,9 @@ class ArtifactSubscriber:
             for result in lit_results:
                 content = result.get("content", "")
                 run_id = result.get("run_id", "?")
-                summary = content[:200] if isinstance(content, str) else str(content)[:200]
+                summary = (
+                    content[:200] if isinstance(content, str) else str(content)[:200]
+                )
                 parts.append(f"- {summary}... (from run: {run_id})")
 
         # Experiment insights

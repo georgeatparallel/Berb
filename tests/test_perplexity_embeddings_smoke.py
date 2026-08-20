@@ -71,15 +71,25 @@ def test_embeddings_endpoint_matches_openai_shape() -> None:
             "current embeddings docs before wiring EmbeddingProvider."
         )
 
-    assert "data" in body, f"Expected top-level 'data' key, got keys: {list(body.keys())}"
-    assert isinstance(body["data"], list) and body["data"], "Expected non-empty 'data' list"
+    assert (
+        "data" in body
+    ), f"Expected top-level 'data' key, got keys: {list(body.keys())}"
+    assert (
+        isinstance(body["data"], list) and body["data"]
+    ), "Expected non-empty 'data' list"
 
     entry = body["data"][0]
-    assert "embedding" in entry, f"Expected 'embedding' key in data[0], got: {list(entry.keys())}"
+    assert (
+        "embedding" in entry
+    ), f"Expected 'embedding' key in data[0], got: {list(entry.keys())}"
     embedding = entry["embedding"]
-    assert isinstance(embedding, list) and embedding, "Expected non-empty embedding vector"
-    assert all(isinstance(v, (int, float)) for v in embedding), (
-        "Expected embedding to be a list of numbers"
-    )
+    assert (
+        isinstance(embedding, list) and embedding
+    ), "Expected non-empty embedding vector"
+    assert all(
+        isinstance(v, (int, float)) for v in embedding
+    ), "Expected embedding to be a list of numbers"
 
-    print(f"\nSchema confirmed OpenAI-compatible. Embedding dimension: {len(embedding)}")
+    print(
+        f"\nSchema confirmed OpenAI-compatible. Embedding dimension: {len(embedding)}"
+    )

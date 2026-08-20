@@ -52,7 +52,9 @@ class TestReport:
         )
         draft_dir = tmp_path / "stage-17"
         draft_dir.mkdir()
-        (draft_dir / "paper_draft.md").write_text("This is a paper with some words in it.")
+        (draft_dir / "paper_draft.md").write_text(
+            "This is a paper with some words in it."
+        )
         report = generate_report(tmp_path)
         assert "Paper" in report
         assert "words" in report
@@ -136,7 +138,10 @@ class TestReport:
                     "total_tokens": 45678,
                     "num_events": 12,
                     "by_stage": {"17": 0.9, "14": 0.3, "3": 0.0345},
-                    "by_phase": {"G: Paper Writing": 0.9, "F: Analysis & Decision": 0.3},
+                    "by_phase": {
+                        "G: Paper Writing": 0.9,
+                        "F: Analysis & Decision": 0.3,
+                    },
                     "by_purpose": {"other": 1.2345},
                     "pricing_version": "test",
                 }

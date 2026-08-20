@@ -4,9 +4,6 @@ from __future__ import annotations
 
 import json
 import logging
-import math
-import re
-from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -21,24 +18,16 @@ from berb.pipeline._helpers import (
     _build_context_preamble,
     _chat_with_prompt,
     _collect_experiment_results,  # noqa: F401
-    _default_quality_report,
-    _extract_paper_title,
-    _find_prior_file,
-    _generate_framework_diagram_prompt,
-    _generate_neurips_checklist,
     _get_evolution_overlay,
     _read_best_analysis,
     _read_prior_artifact,
-    _safe_json_loads,
     _topic_constraint_block,  # noqa: F401
     _utcnow_iso,
-    reconcile_figure_refs,
 )
 from berb.pipeline.contracts import StageContract
 from berb.pipeline.registry import register_stage
 from berb.pipeline.stages import Stage, StageStatus
 from berb.prompts import PromptManager
-from berb.writing.anti_ai import AntiAIEncoder
 
 logger = logging.getLogger(__name__)
 
@@ -115,7 +104,9 @@ Generated: {_utcnow_iso()}
         "artifact_count": len(files),
         "artifacts": files,
     }
-    (stage_dir / "bundle_index.json").write_text(json.dumps(index, indent=2), encoding="utf-8")
+    (stage_dir / "bundle_index.json").write_text(
+        json.dumps(index, indent=2), encoding="utf-8"
+    )
     return StageResult(
         stage=Stage.KNOWLEDGE_ARCHIVE,
         status=StageStatus.DONE,
@@ -370,7 +361,9 @@ def _sanitize_fabricated_data(
 
         # Check if this looks like a results/experiment table
         # (heuristic: has a separator row with dashes)
-        has_separator = any(_re_san.match(r"^[ \t]*\|[\s:|-]+\|[ \t]*$", line) for line in lines)
+        has_separator = any(
+            _re_san.match(r"^[ \t]*\|[\s:|-]+\|[ \t]*$", line) for line in lines
+        )
         if not has_separator:
             return table_text
 
@@ -698,7 +691,13 @@ def _sanitize_fabricated_data(
             _header_text = _line.lstrip("#").strip().lower()
             if _header_text and not any(
                 kw in _header_text
-                for kw in ("result", "experiment", "ablation", "evaluation", "comparison")
+                for kw in (
+                    "result",
+                    "experiment",
+                    "ablation",
+                    "evaluation",
+                    "comparison",
+                )
             ):
                 _in_results_section = False
         if _in_results_section and "|" not in _line:  # skip table rows
@@ -718,7 +717,9 @@ def _sanitize_fabricated_data(
                 if _is_verified(val):
                     return m.group(0)
                 prose_numbers_replaced += 1
-                return m.group(0).replace(num_str + (m.group(2) or ""), "[value removed]")
+                return m.group(0).replace(
+                    num_str + (m.group(2) or ""), "[value removed]"
+                )
 
             _line = _prose_pattern.sub(_replace_prose_num, _line)
         _sanitized_lines.append(_line)
@@ -750,5 +751,3 @@ def _sanitize_fabricated_data(
 # for a result to be accepted.  Prevents "Jokowi and the New Developmentalism"
 # from replacing "Deep Residual Learning for Image Recognition".
 _CITATION_RESOLVE_MIN_SIMILARITY = 0.30
-
-

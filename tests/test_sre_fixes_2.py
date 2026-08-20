@@ -9,7 +9,6 @@ from __future__ import annotations
 import threading
 import time
 from pathlib import Path
-from unittest.mock import MagicMock
 
 # ---------------------------------------------------------------------------
 # BUG-A — RateLimiter.wait_sync() race on _last_call
@@ -59,9 +58,9 @@ class TestRateLimiterWaitSyncThreadSafety:
         limiter.wait_sync()
         limiter.wait_sync()
         elapsed = time.monotonic() - t0
-        assert elapsed >= interval * 0.9, (
-            f"Single-threaded wait_sync broken: elapsed={elapsed:.3f}s"
-        )
+        assert (
+            elapsed >= interval * 0.9
+        ), f"Single-threaded wait_sync broken: elapsed={elapsed:.3f}s"
 
     def test_sync_lock_attribute_exists(self):
         """BUG-A fix: _sync_lock must be present on RateLimiter instances."""
@@ -70,10 +69,12 @@ class TestRateLimiterWaitSyncThreadSafety:
         from berb.literature._rate_limiter import RateLimiter
 
         limiter = RateLimiter(min_interval_sec=1.0)
-        assert hasattr(limiter, "_sync_lock"), "BUG-A: _sync_lock not added to RateLimiter"
-        assert isinstance(limiter._sync_lock, type(_threading.Lock())), (
-            "_sync_lock must be a threading.Lock"
-        )
+        assert hasattr(
+            limiter, "_sync_lock"
+        ), "BUG-A: _sync_lock not added to RateLimiter"
+        assert isinstance(
+            limiter._sync_lock, type(_threading.Lock())
+        ), "_sync_lock must be a threading.Lock"
 
 
 # ---------------------------------------------------------------------------
@@ -103,9 +104,9 @@ class TestPutCacheAtomicWrite:
 
         # File must be readable and valid JSON after all concurrent writes
         result = get_cached(query, source, limit, cache_base=tmp_path)
-        assert result is not None, (
-            "BUG-B regression: get_cached returned None — JSON likely corrupted by concurrent writes"
-        )
+        assert (
+            result is not None
+        ), "BUG-B regression: get_cached returned None — JSON likely corrupted by concurrent writes"
         assert isinstance(result, list), "BUG-B: cached papers must be a list"
 
     def test_single_writer_still_works(self, tmp_path: Path):
@@ -142,7 +143,6 @@ class TestPutCacheAtomicWrite:
             t.join()
 
         leftover_tmp = list(tmp_path.glob("*.tmp"))
-        assert leftover_tmp == [], (
-            f"BUG-B: {len(leftover_tmp)} .tmp files left behind: {leftover_tmp}"
-        )
-
+        assert (
+            leftover_tmp == []
+        ), f"BUG-B: {len(leftover_tmp)} .tmp files left behind: {leftover_tmp}"

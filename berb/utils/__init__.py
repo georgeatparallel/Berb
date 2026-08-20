@@ -1,7 +1,14 @@
 """Berb utility functions."""
 
 from .sanitize import sanitize_figure_id
-from .time import duration_seconds, ensure_utc, utc_timestamp, utcnow, utcnow_iso, utcnow_str
+from .time import (
+    duration_seconds,
+    ensure_utc,
+    utc_timestamp,
+    utcnow,
+    utcnow_iso,
+    utcnow_str,
+)
 from .token_tracker import DailyTokenStats, TokenSummary, TokenTracker, TokenUsage
 
 __all__ = [

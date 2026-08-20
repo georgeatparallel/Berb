@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
-from berb.pipeline.resolution import eligible_stages, resolve_stage_order, verify_acyclic
+from berb.pipeline.resolution import (
+    eligible_stages,
+    resolve_stage_order,
+    verify_acyclic,
+)
 from berb.pipeline.stages import Stage
 
 

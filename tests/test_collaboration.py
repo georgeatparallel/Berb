@@ -32,7 +32,9 @@ def populated_repo(repo: ResearchRepository) -> ResearchRepository:
     repo.publish(
         run_id="run-001",
         artifacts={
-            "literature_summary": {"papers": ["Paper A on transformer", "Paper B on vision"]},
+            "literature_summary": {
+                "papers": ["Paper A on transformer", "Paper B on vision"]
+            },
             "experiment_results": {"accuracy": 0.95, "model": "ResNet50"},
         },
     )
@@ -68,7 +70,9 @@ def run_dir(tmp_path: Path) -> Path:
     # Stage 14 — result analysis
     s14 = d / "stage-14-result_analysis"
     s14.mkdir()
-    (s14 / "experiment_summary.json").write_text(json.dumps({"accuracy": 0.92}), encoding="utf-8")
+    (s14 / "experiment_summary.json").write_text(
+        json.dumps({"accuracy": 0.92}), encoding="utf-8"
+    )
 
     # Stage 18 — peer review
     s18 = d / "stage-18-peer_review"
@@ -133,7 +137,9 @@ class TestResearchRepository:
         assert "literature_summary" in artifacts
         assert "experiment_results" in artifacts
 
-    def test_get_run_artifacts_missing(self, populated_repo: ResearchRepository) -> None:
+    def test_get_run_artifacts_missing(
+        self, populated_repo: ResearchRepository
+    ) -> None:
         artifacts = populated_repo.get_run_artifacts("run-999")
         assert artifacts == {}
 
@@ -142,7 +148,9 @@ class TestResearchRepository:
         assert isinstance(lit, list)
         assert len(lit) >= 1
 
-    def test_import_literature_missing_run(self, populated_repo: ResearchRepository) -> None:
+    def test_import_literature_missing_run(
+        self, populated_repo: ResearchRepository
+    ) -> None:
         lit = populated_repo.import_literature("run-999")
         assert lit == []
 
@@ -151,7 +159,9 @@ class TestResearchRepository:
         assert code is not None
         assert "torch" in code
 
-    def test_import_code_template_no_match(self, populated_repo: ResearchRepository) -> None:
+    def test_import_code_template_no_match(
+        self, populated_repo: ResearchRepository
+    ) -> None:
         code = populated_repo.import_code_template("run-002", "tensorflow_xyz")
         assert code is None
 

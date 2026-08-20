@@ -286,7 +286,9 @@ class ZoteroMCPClient:
 
         # Build URL
         library_prefix = (
-            f"groups/{self.config.library_id}" if self.config.library_type == "group" else "users"
+            f"groups/{self.config.library_id}"
+            if self.config.library_type == "group"
+            else "users"
         )
         url = f"/{library_prefix}/{self.config.library_id or 'self'}/collections"
 
@@ -370,15 +372,19 @@ class ZoteroMCPClient:
             )
 
         library_prefix = (
-            f"groups/{self.config.library_id}" if self.config.library_type == "group" else "users"
+            f"groups/{self.config.library_id}"
+            if self.config.library_type == "group"
+            else "users"
         )
         url = f"/{library_prefix}/{self.config.library_id or 'self'}/collections/{collection_id}/items"
         params = {
             "format": "json",
             "limit": limit,
-            "include": "annotations,notes"
-            if (include_annotations or self.config.include_annotations)
-            else "json",
+            "include": (
+                "annotations,notes"
+                if (include_annotations or self.config.include_annotations)
+                else "json"
+            ),
         }
 
         try:
@@ -593,9 +599,11 @@ class ZoteroMCPClient:
             if field == "title":
                 return [i for i in all_items if query_lower in i.title.lower()][:limit]
             elif field == "creator":
-                return [i for i in all_items if any(query_lower in a.lower() for a in i.authors)][
-                    :limit
-                ]
+                return [
+                    i
+                    for i in all_items
+                    if any(query_lower in a.lower() for a in i.authors)
+                ][:limit]
             else:
                 return all_items[:limit]
 

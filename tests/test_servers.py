@@ -55,7 +55,12 @@ def registry() -> ServerRegistry:
                 cloud_provider="aws",
             ),
             _make_server(
-                "hpc", "hpc.host", server_type="slurm", vram_gb=40, priority=2, scheduler="slurm"
+                "hpc",
+                "hpc.host",
+                server_type="slurm",
+                vram_gb=40,
+                priority=2,
+                scheduler="slurm",
             ),
         ]
     )
@@ -133,7 +138,9 @@ class TestServerRegistry:
         assert best is not None
         assert best.cost_per_hour == 0.0
 
-    def test_get_best_match_none_when_impossible(self, registry: ServerRegistry) -> None:
+    def test_get_best_match_none_when_impossible(
+        self, registry: ServerRegistry
+    ) -> None:
         best = registry.get_best_match({"min_vram_gb": 999})
         assert best is None
 
@@ -178,13 +185,17 @@ class TestServerMonitor:
 
     def test_check_status_unreachable(self, registry: ServerRegistry) -> None:
         monitor = ServerMonitor(registry)
-        with patch("berb.servers.monitor._ssh_command", side_effect=RuntimeError("unreachable")):
+        with patch(
+            "berb.servers.monitor._ssh_command", side_effect=RuntimeError("unreachable")
+        ):
             status = asyncio.run(monitor.check_status(_make_server()))
         assert status["reachable"] is False
 
     def test_check_all(self, registry: ServerRegistry) -> None:
         monitor = ServerMonitor(registry)
-        with patch("berb.servers.monitor._ssh_command", side_effect=RuntimeError("unreachable")):
+        with patch(
+            "berb.servers.monitor._ssh_command", side_effect=RuntimeError("unreachable")
+        ):
             results = asyncio.run(monitor.check_all())
         assert len(results) == 3
         for _name, status in results.items():
@@ -234,7 +245,9 @@ class TestSlurmExecutor:
     def test_generate_sbatch_script(self) -> None:
         server = _make_server(server_type="slurm", scheduler="slurm")
         exe = SlurmExecutor(server)
-        script = exe._generate_sbatch_script("python main.py", resources={"gpus": 2, "mem_gb": 32})
+        script = exe._generate_sbatch_script(
+            "python main.py", resources={"gpus": 2, "mem_gb": 32}
+        )
         assert "#SBATCH --gres=gpu:2" in script
         assert "#SBATCH --mem=32G" in script
         assert "python main.py" in script
@@ -253,7 +266,9 @@ class TestSlurmExecutor:
         async def _run() -> str:
             with patch("asyncio.create_subprocess_exec") as mock_exec:
                 proc = AsyncMock()
-                proc.communicate = AsyncMock(return_value=(b"Submitted batch job 12345\n", b""))
+                proc.communicate = AsyncMock(
+                    return_value=(b"Submitted batch job 12345\n", b"")
+                )
                 proc.returncode = 0
                 mock_exec.return_value = proc
                 return await exe.submit_job("echo hi", "/tmp/test")
@@ -290,7 +305,9 @@ class TestTaskDispatcher:
     def test_dispatch_returns_task_id(self, registry: ServerRegistry) -> None:
         monitor = ServerMonitor(registry)
         disp = TaskDispatcher(registry, monitor)
-        task_id = asyncio.run(disp.dispatch({"command": "echo hi", "local_dir": "/tmp"}))
+        task_id = asyncio.run(
+            disp.dispatch({"command": "echo hi", "local_dir": "/tmp"})
+        )
         assert len(task_id) == 12
 
     def test_dispatch_no_server_queues(self) -> None:

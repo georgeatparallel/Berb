@@ -26,9 +26,9 @@ class TestAutoDebuggerDeadCode:
 
         # The bug: f-string on line 608 is not assigned to any variable
         # After fix, the prompt should be assigned and used
-        assert "prompt =" in source or "prompt=" in source, (
-            "BUG: f-string prompt is built but never assigned to variable"
-        )
+        assert (
+            "prompt =" in source or "prompt=" in source
+        ), "BUG: f-string prompt is built but never assigned to variable"
 
 
 class TestAutoDebuggerDivisionByZero:
@@ -86,9 +86,9 @@ class TestSandboxPathTraversal:
         # validate_entry_point_resolved should catch this
         result = validate_entry_point_resolved(staging, "entry.py")
 
-        assert result is not None, (
-            "BUG: validate_entry_point_resolved should detect symlink-based path traversal"
-        )
+        assert (
+            result is not None
+        ), "BUG: validate_entry_point_resolved should detect symlink-based path traversal"
 
 
 class TestSelfCorrectingResourceLeak:
@@ -109,7 +109,9 @@ class TestSelfCorrectingResourceLeak:
 
         # Execute code that will fail (async)
         async def run_test():
-            return await executor.execute("raise ValueError('test error')", timeout_sec=1)
+            return await executor.execute(
+                "raise ValueError('test error')", timeout_sec=1
+            )
 
         asyncio.run(run_test())
 

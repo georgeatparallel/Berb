@@ -74,7 +74,9 @@ class VerifiedEvidenceRegistry:
         """Return records whose normalised value matches *value*."""
         needle = EvidenceRecord._normalise_value(value)
         return [
-            r for r in self.records.values() if EvidenceRecord._normalise_value(r.value) == needle
+            r
+            for r in self.records.values()
+            if EvidenceRecord._normalise_value(r.value) == needle
         ]
 
     # ------------------------------------------------------------------
@@ -124,7 +126,9 @@ class VerifiedEvidenceRegistry:
                 rec = EvidenceRecord.from_dict(item)
                 reg.records[rec.evidence_id] = rec
             except (KeyError, ValueError, TypeError):
-                logger.warning("Skipping unparseable evidence record: %s", str(item)[:120])
+                logger.warning(
+                    "Skipping unparseable evidence record: %s", str(item)[:120]
+                )
         return reg
 
     # ------------------------------------------------------------------
@@ -192,9 +196,13 @@ class VerifiedEvidenceRegistry:
             logger.info(
                 "from_run_dir: %d evidence records (%s)",
                 len(reg.records),
-                ", ".join(sorted({r.evidence_type.value for r in reg.records.values()}))
-                if reg.records
-                else "none",
+                (
+                    ", ".join(
+                        sorted({r.evidence_type.value for r in reg.records.values()})
+                    )
+                    if reg.records
+                    else "none"
+                ),
             )
         return reg
 

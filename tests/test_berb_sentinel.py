@@ -80,7 +80,9 @@ class TestHeartbeatInPipeline:
                 return StageResult(
                     stage=stage, status=StageStatus.FAILED, artifacts=(), error="stop"
                 )
-            return StageResult(stage=stage, status=StageStatus.DONE, artifacts=("x.md",))
+            return StageResult(
+                stage=stage, status=StageStatus.DONE, artifacts=("x.md",)
+            )
 
         monkeypatch.setattr(rc_runner, "execute_stage", mock_execute_stage)
         await rc_runner.execute_pipeline(
@@ -115,11 +117,14 @@ class TestSentinelScript:
         except FileNotFoundError:
             pytest.skip("bash not available on this system")
         if result.returncode != 0 and "execvpe" in result.stderr:
-            pytest.skip(f"bash unavailable in this environment: {result.stderr.strip()}")
+            pytest.skip(
+                f"bash unavailable in this environment: {result.stderr.strip()}"
+            )
         assert result.returncode == 0, f"Bash syntax error: {result.stderr}"
 
     @pytest.mark.skipif(
-        sys.platform == "win32", reason="Unix file permissions not applicable on Windows"
+        sys.platform == "win32",
+        reason="Unix file permissions not applicable on Windows",
     )
     def test_sentinel_script_is_executable(self) -> None:
         script = Path(__file__).parent.parent / "sentinel.sh"

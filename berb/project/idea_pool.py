@@ -37,11 +37,15 @@ class IdeaPool:
     def _save(self) -> None:
         self.pool_path.parent.mkdir(parents=True, exist_ok=True)
         data = {"ideas": [idea.to_dict() for idea in self.ideas.values()]}
-        self.pool_path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+        self.pool_path.write_text(
+            json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8"
+        )
 
     # ── CRUD ──────────────────────────────────────────────────────
 
-    def add(self, title: str, description: str, domains: list[str] | None = None) -> Idea:
+    def add(
+        self, title: str, description: str, domains: list[str] | None = None
+    ) -> Idea:
         """Add a new idea to the pool."""
         idea_id = uuid.uuid4().hex[:8]
         idea = Idea(
@@ -70,7 +74,9 @@ class IdeaPool:
 
     # ── evaluation ────────────────────────────────────────────────
 
-    def evaluate(self, idea_id: str, feasibility: float, novelty: float) -> dict[str, Any]:
+    def evaluate(
+        self, idea_id: str, feasibility: float, novelty: float
+    ) -> dict[str, Any]:
         """Set feasibility and novelty scores for an idea."""
         idea = self.get(idea_id)
         idea.feasibility = max(0.0, min(1.0, feasibility))
@@ -90,7 +96,9 @@ class IdeaPool:
 
     # ── conversion ────────────────────────────────────────────────
 
-    def to_project(self, idea_id: str, config_path: str, projects_dir: str | Path) -> Project:
+    def to_project(
+        self, idea_id: str, config_path: str, projects_dir: str | Path
+    ) -> Project:
         """Convert an idea into a project skeleton."""
         idea = self.get(idea_id)
         from berb.project.manager import ProjectManager

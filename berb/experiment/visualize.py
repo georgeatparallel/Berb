@@ -204,7 +204,11 @@ def plot_condition_comparison(
     )
 
     # Value labels above bars
-    y_max = max(m + h for m, h in zip(means, yerr_hi, strict=False)) if yerr_hi else max(means)
+    y_max = (
+        max(m + h for m, h in zip(means, yerr_hi, strict=False))
+        if yerr_hi
+        else max(means)
+    )
     offset = y_max * 0.025
     for i, m in enumerate(means):
         ax.text(
@@ -294,7 +298,9 @@ def plot_metric_heatmap(
         else:
             data[:, j] = 0.5
 
-    fig, ax = plt.subplots(figsize=(max(6, len(clean_keys) * 1.3), max(4, len(cond_names) * 0.6)))
+    fig, ax = plt.subplots(
+        figsize=(max(6, len(clean_keys) * 1.3), max(4, len(cond_names) * 0.6))
+    )
     im = ax.imshow(data, cmap="YlGnBu", aspect="auto", vmin=0, vmax=1)
 
     # Annotate cells
@@ -414,12 +420,22 @@ def plot_ablation_deltas(
     for i, d in enumerate(deltas):
         ha = "left" if d >= 0 else "right"
         offset = 0.5 if d >= 0 else -0.5
-        ax.text(d + offset, i, f"{d:+.1f}%", ha=ha, va="center", fontsize=9, fontweight="bold")
+        ax.text(
+            d + offset,
+            i,
+            f"{d:+.1f}%",
+            ha=ha,
+            va="center",
+            fontsize=9,
+            fontweight="bold",
+        )
 
     ax.set_yticks(y)
     ax.set_yticklabels(names)
     ax.set_xlabel(f"\u0394 {metric_key.replace('_', ' ').title()} vs. Baseline (%)")
-    ax.set_title(title or f"Ablation Analysis (Baseline: {_format_cond_name(base_key)})")
+    ax.set_title(
+        title or f"Ablation Analysis (Baseline: {_format_cond_name(base_key)})"
+    )
     ax.invert_yaxis()
     fig.tight_layout()
     fig.savefig(_ensure_dir(output_path), dpi=300, bbox_inches="tight")
@@ -529,7 +545,9 @@ def plot_experiment_comparison(
 
     # Limit to top 12 metrics
     if len(filtered) > 12:
-        top = sorted(filtered.items(), key=lambda kv: abs(kv[1].get("mean", 0)), reverse=True)[:12]
+        top = sorted(
+            filtered.items(), key=lambda kv: abs(kv[1].get("mean", 0)), reverse=True
+        )[:12]
         filtered = dict(top)
 
     names = list(filtered.keys())
@@ -717,7 +735,9 @@ def generate_all_charts(
                 continue
 
     # 1. Metric trajectory
-    path = plot_metric_trajectory(runs, metric_key, output_dir / "metric_trajectory.png")
+    path = plot_metric_trajectory(
+        runs, metric_key, output_dir / "metric_trajectory.png"
+    )
     if path:
         generated.append(path)
 
@@ -768,7 +788,9 @@ def generate_all_charts(
             if ms:
                 ms = {k: v for k, v in ms.items() if not _is_excluded_metric(k)}
                 if ms:
-                    path = plot_experiment_comparison(ms, output_dir / "experiment_comparison.png")
+                    path = plot_experiment_comparison(
+                        ms, output_dir / "experiment_comparison.png"
+                    )
                     if path:
                         generated.append(path)
         except (json.JSONDecodeError, OSError):

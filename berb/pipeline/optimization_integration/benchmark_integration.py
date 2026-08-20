@@ -124,9 +124,13 @@ class BenchmarkIntegration:
         # Collect issues
         issues = []
         if draco_score.factual_accuracy < self.draco_threshold:
-            issues.append(f"Factual accuracy below threshold: {draco_score.factual_accuracy:.1f}")
+            issues.append(
+                f"Factual accuracy below threshold: {draco_score.factual_accuracy:.1f}"
+            )
         if draco_score.citation_quality < self.draco_threshold:
-            issues.append(f"Citation quality below threshold: {draco_score.citation_quality:.1f}")
+            issues.append(
+                f"Citation quality below threshold: {draco_score.citation_quality:.1f}"
+            )
 
         # Create report
         report = BenchmarkReport(
@@ -184,7 +188,9 @@ class BenchmarkIntegration:
         current_overall = current_score.overall_score
 
         improvement = current_overall - baseline_score
-        improvement_pct = (improvement / baseline_score * 100) if baseline_score > 0 else 0
+        improvement_pct = (
+            (improvement / baseline_score * 100) if baseline_score > 0 else 0
+        )
 
         return {
             "baseline_score": baseline_score,

@@ -69,7 +69,10 @@ class ExperimentHarness:
             try:
                 value = float(value)
             except (TypeError, ValueError):
-                print(f"WARNING: Cannot convert {name}={value!r} to float", file=sys.stderr)
+                print(
+                    f"WARNING: Cannot convert {name}={value!r} to float",
+                    file=sys.stderr,
+                )
                 return
 
         if not self.check_value(value, name):

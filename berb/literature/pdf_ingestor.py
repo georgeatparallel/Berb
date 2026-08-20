@@ -73,7 +73,10 @@ def extract_text_from_pdf(path: Path) -> str:
         doc.close()
         text = "\n\n".join(pages)
         logger.debug(
-            "Extracted %d characters from %d pages in %s", len(text), len(pages), path.name
+            "Extracted %d characters from %d pages in %s",
+            len(text),
+            len(pages),
+            path.name,
         )
         return text
     except Exception:
@@ -141,7 +144,9 @@ _TITLE_HEURISTICS: list[tuple[re.Pattern[str], str]] = [
 # Simple split on common author-separator patterns
 _AUTHOR_PATTERNS: list[re.Pattern[str]] = [
     re.compile(r"(?:^|\n)(?:Authors?|By)[:]\s*(.+?)(?:\n|$)", re.IGNORECASE),
-    re.compile(r"\n([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)(?:[,;]\s*(?:[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+))*"),
+    re.compile(
+        r"\n([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)(?:[,;]\s*(?:[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+))*"
+    ),
 ]
 
 
@@ -338,7 +343,9 @@ def pdf_to_paper(path: Path | str, llm: object | None = None) -> dict[str, objec
 
     # Compute a simple citation key from first author + first title word
     _surname = authors_list[0]["name"].split()[-1].lower() if authors_list else "upload"
-    _title_word = re.sub(r"[^a-zA-Z]", "", title.split()[0]).lower() if title else "paper"
+    _title_word = (
+        re.sub(r"[^a-zA-Z]", "", title.split()[0]).lower() if title else "paper"
+    )
     cite_key = f"{_surname}{datetime.now(UTC).year}{_title_word}"
 
     return {
@@ -388,7 +395,9 @@ def ingest_pdfs(
             logger.warning("Uploaded PDF not found, skipping: %s", path)
             continue
         if path.suffix.lower() != ".pdf":
-            logger.warning("Skipping non-PDF file: %s (extension: %s)", path, path.suffix)
+            logger.warning(
+                "Skipping non-PDF file: %s (extension: %s)", path, path.suffix
+            )
             continue
 
         try:
@@ -405,6 +414,8 @@ def ingest_pdfs(
             logger.error("Failed to ingest PDF: %s", path, exc_info=True)
 
     if not papers:
-        logger.warning("No papers could be ingested from %d uploaded PDF(s)", len(paths))
+        logger.warning(
+            "No papers could be ingested from %d uploaded PDF(s)", len(paths)
+        )
 
     return papers

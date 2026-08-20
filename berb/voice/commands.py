@@ -32,7 +32,10 @@ _COMMAND_PATTERNS: list[tuple[VoiceCommand, re.Pattern[str]]] = [
     (VoiceCommand.STOP, re.compile(r"^(?:stop|停止|结束|终止)", re.IGNORECASE)),
     (VoiceCommand.PAUSE, re.compile(r"^(?:pause|暂停|等一下)", re.IGNORECASE)),
     (VoiceCommand.RESUME, re.compile(r"^(?:resume|continue|继续|恢复)", re.IGNORECASE)),
-    (VoiceCommand.STATUS, re.compile(r"^(?:status|progress|进度|到哪了|查看)", re.IGNORECASE)),
+    (
+        VoiceCommand.STATUS,
+        re.compile(r"^(?:status|progress|进度|到哪了|查看)", re.IGNORECASE),
+    ),
 ]
 
 

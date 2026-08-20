@@ -120,10 +120,14 @@ class TestServerConfig:
         assert cfg.server.host == "0.0.0.0"
         assert cfg.server.auth_token == "secret123"
 
-    def test_rcconfig_allows_nonloopback_host_with_explicit_insecure_opt_out(self) -> None:
+    def test_rcconfig_allows_nonloopback_host_with_explicit_insecure_opt_out(
+        self,
+    ) -> None:
         from berb.config import RCConfig
 
-        data = _minimal_config_data(server={"enabled": True, "host": "0.0.0.0", "insecure": True})
+        data = _minimal_config_data(
+            server={"enabled": True, "host": "0.0.0.0", "insecure": True}
+        )
         cfg = RCConfig.from_dict(data, check_paths=False)
         assert cfg.server.host == "0.0.0.0"
         assert cfg.server.insecure is True
@@ -789,7 +793,9 @@ class TestTokenAuthMiddleware:
 
         transport = ASGITransport(app=app)  # type: ignore[arg-type]
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
-            resp = await ac.get("/api/config", headers={"authorization": "Bearer wrong"})
+            resp = await ac.get(
+                "/api/config", headers={"authorization": "Bearer wrong"}
+            )
             assert resp.status_code == 401
 
     @pytest.mark.asyncio
@@ -798,7 +804,9 @@ class TestTokenAuthMiddleware:
 
         transport = ASGITransport(app=app)  # type: ignore[arg-type]
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
-            resp = await ac.get("/api/config", headers={"authorization": "Bearer secret123"})
+            resp = await ac.get(
+                "/api/config", headers={"authorization": "Bearer secret123"}
+            )
             assert resp.status_code == 200
 
     @pytest.mark.asyncio

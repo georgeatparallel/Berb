@@ -41,7 +41,9 @@ def export_to_dot(graph: KnowledgeGraphBuilder, path: str | Path) -> None:
     for entity in graph._entities.values():
         color = _TYPE_COLORS.get(entity.entity_type, "#CCCCCC")
         label = entity.name[:40].replace('"', '\\"')
-        lines.append(f'  "{entity.id}" [label="{label}", fillcolor="{color}", fontcolor="white"];')
+        lines.append(
+            f'  "{entity.id}" [label="{label}", fillcolor="{color}", fontcolor="white"];'
+        )
 
     # Edges
     for rel in graph._relations:

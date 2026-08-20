@@ -61,9 +61,9 @@ class TestGetSharedMemorySingleton:
 
         # All 20 threads must have received the identical instance
         assert len(instances) == 20
-        assert all(inst is instances[0] for inst in instances), (
-            "BUG-001 regression: multiple distinct instances created under concurrency"
-        )
+        assert all(
+            inst is instances[0] for inst in instances
+        ), "BUG-001 regression: multiple distinct instances created under concurrency"
 
     def test_project_id_change_creates_new_instance(self):
         """Changing project_id should create a fresh instance."""
@@ -92,9 +92,9 @@ class TestGetSharedMemorySingleton:
         t.join()
 
         assert results[0] is mem
-        assert results[0].get("key_x") == "value_x", (
-            "BUG-001 regression: stored data was lost because a new instance was created"
-        )
+        assert (
+            results[0].get("key_x") == "value_x"
+        ), "BUG-001 regression: stored data was lost because a new instance was created"
 
 
 # ---------------------------------------------------------------------------
@@ -131,9 +131,9 @@ class TestMessageCountersThreadSafety:
 
         state = mem.get_agent_state("agent_a")
         assert state is not None
-        assert state.messages_sent == N * M, (
-            f"BUG-002 regression: expected {N * M} sent, got {state.messages_sent}"
-        )
+        assert (
+            state.messages_sent == N * M
+        ), f"BUG-002 regression: expected {N * M} sent, got {state.messages_sent}"
 
     def test_messages_received_exact_under_concurrency(self):
         """N threads each read messages — received counter must equal total reads × matches."""
@@ -164,9 +164,9 @@ class TestMessageCountersThreadSafety:
         state = mem.get_agent_state("agent_a")
         assert state is not None
         expected = sum(received_totals)
-        assert state.messages_received == expected, (
-            f"BUG-002 regression: counter={state.messages_received}, expected={expected}"
-        )
+        assert (
+            state.messages_received == expected
+        ), f"BUG-002 regression: counter={state.messages_received}, expected={expected}"
 
     def test_send_message_basic_still_works(self):
         """Non-regression: basic single-threaded send_message still functions."""
@@ -202,18 +202,22 @@ class TestExecuteStageSignatureIntrospection:
         """An executor that accepts 'prompts' must receive the kwarg."""
         received_kwargs: dict = {}
 
-        def fake_executor(stage_dir, run_dir, config, adapters, *, llm=None, prompts=None):
+        def fake_executor(
+            stage_dir, run_dir, config, adapters, *, llm=None, prompts=None
+        ):
             received_kwargs["prompts"] = prompts
             from berb.pipeline._helpers import StageResult
             from berb.pipeline.stages import Stage, StageStatus
 
             return StageResult(
-                stage=Stage.TOPIC_INIT, status=StageStatus.DONE, artifacts=("topic.json",)
+                stage=Stage.TOPIC_INIT,
+                status=StageStatus.DONE,
+                artifacts=("topic.json",),
             )
 
-        assert "prompts" in inspect.signature(fake_executor).parameters, (
-            "Test setup error: fake_executor must declare 'prompts'"
-        )
+        assert (
+            "prompts" in inspect.signature(fake_executor).parameters
+        ), "Test setup error: fake_executor must declare 'prompts'"
         # Verify inspect agrees that the parameter is present
         sig = inspect.signature(fake_executor)
         assert "prompts" in sig.parameters
@@ -230,7 +234,9 @@ class TestExecuteStageSignatureIntrospection:
     def test_real_typeerror_from_executor_propagates(self):
         """A TypeError raised inside the executor body must propagate — not be swallowed."""
 
-        def buggy_executor(stage_dir, run_dir, config, adapters, *, llm=None, prompts=None):
+        def buggy_executor(
+            stage_dir, run_dir, config, adapters, *, llm=None, prompts=None
+        ):
             # This TypeError has nothing to do with 'prompts'
             _ = "string" + 42  # type: ignore[operator]
 
@@ -248,10 +254,10 @@ class TestExecuteStageSignatureIntrospection:
 
         src = inspect.getsource(exec_module.execute_stage)
         # The old fragile pattern must not exist
-        assert "unexpected keyword argument" not in src, (
-            "BUG-003 regression: fragile TypeError string-match still present in execute_stage"
-        )
+        assert (
+            "unexpected keyword argument" not in src
+        ), "BUG-003 regression: fragile TypeError string-match still present in execute_stage"
         # The new pattern must exist
-        assert "inspect.signature" in src or "_accepts_prompts" in src, (
-            "BUG-003 regression: inspect.signature introspection not found in execute_stage"
-        )
+        assert (
+            "inspect.signature" in src or "_accepts_prompts" in src
+        ), "BUG-003 regression: inspect.signature introspection not found in execute_stage"

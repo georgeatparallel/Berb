@@ -94,7 +94,9 @@ class PersistentMemory:
                     data = json.loads(line)
                     record = self._dict_to_performance_record(data)
                     self.performance_history.append(record)
-            logger.info("Loaded %d performance records from disk", len(self.performance_history))
+            logger.info(
+                "Loaded %d performance records from disk", len(self.performance_history)
+            )
 
     def _save_to_disk(self) -> None:
         """Save data to disk."""
@@ -196,7 +198,11 @@ class PersistentMemory:
             List of relevant improvements
         """
         # Filter by source domain and transferable flag
-        return [imp for imp in self.improvements if imp.source_domain == domain or imp.transferable]
+        return [
+            imp
+            for imp in self.improvements
+            if imp.source_domain == domain or imp.transferable
+        ]
 
     def transfer_improvements(
         self,
@@ -251,7 +257,11 @@ class PersistentMemory:
         Returns:
             List of performance records
         """
-        return [record for record in self.performance_history if record.variant_id == variant_id]
+        return [
+            record
+            for record in self.performance_history
+            if record.variant_id == variant_id
+        ]
 
     def calculate_variant_performance(self, variant_id: str) -> float:
         """

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+
 @dataclass
 class OpenRouterModel:
     """OpenRouter model configuration."""

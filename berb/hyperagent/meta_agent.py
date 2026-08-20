@@ -385,7 +385,10 @@ def generate_modification(analysis: dict, current_code: str) -> str:
             improved = resp.content.strip()
             # Sanity: must parse as valid Python
             compile(improved, "<generated>", "exec")
-            logger.info("MetaAgent: generated error-handling improvement (%d chars)", len(improved))
+            logger.info(
+                "MetaAgent: generated error-handling improvement (%d chars)",
+                len(improved),
+            )
             return improved
         except Exception as exc:
             logger.warning("MetaAgent: error-handling generation failed: %s", exc)
@@ -416,10 +419,15 @@ def generate_modification(analysis: dict, current_code: str) -> str:
             )
             improved = resp.content.strip()
             compile(improved, "<generated>", "exec")
-            logger.info("MetaAgent: generated performance optimisation (%d chars)", len(improved))
+            logger.info(
+                "MetaAgent: generated performance optimisation (%d chars)",
+                len(improved),
+            )
             return improved
         except Exception as exc:
-            logger.warning("MetaAgent: performance optimisation generation failed: %s", exc)
+            logger.warning(
+                "MetaAgent: performance optimisation generation failed: %s", exc
+            )
             return current_code
 
     def _generate_meta_improvement(self) -> str:
@@ -448,10 +456,15 @@ def generate_modification(analysis: dict, current_code: str) -> str:
             )
             improved = resp.content.strip()
             compile(improved, "<generated>", "exec")
-            logger.info("MetaAgent: generated metacognitive improvement (%d chars)", len(improved))
+            logger.info(
+                "MetaAgent: generated metacognitive improvement (%d chars)",
+                len(improved),
+            )
             return improved
         except Exception as exc:
-            logger.warning("MetaAgent: metacognitive improvement generation failed: %s", exc)
+            logger.warning(
+                "MetaAgent: metacognitive improvement generation failed: %s", exc
+            )
             return self.modification_code
 
     def _validate_modification_code(self, code: str) -> bool:

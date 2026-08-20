@@ -151,7 +151,9 @@ class BerbBenchmarkFramework:
         for task in physics_tasks:
             score = await self._evaluate_prbench_task(task)
             scores.append(score)
-            logger.info(f"PRBench {task.get('name', 'unknown')}: {score.overall_score:.1f}/100")
+            logger.info(
+                f"PRBench {task.get('name', 'unknown')}: {score.overall_score:.1f}/100"
+            )
 
         return scores
 
@@ -400,7 +402,9 @@ Format as JSON:
                 total += 1
                 out_value = output[key]
 
-                if isinstance(gt_value, (int, float)) and isinstance(out_value, (int, float)):
+                if isinstance(gt_value, (int, float)) and isinstance(
+                    out_value, (int, float)
+                ):
                     # Check if within 5% tolerance
                     if abs(gt_value - out_value) / max(abs(gt_value), 1e-10) < 0.05:
                         matches += 1

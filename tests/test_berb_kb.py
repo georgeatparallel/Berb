@@ -62,7 +62,9 @@ def test_write_kb_entry_markdown_backend_has_no_obsidian_extras(tmp_path: Path):
         tags=["hypothesis"],
         links=["run-run-a"],
     )
-    text = write_kb_entry(kb_root, entry, backend="markdown").read_text(encoding="utf-8")
+    text = write_kb_entry(kb_root, entry, backend="markdown").read_text(
+        encoding="utf-8"
+    )
     assert "[[run-run-a]]" not in text
     assert "#hypothesis" not in text
 
@@ -79,7 +81,9 @@ def test_write_kb_entry_obsidian_backend_includes_tags_and_wikilinks(tmp_path: P
         tags=["hypothesis", "q1"],
         links=["run-run-a", "topic-a"],
     )
-    text = write_kb_entry(kb_root, entry, backend="obsidian").read_text(encoding="utf-8")
+    text = write_kb_entry(kb_root, entry, backend="obsidian").read_text(
+        encoding="utf-8"
+    )
     assert "#hypothesis #q1" in text
     assert "Related: [[run-run-a]], [[topic-a]]" in text
 
@@ -150,7 +154,9 @@ def test_write_stage_to_kb_places_entry_in_mapped_category(tmp_path: Path):
     stage_dir = tmp_path / "stage-10"
     stage_dir.mkdir()
     (stage_dir / "run.md").write_text("exp content", encoding="utf-8")
-    paths = write_stage_to_kb(kb_root, 10, "experiment_cycle", "run-1", ["run.md"], stage_dir)
+    paths = write_stage_to_kb(
+        kb_root, 10, "experiment_cycle", "run-1", ["run.md"], stage_dir
+    )
     assert len(paths) == 1
     assert paths[0].parent.name == "experiments"
 
@@ -160,7 +166,9 @@ def test_write_stage_to_kb_reads_artifact_file_contents(tmp_path: Path):
     stage_dir = tmp_path / "stage-04"
     stage_dir.mkdir()
     (stage_dir / "lit.md").write_text("paper A\npaper B", encoding="utf-8")
-    path = write_stage_to_kb(kb_root, 4, "literature_search", "run-1", ["lit.md"], stage_dir)[0]
+    path = write_stage_to_kb(
+        kb_root, 4, "literature_search", "run-1", ["lit.md"], stage_dir
+    )[0]
     text = path.read_text(encoding="utf-8")
     assert "paper A" in text
     assert "stage-04/lit.md" in text
@@ -170,9 +178,9 @@ def test_write_stage_to_kb_handles_missing_artifacts_gracefully(tmp_path: Path):
     kb_root = _kb_root(tmp_path)
     stage_dir = tmp_path / "stage-05"
     stage_dir.mkdir()
-    path = write_stage_to_kb(kb_root, 5, "literature_extract", "run-2", ["missing.md"], stage_dir)[
-        0
-    ]
+    path = write_stage_to_kb(
+        kb_root, 5, "literature_extract", "run-2", ["missing.md"], stage_dir
+    )[0]
     text = path.read_text(encoding="utf-8")
     assert "Stage 05 (literature_extract) completed" in text
 
@@ -183,9 +191,9 @@ def test_write_stage_to_kb_truncates_large_artifact_content(tmp_path: Path):
     stage_dir.mkdir()
     large_text = "x" * 6000
     (stage_dir / "big.txt").write_text(large_text, encoding="utf-8")
-    path = write_stage_to_kb(kb_root, 12, "experiment_implement", "run-3", ["big.txt"], stage_dir)[
-        0
-    ]
+    path = write_stage_to_kb(
+        kb_root, 12, "experiment_implement", "run-3", ["big.txt"], stage_dir
+    )[0]
     text = path.read_text(encoding="utf-8")
     assert "... (truncated, see full artifact)" in text
     assert text.count("x") >= 5000
@@ -198,7 +206,9 @@ def test_write_stage_to_kb_directory_artifact_records_listing(tmp_path: Path):
     artifact_dir.mkdir(parents=True)
     (artifact_dir / "a.txt").write_text("a", encoding="utf-8")
     (artifact_dir / "b.txt").write_text("b", encoding="utf-8")
-    path = write_stage_to_kb(kb_root, 13, "experiment_execute", "run-4", ["outputs/"], stage_dir)[0]
+    path = write_stage_to_kb(
+        kb_root, 13, "experiment_execute", "run-4", ["outputs/"], stage_dir
+    )[0]
     text = path.read_text(encoding="utf-8")
     assert "Directory with 2 files: a.txt, b.txt" in text
     assert "stage-13/outputs/" in text

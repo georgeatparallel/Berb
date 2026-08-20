@@ -101,7 +101,9 @@ class SmartLLMClient:
 
             self._tracker = TokenTracker(
                 project_path=Path(project_path) if project_path else None,
-                db_path=Path(tracking_config.db_path) if tracking_config.db_path else None,
+                db_path=(
+                    Path(tracking_config.db_path) if tracking_config.db_path else None
+                ),
             )
             self._tracking_enabled = True
         else:
@@ -150,7 +152,9 @@ class SmartLLMClient:
             tier = selection.tier
             confidence = selection.confidence
 
-            logger.info(f"NadirClaw routing: {tier} tier → {model} (confidence={confidence:.2f})")
+            logger.info(
+                f"NadirClaw routing: {tier} tier → {model} (confidence={confidence:.2f})"
+            )
         else:
             # Use default model
             selection = None

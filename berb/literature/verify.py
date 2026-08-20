@@ -218,7 +218,9 @@ def verify_by_arxiv_id(arxiv_id: str, expected_title: str) -> CitationResult | N
     # arXiv returns an "error" entry when ID is invalid
     entry = entries[0]
     found_title_el = entry.find("atom:title", _ARXIV_NS)
-    found_title = (found_title_el.text or "").strip() if found_title_el is not None else ""
+    found_title = (
+        (found_title_el.text or "").strip() if found_title_el is not None else ""
+    )
     found_title = re.sub(r"\s+", " ", found_title)
 
     # Check for arXiv error responses (they return entry with id but title "Error")
@@ -632,7 +634,9 @@ def verify_by_title_search(
             confidence=best_sim,
             method="title_search",
             details=(
-                f"Partial match (sim={best_sim:.2f}): '{best_paper.title}'" if best_paper else ""
+                f"Partial match (sim={best_sim:.2f}): '{best_paper.title}'"
+                if best_paper
+                else ""
             ),
             matched_paper=best_paper,
         )
@@ -749,7 +753,9 @@ def verify_citations(
                 report.hallucinated += 1
             else:
                 report.skipped += 1
-            logger.debug("[cache] verify HIT [%s] %r → %s", key, title[:50], cached.status.value)
+            logger.debug(
+                "[cache] verify HIT [%s] %r → %s", key, title[:50], cached.status.value
+            )
             continue
 
         result: CitationResult | None = None

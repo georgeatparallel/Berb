@@ -44,7 +44,11 @@ def test_get_all_registrations_returns_all() -> None:
     """get_all_registrations returns every registered stage."""
     clear_registry()
     c1 = StageContract(
-        stage=Stage.TOPIC_INIT, input_files=(), output_files=("a",), dod="t", error_code="E1"
+        stage=Stage.TOPIC_INIT,
+        input_files=(),
+        output_files=("a",),
+        dod="t",
+        error_code="E1",
     )
     c2 = StageContract(
         stage=Stage.PROBLEM_DECOMPOSE,
@@ -58,7 +62,9 @@ def test_get_all_registrations_returns_all() -> None:
     def fn1() -> None: ...
 
     @register_stage(
-        stage=Stage.PROBLEM_DECOMPOSE, depends_on=frozenset({Stage.TOPIC_INIT}), contract=c2
+        stage=Stage.PROBLEM_DECOMPOSE,
+        depends_on=frozenset({Stage.TOPIC_INIT}),
+        contract=c2,
     )
     def fn2() -> None: ...
 
@@ -97,7 +103,11 @@ def test_clear_registry_removes_all() -> None:
     clear_registry()
 
     c = StageContract(
-        stage=Stage.TOPIC_INIT, input_files=(), output_files=("a",), dod="t", error_code="E1"
+        stage=Stage.TOPIC_INIT,
+        input_files=(),
+        output_files=("a",),
+        dod="t",
+        error_code="E1",
     )
 
     @register_stage(stage=Stage.TOPIC_INIT, depends_on=frozenset(), contract=c)

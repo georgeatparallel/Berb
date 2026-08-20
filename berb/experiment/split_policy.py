@@ -147,7 +147,9 @@ def partition(
         test_indices=test,
         n_total=n_total,
         feasible=True,
-        reason=(f"Split {n_total} rows: {len(train)} train, {len(val)} val, {len(test)} test"),
+        reason=(
+            f"Split {n_total} rows: {len(train)} train, {len(val)} val, {len(test)} test"
+        ),
     )
 
 
@@ -260,7 +262,9 @@ def admit(ev: SplitEvidence, cfg: GateConfig = GateConfig()) -> ClaimVerdict:
         return ClaimVerdict.UNSPLITTABLE
 
     # Rule 3: direction disagreement → INCONCLUSIVE
-    if ev.metric_report is not None and _sign(ev.metric_rank) != _sign(ev.metric_report):
+    if ev.metric_report is not None and _sign(ev.metric_rank) != _sign(
+        ev.metric_report
+    ):
         return ClaimVerdict.INCONCLUSIVE
 
     # Rule 4: strong evidence → SUPPORTED

@@ -143,7 +143,11 @@ class DebateMethod(ReasoningMethod):
                 )
 
             # Extract debate topic and position from context
-            topic = context.get("topic") or context.get("hypothesis") or context.get("question")
+            topic = (
+                context.get("topic")
+                or context.get("hypothesis")
+                or context.get("question")
+            )
             if not topic:
                 return ReasoningResult.error_result(
                     MethodType.DEBATE,
@@ -161,7 +165,9 @@ class DebateMethod(ReasoningMethod):
                 await self._generate_rebuttals(pro_args, con_args)
 
             # Judge evaluates
-            judge_result = await self._judge_debate(position, pro_args, con_args, context)
+            judge_result = await self._judge_debate(
+                position, pro_args, con_args, context
+            )
 
             # Build result
             debate_result = DebateResult(
@@ -181,11 +187,19 @@ class DebateMethod(ReasoningMethod):
                     "topic": topic,
                     "position": position,
                     "pro_arguments": [
-                        {"claim": a.claim, "evidence": a.evidence, "strength": a.strength}
+                        {
+                            "claim": a.claim,
+                            "evidence": a.evidence,
+                            "strength": a.strength,
+                        }
                         for a in pro_args
                     ],
                     "con_arguments": [
-                        {"claim": a.claim, "evidence": a.evidence, "strength": a.strength}
+                        {
+                            "claim": a.claim,
+                            "evidence": a.evidence,
+                            "strength": a.strength,
+                        }
                         for a in con_args
                     ],
                     "winner": debate_result.winner,
@@ -247,7 +261,9 @@ class DebateMethod(ReasoningMethod):
                         )
                     )
             except Exception as e:
-                logger.warning(f"Router argument generation failed: {e}, using fallback")
+                logger.warning(
+                    f"Router argument generation failed: {e}, using fallback"
+                )
                 arguments = self._generate_fallback_arguments(side, position)
         elif self.llm_client:
             # Fallback to llm_client (backward compatible)
@@ -340,8 +356,12 @@ Respond in JSON format:
         """Judge evaluates the debate and declares a winner."""
         if self.llm_client:
             # Format arguments for judge
-            pro_text = "\n".join(f"- {a.claim} (Evidence: {a.evidence})" for a in pro_args)
-            con_text = "\n".join(f"- {a.claim} (Evidence: {a.evidence})" for a in con_args)
+            pro_text = "\n".join(
+                f"- {a.claim} (Evidence: {a.evidence})" for a in pro_args
+            )
+            con_text = "\n".join(
+                f"- {a.claim} (Evidence: {a.evidence})" for a in con_args
+            )
 
             prompt = f"""As an impartial judge, evaluate this debate:
 
@@ -376,8 +396,12 @@ Respond in JSON format:
                 logger.warning(f"LLM judge failed: {e}, using fallback")
 
         # Fallback: simple strength-based judging
-        pro_strength = sum(a.strength for a in pro_args) / len(pro_args) if pro_args else 0.5
-        con_strength = sum(a.strength for a in con_args) / len(con_args) if con_args else 0.5
+        pro_strength = (
+            sum(a.strength for a in pro_args) / len(pro_args) if pro_args else 0.5
+        )
+        con_strength = (
+            sum(a.strength for a in con_args) / len(con_args) if con_args else 0.5
+        )
 
         if pro_strength > con_strength + 0.1:
             winner = "pro"
@@ -389,9 +413,11 @@ Respond in JSON format:
         return {
             "winner": winner,
             "reasoning": f"Pro average strength: {pro_strength:.2f}, Con average strength: {con_strength:.2f}",
-            "conclusion": f"The debate favors the {winner} side based on argument strength."
-            if winner != "undecided"
-            else "The debate is too close to call.",
+            "conclusion": (
+                f"The debate favors the {winner} side based on argument strength."
+                if winner != "undecided"
+                else "The debate is too close to call."
+            ),
             "confidence": abs(pro_strength - con_strength),
         }
 

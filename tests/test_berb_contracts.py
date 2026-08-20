@@ -33,7 +33,9 @@ def test_output_files_is_non_empty_for_all_contracts(contract: StageContract):
 
 
 @pytest.mark.parametrize("stage,contract", tuple(CONTRACTS.items()))
-def test_error_code_starts_with_e_and_contains_stage_number(stage: Stage, contract: StageContract):
+def test_error_code_starts_with_e_and_contains_stage_number(
+    stage: Stage, contract: StageContract
+):
     assert contract.error_code.startswith("E")
     assert f"{int(stage):02d}" in contract.error_code
     assert re.match(r"^E\d{2}_[A-Z0-9_]+$", contract.error_code)

@@ -50,7 +50,7 @@ def test_unknown_attribute_raises_attribute_error(package: str) -> None:
     module = importlib.import_module(package)
 
     with pytest.raises(AttributeError):
-        getattr(module, "definitely_not_an_export")  # noqa: B009 — must go through __getattr__
+        _ = module.definitely_not_an_export  # must go through __getattr__
 
 
 @pytest.mark.parametrize("package", LAZY_PACKAGES)

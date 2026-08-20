@@ -105,7 +105,9 @@ class TDDCodeGenerator:
 
         # Phase 2: Generate implementation to pass tests
         logger.info("TDD Phase 2: Generating implementation...")
-        implementation = await self._generate_implementation(requirement, tests, context)
+        implementation = await self._generate_implementation(
+            requirement, tests, context
+        )
 
         # Phase 3: Run tests and repair if needed
         logger.info("TDD Phase 3: Running tests...")
@@ -257,7 +259,9 @@ Language: {self._language}
                 return result
 
             # Repair implementation
-            logger.info(f"Iteration {iteration + 1}: {passed}/{total} tests passed, repairing...")
+            logger.info(
+                f"Iteration {iteration + 1}: {passed}/{total} tests passed, repairing..."
+            )
 
             implementation = await self._repair_implementation(
                 requirement, tests, implementation, output, context
@@ -421,7 +425,9 @@ class PytestRunner:
             # Run pytest
             try:
                 loop = asyncio.get_running_loop()
-                return await loop.run_in_executor(None, self._run_pytest, str(test_path))
+                return await loop.run_in_executor(
+                    None, self._run_pytest, str(test_path)
+                )
             except subprocess.TimeoutExpired:
                 return f"Tests timed out after {self._timeout}s"
             except Exception as e:

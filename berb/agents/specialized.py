@@ -373,7 +373,9 @@ Respond in JSON format:
                 "max": max(metrics.values()) if metrics else 0,
                 "min": min(metrics.values()) if metrics else 0,
             },
-            key_results=[f"Result {i + 1}: {v:.4f}" for i, v in enumerate(metrics.values())],
+            key_results=[
+                f"Result {i + 1}: {v:.4f}" for i, v in enumerate(metrics.values())
+            ],
             ablation_findings=[],
             figure_suggestions=[
                 {"type": "bar", "description": "Metric comparison"},
@@ -515,7 +517,9 @@ Respond in JSON format:
             data = json.loads(response.content)
 
             # Calculate actual word count
-            total_words = sum(len(section.split()) for section in data.get("sections", {}).values())
+            total_words = sum(
+                len(section.split()) for section in data.get("sections", {}).values()
+            )
 
             return PaperWritingResult(
                 success=True,
@@ -778,6 +782,8 @@ def create_agent(
     }
 
     if agent_type not in agents:
-        raise ValueError(f"Unknown agent type: {agent_type}. Available: {', '.join(agents.keys())}")
+        raise ValueError(
+            f"Unknown agent type: {agent_type}. Available: {', '.join(agents.keys())}"
+        )
 
     return agents[agent_type](config)

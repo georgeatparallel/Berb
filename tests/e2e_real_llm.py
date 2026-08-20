@@ -33,7 +33,9 @@ def main() -> None:
         raw = yaml.safe_load(f)
 
     # Override for test
-    raw["research"]["topic"] = "Efficient Attention Mechanisms for Long-Context Language Models"
+    raw["research"][
+        "topic"
+    ] = "Efficient Attention Mechanisms for Long-Context Language Models"
     raw["experiment"]["mode"] = "sandbox"
     raw["experiment"]["time_budget_sec"] = 60
     raw["experiment"]["max_iterations"] = 3
@@ -113,7 +115,9 @@ def main() -> None:
     if summary_path.exists():
         summary = json.loads(summary_path.read_text())
         has_metrics = bool(summary.get("metrics_summary"))
-        print(f"\n  📊 Experiment summary has real metrics: {'YES' if has_metrics else 'NO'}")
+        print(
+            f"\n  📊 Experiment summary has real metrics: {'YES' if has_metrics else 'NO'}"
+        )
         if has_metrics:
             for k, v in summary["metrics_summary"].items():
                 print(f"     - {k}: {v}")

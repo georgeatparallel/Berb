@@ -19,7 +19,9 @@ from berb.literature.full_text import FullTextExtractor
 class TestSSRFGuard:
     def test_direct_fetch_of_metadata_ip_is_blocked(self):
         extractor = FullTextExtractor()
-        result = asyncio.run(extractor.extract("http://169.254.169.254/latest/meta-data/"))
+        result = asyncio.run(
+            extractor.extract("http://169.254.169.254/latest/meta-data/")
+        )
 
         assert result.success is False
         assert "ssrf" in (result.error or "").lower()
@@ -39,7 +41,9 @@ class TestSSRFGuard:
 
         redirect_response = MagicMock()
         redirect_response.is_redirect = True
-        redirect_response.headers = {"location": "http://169.254.169.254/latest/meta-data/"}
+        redirect_response.headers = {
+            "location": "http://169.254.169.254/latest/meta-data/"
+        }
 
         fake_client = MagicMock()
         fake_client.get = AsyncMock(return_value=redirect_response)
@@ -51,7 +55,9 @@ class TestSSRFGuard:
             "berb.literature.full_text.check_url_ssrf",
             side_effect=[None, "Blocked internal/private URL: 169.254.169.254"],
         ):
-            result = asyncio.run(extractor._extract_basic("https://allowlisted.example.com/paper"))
+            result = asyncio.run(
+                extractor._extract_basic("https://allowlisted.example.com/paper")
+            )
 
         assert result.success is False
         assert "ssrf" in (result.error or "").lower()

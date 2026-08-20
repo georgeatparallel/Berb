@@ -75,6 +75,18 @@ from berb.pipeline.stage_impls._analysis import (  # noqa: E402,F401
     _parse_decision,
 )
 
+# Stage 21: Knowledge archive
+from berb.pipeline.stage_impls._archive import (  # noqa: E402,F401
+    _execute_knowledge_archive,
+)
+
+# Stage 23: Citation verify
+from berb.pipeline.stage_impls._citations import (  # noqa: E402,F401
+    _execute_citation_verify,
+    _remove_bibtex_entries,
+    _remove_citations_from_text,
+)
+
 # Stage 10: Code Generation
 from berb.pipeline.stage_impls._code_generation import (  # noqa: E402,F401
     _execute_code_generation,
@@ -90,6 +102,11 @@ from berb.pipeline.stage_impls._execution import (  # noqa: E402,F401
 # Stage 9: Experiment Design
 from berb.pipeline.stage_impls._experiment_design import (  # noqa: E402,F401
     _execute_experiment_design,
+)
+
+# Stage 22: Export & publish
+from berb.pipeline.stage_impls._export import (  # noqa: E402,F401
+    _execute_export_publish,
 )
 
 # Stages 3-6: Literature Search
@@ -116,23 +133,6 @@ from berb.pipeline.stage_impls._review import (  # noqa: E402,F401
     _execute_paper_revision,
     _execute_peer_review,
     _execute_quality_gate,
-)
-
-# Stage 21: Knowledge archive
-from berb.pipeline.stage_impls._archive import (  # noqa: E402,F401
-    _execute_knowledge_archive,
-)
-
-# Stage 22: Export & publish
-from berb.pipeline.stage_impls._export import (  # noqa: E402,F401
-    _execute_export_publish,
-)
-
-# Stage 23: Citation verify
-from berb.pipeline.stage_impls._citations import (  # noqa: E402,F401
-    _execute_citation_verify,
-    _remove_bibtex_entries,
-    _remove_citations_from_text,
 )
 
 # Stages 7-8: Synthesis & Hypothesis
@@ -246,7 +246,9 @@ def execute_stage(
         # adapters.llm mirrors the same LLMClient passed as `llm=` above, for
         # the few call paths that thread the adapter bundle through instead.
         if _accepts_prompts:
-            result = executor(stage_dir, run_dir, config, adapters, llm=llm, prompts=prompts)
+            result = executor(
+                stage_dir, run_dir, config, adapters, llm=llm, prompts=prompts
+            )
         else:
             result = executor(stage_dir, run_dir, config, adapters, llm=llm)
     except Exception as exc:  # noqa: BLE001
@@ -289,7 +291,11 @@ def execute_stage(
     # --- MetaClaw PRM quality gate evaluation ---
     try:
         mc_bridge = getattr(config, "metaclaw_bridge", None)
-        if mc_bridge and getattr(mc_bridge, "enabled", False) and result.status == StageStatus.DONE:
+        if (
+            mc_bridge
+            and getattr(mc_bridge, "enabled", False)
+            and result.status == StageStatus.DONE
+        ):
             mc_prm = getattr(mc_bridge, "prm", None)
             if mc_prm and getattr(mc_prm, "enabled", False):
                 prm_stages = getattr(mc_prm, "gate_stages", (5, 9, 15, 20))
@@ -304,7 +310,9 @@ def execute_stage(
                             art_path = stage_dir / art
                             if art_path.exists() and art_path.is_file():
                                 try:
-                                    output_text += art_path.read_text(encoding="utf-8")[:4000]
+                                    output_text += art_path.read_text(encoding="utf-8")[
+                                        :4000
+                                    ]
                                 except (UnicodeDecodeError, OSError):
                                     pass
                         if output_text:

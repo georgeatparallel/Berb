@@ -83,7 +83,9 @@ class TestSafeEvalStillEvaluatesMath:
 
     def test_evaluate_expression_computes_real_equations(self) -> None:
         verifier = VerifiableMathContent()
-        result = verifier._evaluate_expression("sqrt(a**2 + b**2)", {"a": 3.0, "b": 4.0})
+        result = verifier._evaluate_expression(
+            "sqrt(a**2 + b**2)", {"a": 3.0, "b": 4.0}
+        )
         assert result == pytest.approx(5.0)
 
 

@@ -47,7 +47,9 @@ class TestComplexityScorer:
             "condition_3: ablation with reduced generator\n"
             "Custom loss function and custom layer for cross-modal attention.\n"
         )
-        result = score_complexity(plan, topic="Multi-modal GAN for vision-language synthesis")
+        result = score_complexity(
+            plan, topic="Multi-modal GAN for vision-language synthesis"
+        )
         assert result.score > 0.6
         assert result.recommendation == "beast_mode"
 
@@ -94,7 +96,8 @@ class TestComplexityScorer:
     def test_score_clamped_to_unit_interval(self):
         """Score should never exceed 1.0 even with extreme inputs."""
         plan = " ".join(
-            ["encoder decoder discriminator generator critic actor teacher student"] * 10
+            ["encoder decoder discriminator generator critic actor teacher student"]
+            * 10
             + ["model.py trainer.py dataset.py multiple files modular"] * 10
             + ["multi-modal distributed GAN diffusion NeRF MoE meta-learning"] * 10
             + ["condition_1 condition_2 condition_3 ablation_4 variant_5 baseline"] * 10
@@ -104,7 +107,9 @@ class TestComplexityScorer:
         assert 0.0 <= result.score <= 1.0
 
     def test_domain_complexity_keywords(self):
-        plan = "Implement a physics-informed neural network (PINN) with neural ODE solver."
+        plan = (
+            "Implement a physics-informed neural network (PINN) with neural ODE solver."
+        )
         result = score_complexity(plan, topic="PINN for fluid dynamics")
         assert result.signals["domain_complexity"] > 0
 
@@ -202,7 +207,10 @@ class TestOpenCodeBridge:
             cfg["provider"]["openai"]["options"]["baseURL"]
             == "https://huaxi.openai.azure.com/openai/v1"
         )
-        assert "{env:AZURE_OPENAI_API_KEY}" in cfg["provider"]["openai"]["options"]["apiKey"]
+        assert (
+            "{env:AZURE_OPENAI_API_KEY}"
+            in cfg["provider"]["openai"]["options"]["apiKey"]
+        )
 
     def test_opencode_config_openai_format(self, tmp_path):
         bridge = OpenCodeBridge(
@@ -270,7 +278,9 @@ class TestOpenCodeBridge:
 
         bridge = OpenCodeBridge()
         assert bridge._resolve_opencode_model() == OPENCODE_DEFAULT_MODEL
-        assert bridge._resolve_opencode_model() == "openrouter/anthropic/claude-sonnet-4.6"
+        assert (
+            bridge._resolve_opencode_model() == "openrouter/anthropic/claude-sonnet-4.6"
+        )
 
     def test_collect_files_ignores_pycache(self, tmp_path):
         (tmp_path / "main.py").write_text("print('hello')")

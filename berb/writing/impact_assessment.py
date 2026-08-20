@@ -196,7 +196,9 @@ Format as JSON:
             Broader impact statement
         """
         if self._llm_client is None:
-            return "[No LLM client configured — broader impact statement not generated.]"
+            return (
+                "[No LLM client configured — broader impact statement not generated.]"
+            )
 
         prompt = f"""
 Generate an honest broader impact statement for this research:
@@ -296,14 +298,18 @@ List risks as bullet points.
                 json_str = response[start:end]
                 data = json.loads(json_str)
 
-                contribution_type = ContributionType(data.get("contribution_type", "incremental"))
+                contribution_type = ContributionType(
+                    data.get("contribution_type", "incremental")
+                )
 
                 return ContributionAssessment(
                     contribution_type=contribution_type,
                     confidence=float(data.get("confidence", 0.5)),
                     reasoning=data.get("reasoning", ""),
                     novelty_score=float(data.get("novelty_score", 5.0)),
-                    understanding_advancement=float(data.get("understanding_advancement", 5.0)),
+                    understanding_advancement=float(
+                        data.get("understanding_advancement", 5.0)
+                    ),
                 )
         except Exception as e:
             logger.warning(f"Failed to parse assessment: {e}")

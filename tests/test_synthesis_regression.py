@@ -97,8 +97,12 @@ class TestRegression_MultiPerspectiveIntegration:
             mock_result.confidence = 0.85
 
             with (
-                patch("berb.pipeline.stage_impls._synthesis.MultiPerspectiveMethod") as MockMP,
-                patch("berb.literature.search.search_papers_multi_query", return_value=[]),
+                patch(
+                    "berb.pipeline.stage_impls._synthesis.MultiPerspectiveMethod"
+                ) as MockMP,
+                patch(
+                    "berb.literature.search.search_papers_multi_query", return_value=[]
+                ),
             ):
                 MockMP.return_value.execute = AsyncMock(return_value=mock_result)
 
@@ -133,10 +137,16 @@ class TestRegression_MultiPerspectiveIntegration:
 
             # Mock MultiPerspectiveMethod to fail
             with (
-                patch("berb.pipeline.stage_impls._synthesis.MultiPerspectiveMethod") as MockMP,
-                patch("berb.literature.search.search_papers_multi_query", return_value=[]),
+                patch(
+                    "berb.pipeline.stage_impls._synthesis.MultiPerspectiveMethod"
+                ) as MockMP,
+                patch(
+                    "berb.literature.search.search_papers_multi_query", return_value=[]
+                ),
             ):
-                MockMP.return_value.execute = AsyncMock(side_effect=Exception("Test failure"))
+                MockMP.return_value.execute = AsyncMock(
+                    side_effect=Exception("Test failure")
+                )
 
                 # Should not raise, should fall back to default
                 result = _execute_hypothesis_gen(
@@ -167,7 +177,10 @@ class TestEdgeCases:
 
     def test_empty_synthesis_context(self):
         """Test handling of empty synthesis context."""
-        from berb.pipeline.stage_impls._synthesis import _LLMProviderWrapper, _SimpleRouter
+        from berb.pipeline.stage_impls._synthesis import (
+            _LLMProviderWrapper,
+            _SimpleRouter,
+        )
 
         config = LLMConfig(
             base_url="https://api.openai.com/v1",
@@ -217,7 +230,8 @@ class TestEdgeCases:
             stage_dir.mkdir()
 
             with patch(
-                "berb.pipeline.stage_impls._synthesis._multi_perspective_generate", return_value={}
+                "berb.pipeline.stage_impls._synthesis._multi_perspective_generate",
+                return_value={},
             ):
                 result = _fallback_hypothesis_gen(
                     llm=llm,
@@ -249,7 +263,9 @@ class TestEdgeCases:
             # On Windows, pytest-timeout cannot interrupt a thread blocked in
             # real socket I/O, so leaving this unmocked hangs the whole
             # pytest process. Mock at the source module.
-            with patch("berb.literature.search.search_papers_multi_query", return_value=[]):
+            with patch(
+                "berb.literature.search.search_papers_multi_query", return_value=[]
+            ):
                 result = _execute_hypothesis_gen(
                     stage_dir=stage_dir,
                     run_dir=run_dir,
@@ -303,8 +319,12 @@ class TestFailureInjection:
             mock_result.confidence = 0.0
 
             with (
-                patch("berb.pipeline.stage_impls._synthesis.MultiPerspectiveMethod") as MockMP,
-                patch("berb.literature.search.search_papers_multi_query", return_value=[]),
+                patch(
+                    "berb.pipeline.stage_impls._synthesis.MultiPerspectiveMethod"
+                ) as MockMP,
+                patch(
+                    "berb.literature.search.search_papers_multi_query", return_value=[]
+                ),
             ):
                 MockMP.return_value.execute = AsyncMock(return_value=mock_result)
 
@@ -340,7 +360,9 @@ class TestFailureInjection:
             def __exit__(self, exc_type, exc, tb) -> None:
                 return None
 
-        def fake_urlopen(req: urllib.request.Request, timeout: int) -> _DummyHTTPResponse:
+        def fake_urlopen(
+            req: urllib.request.Request, timeout: int
+        ) -> _DummyHTTPResponse:
             return _DummyHTTPResponse(
                 {
                     "choices": [{"message": {"content": "ok"}}],

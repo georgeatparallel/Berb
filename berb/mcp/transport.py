@@ -133,7 +133,9 @@ class SSETransport:
         """Broadcast *message* as an SSE ``data:`` event to all subscribers."""
         payload = json.dumps(message, ensure_ascii=False, default=str)
         sse_chunk = f"data: {payload}\n\n"
-        logger.debug("SSE send (%d subscribers): %s", len(self._subscribers), payload[:200])
+        logger.debug(
+            "SSE send (%d subscribers): %s", len(self._subscribers), payload[:200]
+        )
         for q in list(self._subscribers):
             await q.put(sse_chunk)
 

@@ -471,7 +471,10 @@ class _SecurityVisitor(ast.NodeVisitor):
         # visit_Call already reports `os.system(...)` directly (and marks
         # that exact node via _reported_call_func_ids), so skip re-reporting
         # it here under a second message.
-        if isinstance(node.ctx, ast.Load) and id(node) not in self._reported_call_func_ids:
+        if (
+            isinstance(node.ctx, ast.Load)
+            and id(node) not in self._reported_call_func_ids
+        ):
             canonical = self._canonical_name(node)
             if canonical in DANGEROUS_CALLS:
                 self.issues.append(
@@ -593,7 +596,9 @@ def validate_security(
         # If can't parse, skip security — syntax check will catch it.
         return result
     if import_policy not in ("denylist", "allowlist"):
-        raise ValueError(f"import_policy must be 'denylist' or 'allowlist', got {import_policy!r}")
+        raise ValueError(
+            f"import_policy must be 'denylist' or 'allowlist', got {import_policy!r}"
+        )
     allowed_imports = (
         (SAFE_STDLIB | COMMON_SCIENCE | extra_allowed_imports)
         if import_policy == "allowlist"
@@ -685,7 +690,9 @@ def validate_requirements(text: str) -> CodeValidation:
         line = raw_line.split("#", 1)[0].strip()
         if not line:
             continue
-        if line.startswith("-") or any(s in line.lower() for s in _REQ_DANGEROUS_SUBSTRINGS):
+        if line.startswith("-") or any(
+            s in line.lower() for s in _REQ_DANGEROUS_SUBSTRINGS
+        ):
             result.issues.append(
                 ValidationIssue(
                     severity="error",
@@ -738,7 +745,9 @@ def validate_code(
     # 2. Security
     if not skip_security:
         security = validate_security(
-            code, import_policy=import_policy, extra_allowed_imports=extra_allowed_imports
+            code,
+            import_policy=import_policy,
+            extra_allowed_imports=extra_allowed_imports,
         )
         combined.issues.extend(security.issues)
 
@@ -762,7 +771,9 @@ def format_issues_for_llm(validation: CodeValidation) -> str:
     lines: list[str] = []
     for issue in validation.issues:
         loc = f"line {issue.line}" if issue.line else "unknown location"
-        lines.append(f"- [{issue.severity.upper()}] ({issue.category}) {issue.message} @ {loc}")
+        lines.append(
+            f"- [{issue.severity.upper()}] ({issue.category}) {issue.message} @ {loc}"
+        )
     return "\n".join(lines)
 
 
@@ -813,7 +824,10 @@ def check_code_complexity(code: str) -> list[str]:
     import re
 
     hardcoded_patterns = [
-        (r"print\(['\"].*:\s*0\.\d+['\"]\)", "print statement with hardcoded metric value"),
+        (
+            r"print\(['\"].*:\s*0\.\d+['\"]\)",
+            "print statement with hardcoded metric value",
+        ),
         (r"metric.*=\s*0\.\d{2,}", "hardcoded metric assignment"),
     ]
     for pattern, desc in hardcoded_patterns:
@@ -883,7 +897,10 @@ def check_class_quality(all_files: dict[str, str]) -> list[str]:
                         for sub in ast.walk(item):
                             if isinstance(sub, ast.Call):
                                 call_name = _resolve_call_name(sub.func)
-                                if call_name.startswith("nn.") and call_name != "nn.Module":
+                                if (
+                                    call_name.startswith("nn.")
+                                    and call_name != "nn.Module"
+                                ):
                                     has_forward_new_module = True
 
             # Count effective body lines
@@ -1230,7 +1247,14 @@ def check_api_correctness(code: str, fname: str = "main.py") -> list[str]:
             )
 
         # NumPy 2.0 removed type aliases
-        for old_alias in ("np.bool", "np.int", "np.float", "np.complex", "np.object", "np.str"):
+        for old_alias in (
+            "np.bool",
+            "np.int",
+            "np.float",
+            "np.complex",
+            "np.object",
+            "np.str",
+        ):
             pattern = _re.escape(old_alias) + r"(?![_\w\d])"
             if _re.search(pattern, stripped):
                 warnings.append(

@@ -59,25 +59,39 @@ class MockProvider:
 
         # Return appropriate mock response based on context
         if "perspective" in prompt or "constructive" in prompt:
-            response_content = '{"solution": "Test solution", "key_insights": ["insight1"]}'
+            response_content = (
+                '{"solution": "Test solution", "key_insights": ["insight1"]}'
+            )
         elif "failure" in prompt or "narrative" in prompt:
             response_content = '{"narratives": [{"scenario": "test"}]}'
         elif "prior" in prompt or "probability" in prompt:
             response_content = '{"priors": {"h1": 0.5}}'
         elif "argument" in prompt or "claim" in prompt:
-            response_content = '{"arguments": [{"claim": "test claim", "evidence": "evidence"}]}'
+            response_content = (
+                '{"arguments": [{"claim": "test claim", "evidence": "evidence"}]}'
+            )
         elif "thesis" in prompt or "antithesis" in prompt:
-            response_content = '{"statement": "Test statement", "supporting_arguments": ["arg1"]}'
+            response_content = (
+                '{"statement": "Test statement", "supporting_arguments": ["arg1"]}'
+            )
         elif "finding" in prompt or "synthesis" in prompt:
-            response_content = '{"findings": ["finding1"], "synthesis": "test synthesis"}'
+            response_content = (
+                '{"findings": ["finding1"], "synthesis": "test synthesis"}'
+            )
         elif "question" in prompt:
-            response_content = '{"questions": [{"question": "Test?", "answer": "Answer"}]}'
+            response_content = (
+                '{"questions": [{"question": "Test?", "answer": "Answer"}]}'
+            )
         elif "hypothesis" in prompt:
-            response_content = '{"statement": "Test hypothesis", "null_hypothesis": "Null"}'
+            response_content = (
+                '{"statement": "Test hypothesis", "null_hypothesis": "Null"}'
+            )
         elif "juror" in prompt or "verdict" in prompt:
             response_content = '{"verdict": "approve", "reasoning": "Test reasoning"}'
         elif "winner" in prompt or "judge" in prompt:
-            response_content = '{"winner": "pro", "reasoning": "Test", "conclusion": "Conclusion"}'
+            response_content = (
+                '{"winner": "pro", "reasoning": "Test", "conclusion": "Conclusion"}'
+            )
         else:
             response_content = '{"result": "mock result"}'
 
@@ -163,7 +177,9 @@ class TestMultiPerspectiveIntegration:
         """Test Multi-Perspective with llm_client fallback."""
         mock_llm = MagicMock()
         mock_llm.chat = AsyncMock(
-            return_value=MagicMock(content='{"solution": "fallback", "key_insights": ["test"]}')
+            return_value=MagicMock(
+                content='{"solution": "fallback", "key_insights": ["test"]}'
+            )
         )
 
         method = MultiPerspectiveMethod(llm_client=mock_llm, top_k=2)
@@ -270,7 +286,9 @@ class TestResearchIntegration:
         """Test Research with router."""
         test_context.input_data["topic"] = "Test research topic"
         mock_search = MagicMock()
-        method = ResearchMethod(router=mock_router, search_client=mock_search, max_iterations=2)
+        method = ResearchMethod(
+            router=mock_router, search_client=mock_search, max_iterations=2
+        )
         result = await method.execute(test_context)
 
         assert result.success
@@ -352,7 +370,9 @@ class TestAllReasonersIntegration:
             ("dialectical", DialecticalMethod(router=mock_router)),
             (
                 "research",
-                ResearchMethod(router=mock_router, search_client=MagicMock(), max_iterations=2),
+                ResearchMethod(
+                    router=mock_router, search_client=MagicMock(), max_iterations=2
+                ),
             ),
             ("socratic", SocraticMethod(router=mock_router, depth=1)),
             ("scientific", ScientificMethod(router=mock_router)),
@@ -386,7 +406,9 @@ class TestAllReasonersIntegration:
 
         # Verify all methods succeeded
         for name, result in results.items():
-            assert result.get("success"), f"{name} failed: {result.get('error', 'unknown')}"
+            assert result.get(
+                "success"
+            ), f"{name} failed: {result.get('error', 'unknown')}"
 
 
 # =============================================================================
@@ -409,7 +431,9 @@ class TestBackwardCompatibility:
             BayesianMethod(llm_client=mock_llm),
             DebateMethod(llm_client=mock_llm, num_arguments=2),
             DialecticalMethod(llm_client=mock_llm),
-            ResearchMethod(llm_client=mock_llm, search_client=MagicMock(), max_iterations=2),
+            ResearchMethod(
+                llm_client=mock_llm, search_client=MagicMock(), max_iterations=2
+            ),
             SocraticMethod(llm_client=mock_llm, depth=1),
             ScientificMethod(llm_client=mock_llm),
             JuryMethod(llm_client=mock_llm, jury_size=3),

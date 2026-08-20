@@ -202,7 +202,9 @@ class ClaimManifest:
             try:
                 manifest.claims.append(ClaimRecord.from_dict(item))
             except (KeyError, ValueError, TypeError):
-                logger.warning("Skipping unparseable claim in manifest: %s", str(item)[:120])
+                logger.warning(
+                    "Skipping unparseable claim in manifest: %s", str(item)[:120]
+                )
         return manifest
 
     @classmethod

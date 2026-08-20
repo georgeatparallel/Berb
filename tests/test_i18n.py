@@ -43,7 +43,9 @@ def test_every_profile_uses_a_supported_format() -> None:
         ("fr", "1 234,50"),  # space-separated — silently fell back to US before
     ],
 )
-def test_format_number_honours_language_convention(language: str, expected: str) -> None:
+def test_format_number_honours_language_convention(
+    language: str, expected: str
+) -> None:
     assistant = MultilingualWritingAssistant(language)
 
     assert assistant.format_number(1234.5) == expected

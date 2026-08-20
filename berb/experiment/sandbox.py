@@ -96,7 +96,9 @@ def _scan_project_inputs(
             return None
         validation = validate_requirements(req_text)
         if not validation.ok:
-            details = "; ".join(f"line {i.line}: {i.message}" for i in validation.errors)
+            details = "; ".join(
+                f"line {i.line}: {i.message}" for i in validation.errors
+            )
             return f"Security validation rejected requirements.txt: {details}"
 
     return None
@@ -502,13 +504,17 @@ class ExperimentSandbox:
                 env=env,
                 check=False,
             )
-            result = self._result_from_completed(completed, elapsed_sec=time.monotonic() - start)
+            result = self._result_from_completed(
+                completed, elapsed_sec=time.monotonic() - start
+            )
         except subprocess.TimeoutExpired as exc:
             result = self._result_from_timeout(
                 exc, timeout_sec=timeout_sec, elapsed_sec=time.monotonic() - start
             )
         except Exception as exc:  # noqa: BLE001
-            result = self._result_from_exception(exc, elapsed_sec=time.monotonic() - start)
+            result = self._result_from_exception(
+                exc, elapsed_sec=time.monotonic() - start
+            )
 
         if self._should_cleanup(result):
             self._cleanup_script(script_path)
@@ -573,7 +579,9 @@ class ExperimentSandbox:
                 dest = sandbox_project / src_file.name
                 # Do not allow project to overwrite the harness
                 if dest.name == "experiment_harness.py":
-                    logger.warning("Project contains experiment_harness.py — skipping (immutable)")
+                    logger.warning(
+                        "Project contains experiment_harness.py — skipping (immutable)"
+                    )
                     continue
                 dest.write_bytes(src_file.read_bytes())
             elif src_file.is_dir() and not src_file.name.startswith("."):
@@ -605,7 +613,9 @@ class ExperimentSandbox:
 
         start = time.monotonic()
         command = self._build_command(entry)
-        logger.debug("Running project sandbox command: %s (cwd=%s)", command, sandbox_project)
+        logger.debug(
+            "Running project sandbox command: %s (cwd=%s)", command, sandbox_project
+        )
 
         result: SandboxResult
         try:
@@ -621,13 +631,17 @@ class ExperimentSandbox:
                 env=env,
                 check=False,
             )
-            result = self._result_from_completed(completed, elapsed_sec=time.monotonic() - start)
+            result = self._result_from_completed(
+                completed, elapsed_sec=time.monotonic() - start
+            )
         except subprocess.TimeoutExpired as exc:
             result = self._result_from_timeout(
                 exc, timeout_sec=timeout_sec, elapsed_sec=time.monotonic() - start
             )
         except Exception as exc:  # noqa: BLE001
-            result = self._result_from_exception(exc, elapsed_sec=time.monotonic() - start)
+            result = self._result_from_exception(
+                exc, elapsed_sec=time.monotonic() - start
+            )
 
         return result
 

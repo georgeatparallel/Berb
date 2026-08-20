@@ -127,7 +127,9 @@ class KnowledgeGraphBuilder:
             return False
         del self._entities[entity_id]
         self._relations = [
-            r for r in self._relations if r.source_id != entity_id and r.target_id != entity_id
+            r
+            for r in self._relations
+            if r.source_id != entity_id and r.target_id != entity_id
         ]
         return True
 
@@ -213,7 +215,9 @@ class KnowledgeGraphBuilder:
             "entities": [e.to_dict() for e in self._entities.values()],
             "relations": [r.to_dict() for r in self._relations],
         }
-        path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+        path.write_text(
+            json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8"
+        )
         logger.info(
             "Saved knowledge graph: %d entities, %d relations to %s",
             len(self._entities),

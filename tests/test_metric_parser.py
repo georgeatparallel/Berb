@@ -86,8 +86,20 @@ class TestJSONParsing:
         data = {
             "experiment_type": "progressive_spec",
             "regression_table": {
-                "spec_1_ols": {"coeff": 0.15, "se": 0.03, "p": 0.001, "n": 5000, "r2": 0.12},
-                "spec_2_fe": {"coeff": 0.11, "se": 0.02, "p": 0.001, "n": 5000, "r2": 0.35},
+                "spec_1_ols": {
+                    "coeff": 0.15,
+                    "se": 0.03,
+                    "p": 0.001,
+                    "n": 5000,
+                    "r2": 0.12,
+                },
+                "spec_2_fe": {
+                    "coeff": 0.11,
+                    "se": 0.02,
+                    "p": 0.001,
+                    "n": 5000,
+                    "r2": 0.35,
+                },
             },
         }
         (tmp_run_dir / "results.json").write_text(json.dumps(data))
@@ -137,9 +149,7 @@ class TestJSONParsing:
 
 class TestCSVParsing:
     def test_parse_condition_csv(self, parser, tmp_run_dir):
-        csv_content = (
-            "condition,seed,metric,value\nmethod_a,42,accuracy,0.95\nmethod_b,42,accuracy,0.88\n"
-        )
+        csv_content = "condition,seed,metric,value\nmethod_a,42,accuracy,0.95\nmethod_b,42,accuracy,0.88\n"
         (tmp_run_dir / "results.csv").write_text(csv_content)
 
         result = parser.parse(tmp_run_dir)
@@ -148,7 +158,9 @@ class TestCSVParsing:
         assert result.scalars["method_a/accuracy"] == 0.95
 
     def test_parse_convergence_csv(self, parser, tmp_run_dir):
-        csv_content = "method,h,error\neuler,0.1,0.05\neuler,0.05,0.012\nrk4,0.1,0.001\n"
+        csv_content = (
+            "method,h,error\neuler,0.1,0.05\neuler,0.05,0.012\nrk4,0.1,0.001\n"
+        )
         (tmp_run_dir / "results.csv").write_text(csv_content)
 
         result = parser.parse(tmp_run_dir)
@@ -178,7 +190,9 @@ class TestStdoutParsing:
         assert result.scalars["loss"] == 0.32
 
     def test_parse_condition_metrics(self, parser, tmp_run_dir):
-        stdout = "condition=method_a accuracy: 0.95\ncondition=method_b accuracy: 0.88\n"
+        stdout = (
+            "condition=method_a accuracy: 0.95\ncondition=method_b accuracy: 0.88\n"
+        )
         result = parser.parse(tmp_run_dir, stdout=stdout)
         assert result.source == "stdout"
         assert "method_a/accuracy" in result.scalars

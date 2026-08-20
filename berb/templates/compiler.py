@@ -271,7 +271,9 @@ def fix_common_latex_errors(tex_text: str, errors: list[str]) -> tuple[str, list
     # BUG-189: Fix Python-style pseudocode inside algorithmic environments.
     # LLM generates `# comment` (LaTeX macro param char) and `var_name`
     # (unescaped underscore) inside \STATE commands — causes cascading errors.
-    _algo_pat = re.compile(r"(\\begin\{algorithmic\}.*?\\end\{algorithmic\})", re.DOTALL)
+    _algo_pat = re.compile(
+        r"(\\begin\{algorithmic\}.*?\\end\{algorithmic\})", re.DOTALL
+    )
 
     def _fix_algo_block(m: re.Match) -> str:
         block = m.group(0)
@@ -533,13 +535,21 @@ def check_compiled_quality(
 
     # --- Build warnings summary ---
     if result.unresolved_refs:
-        result.warnings_summary.append(f"{len(result.unresolved_refs)} unresolved reference(s)")
+        result.warnings_summary.append(
+            f"{len(result.unresolved_refs)} unresolved reference(s)"
+        )
     if result.unresolved_cites:
-        result.warnings_summary.append(f"{len(result.unresolved_cites)} unresolved citation(s)")
+        result.warnings_summary.append(
+            f"{len(result.unresolved_cites)} unresolved citation(s)"
+        )
     if result.overfull_hboxes:
-        result.warnings_summary.append(f"{len(result.overfull_hboxes)} overfull hbox(es) > 1pt")
+        result.warnings_summary.append(
+            f"{len(result.overfull_hboxes)} overfull hbox(es) > 1pt"
+        )
     if result.page_count > page_limit:
-        result.warnings_summary.append(f"Page count {result.page_count} exceeds limit {page_limit}")
+        result.warnings_summary.append(
+            f"Page count {result.page_count} exceeds limit {page_limit}"
+        )
     if result.orphan_figures:
         result.warnings_summary.append(
             f"{len(result.orphan_figures)} referenced but undefined figure(s): "
@@ -742,7 +752,12 @@ def _sanitize_bib_file(bib_path: Path) -> None:
         stripped = line.strip()
         # Only fix field-value lines (e.g.  journal = {Science & Technology},)
         # Skip @type{ lines, key lines, and URL/DOI fields (BUG-DA8-12)
-        if "=" in stripped and "{" in stripped and "&" in stripped and "\\&" not in stripped:
+        if (
+            "=" in stripped
+            and "{" in stripped
+            and "&" in stripped
+            and "\\&" not in stripped
+        ):
             _field_name = stripped.split("=", 1)[0].strip().lower()
             if _field_name in ("url", "doi", "howpublished", "eprint"):
                 continue  # Don't escape & in URLs

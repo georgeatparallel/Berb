@@ -49,7 +49,11 @@ class TaskDispatcher:
             prefer_free=self.prefer_free,
         )
         if server is None:
-            self._tasks[task_id] = {"status": "queued", "task": task, "error": "No matching server"}
+            self._tasks[task_id] = {
+                "status": "queued",
+                "task": task,
+                "error": "No matching server",
+            }
             logger.warning("No server available for task %s, queued", task_id)
             return task_id
 
@@ -60,7 +64,9 @@ class TaskDispatcher:
             "task": task,
         }
         self._busy_servers.add(server.name)
-        logger.info("Dispatched task %s to %s (%s)", task_id, server.name, server.server_type)
+        logger.info(
+            "Dispatched task %s to %s (%s)", task_id, server.name, server.server_type
+        )
         return task_id
 
     async def execute_task(self, task_id: str) -> dict[str, Any]:

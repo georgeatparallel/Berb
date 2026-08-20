@@ -453,9 +453,14 @@ def _write_paper_sections(
         try:
             import asyncio as _asyncio_sf
 
-            from berb.writing.style_fingerprint import AuthorProfile, StyleFingerprintEngine
+            from berb.writing.style_fingerprint import (
+                AuthorProfile,
+                StyleFingerprintEngine,
+            )
 
-            _candidates_text_sf = _read_prior_artifact(run_dir, "candidates.jsonl") or ""
+            _candidates_text_sf = (
+                _read_prior_artifact(run_dir, "candidates.jsonl") or ""
+            )
             _abstracts: dict[str, str] = {}
             for _line_sf in _candidates_text_sf.strip().splitlines():
                 _row_sf = _safe_json_loads(_line_sf, {})
@@ -471,7 +476,9 @@ def _write_paper_sections(
                     name="Literature corpus", top_papers=list(_abstracts)
                 )
                 _fingerprint = _asyncio_sf.run(
-                    _sf_engine.extract_style_from_authors([_corpus_profile], paper_texts=_abstracts)
+                    _sf_engine.extract_style_from_authors(
+                        [_corpus_profile], paper_texts=_abstracts
+                    )
                 )
                 _style_fingerprint_block = _fingerprint.to_prompt_context()
         except Exception:  # noqa: BLE001
@@ -520,7 +527,9 @@ def _write_paper_sections(
         )
         part1 = resp1.content.strip()
     except Exception:  # noqa: BLE001
-        logger.error("Stage 17: Part 1 LLM call failed after retry — using outline-based stub")
+        logger.error(
+            "Stage 17: Part 1 LLM call failed after retry — using outline-based stub"
+        )
         _topic_line = topic_constraint.strip()
         if _topic_line.upper().startswith("TOPIC CONSTRAINT:"):
             _topic_line = _topic_line[len("TOPIC CONSTRAINT:") :].strip()
@@ -546,7 +555,9 @@ def _write_paper_sections(
             f"**Outline:**\n{outline}"
         )
     sections.append(part1)
-    logger.info("Stage 17: Part 1 (Title+Abstract+Intro+Related Work) — %d chars", len(part1))
+    logger.info(
+        "Stage 17: Part 1 (Title+Abstract+Intro+Related Work) — %d chars", len(part1)
+    )
 
     # --- Call 2: Method + Experiments ---
     call2_user = (
@@ -585,7 +596,9 @@ def _write_paper_sections(
         )
         part2 = resp2.content.strip()
     except Exception:  # noqa: BLE001
-        logger.error("Stage 17: Part 2 LLM call failed after retry — using outline-based stub")
+        logger.error(
+            "Stage 17: Part 2 LLM call failed after retry — using outline-based stub"
+        )
         part2 = (
             "## Method\n"
             "We propose a method consisting of three components. "
@@ -659,7 +672,9 @@ def _write_paper_sections(
         )
         part3 = resp3.content.strip()
     except Exception:  # noqa: BLE001
-        logger.error("Stage 17: Part 3 LLM call failed after retry — using outline-based stub")
+        logger.error(
+            "Stage 17: Part 3 LLM call failed after retry — using outline-based stub"
+        )
         part3 = (
             "## Results\n\n"
             "| Method | Metric 1 | Metric 2 |\n"
@@ -686,7 +701,8 @@ def _write_paper_sections(
         )
     sections.append(part3)
     logger.info(
-        "Stage 17: Part 3 (Results+Discussion+Limitations+Conclusion) — %d chars", len(part3)
+        "Stage 17: Part 3 (Results+Discussion+Limitations+Conclusion) — %d chars",
+        len(part3),
     )
 
     # Combine all sections
@@ -793,9 +809,9 @@ def _validate_draft_quality(
             _subsection_words.setdefault(_current_parent, 0)
         else:
             # Add subsection words to parent
-            _subsection_words[_current_parent] = _subsection_words.get(_current_parent, 0) + len(
-                sec["body"].split()
-            )
+            _subsection_words[_current_parent] = _subsection_words.get(
+                _current_parent, 0
+            ) + len(sec["body"].split())
 
     for sec in sections_data:
         if sec["level"] > 2:
@@ -845,7 +861,9 @@ def _validate_draft_quality(
                 entry["status"] = "ok"
         if body:
             total_lines = len([ln for ln in body.splitlines() if ln.strip()])
-            bullet_lines = len(_bullet_re.findall(body)) + len(_numbered_re.findall(body))
+            bullet_lines = len(_bullet_re.findall(body)) + len(
+                _numbered_re.findall(body)
+            )
             density = bullet_lines / total_lines if total_lines > 0 else 0.0
             entry["bullet_density"] = round(density, 2)
             threshold = 0.50 if heading_lower in _BULLET_LENIENT_SECTIONS else 0.25
@@ -920,7 +938,9 @@ def _validate_draft_quality(
         body_text: str = sec["body"]
         wc = len(body_text.split())
         if hl == "abstract" and wc > 250:
-            overall_warnings.append(f"Abstract is too long: {wc} words (target: 150-220 words)")
+            overall_warnings.append(
+                f"Abstract is too long: {wc} words (target: 150-220 words)"
+            )
             revision_directives.append(
                 f"COMPRESS the Abstract from {wc} to 150-220 words. "
                 f"Remove raw metric values, redundant context, and self-references."
@@ -978,7 +998,9 @@ def _validate_draft_quality(
         _polisher = AcademicProsePolisher()
         _polish_report = asyncio.run(_polisher.polish(draft))
         _actionable = [
-            s for s in _polish_report.suggestions if s.severity.value in ("error", "warning")
+            s
+            for s in _polish_report.suggestions
+            if s.severity.value in ("error", "warning")
         ]
         if len(_actionable) > 10:
             _cat_counts: dict[str, int] = {}
@@ -1035,11 +1057,17 @@ def _validate_draft_quality(
     if results_body and len(results_body.split()) > 100:
         has_std = bool(
             re.search(
-                r"\u00b1|\\pm|\bstd\b|\\std\b|standard deviation", results_body, re.IGNORECASE
+                r"\u00b1|\\pm|\bstd\b|\\std\b|standard deviation",
+                results_body,
+                re.IGNORECASE,
             )
         )
         has_ci = bool(
-            re.search(r"confidence interval|\bCI\b|95%|p-value|p\s*<", results_body, re.IGNORECASE)
+            re.search(
+                r"confidence interval|\bCI\b|95%|p-value|p\s*<",
+                results_body,
+                re.IGNORECASE,
+            )
         )
         has_seeds = bool(
             re.search(
@@ -1176,7 +1204,11 @@ def _review_compiled_pdf(
                     "reproducibility",
                 )
             }
-            valid = {k: v for k, v in dim_scores.items() if isinstance(v, (int, float)) and v > 0}
+            valid = {
+                k: v
+                for k, v in dim_scores.items()
+                if isinstance(v, (int, float)) and v > 0
+            }
             if valid:
                 review_data["mean_score"] = round(sum(valid.values()) / len(valid), 2)
             return review_data
@@ -1209,7 +1241,9 @@ def _check_ablation_effectiveness(
         if not isinstance(data, dict):
             continue
         name_lower = name.lower()
-        if any(tag in name_lower for tag in ("baseline", "control", "vanilla", "standard")):
+        if any(
+            tag in name_lower for tag in ("baseline", "control", "vanilla", "standard")
+        ):
             metrics = data.get("metrics") or {}
             if not isinstance(metrics, dict):
                 metrics = {}
@@ -1240,7 +1274,9 @@ def _check_ablation_effectiveness(
         name_lower = name.lower()
         if name == baseline_name:
             continue
-        if not any(tag in name_lower for tag in ("ablation", "no_", "without", "reduced")):
+        if not any(
+            tag in name_lower for tag in ("ablation", "no_", "without", "reduced")
+        ):
             continue
         metrics = data.get("metrics") or {}
         if not isinstance(metrics, dict):
@@ -1341,7 +1377,9 @@ def _detect_result_contradictions(
     proposed_name = None
     for name, val in means.items():
         name_lower = name.lower()
-        if any(tag in name_lower for tag in ("baseline", "control", "random", "vanilla")):
+        if any(
+            tag in name_lower for tag in ("baseline", "control", "random", "vanilla")
+        ):
             if (
                 baseline_val is None
                 or (_maximize and val > baseline_val)
@@ -1360,7 +1398,9 @@ def _detect_result_contradictions(
 
     if baseline_val is not None and proposed_val is not None:
         _baseline_wins = (
-            (baseline_val > proposed_val) if _maximize else (baseline_val < proposed_val)
+            (baseline_val > proposed_val)
+            if _maximize
+            else (baseline_val < proposed_val)
         )
         if _baseline_wins:
             advisories.append(
@@ -1481,7 +1521,9 @@ def _execute_paper_draft(
                     len(_verified_registry.condition_names),
                 )
             except Exception as _vr_exc:
-                logger.warning("Stage 17: Failed to build VerifiedRegistry: %s", _vr_exc)
+                logger.warning(
+                    "Stage 17: Failed to build VerifiedRegistry: %s", _vr_exc
+                )
         if isinstance(exp_summary, dict) and exp_summary.get("metrics_summary"):
             has_real_metrics = True
             exp_metrics_instruction = (
@@ -1558,9 +1600,7 @@ def _execute_paper_draft(
                     ci_hi = cdata.get("ci95_high")
                     if ci_lo is not None and ci_hi is not None:
                         try:
-                            cond_block += (
-                                f"- Bootstrap 95% CI: [{float(ci_lo):.4f}, {float(ci_hi):.4f}]\n"
-                            )
+                            cond_block += f"- Bootstrap 95% CI: [{float(ci_lo):.4f}, {float(ci_hi):.4f}]\n"
                         except (ValueError, TypeError):
                             cond_block += f"- Bootstrap 95% CI: [{ci_lo}, {ci_hi}]\n"
                     cm = cdata.get("metrics") or {}
@@ -1575,7 +1615,9 @@ def _execute_paper_draft(
             # R18-1: Inject paired statistical comparisons
             paired = exp_summary_parsed.get("paired_comparisons", [])
             if paired:
-                paired_block = "\n\n## PAIRED STATISTICAL COMPARISONS (use these in Results)\n"
+                paired_block = (
+                    "\n\n## PAIRED STATISTICAL COMPARISONS (use these in Results)\n"
+                )
                 paired_block += f"Total: {len(paired)} paired tests computed.\n"
                 for pc in paired:
                     if not isinstance(pc, dict):
@@ -1592,7 +1634,9 @@ def _execute_paper_draft(
                     ci_str = ""
                     if ci_lo is not None and ci_hi is not None:
                         try:
-                            ci_str = f", 95% CI [{float(ci_lo):.3f}, {float(ci_hi):.3f}]"
+                            ci_str = (
+                                f", 95% CI [{float(ci_lo):.3f}, {float(ci_hi):.3f}]"
+                            )
                         except (ValueError, TypeError):
                             ci_str = f", 95% CI [{ci_lo}, {ci_hi}]"
                     paired_block += (
@@ -1669,7 +1713,10 @@ def _execute_paper_draft(
 
             # R27: Multi-seed framing enforcement
             _any_seeds = (
-                any((cond_summaries.get(c) or {}).get("n_seed_metrics", 0) > 1 for c in _cond_names)
+                any(
+                    (cond_summaries.get(c) or {}).get("n_seed_metrics", 0) > 1
+                    for c in _cond_names
+                )
                 if _cond_names
                 else False
             )
@@ -1737,9 +1784,7 @@ def _execute_paper_draft(
                 _exp_parsed_p10, metric_direction=config.experiment.metric_direction
             )
             if _contradictions:
-                _contra_block = (
-                    "\n\n## RESULT INTERPRETATION ADVISORIES (CRITICAL — read before writing)\n"
-                )
+                _contra_block = "\n\n## RESULT INTERPRETATION ADVISORIES (CRITICAL — read before writing)\n"
                 for _ca in _contradictions:
                     _contra_block += f"- {_ca}\n"
                 exp_metrics_instruction += _contra_block
@@ -1831,7 +1876,9 @@ def _execute_paper_draft(
     if _rating_match:
         _analysis_rating = int(_rating_match.group(1))
         if _analysis_rating <= 3:
-            _quality_warnings.append(f"Analysis rated experiment quality {_analysis_rating}/10")
+            _quality_warnings.append(
+                f"Analysis rated experiment quality {_analysis_rating}/10"
+            )
         # BUG-23: If quality rating is ≤ 2, force has_real_metrics = False
         # to prevent fabricated results even if stdout had stray numbers.
         # R5-BUG-05: Skip override when _has_parsed_metrics is True — the
@@ -1871,7 +1918,9 @@ def _execute_paper_draft(
             "metric undefined",
         ]
     ):
-        _quality_warnings.append("Primary metric is undefined (direction/units/formula unknown)")
+        _quality_warnings.append(
+            "Primary metric is undefined (direction/units/formula unknown)"
+        )
 
     # Check 4: Very few conditions completed
     _condition_count = len(
@@ -1982,7 +2031,9 @@ def _execute_paper_draft(
                             _ftitle = _fig.get("title", "")
                             _fcap = _fig.get("caption", "")
                             _fsec = _fig.get("section", "results")
-                            _desc_parts.append(f"- **{_fid}** ({_fsec}): {_ftitle}\n  {_fcap}")
+                            _desc_parts.append(
+                                f"- **{_fid}** ({_fsec}): {_ftitle}\n  {_fcap}"
+                            )
                     if len(_desc_parts) > 1:
                         _fa_descriptions = "\n".join(_desc_parts)
             except (json.JSONDecodeError, OSError):
@@ -1994,7 +2045,9 @@ def _execute_paper_draft(
 
     if _fa_descriptions:
         exp_metrics_instruction += "\n\n" + _fa_descriptions
-        logger.info("Stage 17: Injected FigureAgent figure descriptions into paper draft prompt")
+        logger.info(
+            "Stage 17: Injected FigureAgent figure descriptions into paper draft prompt"
+        )
     else:
         # Fallback: scan for chart files from the LATEST stage-14 iteration
         # BUG-178: Must use reverse order to match Stage 22 chart copy behavior
@@ -2050,9 +2103,7 @@ def _execute_paper_draft(
                 if isinstance(_run_data, dict) and _run_data.get("hyperparameters"):
                     _hp = _run_data["hyperparameters"]
                     if isinstance(_hp, dict) and _hp:
-                        _hp_table = (
-                            "\n\n## HYPERPARAMETERS (include as a table in the Method section)\n"
-                        )
+                        _hp_table = "\n\n## HYPERPARAMETERS (include as a table in the Method section)\n"
                         _hp_table += "| Hyperparameter | Value |\n|---|---|\n"
                         for _hk, _hv in sorted(_hp.items()):
                             _hp_table += f"| {_hk} | {_hv} |\n"
@@ -2113,15 +2164,21 @@ def _execute_paper_draft(
             _kept = _pre_report.verified + _pre_report.suspicious
             _removed = _pre_report.hallucinated
             if _removed > 0:
-                bib_text = filter_verified_bibtex(bib_text, _pre_report, include_suspicious=True)
-                (stage_dir / "references_preverified.bib").write_text(bib_text, encoding="utf-8")
+                bib_text = filter_verified_bibtex(
+                    bib_text, _pre_report, include_suspicious=True
+                )
+                (stage_dir / "references_preverified.bib").write_text(
+                    bib_text, encoding="utf-8"
+                )
                 logger.info(
                     "P3: Pre-verification kept %d/%d citations (removed %d hallucinated)",
                     _kept,
                     _pre_report.total,
                     _removed,
                 )
-            verified_keys = {e["key"] for e in parse_bibtex_entries(bib_text) if e.get("key")}
+            verified_keys = {
+                e["key"] for e in parse_bibtex_entries(bib_text) if e.get("key")
+            }
         except Exception as exc:
             logger.warning("P3: Pre-verification failed, using original bib: %s", exc)
 
@@ -2194,7 +2251,10 @@ def _execute_paper_draft(
         draft: str | None = None
         import os as _os_pw
 
-        if _os_pw.environ.get("BERB_EXPERIMENTAL_PARALLEL_WRITER", "").strip() in ("1", "true"):
+        if _os_pw.environ.get("BERB_EXPERIMENTAL_PARALLEL_WRITER", "").strip() in (
+            "1",
+            "true",
+        ):
             try:
                 import asyncio as _asyncio_pw
 
@@ -2236,7 +2296,9 @@ def _execute_paper_draft(
         # R7: Strip LLM-generated References section — it often fabricates arXiv IDs.
         import re as _re_r7
 
-        ref_pattern = _re_r7.compile(r"^(#{1,2}\s*References.*)", _re_r7.MULTILINE | _re_r7.DOTALL)
+        ref_pattern = _re_r7.compile(
+            r"^(#{1,2}\s*References.*)", _re_r7.MULTILINE | _re_r7.DOTALL
+        )
         ref_match = ref_pattern.search(draft)
         if ref_match:
             draft = draft[: ref_match.start()].rstrip()
@@ -2335,7 +2397,9 @@ def _build_draft_claim_manifest(
     try:
         evidence_reg = _IntegrityRegistry.load(run_dir / "evidence_registry.json")
     except (OSError, json.JSONDecodeError) as exc:
-        logger.warning("Claim manifest: evidence registry unreadable, linking skipped: %s", exc)
+        logger.warning(
+            "Claim manifest: evidence registry unreadable, linking skipped: %s", exc
+        )
         evidence_reg = _IntegrityRegistry()
     metric_values = {
         r.value
@@ -2412,9 +2476,7 @@ def _extract_numeric_claims(
 
         # Filter out year-like numbers (1900-2100) and very common small ints
         meaningful = [
-            n
-            for n in numbers
-            if not (1900 <= float(n) <= 2100)  # not a year
+            n for n in numbers if not (1900 <= float(n) <= 2100)  # not a year
         ]
         # Also skip lines with only single-digit numbers (indexes, counts)
         if not meaningful:
@@ -2517,7 +2579,9 @@ def _classify_numeric_claim(text: str, section: str) -> ClaimType:
         return ClaimType.DATASET
 
     # Results / Experiments sections -> empirical
-    if any(s in section_lower for s in ("result", "experiment", "evaluation", "ablation")):
+    if any(
+        s in section_lower for s in ("result", "experiment", "evaluation", "ablation")
+    ):
         return ClaimType.EMPIRICAL
 
     return ClaimType.EMPIRICAL

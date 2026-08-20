@@ -18,7 +18,7 @@ from berb.review.ensemble import (
     ReviewDimension,
 )
 
-_DIMS = {d: 7 for d in ReviewDimension}
+_DIMS = dict.fromkeys(ReviewDimension, 7)
 
 
 def _review(reviewer_id: str, feedback: str) -> Review:
@@ -40,7 +40,9 @@ def _review(reviewer_id: str, feedback: str) -> Review:
 def test_review_diversity_low_for_identical_reviews() -> None:
     ensemble = AutomatedReviewerEnsemble()
     reviews = [
-        _review(p.id, "This paper presents a novel method with strong experimental results.")
+        _review(
+            p.id, "This paper presents a novel method with strong experimental results."
+        )
         for p in REVIEWER_PERSONAS
     ]
 
@@ -59,7 +61,9 @@ def test_review_diversity_high_for_distinct_reviews() -> None:
         "Significant contribution to few-shot learning benchmarks with strong gains.",
         "Theorem 2's proof has a sign error in the third inequality step.",
     ]
-    reviews = [_review(p.id, fb) for p, fb in zip(REVIEWER_PERSONAS, feedbacks, strict=True)]
+    reviews = [
+        _review(p.id, fb) for p, fb in zip(REVIEWER_PERSONAS, feedbacks, strict=True)
+    ]
 
     meta = ensemble.area_chair_decision(reviews)
 

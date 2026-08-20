@@ -64,7 +64,9 @@ def tmp_run_dir():
         }
         s14 = run_dir / "stage-14"
         s14.mkdir()
-        (s14 / "experiment_summary.json").write_text(json.dumps(exp_data), encoding="utf-8")
+        (s14 / "experiment_summary.json").write_text(
+            json.dumps(exp_data), encoding="utf-8"
+        )
         yield run_dir
 
 
@@ -120,7 +122,9 @@ class TestEvidenceRecord:
             evidence_type=EvidenceType.RUN_CONFIG,
             value={"learning_rate": 0.001, "batch_size": 64},
             source=EvidenceSource(
-                stage=9, artifact_path="exp_plan.yaml", source_description="training config"
+                stage=9,
+                artifact_path="exp_plan.yaml",
+                source_description="training config",
             ),
             label="hyperparams",
             metadata={"condition": "DQN"},
@@ -527,13 +531,24 @@ class TestDraftClaimExtraction:
                 assert c.verdict == ClaimVerdict.SUPPORTED
 
     def test_classify_numeric_claim(self) -> None:
-        assert _classify_numeric_claim("Outperforms baselines", "Results") == ClaimType.COMPARATIVE
+        assert (
+            _classify_numeric_claim("Outperforms baselines", "Results")
+            == ClaimType.COMPARATIVE
+        )
         assert _classify_numeric_claim("Accuracy 95%", "Results") == ClaimType.EMPIRICAL
-        assert _classify_numeric_claim("Using ImageNet dataset", "Method") == ClaimType.DATASET
-        assert _classify_numeric_claim("We run 10 experiments", "Setup") == ClaimType.EMPIRICAL
+        assert (
+            _classify_numeric_claim("Using ImageNet dataset", "Method")
+            == ClaimType.DATASET
+        )
+        assert (
+            _classify_numeric_claim("We run 10 experiments", "Setup")
+            == ClaimType.EMPIRICAL
+        )
 
     def test_extract_dataset_claims(self) -> None:
-        text = "We use the ImageNet dataset for evaluation.\nWe evaluate on CIFAR-100.\n"
+        text = (
+            "We use the ImageNet dataset for evaluation.\nWe evaluate on CIFAR-100.\n"
+        )
         sections = {"Method": (0, 1)}
         manifest = ClaimManifest(paper_stage="draft")
         _extract_dataset_claims(text, sections, manifest)
@@ -547,7 +562,9 @@ class TestDraftClaimExtraction:
         assert section_map[5] == "Method"
         assert section_map[9] == "Method"
 
-    def test_build_draft_claim_manifest_writes_file(self, tmp_run_dir, sample_draft) -> None:
+    def test_build_draft_claim_manifest_writes_file(
+        self, tmp_run_dir, sample_draft
+    ) -> None:
         # Regression test (audit §4.2): _build_draft_claim_manifest referenced
         # the module-level name ClaimManifest without importing it, raising
         # NameError on every call. The caller in generate_paper_draft() swallows
@@ -581,9 +598,13 @@ class TestIntegrityIntegration:
         sections = _parse_draft_sections(sample_draft)
         manifest = ClaimManifest(paper_stage="draft")
 
-        evidence_reg = VerifiedEvidenceRegistry.load(tmp_run_dir / "evidence_registry.json")
+        evidence_reg = VerifiedEvidenceRegistry.load(
+            tmp_run_dir / "evidence_registry.json"
+        )
         metric_values = {
-            r.value for r in evidence_reg.records.values() if isinstance(r.value, (int, float))
+            r.value
+            for r in evidence_reg.records.values()
+            if isinstance(r.value, (int, float))
         }
 
         _extract_numeric_claims(sample_draft, sections, manifest, metric_values)
@@ -601,7 +622,9 @@ class TestIntegrityIntegration:
                     assert c.verdict == ClaimVerdict.UNSUPPORTED
                 break
 
-    def test_evidence_registry_and_claim_manifest_coexist(self, tmp_run_dir, sample_draft) -> None:
+    def test_evidence_registry_and_claim_manifest_coexist(
+        self, tmp_run_dir, sample_draft
+    ) -> None:
         """Both artifacts can be produced from the same run directory."""
         # Build evidence registry
         reg = VerifiedEvidenceRegistry.from_run_dir(tmp_run_dir)
@@ -618,8 +641,12 @@ class TestIntegrityIntegration:
         assert (tmp_run_dir / "claim_manifest.json").is_file()
 
         # They are valid JSON
-        er = json.loads((tmp_run_dir / "evidence_registry.json").read_text(encoding="utf-8"))
-        cm = json.loads((tmp_run_dir / "claim_manifest.json").read_text(encoding="utf-8"))
+        er = json.loads(
+            (tmp_run_dir / "evidence_registry.json").read_text(encoding="utf-8")
+        )
+        cm = json.loads(
+            (tmp_run_dir / "claim_manifest.json").read_text(encoding="utf-8")
+        )
         assert er["record_count"] > 0
         assert cm["total_claims"] > 0
 

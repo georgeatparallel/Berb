@@ -136,7 +136,10 @@ def test_validate_imports_warns_for_unavailable_package():
     warning = result.warnings[0]
     assert warning.severity == "warning"
     assert warning.category == "import"
-    assert warning.message == "Module 'totally_missing_pkg' may not be available in sandbox"
+    assert (
+        warning.message
+        == "Module 'totally_missing_pkg' may not be available in sandbox"
+    )
 
 
 def test_validate_imports_respects_custom_available_set():
@@ -172,7 +175,10 @@ def test_validate_code_combines_security_and_import_issues_in_order():
     assert result.ok is False
     assert [i.category for i in result.issues] == ["security", "import"]
     assert result.issues[0].message == "Dangerous call: os.system()"
-    assert result.issues[1].message == "Module 'unknown_mod' may not be available in sandbox"
+    assert (
+        result.issues[1].message
+        == "Module 'unknown_mod' may not be available in sandbox"
+    )
 
 
 def test_validate_code_short_circuits_after_syntax_error():
@@ -214,7 +220,9 @@ def test_validate_code_uses_available_packages_for_import_validation():
 
 
 def test_extract_imports_supports_import_and_from_import_styles():
-    code = "import os\nimport numpy as np\nfrom pandas import DataFrame\nfrom x.y import z"
+    code = (
+        "import os\nimport numpy as np\nfrom pandas import DataFrame\nfrom x.y import z"
+    )
 
     assert extract_imports(code) == {"os", "numpy", "pandas", "x"}
 
@@ -267,14 +275,18 @@ def test_format_issues_for_llm_formats_issues_with_and_without_line():
     formatted = format_issues_for_llm(validation)
 
     assert "- [ERROR] (syntax) invalid syntax @ line 3" in formatted
-    assert "- [WARNING] (import) Module 'x' may be missing @ unknown location" in formatted
+    assert (
+        "- [WARNING] (import) Module 'x' may be missing @ unknown location" in formatted
+    )
 
 
 def test_format_issues_for_llm_preserves_issue_order():
     validation = CodeValidation(
         issues=[
             ValidationIssue(severity="warning", category="import", message="first"),
-            ValidationIssue(severity="error", category="security", message="second", line=9),
+            ValidationIssue(
+                severity="error", category="security", message="second", line=9
+            ),
         ]
     )
 
@@ -302,7 +314,9 @@ def test_code_validation_ok_false_when_error_present():
 
 def test_code_validation_errors_and_warnings_filter_correctly():
     err = ValidationIssue(severity="error", category="security", message="danger")
-    warn = ValidationIssue(severity="warning", category="import", message="maybe missing")
+    warn = ValidationIssue(
+        severity="warning", category="import", message="maybe missing"
+    )
     validation = CodeValidation(issues=[err, warn])
 
     assert validation.errors == [err]
@@ -473,7 +487,9 @@ def test_validate_security_denylist_mode_is_the_function_default():
 def test_validate_security_allowlist_mode_rejects_unlisted_import():
     result = validate_security("import mypkg", import_policy="allowlist")
     assert result.ok is False
-    assert any("allowlist" in i.message for i in result.issues if i.category == "security")
+    assert any(
+        "allowlist" in i.message for i in result.issues if i.category == "security"
+    )
 
 
 def test_validate_security_allowlist_mode_accepts_stdlib_and_science():
@@ -484,7 +500,9 @@ def test_validate_security_allowlist_mode_accepts_stdlib_and_science():
 
 def test_validate_security_allowlist_mode_extra_allowed_imports():
     result = validate_security(
-        "import mypkg", import_policy="allowlist", extra_allowed_imports=frozenset({"mypkg"})
+        "import mypkg",
+        import_policy="allowlist",
+        extra_allowed_imports=frozenset({"mypkg"}),
     )
     assert result.ok is True
 
@@ -515,7 +533,10 @@ def test_check_code_security_defaults_to_allowlist_mode():
 def test_check_code_security_honors_extra_allowed_imports():
     from berb.experiment.sandbox import check_code_security
 
-    assert check_code_security("import mypkg", extra_allowed_imports=frozenset({"mypkg"})) is None
+    assert (
+        check_code_security("import mypkg", extra_allowed_imports=frozenset({"mypkg"}))
+        is None
+    )
 
 
 def test_filename_collision_multiple_shadows():

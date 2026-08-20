@@ -14,7 +14,11 @@ from berb.pipeline.stage_impls._experiment_design import _trim_plan_to_condition
 def test_trim_preserves_required_baselines_under_tight_budget() -> None:
     # 25 conditions total, budget caps at 8 (default, time_budget_sec <= 3600)
     plan = {
-        "baselines": ["resnet50", "vit_b16", "efficientnet"],  # first 3 = benchmark-required
+        "baselines": [
+            "resnet50",
+            "vit_b16",
+            "efficientnet",
+        ],  # first 3 = benchmark-required
         "proposed_methods": [f"variant_{i}" for i in range(15)],
         "ablations": [f"ablation_{i}" for i in range(7)],
     }
@@ -26,7 +30,9 @@ def test_trim_preserves_required_baselines_under_tight_budget() -> None:
     assert set(result["baselines"]) >= {"resnet50", "vit_b16", "efficientnet"}
     assert len(result["proposed_methods"]) < 15
     assert (
-        len(result["baselines"]) + len(result["proposed_methods"]) + len(result["ablations"])
+        len(result["baselines"])
+        + len(result["proposed_methods"])
+        + len(result["ablations"])
         <= 8
     )
 
@@ -69,7 +75,11 @@ def test_trim_defaults_required_baseline_count_to_zero() -> None:
 
     result = _trim_plan_to_condition_budget(plan, time_budget_sec=3000)
 
-    total = len(result["baselines"]) + len(result["proposed_methods"]) + len(result["ablations"])
+    total = (
+        len(result["baselines"])
+        + len(result["proposed_methods"])
+        + len(result["ablations"])
+    )
     assert total <= 8
     assert len(result["baselines"]) >= 1
 

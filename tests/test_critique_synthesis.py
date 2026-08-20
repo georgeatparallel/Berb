@@ -16,7 +16,7 @@ from berb.review.ensemble import (
     ReviewDimension,
 )
 
-_DIMS = {d: 7 for d in ReviewDimension}
+_DIMS = dict.fromkeys(ReviewDimension, 7)
 
 
 def _review(reviewer_id: str) -> Review:
@@ -37,13 +37,17 @@ def _review(reviewer_id: str) -> Review:
 
 def test_synthesize_critiques_returns_empty_without_llm() -> None:
     ensemble = AutomatedReviewerEnsemble()
-    result = asyncio.run(ensemble.synthesize_critiques([_review(p.id) for p in REVIEWER_PERSONAS]))
+    result = asyncio.run(
+        ensemble.synthesize_critiques([_review(p.id) for p in REVIEWER_PERSONAS])
+    )
     assert result == ""
 
 
 def test_synthesize_critiques_calls_llm_with_review_content() -> None:
     mock_llm = MagicMock()
-    mock_llm.chat.return_value = MagicMock(content="Clustered: missing ablation (3 reviewers)")
+    mock_llm.chat.return_value = MagicMock(
+        content="Clustered: missing ablation (3 reviewers)"
+    )
     ensemble = AutomatedReviewerEnsemble(llm_client=mock_llm)
     reviews = [_review(p.id) for p in REVIEWER_PERSONAS]
 
@@ -59,7 +63,9 @@ def test_synthesize_critiques_swallows_llm_failure() -> None:
     mock_llm.chat.side_effect = RuntimeError("unavailable")
     ensemble = AutomatedReviewerEnsemble(llm_client=mock_llm)
 
-    result = asyncio.run(ensemble.synthesize_critiques([_review(REVIEWER_PERSONAS[0].id)]))
+    result = asyncio.run(
+        ensemble.synthesize_critiques([_review(REVIEWER_PERSONAS[0].id)])
+    )
 
     assert result == ""
 

@@ -217,7 +217,9 @@ def _sanitize_latex_output(
     # 3. Remove stray markdown code fences in LaTeX body (outside verbatim)
     #    Only match fences NOT inside \begin{verbatim}...\end{verbatim}
     #    Simple approach: remove ``` lines that don't have verbatim nearby
-    tex = re.sub(r"^(\s*```[a-z]*\s*)$", r"% removed stray fence: \1", tex, flags=re.MULTILINE)
+    tex = re.sub(
+        r"^(\s*```[a-z]*\s*)$", r"% removed stray fence: \1", tex, flags=re.MULTILINE
+    )
 
     # 4. Fix placeholder table captions: \caption{Table N} → descriptive
     #    Can't auto-generate content, but at least don't leave "Table 1" as
@@ -800,7 +802,11 @@ def _extract_title(sections: list[_Section], raw_md: str) -> str:
             if first_line and not _is_bad_title(first_line):
                 return first_line
         # Handle "## Title Actual Paper Title" pattern (title embedded in heading)
-        if sec.level in (1, 2) and sec.heading_lower.startswith("title ") and len(sec.heading) > 6:
+        if (
+            sec.level in (1, 2)
+            and sec.heading_lower.startswith("title ")
+            and len(sec.heading) > 6
+        ):
             return sec.heading[6:].strip()
 
     # Fallback: first H1/H2 heading that isn't a meta-heading or artefact
@@ -869,7 +875,11 @@ def _build_body(sections: list[_Section], *, title: str = "") -> str:
     # (skip title/abstract/references).
     title_h1_found = False
     for sec in sections:
-        if sec.level == 1 and sec.heading and sec.heading.strip().lower() == title_lower:
+        if (
+            sec.level == 1
+            and sec.heading
+            and sec.heading.strip().lower() == title_lower
+        ):
             title_h1_found = True
             break
 
@@ -910,7 +920,11 @@ def _build_body(sections: list[_Section], *, title: str = "") -> str:
         if sec.heading_lower in _SKIP_HEADINGS:
             continue
         # Skip the H1 heading that was used as the paper title
-        if sec.level == 1 and sec.heading and sec.heading.strip().lower() == title_lower:
+        if (
+            sec.level == 1
+            and sec.heading
+            and sec.heading.strip().lower() == title_lower
+        ):
             continue
         if sec.level == 0:
             # Preamble text before any heading — include as-is
@@ -980,7 +994,9 @@ def _deduplicate_tables(body: str) -> str:
 # Patterns for block-level structures
 _DISPLAY_MATH_RE = re.compile(r"^\\\[(.+?)\\\]$", re.MULTILINE | re.DOTALL)
 # $$...$$ display math (single- or multi-line)
-_DISPLAY_MATH_DOLLAR_RE = re.compile(r"^\$\$\s*\n?(.*?)\n?\s*\$\$$", re.MULTILINE | re.DOTALL)
+_DISPLAY_MATH_DOLLAR_RE = re.compile(
+    r"^\$\$\s*\n?(.*?)\n?\s*\$\$$", re.MULTILINE | re.DOTALL
+)
 _FENCED_CODE_RE = re.compile(r"^```(\w*)\n(.*?)^```", re.MULTILINE | re.DOTALL)
 _TABLE_SEP_RE = re.compile(r"^\|[-:| ]+\|$")
 
@@ -1129,7 +1145,9 @@ def _convert_block(text: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _collect_list(lines: list[str], start: int, pattern: re.Pattern[str]) -> tuple[list[str], int]:
+def _collect_list(
+    lines: list[str], start: int, pattern: re.Pattern[str]
+) -> tuple[list[str], int]:
     """Collect consecutive list items matching *pattern*."""
     items: list[str] = []
     i = start
@@ -1232,12 +1250,16 @@ def _render_table(table_lines: list[str], caption: str = "") -> str:
         lines_out.append("\\resizebox{\\columnwidth}{!}{%")
     lines_out.append(f"\\begin{{tabular}}{{{col_spec}}}")
     lines_out.append("\\toprule")
-    lines_out.append(" & ".join(f"\\textbf{{{_convert_inline(c)}}}" for c in header) + " \\\\")
+    lines_out.append(
+        " & ".join(f"\\textbf{{{_convert_inline(c)}}}" for c in header) + " \\\\"
+    )
     lines_out.append("\\midrule")
     for row in body_rows:
         # Pad row to match header length
         padded = row + [""] * (ncols - len(row))
-        lines_out.append(" & ".join(_convert_inline(c) for c in padded[:ncols]) + " \\\\")
+        lines_out.append(
+            " & ".join(_convert_inline(c) for c in padded[:ncols]) + " \\\\"
+        )
     lines_out.append("\\bottomrule")
     lines_out.append("\\end{tabular}")
     if needs_resize:
@@ -1908,7 +1930,9 @@ def check_paper_completeness(sections: list[_Section]) -> list[str]:
         total_lines = len([ln for ln in sec.body.splitlines() if ln.strip()])
         if total_lines < 4:
             continue
-        bullet_count = len(_bullet_re_cc.findall(sec.body)) + len(_numbered_re_cc.findall(sec.body))
+        bullet_count = len(_bullet_re_cc.findall(sec.body)) + len(
+            _numbered_re_cc.findall(sec.body)
+        )
         density = bullet_count / total_lines
         if density > 0.30:
             warnings.append(

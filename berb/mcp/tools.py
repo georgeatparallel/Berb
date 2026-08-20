@@ -13,8 +13,14 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "type": "object",
             "properties": {
                 "topic": {"type": "string", "description": "The research topic"},
-                "config_path": {"type": "string", "description": "Path to config YAML (optional)"},
-                "auto_approve": {"type": "boolean", "description": "Auto-approve gate stages"},
+                "config_path": {
+                    "type": "string",
+                    "description": "Path to config YAML (optional)",
+                },
+                "auto_approve": {
+                    "type": "boolean",
+                    "description": "Auto-approve gate stages",
+                },
             },
             "required": ["topic"],
         },
@@ -37,7 +43,10 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "type": "object",
             "properties": {
                 "run_id": {"type": "string", "description": "The pipeline run ID"},
-                "stage": {"type": "string", "description": "Specific stage name (optional)"},
+                "stage": {
+                    "type": "string",
+                    "description": "Specific stage name (optional)",
+                },
             },
             "required": ["run_id"],
         },
@@ -49,7 +58,10 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "type": "object",
             "properties": {
                 "query": {"type": "string", "description": "Search query"},
-                "max_results": {"type": "integer", "description": "Max results (default 10)"},
+                "max_results": {
+                    "type": "integer",
+                    "description": "Max results (default 10)",
+                },
             },
             "required": ["query"],
         },
@@ -64,7 +76,10 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
                     "type": "string",
                     "description": "Path to paper markdown or LaTeX file",
                 },
-                "run_id": {"type": "string", "description": "Associated run ID (optional)"},
+                "run_id": {
+                    "type": "string",
+                    "description": "Associated run ID (optional)",
+                },
             },
             "required": ["paper_path"],
         },

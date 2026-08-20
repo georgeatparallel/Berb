@@ -168,7 +168,9 @@ class PDFFigureExtractor:
                             figures.append(
                                 {
                                     "image_bytes": image_bytes,
-                                    "image_data": base64.b64encode(image_bytes).decode(),
+                                    "image_data": base64.b64encode(
+                                        image_bytes
+                                    ).decode(),
                                     "page": page_num + 1,
                                     "figure_number": f"{page_num + 1}.{img_index + 1}",
                                     "width": base_image.get("width", 0),
@@ -311,7 +313,9 @@ class TableStructureParser:
             import camelot  # Table extraction library
             import fitz  # noqa: F401 - PyMuPDF for future PDF operations
         except ImportError:
-            logger.warning("camelot-py not installed. Install with: pip install camelot-py")
+            logger.warning(
+                "camelot-py not installed. Install with: pip install camelot-py"
+            )
             return []
 
         tables = []

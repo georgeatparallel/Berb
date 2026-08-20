@@ -77,7 +77,9 @@ def package_deliverables(
             )
             _has_abstract = (
                 "\\begin{abstract}" in tex_content
-                and tex_content.split("\\begin{abstract}")[1].split("\\end{abstract}")[0].strip()
+                and tex_content.split("\\begin{abstract}")[1]
+                .split("\\end{abstract}")[0]
+                .strip()
             )
             _section_count = tex_content.count("\\section{")
             if _has_abstract and _section_count >= 3:
@@ -248,7 +250,9 @@ def package_deliverables(
         "files": packaged,
         "generated": _utcnow_iso(),
     }
-    (dest / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    (dest / "manifest.json").write_text(
+        json.dumps(manifest, indent=2), encoding="utf-8"
+    )
 
     logger.info("Deliverables packaged: %s (%d items)", dest, len(packaged))
     return dest

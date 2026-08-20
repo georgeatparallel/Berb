@@ -82,7 +82,10 @@ def _collect_experiment_results(
     summary: dict[str, Any] = {}
 
     # Try experiment_summary_best.json first
-    for candidate in ["experiment_summary_best.json", "stage-14/experiment_summary.json"]:
+    for candidate in [
+        "experiment_summary_best.json",
+        "stage-14/experiment_summary.json",
+    ]:
         _path = run_dir / candidate
         if _path.exists():
             try:
@@ -178,10 +181,14 @@ def _detect_runtime_issues(sandbox_result: object) -> str:
         elif math.isinf(fvalue):
             warnings.append(f"Inf detected in metric '{key}'")
         elif "loss" in key.lower() and fvalue > _DIVERGENCE_LOSS_THRESHOLD:
-            warnings.append(f"DIVERGING loss detected in metric '{key}' (value={fvalue})")
+            warnings.append(
+                f"DIVERGING loss detected in metric '{key}' (value={fvalue})"
+            )
 
     # Raw stdout/stderr fallback (metrics dict may be empty/unavailable)
-    if not any("NaN" in w for w in warnings) and re.search(r"\bnan\b", stdout, re.IGNORECASE):
+    if not any("NaN" in w for w in warnings) and re.search(
+        r"\bnan\b", stdout, re.IGNORECASE
+    ):
         warnings.append("NaN values detected in output")
 
     # RuntimeWarning lines in stderr — keep the actual message, not just

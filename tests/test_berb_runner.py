@@ -36,7 +36,9 @@ def rc_config(tmp_path: Path) -> RCConfig:
             "api_key_env": "RC_TEST_KEY",
         },
     }
-    return RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
+    return RCConfig.from_dict(
+        data, project_root=tmp_path, check_paths=False, check_security=False
+    )
 
 
 @pytest.fixture()
@@ -99,9 +101,9 @@ async def test_execute_pipeline_runs_stages_in_sequence(
     seen_index = {stage: idx for idx, stage in enumerate(seen)}
     for stage in seen:
         for dep in CONTRACTS[stage].depends_on:
-            assert seen_index[dep] < seen_index[stage], (
-                f"{stage.name} ran before its dependency {dep.name}"
-            )
+            assert (
+                seen_index[dep] < seen_index[stage]
+            ), f"{stage.name} ran before its dependency {dep.name}"
     assert len(results) == 23
     assert all(r.status == StageStatus.DONE for r in results)
 
@@ -130,7 +132,9 @@ async def test_execute_pipeline_writes_trace_jsonl(
     trace_file = run_dir / "run-trace" / "trace.jsonl"
     assert trace_file.is_file(), "runner did not write trace.jsonl"
 
-    spans = [json.loads(line) for line in trace_file.read_text(encoding="utf-8").splitlines()]
+    spans = [
+        json.loads(line) for line in trace_file.read_text(encoding="utf-8").splitlines()
+    ]
     assert len(spans) == 23, f"expected one span per stage, got {len(spans)}"
     assert {s["trace_id"] for s in spans} == {"run-trace"}
     assert all(s["status"] == "ok" for s in spans)
@@ -164,7 +168,9 @@ async def test_execute_pipeline_trace_span_records_stage_failure(
     )
 
     trace_file = run_dir / "run-trace-fail" / "trace.jsonl"
-    spans = [json.loads(line) for line in trace_file.read_text(encoding="utf-8").splitlines()]
+    spans = [
+        json.loads(line) for line in trace_file.read_text(encoding="utf-8").splitlines()
+    ]
     failed = [s for s in spans if s["tags"]["status"] == "FAILED"]
     assert len(failed) == 1
     assert failed[0]["name"] == "stage.search_strategy"
@@ -298,7 +304,9 @@ async def test_pipeline_summary_has_expected_fields_and_values(
     )
     assert summary["run_id"] == "run-summary-fields"
     assert summary["stages_executed"] == len(results)
-    assert summary["stages_done"] == sum(1 for r in results if r.status == StageStatus.DONE)
+    assert summary["stages_done"] == sum(
+        1 for r in results if r.status == StageStatus.DONE
+    )
     assert summary["stages_blocked"] == 1
     assert summary["stages_failed"] == 1
     assert summary["from_stage"] == 1
@@ -447,7 +455,9 @@ async def test_pipeline_prints_stage_progress(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     mock_results = [
-        StageResult(stage=Stage.TOPIC_INIT, status=StageStatus.DONE, artifacts=("topic.json",)),
+        StageResult(
+            stage=Stage.TOPIC_INIT, status=StageStatus.DONE, artifacts=("topic.json",)
+        ),
         StageResult(
             stage=Stage.PROBLEM_DECOMPOSE,
             status=StageStatus.DONE,
@@ -507,7 +517,9 @@ async def test_pipeline_prints_elapsed_time(
     )
     results_iter = iter([mock_result, mock_fail])
 
-    monkeypatch.setattr(rc_runner, "execute_stage", lambda *args, **kwargs: next(results_iter))
+    monkeypatch.setattr(
+        rc_runner, "execute_stage", lambda *args, **kwargs: next(results_iter)
+    )
     monkeypatch.setattr(rc_runner, "write_stage_to_kb", lambda *args, **kwargs: [])
 
     _ = await rc_runner.execute_pipeline(
@@ -520,7 +532,9 @@ async def test_pipeline_prints_elapsed_time(
     captured = capsys.readouterr()
     import re
 
-    assert re.search(r"\d+\.\d+s\)", captured.out), f"No elapsed time found in: {captured.out}"
+    assert re.search(
+        r"\d+\.\d+s\)", captured.out
+    ), f"No elapsed time found in: {captured.out}"
 
 
 # ── PIVOT/PROCEED/REFINE decision loop tests ──
@@ -528,13 +542,19 @@ async def test_pipeline_prints_elapsed_time(
 
 def _pivot_result(stage: Stage) -> StageResult:
     return StageResult(
-        stage=stage, status=StageStatus.DONE, artifacts=("decision.md",), decision="pivot"
+        stage=stage,
+        status=StageStatus.DONE,
+        artifacts=("decision.md",),
+        decision="pivot",
     )
 
 
 def _refine_result(stage: Stage) -> StageResult:
     return StageResult(
-        stage=stage, status=StageStatus.DONE, artifacts=("decision.md",), decision="refine"
+        stage=stage,
+        status=StageStatus.DONE,
+        artifacts=("decision.md",),
+        decision="refine",
     )
 
 
@@ -681,9 +701,12 @@ def _setup_stage_artifacts(run_dir: Path) -> None:
     s22.mkdir(parents=True, exist_ok=True)
     (s22 / "paper_final.md").write_text("# My Paper\nContent here.", encoding="utf-8")
     (s22 / "paper.tex").write_text(
-        "\\documentclass{article}\n\\begin{document}\nHello\n\\end{document}", encoding="utf-8"
+        "\\documentclass{article}\n\\begin{document}\nHello\n\\end{document}",
+        encoding="utf-8",
     )
-    (s22 / "references.bib").write_text("@article{smith2024,\n  title={Test}\n}", encoding="utf-8")
+    (s22 / "references.bib").write_text(
+        "@article{smith2024,\n  title={Test}\n}", encoding="utf-8"
+    )
     code_dir = s22 / "code"
     code_dir.mkdir()
     (code_dir / "main.py").write_text("print('hello')", encoding="utf-8")
@@ -703,7 +726,9 @@ def _setup_stage_artifacts(run_dir: Path) -> None:
     )
 
 
-def test_package_deliverables_collects_all_artifacts(run_dir: Path, rc_config: RCConfig) -> None:
+def test_package_deliverables_collects_all_artifacts(
+    run_dir: Path, rc_config: RCConfig
+) -> None:
     _setup_stage_artifacts(run_dir)
     dest = rc_runner.package_deliverables(run_dir, "run-pkg-test", rc_config)
     assert dest is not None
@@ -719,7 +744,9 @@ def test_package_deliverables_collects_all_artifacts(run_dir: Path, rc_config: R
     assert "paper_final.md" in manifest["files"]
 
 
-def test_package_deliverables_prefers_verified_versions(run_dir: Path, rc_config: RCConfig) -> None:
+def test_package_deliverables_prefers_verified_versions(
+    run_dir: Path, rc_config: RCConfig
+) -> None:
     _setup_stage_artifacts(run_dir)
     rc_runner.package_deliverables(run_dir, "run-verified", rc_config)
     dest = run_dir / "deliverables"
@@ -730,7 +757,9 @@ def test_package_deliverables_prefers_verified_versions(run_dir: Path, rc_config
     assert "smith2024" in bib
 
 
-def test_package_deliverables_falls_back_to_stage22(run_dir: Path, rc_config: RCConfig) -> None:
+def test_package_deliverables_falls_back_to_stage22(
+    run_dir: Path, rc_config: RCConfig
+) -> None:
     """When stage 23 outputs are missing, falls back to stage 22 versions."""
     s22 = run_dir / "stage-22"
     s22.mkdir(parents=True, exist_ok=True)
@@ -769,7 +798,9 @@ def test_package_deliverables_returns_none_when_no_stage_artifacts(
     assert not (run_dir / "deliverables").exists()
 
 
-def test_package_deliverables_includes_style_files(run_dir: Path, rc_config: RCConfig) -> None:
+def test_package_deliverables_includes_style_files(
+    run_dir: Path, rc_config: RCConfig
+) -> None:
     """Style files (.sty, .bst) for the target conference are bundled."""
     _setup_stage_artifacts(run_dir)
     dest = rc_runner.package_deliverables(run_dir, "run-styles", rc_config)
@@ -926,7 +957,12 @@ def _make_stage14_summary(run_dir: Path, suffix: str, pm_value: float) -> None:
     d.mkdir(parents=True, exist_ok=True)
     data = {
         "metrics_summary": {
-            "primary_metric": {"min": pm_value, "max": pm_value, "mean": pm_value, "count": 1}
+            "primary_metric": {
+                "min": pm_value,
+                "max": pm_value,
+                "mean": pm_value,
+                "count": 1,
+            }
         },
         "condition_summaries": {"cond_a": {"metrics": {"primary_metric": pm_value}}},
     }
@@ -974,7 +1010,9 @@ class TestPromoteBestStage14BestJson:
         pm = data["metrics_summary"]["primary_metric"]
         assert pm["mean"] == 95.0
 
-    def test_best_json_written_with_equal_values(self, run_dir: Path, max_config: RCConfig) -> None:
+    def test_best_json_written_with_equal_values(
+        self, run_dir: Path, max_config: RCConfig
+    ) -> None:
         """BUG-223 exact scenario: stage-14 and stage-14_v1 have equal
         metrics, stage-14_v2 is regressed."""
         _make_stage14_summary(run_dir, "", 64.46)
@@ -984,7 +1022,9 @@ class TestPromoteBestStage14BestJson:
         rc_runner._promote_best_stage14(run_dir, max_config)  # type: ignore[attr-defined]
 
         best_path = run_dir / "experiment_summary_best.json"
-        assert best_path.exists(), "BUG-223: best.json missing when current is tied-best"
+        assert (
+            best_path.exists()
+        ), "BUG-223: best.json missing when current is tied-best"
         data = json.loads(best_path.read_text(encoding="utf-8"))
         pm = data["metrics_summary"]["primary_metric"]
         assert pm["mean"] == 64.46
@@ -1005,8 +1045,12 @@ class TestPromoteBestStage14AnalysisBest:
         _make_stage14_summary(run_dir, "", 70.0)
         _make_stage14_summary(run_dir, "_v1", 95.0)
         # Write analysis.md in each
-        (run_dir / "stage-14" / "analysis.md").write_text("Degenerate analysis", encoding="utf-8")
-        (run_dir / "stage-14_v1" / "analysis.md").write_text("Best analysis v1", encoding="utf-8")
+        (run_dir / "stage-14" / "analysis.md").write_text(
+            "Degenerate analysis", encoding="utf-8"
+        )
+        (run_dir / "stage-14_v1" / "analysis.md").write_text(
+            "Best analysis v1", encoding="utf-8"
+        )
 
         rc_runner._promote_best_stage14(run_dir, max_config)  # type: ignore[attr-defined]
 
@@ -1020,8 +1064,12 @@ class TestPromoteBestStage14AnalysisBest:
         """Even when stage-14 is already best, analysis_best.md should be written."""
         _make_stage14_summary(run_dir, "", 90.0)
         _make_stage14_summary(run_dir, "_v1", 80.0)
-        (run_dir / "stage-14" / "analysis.md").write_text("Best analysis current", encoding="utf-8")
-        (run_dir / "stage-14_v1" / "analysis.md").write_text("Worse analysis", encoding="utf-8")
+        (run_dir / "stage-14" / "analysis.md").write_text(
+            "Best analysis current", encoding="utf-8"
+        )
+        (run_dir / "stage-14_v1" / "analysis.md").write_text(
+            "Worse analysis", encoding="utf-8"
+        )
 
         rc_runner._promote_best_stage14(run_dir, max_config)  # type: ignore[attr-defined]
 
@@ -1043,7 +1091,9 @@ class TestPromoteBestStage14AnalysisBest:
 class TestPromoteBestStage14DegenerateDetection:
     """BUG-226: Degenerate near-zero metrics must not be promoted as best."""
 
-    def test_degenerate_minimize_skipped(self, run_dir: Path, rc_config: RCConfig) -> None:
+    def test_degenerate_minimize_skipped(
+        self, run_dir: Path, rc_config: RCConfig
+    ) -> None:
         """When minimize, a value 1000x smaller than second-best is degenerate."""
         # metric_direction defaults to "minimize"
         _make_stage14_summary(run_dir, "", 7.26e-8)  # degenerate (broken normalization)
@@ -1055,9 +1105,13 @@ class TestPromoteBestStage14DegenerateDetection:
         assert best_path.exists()
         data = json.loads(best_path.read_text(encoding="utf-8"))
         pm = data["metrics_summary"]["primary_metric"]
-        assert pm["mean"] == 0.37, "Degenerate value should be skipped, valid v2 promoted"
+        assert (
+            pm["mean"] == 0.37
+        ), "Degenerate value should be skipped, valid v2 promoted"
 
-    def test_legitimate_minimize_not_skipped(self, run_dir: Path, rc_config: RCConfig) -> None:
+    def test_legitimate_minimize_not_skipped(
+        self, run_dir: Path, rc_config: RCConfig
+    ) -> None:
         """When values are within normal range, smaller is legitimately best."""
         _make_stage14_summary(run_dir, "", 0.15)
         _make_stage14_summary(run_dir, "_v1", 0.37)
@@ -1069,7 +1123,9 @@ class TestPromoteBestStage14DegenerateDetection:
         pm = data["metrics_summary"]["primary_metric"]
         assert pm["mean"] == 0.15, "Legitimate lower value should be promoted"
 
-    def test_single_candidate_not_affected(self, run_dir: Path, rc_config: RCConfig) -> None:
+    def test_single_candidate_not_affected(
+        self, run_dir: Path, rc_config: RCConfig
+    ) -> None:
         """Single candidate is never skipped regardless of value."""
         _make_stage14_summary(run_dir, "", 1e-10)
 

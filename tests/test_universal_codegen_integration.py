@@ -122,9 +122,15 @@ class TestExperimentSchemaIntegration:
             problem_description="Solve Poisson equation with FEM and FDM",
             conditions=[
                 Condition(
-                    name="FDM_2nd", role="reference", description="2nd order finite difference"
+                    name="FDM_2nd",
+                    role="reference",
+                    description="2nd order finite difference",
                 ),
-                Condition(name="FEM_P1", role="proposed", description="P1 finite element method"),
+                Condition(
+                    name="FEM_P1",
+                    role="proposed",
+                    description="P1 finite element method",
+                ),
                 Condition(
                     name="FEM_P2",
                     role="variant",
@@ -168,7 +174,9 @@ class TestExperimentSchemaIntegration:
             conditions=[
                 Condition(name="OLS", role="reference", description="Simple OLS"),
                 Condition(
-                    name="OLS_controls", role="proposed", description="OLS with control variables"
+                    name="OLS_controls",
+                    role="proposed",
+                    description="OLS with control variables",
                 ),
                 Condition(
                     name="FE",
@@ -269,7 +277,10 @@ class TestCodeSearchIntegration:
                 api_patterns=[
                     "from pyscf import gto, scf\nmol = gto.M(atom='H 0 0 0; H 0 0 0.74', basis='sto-3g')",
                 ],
-                file_structure={"main.py": "Entry point", "molecule.py": "Molecule definitions"},
+                file_structure={
+                    "main.py": "Entry point",
+                    "molecule.py": "Molecule definitions",
+                },
                 evaluation_patterns=["mae = np.mean(np.abs(predicted - reference))"],
             ),
             repos_found=[
@@ -367,7 +378,9 @@ class TestDockerProfileMapping:
         """All domains should map to a valid docker profile."""
         import yaml
 
-        profiles_path = Path(__file__).parent.parent / "berb" / "data" / "docker_profiles.yaml"
+        profiles_path = (
+            Path(__file__).parent.parent / "berb" / "data" / "docker_profiles.yaml"
+        )
         if not profiles_path.exists():
             pytest.skip("docker_profiles.yaml not found")
 
@@ -379,15 +392,17 @@ class TestDockerProfileMapping:
 
         # Every mapped domain should point to a valid profile
         for domain_id, profile_name in domain_map.items():
-            assert profile_name in profiles, (
-                f"Domain {domain_id} maps to unknown profile: {profile_name}"
-            )
+            assert (
+                profile_name in profiles
+            ), f"Domain {domain_id} maps to unknown profile: {profile_name}"
 
     def test_all_loaded_domains_have_docker_mapping(self):
         """All domain profiles should have a docker mapping."""
         import yaml
 
-        profiles_path = Path(__file__).parent.parent / "berb" / "data" / "docker_profiles.yaml"
+        profiles_path = (
+            Path(__file__).parent.parent / "berb" / "data" / "docker_profiles.yaml"
+        )
         if not profiles_path.exists():
             pytest.skip("docker_profiles.yaml not found")
 

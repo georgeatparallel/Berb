@@ -17,7 +17,9 @@ from berb.pipeline.stage_impls._synthesis import _build_domain_narrative
 from berb.pipeline.stages import StageStatus
 
 
-def _write_prior_artifact(run_dir: Path, stage_num: int, filename: str, content: str) -> None:
+def _write_prior_artifact(
+    run_dir: Path, stage_num: int, filename: str, content: str
+) -> None:
     stage_dir = run_dir / f"stage-{stage_num:02d}"
     target = stage_dir / filename
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -43,7 +45,9 @@ class TestBuildDomainNarrative:
             run_dir, 4, "candidates.jsonl", "\n".join(json.dumps(c) for c in candidates)
         )
         llm = MagicMock()
-        llm.chat.return_value = MagicMock(content="The field started with X and evolved to Y.")
+        llm.chat.return_value = MagicMock(
+            content="The field started with X and evolved to Y."
+        )
 
         result = _build_domain_narrative(llm, run_dir, "test topic")
 
@@ -57,7 +61,10 @@ class TestBuildDomainNarrative:
         run_dir = tmp_path / "run"
         run_dir.mkdir()
         _write_prior_artifact(
-            run_dir, 4, "candidates.jsonl", json.dumps({"title": "A Paper", "year": 2020})
+            run_dir,
+            4,
+            "candidates.jsonl",
+            json.dumps({"title": "A Paper", "year": 2020}),
         )
         llm = MagicMock()
         llm.chat.side_effect = RuntimeError("unavailable")
@@ -67,7 +74,9 @@ class TestBuildDomainNarrative:
     def test_skips_rows_without_title(self, tmp_path: Path) -> None:
         run_dir = tmp_path / "run"
         run_dir.mkdir()
-        _write_prior_artifact(run_dir, 4, "candidates.jsonl", json.dumps({"year": 2020}))
+        _write_prior_artifact(
+            run_dir, 4, "candidates.jsonl", json.dumps({"year": 2020})
+        )
         llm = MagicMock()
 
         assert _build_domain_narrative(llm, run_dir, "test topic") == ""
@@ -95,7 +104,9 @@ class TestSynthesisStageWiring:
                 "primary_model": "fake-model",
             },
         }
-        return RCConfig.from_dict(data, project_root=tmp_path, check_paths=False, check_security=False)
+        return RCConfig.from_dict(
+            data, project_root=tmp_path, check_paths=False, check_security=False
+        )
 
     def test_domain_narrative_written_when_candidates_present(
         self, tmp_path: Path, rc_config: RCConfig
@@ -103,7 +114,10 @@ class TestSynthesisStageWiring:
         run_dir = tmp_path / "run"
         run_dir.mkdir()
         _write_prior_artifact(
-            run_dir, 4, "candidates.jsonl", json.dumps({"title": "A Paper", "year": 2020})
+            run_dir,
+            4,
+            "candidates.jsonl",
+            json.dumps({"title": "A Paper", "year": 2020}),
         )
         _write_prior_artifact(run_dir, 6, "cards/dummy.md", "# Card\nSome notes.")
         stage_dir = run_dir / "stage-07"

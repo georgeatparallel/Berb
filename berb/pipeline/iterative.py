@@ -129,10 +129,14 @@ def write_iteration_context(
         "reviews_excerpt": reviews[:3000] if reviews else "",
         "generated": _utcnow_iso(),
     }
-    (run_dir / "iteration_context.json").write_text(json.dumps(ctx, indent=2), encoding="utf-8")
+    (run_dir / "iteration_context.json").write_text(
+        json.dumps(ctx, indent=2), encoding="utf-8"
+    )
 
 
-def _version_rollback_stages(run_dir: Path, rollback_target: Stage, attempt: int) -> None:
+def _version_rollback_stages(
+    run_dir: Path, rollback_target: Stage, attempt: int
+) -> None:
     """Rename stage directories that will be overwritten by a PIVOT/REFINE."""
     import shutil as _shutil
 

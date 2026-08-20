@@ -84,7 +84,9 @@ class TestTimeGuard:
             },
             "best_run": {"metrics": {}},
         }
-        plan = {"conditions": [{"name": "A"}, {"name": "B"}, {"name": "C"}, {"name": "D"}]}
+        plan = {
+            "conditions": [{"name": "A"}, {"name": "B"}, {"name": "C"}, {"name": "D"}]
+        }
         diag = diagnose_experiment(experiment_summary=summary, experiment_plan=plan)
         types = {d.type for d in diag.deficiencies}
         # 1/4 skipped = 25%, below 50% threshold
@@ -114,7 +116,10 @@ class TestGPUOOM:
 class TestIdenticalConditions:
     def test_detects_from_ablation_warnings(self):
         summary = {
-            "condition_summaries": {"A": {"metrics": {"m": 1}}, "B": {"metrics": {"m": 1}}},
+            "condition_summaries": {
+                "A": {"metrics": {"m": 1}},
+                "B": {"metrics": {"m": 1}},
+            },
             "best_run": {"metrics": {}},
             "ablation_warnings": [
                 "ABLATION FAILURE: Conditions 'A' and 'B' produce identical outputs across all 1 metrics."
@@ -276,7 +281,9 @@ class TestDatasetNotFoundError:
             experiment_summary={"condition_summaries": {}, "best_run": {"metrics": {}}},
             stderr=stderr,
         )
-        ds_issues = [d for d in diag.deficiencies if d.type == DeficiencyType.DATASET_UNAVAILABLE]
+        ds_issues = [
+            d for d in diag.deficiencies if d.type == DeficiencyType.DATASET_UNAVAILABLE
+        ]
         assert len(ds_issues) >= 1
         assert "HuggingFace" in ds_issues[0].description
         # Should NOT also appear as a generic CODE_CRASH
@@ -292,7 +299,9 @@ class TestDatasetNotFoundError:
             experiment_summary={"condition_summaries": {}, "best_run": {"metrics": {}}},
             stderr=stderr,
         )
-        ds_issues = [d for d in diag.deficiencies if d.type == DeficiencyType.DATASET_UNAVAILABLE]
+        ds_issues = [
+            d for d in diag.deficiencies if d.type == DeficiencyType.DATASET_UNAVAILABLE
+        ]
         assert any("/opt/datasets" in d.suggested_fix for d in ds_issues)
 
 
@@ -304,11 +313,17 @@ class TestNearRandomAccuracy:
         diag = diagnose_experiment(
             experiment_summary={
                 "condition_summaries": {"cond_a": {"metrics": {"top1_accuracy": 8.91}}},
-                "metrics_summary": {"top1_accuracy": {"min": 8.42, "max": 8.91, "mean": 8.67}},
+                "metrics_summary": {
+                    "top1_accuracy": {"min": 8.42, "max": 8.91, "mean": 8.67}
+                },
                 "best_run": {"metrics": {}},
             },
         )
-        hp_issues = [d for d in diag.deficiencies if d.type == DeficiencyType.HYPERPARAMETER_ISSUE]
+        hp_issues = [
+            d
+            for d in diag.deficiencies
+            if d.type == DeficiencyType.HYPERPARAMETER_ISSUE
+        ]
         assert any("random chance" in d.description for d in hp_issues)
 
     def test_normal_accuracy_not_flagged(self):
@@ -316,11 +331,17 @@ class TestNearRandomAccuracy:
         diag = diagnose_experiment(
             experiment_summary={
                 "condition_summaries": {"baseline": {"metrics": {"accuracy": 73.07}}},
-                "metrics_summary": {"accuracy": {"min": 68.0, "max": 73.07, "mean": 70.5}},
+                "metrics_summary": {
+                    "accuracy": {"min": 68.0, "max": 73.07, "mean": 70.5}
+                },
                 "best_run": {"metrics": {}},
             },
         )
-        hp_issues = [d for d in diag.deficiencies if d.type == DeficiencyType.HYPERPARAMETER_ISSUE]
+        hp_issues = [
+            d
+            for d in diag.deficiencies
+            if d.type == DeficiencyType.HYPERPARAMETER_ISSUE
+        ]
         assert not any("random chance" in d.description for d in hp_issues)
 
     def test_zero_accuracy_not_flagged(self):
@@ -332,7 +353,11 @@ class TestNearRandomAccuracy:
                 "best_run": {"metrics": {}},
             },
         )
-        hp_issues = [d for d in diag.deficiencies if d.type == DeficiencyType.HYPERPARAMETER_ISSUE]
+        hp_issues = [
+            d
+            for d in diag.deficiencies
+            if d.type == DeficiencyType.HYPERPARAMETER_ISSUE
+        ]
         assert not any("random chance" in d.description for d in hp_issues)
 
 

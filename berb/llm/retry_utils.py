@@ -64,7 +64,10 @@ def with_retry(
                     last_exception = e
                     if attempt == max_retries:
                         logger.error(
-                            "%s failed after %d attempts: %s", func.__name__, max_retries + 1, e
+                            "%s failed after %d attempts: %s",
+                            func.__name__,
+                            max_retries + 1,
+                            e,
                         )
                         raise
 

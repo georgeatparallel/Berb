@@ -9,7 +9,9 @@ from typing import Any
 
 import yaml
 
-DEFAULT_PYTHON_PATH = ".venv/Scripts/python.exe" if sys.platform == "win32" else ".venv/bin/python3"
+DEFAULT_PYTHON_PATH = (
+    ".venv/Scripts/python.exe" if sys.platform == "win32" else ".venv/bin/python3"
+)
 
 CONFIG_SEARCH_ORDER: tuple[str, ...] = ("config.arc.yaml", "config.yaml")
 
@@ -755,9 +757,13 @@ class ServerConfig:
     enabled: bool = False
     host: str = "127.0.0.1"  # Secure default; set BERB_HOST=0.0.0.0 for LAN/Docker
     port: int = 8080
-    cors_origins: tuple[str, ...] = ()  # Empty = deny all cross-origin; configure explicitly
+    cors_origins: tuple[
+        str, ...
+    ] = ()  # Empty = deny all cross-origin; configure explicitly
     auth_token: str = ""  # empty = no authentication
-    insecure: bool = False  # explicit opt-out required to bind non-loopback without auth_token
+    insecure: bool = (
+        False  # explicit opt-out required to bind non-loopback without auth_token
+    )
     voice_enabled: bool = False
     whisper_model: str = "whisper-1"
     whisper_api_url: str = ""  # empty = use OpenAI default
@@ -920,7 +926,9 @@ class RCConfig:
     # Agent D: Research Enhancement
     trends: TrendsConfig = field(default_factory=TrendsConfig)
     copilot: CoPilotConfig = field(default_factory=CoPilotConfig)
-    quality_assessor: QualityAssessorConfig = field(default_factory=QualityAssessorConfig)
+    quality_assessor: QualityAssessorConfig = field(
+        default_factory=QualityAssessorConfig
+    )
     calendar: CalendarConfig = field(default_factory=CalendarConfig)
 
     def to_dict(self) -> dict[str, Any]:
@@ -983,7 +991,9 @@ class RCConfig:
         calendar_data = data.get("calendar") or {}
 
         return cls(
-            project=ProjectConfig(name=project["name"], mode=project.get("mode", "docs-first")),
+            project=ProjectConfig(
+                name=project["name"], mode=project.get("mode", "docs-first")
+            ),
             research=ResearchConfig(
                 topic=research["topic"],
                 domains=tuple(research.get("domains") or ()),
@@ -1030,12 +1040,18 @@ class RCConfig:
             ),
             integrity=IntegrityConfig(
                 mode=str(integrity.get("mode", "draft")),
-                fail_on_unsupported_claims=bool(integrity.get("fail_on_unsupported_claims", False)),
+                fail_on_unsupported_claims=bool(
+                    integrity.get("fail_on_unsupported_claims", False)
+                ),
                 fail_on_unverified_statistics=bool(
                     integrity.get("fail_on_unverified_statistics", False)
                 ),
-                fail_on_citation_fallback=bool(integrity.get("fail_on_citation_fallback", False)),
-                require_source_snippets=bool(integrity.get("require_source_snippets", False)),
+                fail_on_citation_fallback=bool(
+                    integrity.get("fail_on_citation_fallback", False)
+                ),
+                require_source_snippets=bool(
+                    integrity.get("require_source_snippets", False)
+                ),
                 auto_strict_domains=tuple(
                     integrity.get(
                         "auto_strict_domains",
@@ -1058,10 +1074,14 @@ class RCConfig:
             web_search=WebSearchConfig(
                 enabled=bool(web_search.get("enabled", True)),
                 tavily_api_key=str(web_search.get("tavily_api_key", "")),
-                tavily_api_key_env=str(web_search.get("tavily_api_key_env", "TAVILY_API_KEY")),
+                tavily_api_key_env=str(
+                    web_search.get("tavily_api_key_env", "TAVILY_API_KEY")
+                ),
                 enable_scholar=bool(web_search.get("enable_scholar", True)),
                 enable_crawling=bool(web_search.get("enable_crawling", True)),
-                enable_pdf_extraction=bool(web_search.get("enable_pdf_extraction", True)),
+                enable_pdf_extraction=bool(
+                    web_search.get("enable_pdf_extraction", True)
+                ),
                 max_web_results=int(web_search.get("max_web_results", 10)),
                 max_scholar_results=int(web_search.get("max_scholar_results", 10)),
                 max_crawl_urls=int(web_search.get("max_crawl_urls", 5)),
@@ -1071,7 +1091,9 @@ class RCConfig:
                 api_key_env=str(perplexity.get("api_key_env", "PERPLEXITY_API_KEY")),
                 domain_filter=tuple(perplexity.get("domain_filter") or ()),
                 recency_filter=str(perplexity.get("recency_filter", "")),
-                literature_min_candidates=int(perplexity.get("literature_min_candidates", 10)),
+                literature_min_candidates=int(
+                    perplexity.get("literature_min_candidates", 10)
+                ),
                 literature_min_failed_sources=int(
                     perplexity.get("literature_min_failed_sources", 2)
                 ),
@@ -1110,7 +1132,9 @@ class RCConfig:
                 f"Check that {config_path} is valid YAML."
             )
         resolved_root = (
-            Path(project_root).expanduser().resolve() if project_root else config_path.parent
+            Path(project_root).expanduser().resolve()
+            if project_root
+            else config_path.parent
         )
         return cls.from_dict(
             data,
@@ -1120,13 +1144,19 @@ class RCConfig:
         )
 
 
-def validate_server_bind(host: str, auth_token: str | None, insecure: bool) -> str | None:
+def validate_server_bind(
+    host: str, auth_token: str | None, insecure: bool
+) -> str | None:
     """Return a security-violation message if binding to `host` is unsafe, else None.
 
     Must be called with the *effective* host — after any CLI ``--host`` override
     has been applied — since that's what actually gets passed to the server.
     """
-    if host not in ("127.0.0.1", "localhost", "::1") and _is_blank(auth_token) and not insecure:
+    if (
+        host not in ("127.0.0.1", "localhost", "::1")
+        and _is_blank(auth_token)
+        and not insecure
+    ):
         return (
             f"SECURITY VIOLATION: server.host is '{host}' (non-loopback) but "
             "server.auth_token is empty. Set server.auth_token to require "
@@ -1172,7 +1202,9 @@ def validate_config(
         if llm_api_key_env and len(str(llm_api_key_env).strip()) > 0:
             api_key_env_str = str(llm_api_key_env).strip()
             # Check if it looks like an API key (starts with sk-, pplx-, etc.)
-            if _re.match(r"^(sk[-_]|pplx[-_]|ghp[-_]|xox[-_])", api_key_env_str, _re.IGNORECASE):
+            if _re.match(
+                r"^(sk[-_]|pplx[-_]|ghp[-_]|xox[-_])", api_key_env_str, _re.IGNORECASE
+            ):
                 warnings.append(
                     f"CONFIGURATION WARNING: llm.api_key_env looks like an API key "
                     f"('{api_key_env_str[:20]}...'). This field should contain an "
@@ -1208,7 +1240,9 @@ def validate_config(
         server_host = str(_get_by_path(data, "server.host") or "127.0.0.1")
         server_auth_token = _get_by_path(data, "server.auth_token")
         server_insecure = bool(_get_by_path(data, "server.insecure") or False)
-        bind_error = validate_server_bind(server_host, server_auth_token, server_insecure)
+        bind_error = validate_server_bind(
+            server_host, server_auth_token, server_insecure
+        )
         if bind_error:
             errors.append(bind_error)
 
@@ -1234,7 +1268,9 @@ def validate_config(
         else:
             for stage in hitl_required_stages:
                 if not isinstance(stage, int) or not 1 <= stage <= 23:
-                    errors.append(f"Invalid security.hitl_required_stages entry: {stage}")
+                    errors.append(
+                        f"Invalid security.hitl_required_stages entry: {stage}"
+                    )
 
     exp_mode = _get_by_path(data, "experiment.mode")
     if not _is_blank(exp_mode) and exp_mode not in EXPERIMENT_MODES:
@@ -1245,7 +1281,10 @@ def validate_config(
         errors.append(f"Invalid experiment.metric_direction: {exp_direction}")
 
     cli_agent_provider = _get_by_path(data, "experiment.cli_agent.provider")
-    if not _is_blank(cli_agent_provider) and cli_agent_provider not in CLI_AGENT_PROVIDERS:
+    if (
+        not _is_blank(cli_agent_provider)
+        and cli_agent_provider not in CLI_AGENT_PROVIDERS
+    ):
         errors.append(f"Invalid experiment.cli_agent.provider: {cli_agent_provider}")
 
     for section, reason in UNWIRED_CONFIG_SECTIONS.items():
@@ -1267,7 +1306,9 @@ def validate_config(
                 if not candidate.exists():
                     warnings.append(f"Missing recommended kb subdir: {candidate}")
 
-    return ValidationResult(ok=not errors, errors=tuple(errors), warnings=tuple(warnings))
+    return ValidationResult(
+        ok=not errors, errors=tuple(errors), warnings=tuple(warnings)
+    )
 
 
 def _parse_llm_config(data: dict[str, Any]) -> LlmConfig:
@@ -1283,11 +1324,14 @@ def _parse_llm_config(data: dict[str, Any]) -> LlmConfig:
         # P1 FIX: Multi-provider failover
         fallback_providers=tuple(data.get("fallback_providers") or ()),
         fallback_provider_models=tuple(
-            (str(k), str(v)) for k, v in (data.get("fallback_provider_models") or {}).items()
+            (str(k), str(v))
+            for k, v in (data.get("fallback_provider_models") or {}).items()
         ),
         max_retries=_safe_int(data.get("max_retries"), 3),
         provider_routing_order=tuple(data.get("provider_routing_order") or ()),
-        provider_routing_allow_fallbacks=bool(data.get("provider_routing_allow_fallbacks", True)),
+        provider_routing_allow_fallbacks=bool(
+            data.get("provider_routing_allow_fallbacks", True)
+        ),
         batch_review_enabled=bool(data.get("batch_review_enabled", False)),
         s2_api_key=data.get("s2_api_key", ""),
         notes=data.get("notes", ""),
@@ -1307,7 +1351,9 @@ def _parse_agentic_config(data: dict[str, Any]) -> AgenticConfig:
     return AgenticConfig(
         image=data.get("image", "berb/experiment:latest"),
         agent_cli=data.get("agent_cli", "claude"),
-        agent_install_cmd=data.get("agent_install_cmd", "npm install -g @anthropic-ai/claude-code"),
+        agent_install_cmd=data.get(
+            "agent_install_cmd", "npm install -g @anthropic-ai/claude-code"
+        ),
         network_policy=data.get("network_policy", "full"),
         timeout_sec=int(data.get("timeout_sec", 1800)),
         memory_limit_mb=int(data.get("memory_limit_mb", 8192)),
@@ -1334,7 +1380,9 @@ def _parse_experiment_config(data: dict[str, Any]) -> ExperimentConfig:
         sandbox=SandboxConfig(
             python_path=sandbox_data.get("python_path", DEFAULT_PYTHON_PATH),
             gpu_required=bool(sandbox_data.get("gpu_required", False)),
-            import_policy=sandbox_data.get("import_policy", SandboxConfig.import_policy),
+            import_policy=sandbox_data.get(
+                "import_policy", SandboxConfig.import_policy
+            ),
             allowed_imports=tuple(
                 sandbox_data.get("allowed_imports", SandboxConfig.allowed_imports)
             ),
@@ -1370,13 +1418,17 @@ def _parse_experiment_config(data: dict[str, Any]) -> ExperimentConfig:
             docker_network_policy=_validate_network_policy(
                 ssh_data.get("docker_network_policy", "none"),
             ),
-            docker_memory_limit_mb=_safe_int(ssh_data.get("docker_memory_limit_mb"), 8192),
+            docker_memory_limit_mb=_safe_int(
+                ssh_data.get("docker_memory_limit_mb"), 8192
+            ),
             docker_shm_size_mb=_safe_int(ssh_data.get("docker_shm_size_mb"), 2048),
             timeout_sec=_safe_int(ssh_data.get("timeout_sec"), 600),
             scp_timeout_sec=_safe_int(ssh_data.get("scp_timeout_sec"), 300),
             setup_timeout_sec=_safe_int(ssh_data.get("setup_timeout_sec"), 300),
             # P1 FIX: SSH host key verification
-            strict_host_key_checking=ssh_data.get("strict_host_key_checking", "accept-new"),
+            strict_host_key_checking=ssh_data.get(
+                "strict_host_key_checking", "accept-new"
+            ),
         ),
         colab_drive=ColabDriveConfig(
             drive_root=colab_data.get("drive_root", ""),
@@ -1387,7 +1439,9 @@ def _parse_experiment_config(data: dict[str, Any]) -> ExperimentConfig:
         agentic=_parse_agentic_config(data.get("agentic") or {}),
         code_agent=_parse_code_agent_config(data.get("code_agent") or {}),
         opencode=_parse_opencode_config(data.get("opencode") or {}),
-        benchmark_agent=_parse_benchmark_agent_config(data.get("benchmark_agent") or {}),
+        benchmark_agent=_parse_benchmark_agent_config(
+            data.get("benchmark_agent") or {}
+        ),
         figure_agent=_parse_figure_agent_config(data.get("figure_agent") or {}),
         search=_parse_search_config(data.get("search") or {}),
         repair=_parse_experiment_repair_config(data.get("repair") or {}),
@@ -1485,13 +1539,17 @@ def _parse_code_agent_config(data: dict[str, Any]) -> CodeAgentConfig:
         architecture_planning=bool(data.get("architecture_planning", True)),
         sequential_generation=bool(data.get("sequential_generation", True)),
         hard_validation=bool(data.get("hard_validation", True)),
-        hard_validation_max_repairs=_safe_int(data.get("hard_validation_max_repairs"), 4),
+        hard_validation_max_repairs=_safe_int(
+            data.get("hard_validation_max_repairs"), 4
+        ),
         exec_fix_max_iterations=_safe_int(data.get("exec_fix_max_iterations"), 3),
         exec_fix_timeout_sec=_safe_int(data.get("exec_fix_timeout_sec"), 60),
         tree_search_enabled=bool(data.get("tree_search_enabled", False)),
         tree_search_candidates=_safe_int(data.get("tree_search_candidates"), 3),
         tree_search_max_depth=_safe_int(data.get("tree_search_max_depth"), 2),
-        tree_search_eval_timeout_sec=_safe_int(data.get("tree_search_eval_timeout_sec"), 120),
+        tree_search_eval_timeout_sec=_safe_int(
+            data.get("tree_search_eval_timeout_sec"), 120
+        ),
         review_max_rounds=_safe_int(data.get("review_max_rounds"), 2),
     )
 
@@ -1527,7 +1585,9 @@ def _parse_metaclaw_bridge_config(data: dict[str, Any]) -> MetaClawBridgeConfig:
             model=prm_data.get("model", "gpt-5.4"),
             votes=_safe_int(prm_data.get("votes"), 3),
             temperature=_safe_float(prm_data.get("temperature"), 0.6),
-            gate_stages=tuple(int(s) for s in prm_data.get("gate_stages", (5, 9, 15, 20))),
+            gate_stages=tuple(
+                int(s) for s in prm_data.get("gate_stages", (5, 9, 15, 20))
+            ),
         ),
         lesson_to_skill=MetaClawLessonToSkillConfig(
             enabled=bool(l2s_data.get("enabled", True)),
@@ -1709,7 +1769,9 @@ def _parse_copilot_config(data: dict[str, Any]) -> CoPilotConfig:
 def _parse_quality_assessor_config(data: dict[str, Any]) -> QualityAssessorConfig:
     if not data:
         return QualityAssessorConfig()
-    dimensions = data.get("dimensions", ("novelty", "rigor", "clarity", "impact", "experiments"))
+    dimensions = data.get(
+        "dimensions", ("novelty", "rigor", "clarity", "impact", "experiments")
+    )
     if isinstance(dimensions, list):
         dimensions = tuple(dimensions)
     return QualityAssessorConfig(

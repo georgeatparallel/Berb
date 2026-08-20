@@ -203,12 +203,16 @@ class AnalysisResult:
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
-            "original_text": self.original_text[:200] + "..."
-            if len(self.original_text) > 200
-            else self.original_text,
-            "revised_text": self.revised_text[:200] + "..."
-            if len(self.revised_text) > 200
-            else self.revised_text,
+            "original_text": (
+                self.original_text[:200] + "..."
+                if len(self.original_text) > 200
+                else self.original_text
+            ),
+            "revised_text": (
+                self.revised_text[:200] + "..."
+                if len(self.revised_text) > 200
+                else self.revised_text
+            ),
             "phrases": [p.to_dict() for p in self.phrases],
             "ai_score": self.ai_score,
             "language": self.language.value,
@@ -219,7 +223,10 @@ class AnalysisResult:
 # AI phrase patterns - English
 AI_PATTERNS_EN = {
     PhraseCategory.HEDGING: [
-        (r"\bit is worth noting\b", "Consider removing or replacing with direct statement"),
+        (
+            r"\bit is worth noting\b",
+            "Consider removing or replacing with direct statement",
+        ),
         (r"\bit should be noted\b", "Often unnecessary hedging"),
         (r"\bit is important to note\b", "Weak opening - be direct"),
         (r"\barguably\b", "Often overused hedge"),
@@ -242,14 +249,20 @@ AI_PATTERNS_EN = {
         (r"\btaken\s+together\b", "Formulaic summary marker"),
     ],
     PhraseCategory.EMPHASIS: [
-        (r"\bit is (?:crucial|essential|important|imperative) to\b", "Be direct about importance"),
+        (
+            r"\bit is (?:crucial|essential|important|imperative) to\b",
+            "Be direct about importance",
+        ),
         (r"\bnotably\b", "Often overused"),
         (r"\bsignificantly\b", "Use only for statistical significance"),
         (r"\binterestingly\b", "Let readers decide what's interesting"),
         (r"\bremarkably\b", "Often overused"),
     ],
     PhraseCategory.STRUCTURE: [
-        (r"\bthis\s+paper\s+(?:presents|proposes|introduces)\b", "Consider active voice"),
+        (
+            r"\bthis\s+paper\s+(?:presents|proposes|introduces)\b",
+            "Consider active voice",
+        ),
         (r"\bwe\s+(?:propose|present|introduce)\b", "Often acceptable, but vary"),
         (r"\bthe\s+rest\s+of\s+this\s+paper\b", "Formulaic roadmap"),
         (r"\bas\s+follows\b", "Often unnecessary"),
@@ -258,63 +271,114 @@ AI_PATTERNS_EN = {
         (r"\bdelves?\s+into\b", "Overused AI cliche - use 'examine' or 'analyze'"),
         (r"\bsheds?\s+light\s+on\b", "Cliche - use 'clarify' or 'explain'"),
         (r"\bpaves?\s+the\s+way\b", "Cliche - use 'enable' or 'facilitate'"),
-        (r"\bplays?\s+a\s+(?:key|crucial|vital|pivotal)\s+role\b", "Cliche - be specific"),
-        (r"\bgain\s+(?:insights|understanding)\b", "Awkward - use 'understand' or 'learn'"),
+        (
+            r"\bplays?\s+a\s+(?:key|crucial|vital|pivotal)\s+role\b",
+            "Cliche - be specific",
+        ),
+        (
+            r"\bgain\s+(?:insights|understanding)\b",
+            "Awkward - use 'understand' or 'learn'",
+        ),
         (r"\bprovide\s+(?:insights|guidance)\b", "Often vague"),
         (r"\bleverages?\b", "Often pretentious - use 'use'"),
         (r"\butilize[sd]?\b", "Often pretentious - use 'use'"),
         (r"\bmethodology\b", "Often just 'methods' is fine"),
         (r"\bparadigm\b", "Often just 'approach' or 'framework'"),
         (r"\ba\s+testament\s+to\b", "Cliche - use 'evidence of' or 'proof of'"),
-        (r"\bto\s+the\s+best\s+of\s+our\s+knowledge\b", "Overused hedge on novelty claims"),
-        (r"\bin\s+the\s+realm\s+of\b", "Vague abstract framing - name the specific field"),
+        (
+            r"\bto\s+the\s+best\s+of\s+our\s+knowledge\b",
+            "Overused hedge on novelty claims",
+        ),
+        (
+            r"\bin\s+the\s+realm\s+of\b",
+            "Vague abstract framing - name the specific field",
+        ),
         (r"\bin\s+the\s+landscape\s+of\b", "Vague abstract-noun framing"),
-        (r"\bgroundbreaking\b", "Promotional language - state the specific contribution"),
+        (
+            r"\bgroundbreaking\b",
+            "Promotional language - state the specific contribution",
+        ),
         (r"\bcutting-edge\b", "Promotional language - be specific"),
         (r"\bgame-changing\b", "Promotional language - be specific"),
         (r"\ba\s+myriad\s+of\b", "Vague quantity - use a specific number or 'many'"),
         (r"\ba\s+plethora\s+of\b", "Vague quantity - use a specific number or 'many'"),
-        (r"\bbridge\s+the\s+gap\b", "Cliche - state the specific limitation being addressed"),
-        (r"\bthe\s+advent\s+of\b", "Cliche temporal framing - state the specific development"),
+        (
+            r"\bbridge\s+the\s+gap\b",
+            "Cliche - state the specific limitation being addressed",
+        ),
+        (
+            r"\bthe\s+advent\s+of\b",
+            "Cliche temporal framing - state the specific development",
+        ),
         (
             r"\bin\s+recent\s+(?:years|times)\b",
             "Vague temporal framing - give a specific timeframe",
         ),
-        (r"\bhas\s+gained\s+significant\s+attention\b", "Vague attribution of popularity"),
-        (r"\bhas\s+attracted\s+considerable\s+interest\b", "Vague attribution of popularity"),
+        (
+            r"\bhas\s+gained\s+significant\s+attention\b",
+            "Vague attribution of popularity",
+        ),
+        (
+            r"\bhas\s+attracted\s+considerable\s+interest\b",
+            "Vague attribution of popularity",
+        ),
         (r"\bhas\s+emerged\s+as\s+a\s+promising\b", "Cliche framing"),
         (r"\ba\s+comprehensive\s+overview\b", "Vague self-description"),
-        (r"\bholistic\s+(?:approach|understanding)\b", "Vague abstraction - be specific"),
+        (
+            r"\bholistic\s+(?:approach|understanding)\b",
+            "Vague abstraction - be specific",
+        ),
         (r"\bshowcasing\s+the\s+efficacy\b", "Superficial -ing analysis"),
         (r"\bmultifaceted\b", "Vague abstraction"),
-        (r"\bunderscores?\s+the\s+(?:importance|significance)\b", "Inflated significance"),
+        (
+            r"\bunderscores?\s+the\s+(?:importance|significance)\b",
+            "Inflated significance",
+        ),
         (r"\bnavigate\s+the\s+complexities\b", "Vague abstraction"),
         (r"\bharness(?:ing|es)?\s+the\s+(?:potential|power)\b", "Cliche - be specific"),
         (r"\bnuanced\s+(?:understanding|approach)\b", "Vague qualifier"),
-        (r"\brobust\s+and\s+scalable\b", "Unsupported generic praise unless benchmarked"),
+        (
+            r"\brobust\s+and\s+scalable\b",
+            "Unsupported generic praise unless benchmarked",
+        ),
         (r"\bseamlessly\s+integrates?\b", "Unsupported generic praise"),
         (r"\bthe\s+intricacies\s+of\b", "Vague abstraction"),
         (r"\bintricate\s+interplay\b", "Vague abstraction"),
         (r"\bfacilitate\s+a\s+deeper\s+understanding\b", "Vague filler"),
     ],
     PhraseCategory.REDUNDANCY: [
-        (r"\b(?:comprehensive|thorough)\s+and\s+(?:comprehensive|thorough)\b", "Redundant pairing"),
+        (
+            r"\b(?:comprehensive|thorough)\s+and\s+(?:comprehensive|thorough)\b",
+            "Redundant pairing",
+        ),
         (r"\b(?:various|different)\s+types\s+of\b", "Redundant - just 'various'"),
         (r"\b(?:each|every)\s+and\s+every\b", "Redundant pairing"),
         (r"\b(?:first|initial)\s+and\s+(?:foremost|primary)\b", "Cliche pairing"),
         (r"\b(?:end|final)\s+result\b", "Redundant - just 'result'"),
     ],
     PhraseCategory.SIGNIFICANCE: [
-        (r"\bmarks?\s+a\s+pivotal\s+moment\b", "Inflated significance - state the fact plainly"),
-        (r"\bunderscores?\s+the\s+(?:importance|significance)\s+of\b", "Inflated significance"),
-        (r"\bsymboliz(?:es|ing)\s+its\s+(?:ongoing|enduring|lasting)\b", "Inflated significance"),
+        (
+            r"\bmarks?\s+a\s+pivotal\s+moment\b",
+            "Inflated significance - state the fact plainly",
+        ),
+        (
+            r"\bunderscores?\s+the\s+(?:importance|significance)\s+of\b",
+            "Inflated significance",
+        ),
+        (
+            r"\bsymboliz(?:es|ing)\s+its\s+(?:ongoing|enduring|lasting)\b",
+            "Inflated significance",
+        ),
         (r"\bsets?\s+the\s+stage\s+for\b", "Inflated significance cliche"),
         (r"\bevolving\s+landscape\b", "Vague abstract-noun inflation"),
         (r"\bindelible\s+mark\b", "Inflated significance cliche"),
         (r"\bdeeply\s+rooted\b", "Inflated significance cliche"),
     ],
     PhraseCategory.ATTRIBUTION: [
-        (r"\bexperts?\s+believe\b", "Vague uncited authority - name the source or cite it"),
+        (
+            r"\bexperts?\s+believe\b",
+            "Vague uncited authority - name the source or cite it",
+        ),
         (r"\bindustry\s+reports?\b", "Vague uncited authority"),
         (r"\bobservers?\s+have\s+(?:noted|stated)\b", "Vague uncited authority"),
         (r"\bsome\s+critics?\s+argue\b", "Vague uncited authority"),
@@ -457,7 +521,9 @@ class AntiAIEncoder:
         for category, pattern_list in patterns.items():
             for pattern, explanation in pattern_list:
                 try:
-                    compiled.append((re.compile(pattern, re.IGNORECASE), category, explanation))
+                    compiled.append(
+                        (re.compile(pattern, re.IGNORECASE), category, explanation)
+                    )
                 except re.error as e:
                     logger.warning("Invalid regex pattern '%s': %s", pattern, e)
         return compiled
@@ -662,7 +728,9 @@ class AntiAIEncoder:
             if phrase.alternatives:
                 # Use first alternative (or empty string if first is "")
                 replacement = phrase.alternatives[0]
-                result = result[: phrase.start_pos] + replacement + result[phrase.end_pos :]
+                result = (
+                    result[: phrase.start_pos] + replacement + result[phrase.end_pos :]
+                )
         return result
 
     def _generate_suggestions(
@@ -676,7 +744,9 @@ class AntiAIEncoder:
         # Count categories
         category_counts: dict[PhraseCategory, int] = {}
         for phrase in phrases:
-            category_counts[phrase.category] = category_counts.get(phrase.category, 0) + 1
+            category_counts[phrase.category] = (
+                category_counts.get(phrase.category, 0) + 1
+            )
 
         # Generate suggestions based on patterns
         if category_counts.get(PhraseCategory.HEDGING, 0) > 3:
@@ -699,7 +769,9 @@ class AntiAIEncoder:
 
         if category_counts.get(PhraseCategory.TRANSITION, 0) > 4:
             if language == Language.ENGLISH:
-                suggestions.append("Reduce mechanical transitions - let ideas flow naturally")
+                suggestions.append(
+                    "Reduce mechanical transitions - let ideas flow naturally"
+                )
             else:
                 suggestions.append("减少机械化的过渡词 - 让思路自然流畅")
 
@@ -715,7 +787,9 @@ class AntiAIEncoder:
             )
 
         if category_counts.get(PhraseCategory.COPULA, 0) > 2:
-            suggestions.append("Replace 'serves as'/'stands as'/'boasts' with 'is'/'has'")
+            suggestions.append(
+                "Replace 'serves as'/'stands as'/'boasts' with 'is'/'has'"
+            )
 
         return suggestions
 
@@ -783,7 +857,9 @@ class AntiAIEncoder:
         word_count = len(text.split())
         sentences = [s for s in re.split(r"[.!?]+", text) if s.strip()]
         sentence_count = len(sentences)
-        avg_sentence_length = round(word_count / sentence_count, 2) if sentence_count else 0.0
+        avg_sentence_length = (
+            round(word_count / sentence_count, 2) if sentence_count else 0.0
+        )
         return {
             "word_count": word_count,
             "sentence_count": sentence_count,
@@ -839,7 +915,9 @@ class AntiAIEncoder:
             )
 
         dup_matches = _DUPLICATE_WORDS_RE.findall(text)
-        dup_count = len([d for d in dup_matches if d.lower() not in _DUPLICATE_WORDS_ALLOWLIST])
+        dup_count = len(
+            [d for d in dup_matches if d.lower() not in _DUPLICATE_WORDS_ALLOWLIST]
+        )
         if dup_count > 0:
             warnings.append(
                 f"Duplicate adjacent words found: {dup_count} instance(s) "
@@ -904,7 +982,9 @@ class AntiAIEncoder:
                 return category
         return "unknown"
 
-    def _generate_recommendations(self, phrases: list[AIPhrases], threshold: float) -> list[str]:
+    def _generate_recommendations(
+        self, phrases: list[AIPhrases], threshold: float
+    ) -> list[str]:
         """Generate human-readable recommendations from detected phrases."""
         _ = threshold
         counts: dict[str, int] = {}
@@ -913,7 +993,9 @@ class AntiAIEncoder:
 
         recommendations: list[str] = []
         if counts.get("cliche", 0) >= 2:
-            recommendations.append("Replace cliche phrases with specific, concrete language")
+            recommendations.append(
+                "Replace cliche phrases with specific, concrete language"
+            )
         if counts.get("hedging", 0) >= 3 or counts.get("filler", 0) >= 3:
             recommendations.append("Reduce hedging/filler language")
         if counts.get("redundancy", 0) >= 1:
@@ -923,11 +1005,17 @@ class AntiAIEncoder:
         if counts.get("significance", 0) >= 2:
             recommendations.append("Remove inflated significance/legacy language")
         if counts.get("attribution", 0) >= 1:
-            recommendations.append("Replace vague authority claims with specific citations")
+            recommendations.append(
+                "Replace vague authority claims with specific citations"
+            )
         if counts.get("copula", 0) >= 3:
-            recommendations.append("Replace 'serves as'/'stands as'/'boasts' with 'is'/'has'")
+            recommendations.append(
+                "Replace 'serves as'/'stands as'/'boasts' with 'is'/'has'"
+            )
         if not recommendations and phrases:
-            recommendations.append(f"Review {len(phrases)} flagged phrase(s) for clarity")
+            recommendations.append(
+                f"Review {len(phrases)} flagged phrase(s) for clarity"
+            )
         return recommendations
 
 
@@ -1001,7 +1089,9 @@ def create_encoder_from_env() -> AntiAIEncoder:
 
     language = os.environ.get("ANTI_AI_LANGUAGE", "en,zh").split(",")
     strictness = float(os.environ.get("ANTI_AI_STRICTNESS", 0.7))
-    preserve_meaning = os.environ.get("ANTI_AI_PRESERVE_MEANING", "true").lower() == "true"
+    preserve_meaning = (
+        os.environ.get("ANTI_AI_PRESERVE_MEANING", "true").lower() == "true"
+    )
     config = EncoderConfig(
         language=language, strictness=strictness, preserve_meaning=preserve_meaning
     )

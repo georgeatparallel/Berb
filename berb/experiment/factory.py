@@ -75,7 +75,9 @@ def create_sandbox(config: ExperimentConfig, workdir: Path) -> SandboxProtocol:
 
         ssh_cfg = config.ssh_remote
         if not ssh_cfg.host:
-            raise RuntimeError("ssh_remote mode requires experiment.ssh_remote.host in config.")
+            raise RuntimeError(
+                "ssh_remote mode requires experiment.ssh_remote.host in config."
+            )
 
         ok, msg = SshRemoteSandbox.check_ssh_available(ssh_cfg)
         if not ok:
@@ -106,7 +108,9 @@ def create_sandbox(config: ExperimentConfig, workdir: Path) -> SandboxProtocol:
         return ColabDriveSandbox(colab_cfg, workdir)
 
     if config.mode != "sandbox":
-        raise RuntimeError(f"Unsupported experiment mode for create_sandbox(): {config.mode}")
+        raise RuntimeError(
+            f"Unsupported experiment mode for create_sandbox(): {config.mode}"
+        )
 
     return ExperimentSandbox(config.sandbox, workdir)
 

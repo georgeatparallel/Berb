@@ -52,7 +52,11 @@ def detect_environment() -> EnvironmentReport:
         report.has_docker = True
         try:
             result = subprocess.run(
-                ["docker", "--version"], capture_output=True, text=True, encoding="utf-8", timeout=5
+                ["docker", "--version"],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                timeout=5,
             )
             report.docker_version = result.stdout.strip()
         except Exception:
@@ -65,7 +69,9 @@ def detect_environment() -> EnvironmentReport:
         if torch.cuda.is_available():
             report.has_gpu = True
             report.gpu_name = torch.cuda.get_device_name(0)
-            report.gpu_vram_gb = torch.cuda.get_device_properties(0).total_memory / (1024**3)
+            report.gpu_vram_gb = torch.cuda.get_device_properties(0).total_memory / (
+                1024**3
+            )
     except ImportError:
         pass
 
@@ -82,13 +88,19 @@ def detect_environment() -> EnvironmentReport:
 
     # Recommendations
     if not report.has_docker:
-        report.recommendations.append("Install Docker for experiment isolation (recommended)")
+        report.recommendations.append(
+            "Install Docker for experiment isolation (recommended)"
+        )
     if not report.has_gpu:
-        report.recommendations.append("No GPU detected — use 'simulated' mode or remote GPU server")
+        report.recommendations.append(
+            "No GPU detected — use 'simulated' mode or remote GPU server"
+        )
     if not report.has_latex:
         report.recommendations.append("Install LaTeX (texlive) for PDF paper export")
 
     if report.has_gpu and report.has_docker:
-        report.recommendations.append("Environment ready for full Docker GPU experiments")
+        report.recommendations.append(
+            "Environment ready for full Docker GPU experiments"
+        )
 
     return report

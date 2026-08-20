@@ -323,7 +323,9 @@ class TestGreyLiteratureSearch:
             patch("berb.literature.grey_search.ZenodoClient") as mock_zenodo,
         ):
             # bioRxiv fails
-            mock_biorxiv.return_value.search = AsyncMock(side_effect=Exception("API error"))
+            mock_biorxiv.return_value.search = AsyncMock(
+                side_effect=Exception("API error")
+            )
             # Zenodo succeeds
             mock_zenodo.return_value.search = AsyncMock(
                 return_value=[

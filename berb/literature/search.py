@@ -190,7 +190,9 @@ def search_papers(
 
     for src in sources:
         src_lower = src.lower().replace("-", "_").replace(" ", "_")
-        cache_source = "semantic_scholar" if src_lower in ("semantic_scholar", "s2") else src_lower
+        cache_source = (
+            "semantic_scholar" if src_lower in ("semantic_scholar", "s2") else src_lower
+        )
         try:
             if src_lower == "openalex":
                 papers = search_openalex(
@@ -214,7 +216,9 @@ def search_papers(
                 all_papers.extend(papers)
                 cache_put(query, "semantic_scholar", limit, _papers_to_dicts(papers))
                 source_stats["semantic_scholar"] = len(papers)
-                logger.info("Semantic Scholar returned %d papers for %r", len(papers), query)
+                logger.info(
+                    "Semantic Scholar returned %d papers for %r", len(papers), query
+                )
                 # Rate-limit gap before next source
                 time.sleep(1.0)
 
@@ -235,7 +239,9 @@ def search_papers(
             urllib.error.HTTPError,
             urllib.error.URLError,
         ):
-            logger.warning("[rate-limit] Source %s failed for %r — trying cache", src, query)
+            logger.warning(
+                "[rate-limit] Source %s failed for %r — trying cache", src, query
+            )
             if failure_counter is not None:
                 failure_counter[cache_source] = failure_counter.get(cache_source, 0) + 1
             cached = cache_get(query, cache_source, limit)
@@ -272,8 +278,10 @@ def search_papers(
         all_papers = [p for p in all_papers if p.year == 0 or p.year <= year_max]
 
     # Sort by (venue-boosted) citation count descending, then year descending
-    all_papers.sort(key=lambda p: (p.citation_count * _venue_boost_factor(p.venue), p.year),
-                     reverse=True)
+    all_papers.sort(
+        key=lambda p: (p.citation_count * _venue_boost_factor(p.venue), p.year),
+        reverse=True,
+    )
 
     return all_papers
 
@@ -350,8 +358,10 @@ def search_papers_multi_query(
             if top_up:
                 deduped = _deduplicate(deduped + top_up)
 
-    deduped.sort(key=lambda p: (p.citation_count * _venue_boost_factor(p.venue), p.year),
-                 reverse=True)
+    deduped.sort(
+        key=lambda p: (p.citation_count * _venue_boost_factor(p.venue), p.year),
+        reverse=True,
+    )
     return deduped
 
 

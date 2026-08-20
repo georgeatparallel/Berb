@@ -61,7 +61,8 @@ class TestWebSearchAgentResult:
         r = WebSearchAgentResult(
             topic="test",
             web_results=[
-                SearchResult(title=f"R{i}", url=f"u{i}", snippet="x" * 1000) for i in range(50)
+                SearchResult(title=f"R{i}", url=f"u{i}", snippet="x" * 1000)
+                for i in range(50)
             ],
         )
         ctx = r.to_context_string(max_length=5000)
@@ -110,7 +111,10 @@ class TestWebSearchAgent:
         agent = WebSearchAgent(max_crawl_urls=3)
         result = WebSearchAgentResult(
             topic="test",
-            web_results=[SearchResult(title=f"R{i}", url=f"https://ex.com/{i}") for i in range(10)],
+            web_results=[
+                SearchResult(title=f"R{i}", url=f"https://ex.com/{i}")
+                for i in range(10)
+            ],
         )
         urls = agent._select_urls_to_crawl(result)
         assert len(urls) <= 3
