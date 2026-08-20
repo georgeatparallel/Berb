@@ -2327,8 +2327,16 @@ def _build_draft_claim_manifest(
     """
     manifest = ClaimManifest(paper_stage="draft")
 
-    # 1. Load evidence registry if available
-    evidence_reg = _IntegrityRegistry.load(run_dir / "evidence_registry.json")
+    # 1. Load evidence registry if available. A3-1 (hardening_plan_2026-08-13.md):
+    # _IntegrityRegistry.load() now raises on a present-but-corrupt file rather
+    # than silently degrading; this function's own contract is "link evidence
+    # when available", so a corrupt registry loses evidence-linking for this
+    # draft (as before) but is now logged loudly instead of invisibly.
+    try:
+        evidence_reg = _IntegrityRegistry.load(run_dir / "evidence_registry.json")
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning("Claim manifest: evidence registry unreadable, linking skipped: %s", exc)
+        evidence_reg = _IntegrityRegistry()
     metric_values = {
         r.value
         for r in evidence_reg.records.values()

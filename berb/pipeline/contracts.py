@@ -14,8 +14,9 @@ editing this module — the registry's decorator carries the contract inline.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Literal
+import json
+from dataclasses import dataclass, field
+from typing import Any, ClassVar, Literal
 
 from berb.pipeline.stages import Stage
 
@@ -135,6 +136,77 @@ class Threshold:
 
     value: float = 0.0
     """The threshold value to compare against."""
+
+
+@dataclass(frozen=True)
+class ExperimentSummary:
+    """Typed contract for ``experiment_summary.json`` — Stage 14's primary
+    artifact, read back by Stages 17-23 and the iterative-refine/repair
+    loops under several file names (``stage-14*/experiment_summary.json``,
+    ``experiment_summary_best.json``).
+
+    Only the four fields every producer writes are promoted to typed
+    attributes; the rest (``condition_summaries``, ``ablation_warnings``,
+    ``paired_comparisons``, etc.) are written conditionally by the producer
+    and read selectively by different consumers, so they stay in ``extra``
+    rather than being forced into a fixed shape that would drift from
+    reality on the next added key.
+
+    ``from_dict``/``from_json`` raise ``ValueError`` on real shape
+    mismatches (wrong type for a known field) instead of the historical
+    pattern of ``.get(key, {})`` chains silently no-op'ing over malformed
+    data.
+    """
+
+    metrics_summary: dict[str, Any] = field(default_factory=dict)
+    total_runs: int = 0
+    best_run: dict[str, Any] = field(default_factory=dict)
+    generated: str = ""
+    extra: dict[str, Any] = field(default_factory=dict)
+
+    _KNOWN_KEYS: ClassVar[frozenset[str]] = frozenset(
+        {"metrics_summary", "total_runs", "best_run", "generated"}
+    )
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> ExperimentSummary:
+        """Validate and parse. Raises ``ValueError`` on shape mismatch."""
+        if not isinstance(data, dict):
+            raise ValueError(
+                f"experiment_summary.json must be a JSON object, got {type(data).__name__}"
+            )
+        metrics_summary = data.get("metrics_summary", {})
+        if not isinstance(metrics_summary, dict):
+            raise ValueError(
+                "experiment_summary.json 'metrics_summary' must be an object, "
+                f"got {type(metrics_summary).__name__}"
+            )
+        best_run = data.get("best_run", {})
+        if not isinstance(best_run, dict):
+            raise ValueError(
+                f"experiment_summary.json 'best_run' must be an object, got {type(best_run).__name__}"
+            )
+        total_runs = data.get("total_runs", 0)
+        if not isinstance(total_runs, int) or isinstance(total_runs, bool):
+            raise ValueError(
+                f"experiment_summary.json 'total_runs' must be an int, got {type(total_runs).__name__}"
+            )
+        return cls(
+            metrics_summary=metrics_summary,
+            total_runs=total_runs,
+            best_run=best_run,
+            generated=str(data.get("generated", "")),
+            extra={k: v for k, v in data.items() if k not in cls._KNOWN_KEYS},
+        )
+
+    @classmethod
+    def from_json(cls, text: str) -> ExperimentSummary:
+        """Parse from raw JSON text.
+
+        Raises ``json.JSONDecodeError`` on invalid JSON, ``ValueError`` on
+        valid JSON with the wrong shape.
+        """
+        return cls.from_dict(json.loads(text))
 
 
 @dataclass(frozen=True)

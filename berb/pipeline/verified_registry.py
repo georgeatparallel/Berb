@@ -15,6 +15,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from berb.pipeline.contracts import ExperimentSummary
+
 logger = logging.getLogger(__name__)
 
 # Infrastructure metric keys — allowed in paper without verification
@@ -277,17 +279,17 @@ class VerifiedRegistry:
             if best_path.is_file():
                 try:
                     best_data = _json_rd.loads(best_path.read_text(encoding="utf-8"))
-                    if isinstance(best_data, dict):
-                        sub = cls.from_experiment(best_data, metric_direction=metric_direction)
-                        _merge_into(target, sub)
-                        logger.debug(
-                            "from_run_dir(best_only): using experiment_summary_best.json (%d values)",
-                            len(sub.values),
-                        )
-                except (OSError, _json_rd.JSONDecodeError, Exception):  # noqa: BLE001
+                    ExperimentSummary.from_dict(best_data)
+                    sub = cls.from_experiment(best_data, metric_direction=metric_direction)
+                    _merge_into(target, sub)
                     logger.debug(
-                        "from_run_dir(best_only): failed to load experiment_summary_best.json",
-                        exc_info=True,
+                        "from_run_dir(best_only): using experiment_summary_best.json (%d values)",
+                        len(sub.values),
+                    )
+                except (OSError, _json_rd.JSONDecodeError, ValueError) as exc:
+                    logger.warning(
+                        "from_run_dir(best_only): skipping malformed experiment_summary_best.json: %s",
+                        exc,
                     )
             if not target.values:
                 # Fallback: no best.json or it was empty — use stage-14/ (non-versioned)
@@ -295,41 +297,42 @@ class VerifiedRegistry:
                 if s14_path.is_file():
                     try:
                         es_data = _json_rd.loads(s14_path.read_text(encoding="utf-8"))
-                        if isinstance(es_data, dict):
-                            sub = cls.from_experiment(es_data, metric_direction=metric_direction)
-                            _merge_into(target, sub)
-                    except (OSError, _json_rd.JSONDecodeError, Exception):  # noqa: BLE001
-                        pass
+                        ExperimentSummary.from_dict(es_data)
+                        sub = cls.from_experiment(es_data, metric_direction=metric_direction)
+                        _merge_into(target, sub)
+                    except (OSError, _json_rd.JSONDecodeError, ValueError) as exc:
+                        logger.warning(
+                            "from_run_dir(best_only): skipping malformed %s: %s", s14_path, exc
+                        )
         else:
             # --- 1. All stage-14* experiment summaries ---
             for es_path in sorted(run_dir.glob("stage-14*/experiment_summary.json")):
                 try:
                     es_data = _json_rd.loads(es_path.read_text(encoding="utf-8"))
-                    if not isinstance(es_data, dict):
-                        continue
+                    ExperimentSummary.from_dict(es_data)
                     sub = cls.from_experiment(es_data, metric_direction=metric_direction)
                     _merge_into(target, sub)
                     logger.debug(
                         "from_run_dir: merged %s (%d values)", es_path.name, len(sub.values)
                     )
-                except (OSError, _json_rd.JSONDecodeError, Exception):  # noqa: BLE001
-                    logger.debug("from_run_dir: skipping %s", es_path, exc_info=True)
+                except (OSError, _json_rd.JSONDecodeError, ValueError) as exc:
+                    logger.warning("from_run_dir: skipping malformed %s: %s", es_path, exc)
 
             # --- 2. experiment_summary_best.json (repair cycle output) ---
             best_path = run_dir / "experiment_summary_best.json"
             if best_path.is_file():
                 try:
                     best_data = _json_rd.loads(best_path.read_text(encoding="utf-8"))
-                    if isinstance(best_data, dict):
-                        sub = cls.from_experiment(best_data, metric_direction=metric_direction)
-                        _merge_into(target, sub)
-                        logger.debug(
-                            "from_run_dir: merged experiment_summary_best.json (%d values)",
-                            len(sub.values),
-                        )
-                except (OSError, _json_rd.JSONDecodeError, Exception):  # noqa: BLE001
+                    ExperimentSummary.from_dict(best_data)
+                    sub = cls.from_experiment(best_data, metric_direction=metric_direction)
+                    _merge_into(target, sub)
                     logger.debug(
-                        "from_run_dir: skipping experiment_summary_best.json", exc_info=True
+                        "from_run_dir: merged experiment_summary_best.json (%d values)",
+                        len(sub.values),
+                    )
+                except (OSError, _json_rd.JSONDecodeError, ValueError) as exc:
+                    logger.warning(
+                        "from_run_dir: skipping malformed experiment_summary_best.json: %s", exc
                     )
 
             # --- 3. All refinement logs (enrichment) ---
@@ -339,8 +342,8 @@ class VerifiedRegistry:
                     if isinstance(rl_data, dict):
                         _enrich_from_refinement_log(target, rl_data)
                         logger.debug("from_run_dir: enriched from %s", rl_path.name)
-                except (OSError, _json_rd.JSONDecodeError, Exception):  # noqa: BLE001
-                    logger.debug("from_run_dir: skipping %s", rl_path, exc_info=True)
+                except (OSError, _json_rd.JSONDecodeError) as exc:
+                    logger.warning("from_run_dir: skipping malformed %s: %s", rl_path, exc)
 
         # Recompute per-condition stats after merging
         for cond in target.conditions.values():

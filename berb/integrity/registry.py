@@ -146,16 +146,19 @@ class VerifiedEvidenceRegistry:
 
     @classmethod
     def load(cls, path: Path) -> VerifiedEvidenceRegistry:
-        """Load evidence registry from a JSON file at *path*."""
+        """Load evidence registry from a JSON file at *path*.
+
+        A missing file is a normal first-run state and returns an empty
+        registry. A file that exists but fails to parse is a real
+        corruption bug — surfacing it as an empty registry would silently
+        tell every downstream integrity gate "no evidence exists" instead
+        of "evidence_registry.json is broken," so this raises instead.
+        """
         if not path.is_file():
             logger.debug("No evidence registry found at %s", path)
             return cls()
-        try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-            return cls.from_dict(data)
-        except (json.JSONDecodeError, OSError) as exc:
-            logger.warning("Failed to load evidence registry: %s", exc)
-            return cls()
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return cls.from_dict(data)
 
     # ------------------------------------------------------------------
     # Factory: build from run directory

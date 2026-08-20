@@ -634,11 +634,16 @@ class TestEdgeCases:
         reg = VerifiedEvidenceRegistry.load(tmp_path / "nonexistent.json")
         assert len(reg.records) == 0
 
-    def test_evidence_registry_load_corrupt_file(self, tmp_path) -> None:
+    def test_evidence_registry_load_corrupt_file_raises(self, tmp_path) -> None:
+        """A3-1 (hardening_plan_2026-08-13.md): a present-but-corrupt
+        evidence_registry.json must raise, not silently look like "no
+        evidence exists" to downstream integrity gates."""
+        import json
+
         bad = tmp_path / "bad.json"
         bad.write_text("{invalid json}", encoding="utf-8")
-        reg = VerifiedEvidenceRegistry.load(bad)
-        assert len(reg.records) == 0
+        with pytest.raises(json.JSONDecodeError):
+            VerifiedEvidenceRegistry.load(bad)
 
     def test_claim_manifest_empty_save_load(self) -> None:
         manifest = ClaimManifest(paper_stage="draft")
