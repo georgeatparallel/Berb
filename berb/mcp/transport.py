@@ -96,7 +96,9 @@ class SSETransport:
     endpoint to ``post_message()``.
     """
 
-    def __init__(self, host: str = "0.0.0.0", port: int = 3000) -> None:
+    # Secure default, matching RCConfig.server.host (berb/config.py): bind
+    # loopback unless the operator explicitly opts into a wider bind.
+    def __init__(self, host: str = "127.0.0.1", port: int = 3000) -> None:
         self.host = host
         self.port = port
         self._running = False

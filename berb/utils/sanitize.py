@@ -54,7 +54,13 @@ def safe_path_component(raw: str, *, fallback: str = "item") -> str:
         # fallback, e.g. an index-suffixed "paper_{i}", so it needs no
         # digest of its own).
         return cleaned
-    digest = hashlib.sha1(raw.encode("utf-8", errors="surrogateescape")).hexdigest()[:8]
+    # usedforsecurity=False: this digest only disambiguates two distinct
+    # raw ids that sanitize to the same filename — it is never a
+    # security or integrity check, so collision resistance is not
+    # required (and the flag keeps FIPS-restricted builds working).
+    digest = hashlib.sha1(
+        raw.encode("utf-8", errors="surrogateescape"), usedforsecurity=False
+    ).hexdigest()[:8]
     return f"{cleaned}_{digest}"
 
 

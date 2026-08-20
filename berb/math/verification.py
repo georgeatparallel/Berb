@@ -26,11 +26,93 @@ Usage:
 
 from __future__ import annotations
 
+import ast
 import logging
 from dataclasses import dataclass, field
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Safe expression evaluation
+# ---------------------------------------------------------------------------
+#
+# Mathematical claims verified here are extracted from paper text, which in
+# this pipeline originates from arXiv documents and LLM output. Evaluating
+# them with eval() — even with __builtins__ emptied — is a remote code
+# execution primitive, because attribute access on any literal reaches the
+# class hierarchy:
+#
+#     ().__class__.__base__.__subclasses__()   -> arbitrary classes -> os
+#
+# The allowlist below is expressed over AST node *types*, so anything not
+# explicitly permitted is rejected by construction rather than by pattern
+# matching on the source text (which is bypassable).
+
+_ALLOWED_NODES: tuple[type[ast.AST], ...] = (
+    ast.Expression,
+    ast.BinOp,
+    ast.UnaryOp,
+    ast.Compare,
+    ast.BoolOp,
+    ast.IfExp,
+    ast.Call,
+    ast.Name,
+    ast.Load,
+    ast.Constant,
+    ast.Tuple,
+    ast.List,
+    # Operators
+    ast.Add, ast.Sub, ast.Mult, ast.Div, ast.FloorDiv, ast.Mod, ast.Pow,
+    ast.USub, ast.UAdd, ast.Not,
+    ast.Eq, ast.NotEq, ast.Lt, ast.LtE, ast.Gt, ast.GtE,
+    ast.And, ast.Or,
+)
+"""AST nodes permitted inside a verifiable mathematical expression.
+
+Deliberately excluded: ast.Attribute (the __class__ escape), ast.Subscript,
+ast.Starred, lambdas, comprehensions, assignments, and f-strings.
+"""
+
+
+def _safe_eval_expr(expr: str, namespace: dict[str, Any]) -> float:
+    """Evaluate a mathematical expression without exposing an RCE primitive.
+
+    Only the node types in ``_ALLOWED_NODES`` are permitted, and calls may
+    only target plain names already bound in *namespace* — so ``sqrt(2)``
+    works while ``__import__('os')`` or ``().__class__`` do not.
+
+    Raises:
+        ValueError: if the expression uses a disallowed construct or an
+            unknown name. Never returns a partially-evaluated result.
+    """
+    tree = ast.parse(expr, mode="eval")
+
+    for node in ast.walk(tree):
+        if not isinstance(node, _ALLOWED_NODES):
+            raise ValueError(f"disallowed expression construct: {type(node).__name__}")
+        if isinstance(node, ast.Call):
+            # Only direct calls to whitelisted names; no obj.method(), no
+            # computed callees.
+            if not isinstance(node.func, ast.Name):
+                raise ValueError("only direct calls to named functions are allowed")
+            if node.keywords:
+                raise ValueError("keyword arguments are not allowed")
+        if isinstance(node, ast.Name) and node.id not in namespace:
+            raise ValueError(f"unknown name in expression: {node.id!r}")
+
+    # __builtins__ is still emptied: belt and braces, since the allowlist
+    # above has already made the builtins unreachable.
+    # Reason for nosec: every node was allowlisted above, so no attribute
+    # access, subscript, or non-whitelisted call can reach this point.
+    result = eval(  # noqa: S307  # nosec B307
+        compile(tree, "<equation>", "eval"),
+        {"__builtins__": {}},
+        namespace,
+    )
+    return float(result)
+
 
 
 @dataclass
@@ -458,11 +540,22 @@ Format as a list of conditions.
             "e": np.e,
         }
 
-        # Evaluate
+        # Evaluate.
+        #
+        # SECURITY: `expr` originates from claims extracted out of paper text
+        # (see evaluation_framework._extract_math_claims), i.e. from arXiv
+        # documents and LLM output — untrusted input. The previous
+        # implementation used eval(expr, {"__builtins__": {}}, namespace),
+        # which is NOT a sandbox: emptying __builtins__ is defeated by the
+        # standard ().__class__.__base__.__subclasses__() walk, which reaches
+        # arbitrary classes and from there os.system. _safe_eval_expr parses
+        # the expression and rejects every construct that could escape
+        # (attribute access, subscripts, comprehensions, lambdas, non-
+        # whitelisted calls) before any evaluation happens.
         try:
-            return eval(expr, {"__builtins__": {}}, namespace)
-        except Exception as e:
-            logger.warning(f"Expression evaluation failed: {expr} - {e}")
+            return _safe_eval_expr(expr, namespace)
+        except (ValueError, SyntaxError, TypeError, ZeroDivisionError, AttributeError) as e:
+            logger.warning("Expression evaluation failed: %s - %s", expr, e)
             return float("nan")
 
     async def _run_algorithm(
@@ -493,11 +586,33 @@ Format as a list of conditions.
             "np": __import__("numpy"),
         }
 
-        # Instrument algorithm to track convergence
+        # SECURITY: algorithm_code is untrusted (paper- and LLM-derived), and
+        # exec() runs it in *this* process — no subprocess, no sandbox
+        # boundary. Route it through the same AST gate every sandbox backend
+        # uses before spawning, so a banned import or __builtins__ escape is
+        # rejected here too rather than only at the subprocess boundary.
+        #
+        # Gate the ORIGINAL code, not the instrumented version: the
+        # convergence instrumentation this class appends calls globals(),
+        # which the validator (correctly) rejects in untrusted input. Only
+        # the caller-supplied half is untrusted.
+        from berb.experiment.sandbox import check_code_security
+
+        security_error = check_code_security(algorithm_code, label="algorithm")
+        if security_error is not None:
+            logger.warning("Algorithm rejected by security gate: %s", security_error)
+            return {
+                "converged": False,
+                "error_msg": f"rejected by security gate: {security_error}",
+            }
+
+        # Instrument algorithm to track convergence (trusted: written here).
         instrumented_code = self._instrument_algorithm(algorithm_code)
 
         try:
-            exec(instrumented_code, exec_globals)
+            # Reason for nosec: check_code_security() above is the same AST
+            # gate every sandbox backend applies before spawning.
+            exec(instrumented_code, exec_globals)  # nosec B102
         except Exception as e:
             return {
                 "converged": False,
