@@ -19,6 +19,8 @@ from berb.adapters import AdapterBundle
 from berb.config import RCConfig
 from berb.evolution import EvolutionStore, extract_lessons
 from berb.knowledge.base import write_stage_to_kb
+from berb.llm.cost_tracker import get_cost_tracker, stage_attribution
+from berb.logging_setup import configure_run_logging, set_run_id
 from berb.pipeline.checkpoint import CheckpointManager, write_heartbeat
 from berb.pipeline.executor import StageResult, execute_stage
 from berb.pipeline.iterative import (
@@ -41,8 +43,11 @@ from berb.pipeline.stages import (
     StageStatus,
     StageTransitionEvent,
     TransitionEvent,
+    phase_of,
 )
 from berb.pipeline.summary import build_pipeline_summary, write_pipeline_summary
+from berb.pipeline.tracing import configure as _configure_tracing
+from berb.pipeline.tracing import new_trace, start_span
 
 logger = logging.getLogger(__name__)
 
@@ -179,15 +184,31 @@ async def _execute_single_stage(
         _promote_best_stage14(run_dir, config)
 
     t0 = _time.monotonic()
-    result = await _run_sync_stage_internal(
-        stage,
-        run_dir=run_dir,
-        run_id=run_id,
-        config=config,
-        adapters=adapters,
-        checkpoint_mgr=checkpoint_mgr,
-        auto_approve_gates=auto_approve_gates,
-    )
+    # A4-2: trace_id == run_id (new_trace(run_id) returns it unchanged), so
+    # concurrently-executing DAG-level stages land in one per-run trace.jsonl.
+    with (
+        start_span(
+            run_id,
+            f"stage.{stage.name.lower()}",
+            stage=stage_num,
+            model=model_info,
+        ) as _span,
+        # A4-3: ambient attribution so every LLM call made anywhere beneath
+        # this stage lands in CostTracker.by_stage()/by_phase().
+        stage_attribution(stage_num, phase_of(stage)),
+    ):
+        result = await _run_sync_stage_internal(
+            stage,
+            run_dir=run_dir,
+            run_id=run_id,
+            config=config,
+            adapters=adapters,
+            checkpoint_mgr=checkpoint_mgr,
+            auto_approve_gates=auto_approve_gates,
+        )
+        _span.set_tag("status", result.status.name)
+        if result.error:
+            _span.set_tag("error_detail", result.error)
     elapsed = _time.monotonic() - t0
 
     if result.status == StageStatus.DONE:
@@ -272,6 +293,21 @@ async def execute_pipeline(
     event_store_path = run_dir / "event_log.json" if run_dir else None
     event_store = EventStore(run_id=run_id, storage_path=str(event_store_path))
     checkpoint_mgr = CheckpointManager()
+
+    # A4-2: wire the (previously importer-less) tracing module. Spans land in
+    # <run_dir>/<run_id>/trace.jsonl. Only configure on first entry — a PIVOT
+    # recurses into execute_pipeline and must keep appending to one trace.
+    if _pivot_depth == 0:
+        _configure_tracing(run_dir)
+        new_trace(run_id)
+
+    # A4-1: stamp run_id (and, via cost_tracker's contextvar, stage) onto
+    # every log record from every one of the ~278 call sites. Set on every
+    # entry, not just the outermost: a PIVOT recurses into a fresh asyncio
+    # task whose context is copied at creation, so the value must be
+    # re-established there too.
+    configure_run_logging()
+    set_run_id(run_id)
 
     # Persist the topic actually used for this run on first entry, so a later
     # `berb run --resume` (which re-reads config.research.topic — the static
@@ -394,6 +430,19 @@ async def execute_pipeline(
         run_dir=run_dir,
     )
     write_pipeline_summary(run_dir, summary)
+
+    # A4-3: persist the cost breakdown. Only on the outermost call — a PIVOT
+    # recurses and would otherwise overwrite the full run's report with the
+    # sub-run's slice. The tracker is process-global, so the outermost write
+    # already contains everything the recursion recorded.
+    if _pivot_depth == 0:
+        try:
+            (run_dir / "cost_report.json").write_text(
+                json.dumps(get_cost_tracker().to_report(), indent=2, default=str),
+                encoding="utf-8",
+            )
+        except (OSError, TypeError, ValueError) as exc:
+            logger.warning("Failed to write cost_report.json: %s", exc)
 
     lessons: list[object] = []
     try:

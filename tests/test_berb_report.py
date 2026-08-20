@@ -105,6 +105,57 @@ class TestReport:
         assert "Warnings" in report
         assert "2 stage(s) failed" in report
 
+    def _minimal_summary(self, tmp_path: Path) -> None:
+        (tmp_path / "pipeline_summary.json").write_text(
+            json.dumps(
+                {
+                    "run_id": "test",
+                    "stages_executed": 1,
+                    "stages_done": 1,
+                    "stages_failed": 0,
+                    "final_status": "done",
+                    "generated": "now",
+                }
+            )
+        )
+
+    def test_report_cost_section_absent_when_no_cost_report(self, tmp_path: Path):
+        """A4-3: a run with no cost_report.json must say so, not imply $0."""
+        self._minimal_summary(tmp_path)
+        report = generate_report(tmp_path)
+        assert "## Cost" in report
+        assert "Not recorded" in report
+
+    def test_report_cost_section_renders_breakdown(self, tmp_path: Path):
+        """A4-3: by_stage/by_phase were always {} before the contextvar fix."""
+        self._minimal_summary(tmp_path)
+        (tmp_path / "cost_report.json").write_text(
+            json.dumps(
+                {
+                    "total_cost_usd": 1.2345,
+                    "total_tokens": 45678,
+                    "num_events": 12,
+                    "by_stage": {"17": 0.9, "14": 0.3, "3": 0.0345},
+                    "by_phase": {"G: Paper Writing": 0.9, "F: Analysis & Decision": 0.3},
+                    "by_purpose": {"other": 1.2345},
+                    "pricing_version": "test",
+                }
+            )
+        )
+        report = generate_report(tmp_path)
+        assert "$1.2345" in report
+        assert "12 call(s)" in report
+        assert "45,678 tokens" in report
+        # Stages ranked by spend, not by stage number.
+        assert "stage 17 $0.9000, stage 14 $0.3000" in report
+        assert "G: Paper Writing $0.9000" in report
+
+    def test_report_cost_section_survives_corrupt_file(self, tmp_path: Path):
+        self._minimal_summary(tmp_path)
+        (tmp_path / "cost_report.json").write_text("{not json")
+        report = generate_report(tmp_path)
+        assert "unreadable" in report
+
     def test_report_with_experiment_results(self, tmp_path: Path):
         (tmp_path / "pipeline_summary.json").write_text(
             json.dumps(

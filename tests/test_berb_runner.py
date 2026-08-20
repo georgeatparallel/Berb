@@ -106,6 +106,71 @@ async def test_execute_pipeline_runs_stages_in_sequence(
     assert all(r.status == StageStatus.DONE for r in results)
 
 
+async def test_execute_pipeline_writes_trace_jsonl(
+    monkeypatch: pytest.MonkeyPatch,
+    run_dir: Path,
+    rc_config: RCConfig,
+    adapters: AdapterBundle,
+) -> None:
+    """A4-2: tracing.py was fully implemented with zero importers; the runner
+    must now open a trace and emit one span per stage."""
+
+    def mock_execute_stage(stage: Stage, **kwargs) -> StageResult:
+        _ = kwargs
+        return _done(stage)
+
+    monkeypatch.setattr(rc_runner, "execute_stage", mock_execute_stage)
+    await rc_runner.execute_pipeline(
+        run_dir=run_dir,
+        run_id="run-trace",
+        config=rc_config,
+        adapters=adapters,
+    )
+
+    trace_file = run_dir / "run-trace" / "trace.jsonl"
+    assert trace_file.is_file(), "runner did not write trace.jsonl"
+
+    spans = [json.loads(line) for line in trace_file.read_text(encoding="utf-8").splitlines()]
+    assert len(spans) == 23, f"expected one span per stage, got {len(spans)}"
+    assert {s["trace_id"] for s in spans} == {"run-trace"}
+    assert all(s["status"] == "ok" for s in spans)
+    assert all(s["duration_ms"] >= 0 for s in spans)
+    # Tags carry the stage identity used for per-stage attribution.
+    assert {s["tags"]["stage"] for s in spans} == set(range(1, 24))
+    assert all(s["tags"]["status"] == "DONE" for s in spans)
+
+
+async def test_execute_pipeline_trace_span_records_stage_failure(
+    monkeypatch: pytest.MonkeyPatch,
+    run_dir: Path,
+    rc_config: RCConfig,
+    adapters: AdapterBundle,
+) -> None:
+    """A failing stage returns a StageResult (it does not raise), so the span
+    stays status=ok but must carry the failure in its tags."""
+
+    def mock_execute_stage(stage: Stage, **kwargs) -> StageResult:
+        _ = kwargs
+        if stage == Stage.SEARCH_STRATEGY:
+            return _failed(stage, "forced failure")
+        return _done(stage)
+
+    monkeypatch.setattr(rc_runner, "execute_stage", mock_execute_stage)
+    await rc_runner.execute_pipeline(
+        run_dir=run_dir,
+        run_id="run-trace-fail",
+        config=rc_config,
+        adapters=adapters,
+    )
+
+    trace_file = run_dir / "run-trace-fail" / "trace.jsonl"
+    spans = [json.loads(line) for line in trace_file.read_text(encoding="utf-8").splitlines()]
+    failed = [s for s in spans if s["tags"]["status"] == "FAILED"]
+    assert len(failed) == 1
+    assert failed[0]["name"] == "stage.search_strategy"
+    assert failed[0]["tags"]["error_detail"] == "forced failure"
+
+
 async def test_execute_pipeline_stops_on_failed_stage(
     monkeypatch: pytest.MonkeyPatch,
     run_dir: Path,

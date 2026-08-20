@@ -174,6 +174,16 @@ PHASE_MAP: dict[str, tuple[Stage, ...]] = {
     ),
 }
 
+# Reverse index of PHASE_MAP, built once at import.
+_STAGE_TO_PHASE: dict[Stage, str] = {
+    stage: phase for phase, stages in PHASE_MAP.items() for stage in stages
+}
+
+
+def phase_of(stage: Stage) -> str:
+    """Return the phase label containing *stage* (e.g. ``"F: Analysis & Decision"``)."""
+    return _STAGE_TO_PHASE[stage]
+
 
 # ---------------------------------------------------------------------------
 # Transition logic

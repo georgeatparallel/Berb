@@ -999,10 +999,18 @@ class LLMClient:
         callers, so nothing was ever recorded despite the tracker existing.
         """
         try:
-            from .cost_tracker import get_cost_tracker
+            from .cost_tracker import current_attribution, get_cost_tracker
 
+            # A4-3: stage/phase come from the ambient contextvar the runner
+            # sets around each stage; without them by_stage()/by_phase()
+            # aggregate nothing and every breakdown returns {}.
+            stage, phase = current_attribution()
             get_cost_tracker().record_from_llm_response(
-                resp.model, resp.prompt_tokens, resp.completion_tokens
+                resp.model,
+                resp.prompt_tokens,
+                resp.completion_tokens,
+                stage=stage,
+                phase=phase,
             )
         except Exception:  # noqa: BLE001
             logger.debug("Cost tracking failed", exc_info=True)

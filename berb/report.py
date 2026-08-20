@@ -40,6 +40,7 @@ def generate_report(run_dir: Path) -> str:
     sections.append(_paper_section(run_dir))
     sections.append(_experiment_section(run_dir))
     sections.append(_citation_section(run_dir))
+    sections.append(_cost_section(run_dir))
     sections.append(_warnings_section(summary))
 
     return "\n\n".join(section for section in sections if section)
@@ -163,6 +164,43 @@ def _citation_section(run_dir: Path) -> str:
             lines.append("- Verification: present (parse error)")
     else:
         lines.append("- Verification: not run")
+
+    return "\n".join(lines)
+
+
+def _cost_section(run_dir: Path) -> str:
+    """A4-3: render cost_report.json, written by the runner at run end.
+
+    Absent for runs made before cost reporting existed, or when no LLM call
+    was ever made — both render as "not recorded" rather than a zero total,
+    which would falsely imply a free run.
+    """
+    cost_path = run_dir / "cost_report.json"
+    if not cost_path.exists():
+        return "## Cost\n- Not recorded"
+
+    try:
+        loaded = json.loads(cost_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return "## Cost\n- Cost report present but unreadable"
+    if not isinstance(loaded, dict):
+        return "## Cost\n- Cost report present but malformed"
+
+    lines = ["## Cost"]
+    total = loaded.get("total_cost_usd", 0.0)
+    tokens = loaded.get("total_tokens", 0)
+    calls = loaded.get("num_events", 0)
+    lines.append(f"- Total: ${total:,.4f} across {calls:,} call(s), {tokens:,} tokens")
+
+    by_stage = loaded.get("by_stage")
+    if isinstance(by_stage, dict) and by_stage:
+        top = sorted(by_stage.items(), key=lambda kv: kv[1], reverse=True)[:5]
+        lines.append("- Top stages: " + ", ".join(f"stage {k} ${v:,.4f}" for k, v in top))
+
+    by_phase = loaded.get("by_phase")
+    if isinstance(by_phase, dict) and by_phase:
+        ordered = sorted(by_phase.items())
+        lines.append("- By phase: " + ", ".join(f"{k} ${v:,.4f}" for k, v in ordered))
 
     return "\n".join(lines)
 

@@ -178,6 +178,48 @@ def test_raw_call_records_cost_event(monkeypatch: pytest.MonkeyPatch):
     assert tracker.total_tokens() == 15
 
 
+def test_raw_call_attributes_cost_to_ambient_stage(monkeypatch: pytest.MonkeyPatch):
+    """A4-3: CostEvent has stage/phase fields and by_stage()/by_phase()
+    aggregators, but the recording call site passed neither — so every
+    breakdown returned {}. The runner now sets an ambient contextvar."""
+    from berb.llm.cost_tracker import get_cost_tracker, stage_attribution
+
+    tracker = get_cost_tracker()
+    tracker.reset()
+
+    response = {
+        "choices": [{"message": {"content": "x"}, "finish_reason": "stop"}],
+        "usage": {"prompt_tokens": 10, "completion_tokens": 5},
+    }
+    with stage_attribution(17, "G: Paper Writing"):
+        _capture_raw_call(monkeypatch, model="gpt-4o", response_data=response)
+
+    assert tracker.by_stage() == {17: pytest.approx(tracker.total_usd())}
+    assert tracker.by_phase() == {"G: Paper Writing": pytest.approx(tracker.total_usd())}
+
+
+def test_cost_attribution_does_not_leak_outside_its_block(monkeypatch: pytest.MonkeyPatch):
+    """Calls made outside any stage (e.g. CLI-level helpers) must stay
+    unattributed rather than inheriting the last stage that ran."""
+    from berb.llm.cost_tracker import get_cost_tracker, stage_attribution
+
+    tracker = get_cost_tracker()
+    tracker.reset()
+
+    response = {
+        "choices": [{"message": {"content": "x"}, "finish_reason": "stop"}],
+        "usage": {"prompt_tokens": 10, "completion_tokens": 5},
+    }
+    with stage_attribution(3, "B: Literature Discovery"):
+        _capture_raw_call(monkeypatch, model="gpt-4o", response_data=response)
+    _capture_raw_call(monkeypatch, model="gpt-4o", response_data=response)
+
+    assert tracker.to_report()["num_events"] == 2
+    # Only the in-block call is attributed; the outside one is not.
+    assert list(tracker.by_stage()) == [3]
+    assert tracker.by_stage()[3] < tracker.total_usd()
+
+
 def test_raw_call_cost_recording_failure_does_not_raise(monkeypatch: pytest.MonkeyPatch):
     """Cost tracking is best-effort: a broken tracker must never break a
     real LLM call."""

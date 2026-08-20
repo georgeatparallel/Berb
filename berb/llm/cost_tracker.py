@@ -23,8 +23,11 @@ Usage:
 
 from __future__ import annotations
 
+import contextvars
 import logging
 import threading
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -33,6 +36,47 @@ from typing import Any
 from .pricing import PricingTable
 
 logger = logging.getLogger(__name__)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Ambient stage attribution (A4-3)
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# CostEvent has stage/phase fields and by_stage()/by_phase() aggregators, but
+# the recording choke point (LLMClient._record_llm_cost) sits many frames below
+# the runner and has no access to which stage it is serving — so every
+# aggregator returned {}. Threading stage/phase through every LLM call
+# signature would touch far more code than the problem warrants.
+#
+# ContextVars are the right tool here specifically because DAG-level stages run
+# concurrently via asyncio.gather(): each asyncio task gets its own context, so
+# concurrent stages cannot cross-attribute each other's cost the way a plain
+# module global would. asyncio.to_thread() copies the context too, so
+# sync stage bodies dispatched to worker threads inherit the correct stage.
+
+_current_stage: contextvars.ContextVar[int | None] = contextvars.ContextVar(
+    "berb_cost_current_stage", default=None
+)
+_current_phase: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "berb_cost_current_phase", default=None
+)
+
+
+@contextmanager
+def stage_attribution(stage: int | None, phase: str | None = None) -> Iterator[None]:
+    """Attribute every LLM cost recorded inside this block to *stage*/*phase*."""
+    stage_token = _current_stage.set(stage)
+    phase_token = _current_phase.set(phase)
+    try:
+        yield
+    finally:
+        _current_stage.reset(stage_token)
+        _current_phase.reset(phase_token)
+
+
+def current_attribution() -> tuple[int | None, str | None]:
+    """Return the ambient ``(stage, phase)`` for cost attribution."""
+    return _current_stage.get(), _current_phase.get()
 
 
 @dataclass(frozen=True)
