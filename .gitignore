@@ -108,3 +108,4 @@ firecrawl-main/
 .berb_cache/
 audit_trail.json
 .env
+.coverage
