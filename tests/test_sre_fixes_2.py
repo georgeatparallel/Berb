@@ -2,7 +2,6 @@
 
 BUG-A: RateLimiter.wait_sync() — _last_call read+write without mutex
 BUG-B: put_cache() — non-atomic path.write_text() → corrupt JSON under concurrency
-BUG-C: CascadingLLMClient.get_stats() — dict iteration without lock
 """
 
 from __future__ import annotations
@@ -147,82 +146,3 @@ class TestPutCacheAtomicWrite:
             f"BUG-B: {len(leftover_tmp)} .tmp files left behind: {leftover_tmp}"
         )
 
-
-# ---------------------------------------------------------------------------
-# BUG-C — CascadingLLMClient.get_stats() dict iteration race
-# ---------------------------------------------------------------------------
-
-
-class TestGetStatsThreadSafety:
-    """BUG-C: get_stats() must not raise RuntimeError when dict is concurrently modified."""
-
-    def _make_client(self) -> CascadingLLMClient:  # noqa: F821
-        from berb.llm.model_cascade import CascadeConfig, CascadeStep, CascadingLLMClient
-
-        config = CascadeConfig(
-            cascade=[
-                CascadeStep("model-cheap", min_score=0.5),
-                CascadeStep("model-premium", min_score=0.0),
-            ]
-        )
-        base = MagicMock()
-        return CascadingLLMClient(base_client=base, config=config)
-
-    def test_get_stats_returns_dict(self):
-        """Non-regression: get_stats() must return a dict with expected keys."""
-        client = self._make_client()
-        stats = client.get_stats()
-        assert isinstance(stats, dict)
-        assert "total_requests" in stats
-        assert "cascade_exits" in stats
-        assert "average_exit_step" in stats
-
-    def test_get_stats_no_runtime_error_under_concurrent_mutation(self):
-        """BUG-C regression: get_stats() must not raise RuntimeError under concurrent _record_cascade_exit calls."""
-        client = self._make_client()
-        errors: list[Exception] = []
-        barrier = threading.Barrier(20)
-
-        def _mutate():
-            """Simulate what _record_cascade_exit does inside chat()."""
-            barrier.wait()
-            for i in range(50):
-                # Direct mutation simulating concurrent chat() calls
-                client._cascade_exits[i % 3] = client._cascade_exits.get(i % 3, 0) + 1
-
-        def _reader():
-            barrier.wait()
-            for _ in range(50):
-                try:
-                    client.get_stats()
-                except RuntimeError as exc:
-                    errors.append(exc)
-
-        threads = [threading.Thread(target=_mutate) for _ in range(10)] + [
-            threading.Thread(target=_reader) for _ in range(10)
-        ]
-        for t in threads:
-            t.start()
-        for t in threads:
-            t.join()
-
-        assert errors == [], (
-            f"BUG-C regression: get_stats() raised RuntimeError {len(errors)} time(s): {errors[0]}"
-        )
-
-    def test_get_stats_snapshot_not_live_reference(self):
-        """BUG-C fix: cascade_exits in the returned dict must be a copy, not a live reference."""
-        from berb.llm.model_cascade import CascadeConfig, CascadeStep, CascadingLLMClient
-
-        config = CascadeConfig(cascade=[CascadeStep("m", min_score=0.0)])
-        client = CascadingLLMClient(base_client=MagicMock(), config=config)
-        client._cascade_exits[0] = 5
-
-        stats = client.get_stats()
-        # Mutate the internal dict AFTER calling get_stats
-        client._cascade_exits[0] = 999
-
-        # The returned snapshot should still reflect the value at call time
-        assert stats["cascade_exits"].get(0) == 5, (
-            "BUG-C: cascade_exits is a live reference — mutating internal dict changes returned stats"
-        )

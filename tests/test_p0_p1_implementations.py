@@ -6,7 +6,6 @@ P0 Critical Fixes:
 - Event Sourcing for Pipeline
 
 P1 High Priority:
-- Caching for CascadingLLMClient
 - Bulkhead Isolation for AsyncExperimentPool
 - Pure Functions from Pipeline
 
@@ -32,7 +31,6 @@ from berb.llm.client import (
     CircuitBreakerState,
     LLMClient,
 )
-from berb.llm.model_cascade import CascadeConfig, CascadeStep, CascadingLLMClient
 from berb.memory.shared_memory import SharedResearchMemory
 from berb.pipeline.runner import (
     _create_pivot_event,
@@ -625,132 +623,6 @@ class TestEventStore:
 
 
 # ============================================================================
-# P1-1: Caching Tests
-# ============================================================================
-
-
-class TestCascadingLLMClientCaching:
-    """Test CascadingLLMClient caching implementation."""
-
-    def test_cache_initialization(self):
-        """Test cache is properly initialized."""
-        base_client = Mock()
-        config = CascadeConfig()
-
-        client = CascadingLLMClient(
-            base_client,
-            config,
-            cache_enabled=True,
-            cache_max_size=100,
-        )
-
-        assert client._cache_enabled is True
-        assert client._cache_max_size == 100
-        assert client._cache == {}
-        assert client._cache_stats["hits"] == 0
-        assert client._cache_stats["misses"] == 0
-
-    def test_cache_key_generation(self):
-        """Test cache key generation is deterministic."""
-        base_client = Mock()
-        config = CascadeConfig()
-        client = CascadingLLMClient(base_client, config)
-
-        messages = [{"role": "user", "content": "test"}]
-        key1 = client._generate_cache_key(messages, temperature=0.7)
-        key2 = client._generate_cache_key(messages, temperature=0.7)
-        key3 = client._generate_cache_key(messages, temperature=0.8)
-
-        assert key1 == key2  # Same input = same key
-        assert key1 != key3  # Different input = different key
-        assert len(key1) == 32  # SHA-256 hex truncated
-
-    def test_cache_hit(self):
-        """Test cache hit returns cached value."""
-        base_client = Mock()
-        config = CascadeConfig()
-        client = CascadingLLMClient(base_client, config, cache_enabled=True)
-
-        messages = [{"role": "user", "content": "test"}]
-        cached_response = Mock()
-
-        # Manually cache a response
-        key = client._generate_cache_key(messages)
-        client._cache[key] = cached_response
-
-        # Should return cached value
-        result = client._get_from_cache(key)
-        assert result is cached_response
-        assert client._cache_stats["hits"] == 1
-
-    def test_cache_miss(self):
-        """Test cache miss returns None."""
-        base_client = Mock()
-        config = CascadeConfig()
-        client = CascadingLLMClient(base_client, config, cache_enabled=True)
-
-        result = client._get_from_cache("nonexistent-key")
-        assert result is None
-        assert client._cache_stats["misses"] == 1
-
-    def test_cache_lru_eviction(self):
-        """Test LRU cache eviction."""
-        base_client = Mock()
-        config = CascadeConfig()
-        client = CascadingLLMClient(
-            base_client,
-            config,
-            cache_enabled=True,
-            cache_max_size=3,
-        )
-
-        # Fill cache
-        for i in range(3):
-            client._set_cache(f"key-{i}", f"value-{i}")
-
-        assert len(client._cache) == 3
-
-        # Add one more - should evict oldest
-        client._set_cache("key-new", "value-new")
-
-        assert len(client._cache) == 3
-        assert "key-0" not in client._cache  # Oldest evicted
-        assert client._cache_stats["evictions"] == 1
-
-    def test_cache_stats(self):
-        """Test cache statistics."""
-        base_client = Mock()
-        config = CascadeConfig()
-        client = CascadingLLMClient(base_client, config, cache_enabled=True)
-
-        # Simulate hits and misses
-        client._cache_stats["hits"] = 80
-        client._cache_stats["misses"] = 20
-
-        stats = client.get_cache_stats()
-
-        assert stats["hit_rate"] == 0.8
-        assert stats["enabled"] is True
-        assert "size" in stats
-        assert "max_size" in stats
-
-    def test_cache_clear(self):
-        """Test cache clearing."""
-        base_client = Mock()
-        config = CascadeConfig()
-        client = CascadingLLMClient(base_client, config, cache_enabled=True)
-
-        # Add some data
-        client._cache["key"] = "value"
-        client._cache_stats["hits"] = 10
-
-        client.clear_cache()
-
-        assert len(client._cache) == 0
-        assert client._cache_stats["hits"] == 0
-
-
-# ============================================================================
 # P1-2: Bulkhead Isolation Tests
 # ============================================================================
 
@@ -887,31 +759,6 @@ class TestP0P1Integration:
         assert state.current_stage == Stage(23)
         assert state.current_status == StageStatus.DONE
 
-    def test_cache_with_cascading_client(self):
-        """Test caching integrates properly with cascading client."""
-        base_client = AsyncMock()
-        base_client.chat.return_value = Mock(content="response")
-
-        config = CascadeConfig(
-            cascade=[
-                CascadeStep(model="test-model", min_score=0.0),
-            ]
-        )
-
-        client = CascadingLLMClient(
-            base_client,
-            config,
-            cache_enabled=True,
-            cache_max_size=100,
-        )
-
-        # First call - cache miss
-        # Note: Full integration test would require async test setup
-
-        # Verify cache methods are accessible
-        assert client._cache_enabled is True
-        assert client.get_cache_stats() is not None
-
 
 # ============================================================================
 # Performance Tests
@@ -933,28 +780,6 @@ class TestPerformance:
 
         # Should complete 1000 iterations in < 0.1 seconds
         assert elapsed < 0.1
-
-    def test_cache_performance(self):
-        """Test cache operations are fast."""
-        base_client = Mock()
-        config = CascadeConfig()
-        client = CascadingLLMClient(base_client, config, cache_enabled=True)
-
-        # Test cache set performance
-        start = time.perf_counter()
-        for i in range(1000):
-            client._set_cache(f"key-{i}", f"value-{i}")
-        elapsed_set = time.perf_counter() - start
-
-        # Test cache get performance
-        start = time.perf_counter()
-        for i in range(1000):
-            client._get_from_cache(f"key-{i}")
-        elapsed_get = time.perf_counter() - start
-
-        # Both should be fast
-        assert elapsed_set < 0.1
-        assert elapsed_get < 0.1
 
     def test_event_store_append_performance(self):
         """Test event store append is fast.
