@@ -206,6 +206,12 @@ disallow_untyped_defs = false
 
 # Only modules confirmed type-safe are checked. Everything else suppressed
 # until type annotations are added (tracked in docs/POST_UPGRADE_REMEDIATION.md).
+#
+# This list is a RATCHET: add modules as they go clean, never remove one to
+# make a build pass. A4-5 (tasks/hardening_plan_2026-08-13.md) added the five
+# security-critical modules below; four were already clean, and client.py
+# needed three real annotation fixes (PROVIDER_PRESETS' element type, the
+# _anthropic attribute, urllib's HTTPError hdrs stub).
 [[tool.mypy.overrides]]
 module = [
     "berb.pipeline.registry",
@@ -216,6 +222,12 @@ module = [
     "berb.pipeline.stages",
     "berb.adapters",
     "berb.config",
+    # A4-5: security-critical modules
+    "berb.experiment.validator",
+    "berb.experiment.factory",
+    "berb.experiment.sandbox",
+    "berb.llm.client",
+    "berb.pipeline.executor",
 ]
 ignore_errors = false
 
@@ -226,3 +238,40 @@ ignore_errors = true
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+# ---------------------------------------------------------------------------
+# Bandit (static security scan)
+# ---------------------------------------------------------------------------
+# CI runs `bandit -r berb/ -ll -c pyproject.toml` as a BLOCKING check. The
+# skips below are the triaged baseline (A4-5, tasks/hardening_plan_2026-08-13.md);
+# each is a category decision with a stated reason, not a blanket silence.
+# Findings NOT listed here are blocking — including B102/B307 (exec/eval),
+# which are now gated rather than skipped, and B324 (weak hash), fixed by
+# marking the one non-security digest usedforsecurity=False.
+#
+#   B310 (urllib urlopen, 22 sites) — every site either targets a fixed
+#     https:// API base (arXiv, OpenAlex, Semantic Scholar, GitHub, the
+#     configured LLM base_url) or already routes through
+#     berb/web/_ssrf.py::check_url_ssrf, which validates scheme and resolved
+#     address and re-validates on each redirect hop. There is no site taking
+#     an arbitrary caller-supplied URL without that guard; verified by
+#     enumerating all 22 against the guard's importers.
+#
+#   B108 (hardcoded /tmp, 9 sites) — these are POSIX remote/container paths
+#     (SSH remote_workdir, Docker-side mounts, LaTeX scratch inside an
+#     already-isolated workspace), not local temp files on the host running
+#     Berb. They name a path on the far side of an isolation boundary, where
+#     mkstemp() on this host would be meaningless.
+#
+#   B608 (SQL string build, 5 sites) — false positives. The f-string
+#     interpolates a fixed WHERE-clause literal chosen by a branch; every
+#     user-supplied value is bound via a `?` placeholder and passed in the
+#     params tuple. Verified at each of the 5 sites.
+#
+#   B314 (ElementTree.fromstring, 1 site) — parses the arXiv Atom API
+#     response, a fixed https:// endpoint. XML-bomb exposure requires
+#     compromising arxiv.org itself, at which point the parser is not the
+#     weak link. Revisit if this ever parses caller-supplied XML.
+[tool.bandit]
+exclude_dirs = ["tests"]
+skips = ["B310", "B108", "B608", "B314"]

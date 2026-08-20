@@ -22,7 +22,10 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from berb.llm.anthropic_adapter import AnthropicAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -423,7 +426,8 @@ class LLMClient:
     ) -> None:
         self.config = config
         self._model_chain = [config.primary_model] + list(config.fallback_models)
-        self._anthropic = None  # Will be set by from_rc_config if needed
+        # Set by from_rc_config() for anthropic/kimi-anthropic providers.
+        self._anthropic: AnthropicAdapter | None = None
 
         # SECURITY FIX #6: Initialize rate limiter
         self._rate_limiter: TokenBucketRateLimiter | None = None
@@ -979,7 +983,10 @@ class LLMClient:
                 "",
                 500,
                 f"{error_type}: {error_msg}",
-                None,
+                # urllib's stubs declare hdrs as Message, but this is a
+                # synthesised error with no real response headers and the
+                # runtime accepts None.
+                None,  # type: ignore[arg-type]
                 io.BytesIO(error_msg.encode()),
             )
 

@@ -10,6 +10,7 @@ This is the wall-clock regression test the fix didn't originally ship with.
 from __future__ import annotations
 
 import asyncio
+import threading
 import time
 from unittest.mock import MagicMock
 
@@ -23,24 +24,54 @@ def _slow_chat(**kwargs):
     return MagicMock(content="not valid json, falls back to parse-failure path")
 
 
+class _OverlapProbe:
+    """Records the maximum number of chat() calls in flight simultaneously.
+
+    The property under test is overlap, so measure overlap directly rather
+    than inferring it from wall-clock time. An earlier version of this test
+    asserted ``elapsed < _SLEEP_SEC * 1.5``; that ratio holds on an idle
+    machine but not under a loaded CI box or coverage instrumentation, where
+    it produced false failures while the code under test was fine. Counting
+    concurrent entries is deterministic under any load.
+
+    chat() is dispatched via asyncio.to_thread, so the counters are touched
+    from worker threads and need a real lock.
+    """
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self.in_flight = 0
+        self.max_in_flight = 0
+
+    def __call__(self, **kwargs):
+        with self._lock:
+            self.in_flight += 1
+            self.max_in_flight = max(self.max_in_flight, self.in_flight)
+        try:
+            return _slow_chat(**kwargs)
+        finally:
+            with self._lock:
+                self.in_flight -= 1
+
+
 def test_two_persona_fan_out_runs_concurrently_not_serially() -> None:
+    probe = _OverlapProbe()
     mock_llm = MagicMock()
-    mock_llm.chat.side_effect = _slow_chat
+    mock_llm.chat.side_effect = probe
 
     ensemble = AutomatedReviewerEnsemble(llm_client=mock_llm)
     ensemble._personas = REVIEWER_PERSONAS[:2]
 
-    start = time.monotonic()
     asyncio.run(ensemble.review_paper(paper_path="fake.pdf", paper_text="some paper text"))
-    elapsed = time.monotonic() - start
 
-    # Serial would take >= 2 * _SLEEP_SEC (0.2s). Concurrent should land
-    # close to one _SLEEP_SEC plus overhead — generous margin for CI jitter.
-    assert elapsed < _SLEEP_SEC * 1.5, (
-        f"fan-out took {elapsed:.3f}s for 2 personas each sleeping {_SLEEP_SEC}s — "
-        f"looks serial, not concurrent"
-    )
     assert mock_llm.chat.call_count == 2
+    # Serial execution can never exceed 1 in flight. Before the A1-1 fix,
+    # _generate_review called chat() synchronously inside an async def, so
+    # asyncio.gather() produced exactly this serial pattern.
+    assert probe.max_in_flight >= 2, (
+        f"only {probe.max_in_flight} chat() call(s) were ever in flight at once — "
+        f"the persona fan-out ran serially, not concurrently"
+    )
 
 
 def test_synthesize_critiques_does_not_block_event_loop() -> None:

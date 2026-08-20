@@ -98,8 +98,10 @@ if TYPE_CHECKING:
     )
     from berb.llm.smart_client import SmartLLMClient
 
-# Provider presets for common LLM services
-PROVIDER_PRESETS = {
+# Provider presets for common LLM services.
+# Explicitly annotated: without it mypy widens `.get(provider, {})` at the
+# call sites to `object`, which then has no .get of its own.
+PROVIDER_PRESETS: dict[str, dict[str, str]] = {
     "openai": {
         "base_url": "https://api.openai.com/v1",
     },

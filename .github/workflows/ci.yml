@@ -35,17 +35,24 @@ jobs:
 
       - name: Run unit tests (no LLM, no e2e, no slow)
         run: |
-          # Coverage floor set to match actual measured coverage (~57-58%)
-          # with a small buffer, not the aspirational 70% this gate had been
-          # silently failing against on every commit. Ratchet this up as
-          # test coverage for berb/writing/ and other 0%-covered modules
-          # improves — don't lower it further without adding tests first.
+          # RATCHET ONLY. Never lower this to make a build pass — add tests.
+          #
+          # A4-5 raised this 55 -> 62. Measured coverage is now 64% (up from
+          # ~57-58% when the floor was last set), so 62 keeps a ~2-point
+          # buffer for run-to-run variance from skipped/flaky tests.
+          #
+          # The plan called for 70 here, on the assumption that Waves S-3
+          # would carry coverage that far. They did not — those waves shipped
+          # focused security and architecture tests, not broad coverage — so
+          # 70 would fail CI on the first commit. Reaching 70 needs tests for
+          # berb/writing/ and the other 0%-covered modules, not a higher
+          # number here.
           pytest tests/ \
             -m "not slow and not e2e and not llm" \
             --tb=short \
             -q \
             --cov=berb \
-            --cov-fail-under=55 \
+            --cov-fail-under=62 \
             --junitxml=test-results-${{ matrix.python-version }}.xml
 
       - name: Upload test results
@@ -117,16 +124,17 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
-          pip install bandit pip-audit
+          pip install "bandit[toml]" pip-audit
 
-      # NON-BLOCKING for now: a baseline scan found 40 pre-existing medium
-      # findings (mostly urlopen-scheme and SQL-string-build false/low-risk
-      # positives) that haven't been triaged yet. Report visibility now,
-      # flip to blocking (drop continue-on-error) once the baseline is
-      # triaged and either fixed or explicitly # nosec'd with justification.
+      # BLOCKING as of A4-5: the 41-finding baseline was triaged. Two were
+      # real and are fixed (eval on paper-derived expressions, exec on
+      # paper-derived code — both now AST-gated); one weak-hash finding was
+      # marked usedforsecurity=False; one bind-all default was moved to
+      # loopback. The rest are category decisions documented, with reasons,
+      # in [tool.bandit] in pyproject.toml. Do NOT re-add continue-on-error
+      # to make a build pass — triage the new finding instead.
       - name: Bandit (static security scan)
-        continue-on-error: true
-        run: bandit -r berb/ -ll
+        run: bandit -r berb/ -ll -c pyproject.toml
 
       - name: pip-audit (dependency vulnerability scan)
         continue-on-error: true
