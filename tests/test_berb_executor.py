@@ -1188,6 +1188,52 @@ class TestExportPublishCodePackage:
         assert "My Great Paper" in readme
 
 
+class TestExportPublishMarkerStripping:
+    """tasks/ars_integration_plan.md W1: a berb-cite locator-anchor marker
+    embedded in the draft must never survive into any exported artifact.
+    strip_markers is applied once, early, in _execute_export_publish —
+    this is the regression test that guarantee actually holds end to end."""
+
+    def test_marker_stripped_from_paper_final_md(
+        self,
+        tmp_path: Path,
+        run_dir: Path,
+        rc_config: RCConfig,
+        adapters: AdapterBundle,
+    ) -> None:
+        marker = "<!--berb-cite key=he2016deep kind=quote id=a3f19c-->"
+        _write_prior_artifact(
+            run_dir,
+            19,
+            "paper_revised.md",
+            f"# Test Paper\n\nAccuracy improved by 34% {marker}.\n",
+        )
+        stage_dir = tmp_path / "run" / "stage-22"
+        stage_dir.mkdir(parents=True, exist_ok=True)
+
+        rc_executor._execute_export_publish(stage_dir, run_dir, rc_config, adapters, llm=None)
+
+        final_text = (stage_dir / "paper_final.md").read_text(encoding="utf-8")
+        assert "berb-cite" not in final_text
+        assert "Accuracy improved by 34%" in final_text  # surrounding text preserved
+
+    def test_no_marker_is_a_no_op(
+        self,
+        tmp_path: Path,
+        run_dir: Path,
+        rc_config: RCConfig,
+        adapters: AdapterBundle,
+    ) -> None:
+        _write_prior_artifact(run_dir, 19, "paper_revised.md", "# Test Paper\n\nNo markers here.\n")
+        stage_dir = tmp_path / "run" / "stage-22"
+        stage_dir.mkdir(parents=True, exist_ok=True)
+
+        rc_executor._execute_export_publish(stage_dir, run_dir, rc_config, adapters, llm=None)
+
+        final_text = (stage_dir / "paper_final.md").read_text(encoding="utf-8")
+        assert "No markers here." in final_text
+
+
 class TestExportCitationGate:
     """P0-03: CITATION_VERIFY's own contract says hallucinated citations MUST
     block export, but stage 23 ran after stage 22 and could never do so.

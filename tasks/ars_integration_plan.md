@@ -1,6 +1,6 @@
 # ARS Integration Plan — Research-Integrity Capabilities for Berb
 
-**Status:** in progress — W0, W2, W3, W4 all done including stage wiring
+**Status:** in progress — W0, W2, W3, W4 done including stage wiring; W1 core+schema+export-safety landed, consumer/producer wiring deferred
 **Author:** planning pass, 2026-08-31
 **Source of ideas:** [academic-research-skills](https://github.com/Imbad0202/academic-research-skills) (ARS) v3.21.1 by Cheng-I Wu
 **Supersedes:** nothing. Complements `tasks/hardening_plan_2026-08-13.md` and `tasks/arch_hardening_plan.md`.
@@ -82,7 +82,51 @@
     beside the W2 retraction check.
   - 29 tests total (26 unit + 3 stage-5 wiring), 97.6% coverage, mypy/ruff/
     bandit clean (bandit: zero findings, not just filtered-Low).
-- Remaining: W1 (citation anchors), W5 (cross-model), W6 (revision guard),
+- 2026-09-01 — W1 (`berb/integrity/anchors.py`: `Anchor`, `AnchorKind`,
+  `make_anchor`, `MarkerRef`, `parse_markers`, `strip_markers`,
+  `verify_anchors`) — **core + schema + export safety landed; consumer
+  (stage 23) and producer (LLM prompt-side generation) deliberately not
+  wired this pass** — the largest, most architecturally sensitive item in
+  the plan, split rather than rushed:
+  - Marker syntax `<!--berb-cite key=... kind=quote|page|section|paragraph
+    id=...-->`. Anchor id is a derived `sha256(key|kind|normalized_value)`
+    hash, never accepted from a caller — `make_anchor`'s signature has no
+    id parameter at all, so an LLM cannot forge a mismatched id (asserted
+    via `inspect.signature` in the test suite, not just by convention).
+  - `verify_anchors` never renders "no stored source text" as "verified" —
+    that case is `ANCHOR_UNVERIFIABLE` (`INFO`), matching W2's UNKNOWN
+    discipline. `page`/`section`/`paragraph` anchors always report
+    `ANCHOR_UNVERIFIABLE` too, since this runtime doesn't track a cited
+    work's internal structure — never claims a check that wasn't performed.
+  - Schema: `ClaimRecord.anchors: tuple[Anchor, ...] = ()` and
+    `ClaimManifest.schema_version: int` (both additive; a v1 manifest with
+    neither key loads unchanged — regression-tested directly).
+  - **Stage 22** (`EXPORT_PUBLISH`) safety wiring: `strip_markers()` applied
+    once, at the single earliest point `final_paper` stabilizes — traced
+    the data flow through all 4 `paper_final.md` write sites plus the
+    `final_paper_latex` → `tex_source` → `paper.tex` derivation to confirm
+    one early strip covers every exported artifact rather than patching
+    N write sites individually. Regression-tested: a marker embedded in
+    `paper_revised.md` does not survive into `paper_final.md`.
+  - 36 anchors unit tests (100% DoD checklist: marker round-trip, all
+    `make_anchor`/`Anchor.from_dict` rejects, quote match under
+    NFKC/whitespace/case, quote mismatch → BLOCK, missing source text →
+    INFO not pass, path-traversal cite_key rejected, ReDoS-bounded on
+    adversarial marker text AND on a 2.4M-char source-text haystack) + 5
+    schema tests + 2 export-safety regression tests = 43 new tests, 97.9%
+    coverage on anchors.py, mypy/ruff/bandit clean (bandit: zero findings).
+  - **Explicitly not done**: stage 23 (`CITATION_VERIFY`) calling
+    `verify_anchors` against the manifest + bibliography + stored source
+    texts (the consumer side — mechanically straightforward given
+    everything above, deferred only for session scope); and prompt-side
+    changes so the drafting LLM actually emits `key`/`kind`/`value` for
+    empirical/comparative claims (the producer side — touches
+    `prompts.default.yaml`, materially higher-risk surface, needs its own
+    focused pass). Until the producer ships, this mechanism is fully
+    built, tested, and wired for safety, but inert in practice (no markers
+    exist for it to find) — an honest state, not a hidden gap.
+- Remaining: W1 stage-23 consumer wiring, W1 producer prompt wiring, W5
+  (cross-model), W6 (revision guard),
   W7 (seeded-defect eval), W8 (reporting guidelines/disclosure), plus the
   DoD housekeeping items (dual-license email, stale ruff entry, CLAUDE.md
   router-name fix, `finding_reproduction` disposition), plus the plan's

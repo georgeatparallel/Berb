@@ -234,6 +234,8 @@ module = [
     "berb.integrity.uncited",
     "berb.literature.retraction",
     "berb.literature.paper_mill",
+    "berb.integrity.anchors",
+    "berb.integrity.claims",
 ]
 ignore_errors = false
 

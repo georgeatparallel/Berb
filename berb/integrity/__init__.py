@@ -12,6 +12,16 @@ eval
 
 from __future__ import annotations
 
+from .anchors import (
+    MAX_ANCHOR_VALUE_CHARS,
+    Anchor,
+    AnchorKind,
+    MarkerRef,
+    make_anchor,
+    parse_markers,
+    strip_markers,
+    verify_anchors,
+)
 from .claims import (
     ClaimManifest,
     ClaimRecord,
@@ -40,6 +50,9 @@ from .uncited import (
 )
 
 __all__ = [
+    "MAX_ANCHOR_VALUE_CHARS",
+    "Anchor",
+    "AnchorKind",
     "CheckId",
     "ClaimManifest",
     "ClaimRecord",
@@ -49,11 +62,16 @@ __all__ = [
     "EvidenceSource",
     "EvidenceType",
     "Finding",
+    "MarkerRef",
     "SentenceRef",
     "Severity",
     "VerifiedEvidenceRegistry",
     "detect_uncited",
     "gates",
     "is_uncited_assertion",
+    "make_anchor",
+    "parse_markers",
     "split_sentences",
+    "strip_markers",
+    "verify_anchors",
 ]

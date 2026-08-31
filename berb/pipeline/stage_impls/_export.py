@@ -13,6 +13,7 @@ import yaml  # noqa: F401 — available for downstream use
 
 from berb.adapters import AdapterBundle
 from berb.config import RCConfig
+from berb.integrity.anchors import strip_markers
 from berb.llm.client import LLMClient
 from berb.pipeline._domain import _detect_domain  # noqa: F401
 from berb.pipeline._helpers import (
@@ -195,9 +196,7 @@ def _execute_export_publish(
     if llm is not None:
         _pm = prompts or PromptManager()
         _overlay = _get_evolution_overlay(run_dir, "export_publish")
-        sp = _pm.for_stage(
-            "export_publish", evolution_overlay=_overlay, revised=revised
-        )
+        sp = _pm.for_stage("export_publish", evolution_overlay=_overlay, revised=revised)
         resp = _chat_with_prompt(
             llm,
             sp.system,
@@ -217,6 +216,15 @@ def _execute_export_publish(
         final_paper = revised
     if not final_paper.strip():
         final_paper = "# Final Paper\n\nNo content generated."
+
+    # tasks/ars_integration_plan.md W1: strip berb-cite locator-anchor
+    # markers before ANY exported artifact is written. This is the single
+    # earliest point final_paper is stable — every downstream derivation
+    # (paper_final.md, paper_final_latex.md -> paper.tex,
+    # paper_presanitized.md) flows from this variable, so one strip here
+    # covers all of them. strip_markers is idempotent and a no-op on text
+    # with no markers, so this is safe even before any producer emits them.
+    final_paper = strip_markers(final_paper)
 
     # --- Always-on fabrication sanitization (Phase 1 anti-fabrication) ---
     # Back up pre-sanitized version
@@ -238,9 +246,7 @@ def _execute_export_publish(
     _degradation_signal_path = run_dir / "degradation_signal.json"
     if _degradation_signal_path.exists():
         try:
-            _deg_signal = json.loads(
-                _degradation_signal_path.read_text(encoding="utf-8")
-            )
+            _deg_signal = json.loads(_degradation_signal_path.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
             _deg_signal = {}
 
@@ -267,9 +273,7 @@ def _execute_export_publish(
                     if any(p > 0 for p in (_next_section, _next_heading))
                     else len(final_paper)
                 )
-                final_paper = (
-                    final_paper[:_insert_pos] + _deg_notice + final_paper[_insert_pos:]
-                )
+                final_paper = final_paper[:_insert_pos] + _deg_notice + final_paper[_insert_pos:]
                 _notice_inserted = True
                 break
         if not _notice_inserted:
@@ -285,9 +289,7 @@ def _execute_export_publish(
     # IMP-3: Deduplicate "due to computational constraints" — keep at most 1
     import re as _re_imp3
 
-    _CONSTRAINT_PAT = _re_imp3.compile(
-        r"[Dd]ue to computational constraints", _re_imp3.IGNORECASE
-    )
+    _CONSTRAINT_PAT = _re_imp3.compile(r"[Dd]ue to computational constraints", _re_imp3.IGNORECASE)
     _matches = list(_CONSTRAINT_PAT.finditer(final_paper))
     if len(_matches) > 1:
         # Keep only the first occurrence; remove subsequent ones by
@@ -353,8 +355,7 @@ def _execute_export_publish(
             ):
                 _fig_placement["result"].append(fig_md)
             elif any(
-                k in stem_lower
-                for k in ("concept", "overview", "illustration", "threat", "attack")
+                k in stem_lower for k in ("concept", "overview", "illustration", "threat", "attack")
             ):
                 _fig_placement["intro"].append(fig_md)
             else:
@@ -420,9 +421,7 @@ def _execute_export_publish(
                     "## Discussion",
                 ]:
                     if fallback in final_paper:
-                        final_paper = final_paper.replace(
-                            fallback, fig_block + fallback, 1
-                        )
+                        final_paper = final_paper.replace(fallback, fig_block + fallback, 1)
                         inserted = True
                         _total_inserted += len(figs)
                         break
@@ -432,9 +431,7 @@ def _execute_export_publish(
                 # the markdown fence and gets dropped by converter).
                 _fence_end = final_paper.rfind("\n```")
                 if _fence_end > 0:
-                    final_paper = (
-                        final_paper[:_fence_end] + fig_block + final_paper[_fence_end:]
-                    )
+                    final_paper = final_paper[:_fence_end] + fig_block + final_paper[_fence_end:]
                 else:
                     final_paper += fig_block
                 _total_inserted += len(figs)
@@ -568,12 +565,8 @@ def _execute_export_publish(
                     continue
                 body = m.group(2)
                 # Extract author field
-                author_m = _re.search(
-                    r"author\s*=\s*[\{\"](.*?)[\}\"]", body, _re.IGNORECASE
-                )
-                year_m = _re.search(
-                    r"year\s*=\s*[\{\"]?(\d{4})[\}\"]?", body, _re.IGNORECASE
-                )
+                author_m = _re.search(r"author\s*=\s*[\{\"](.*?)[\}\"]", body, _re.IGNORECASE)
+                year_m = _re.search(r"year\s*=\s*[\{\"]?(\d{4})[\}\"]?", body, _re.IGNORECASE)
                 if not author_m or not year_m:
                     continue
                 author_raw = author_m.group(1).strip()
@@ -635,11 +628,7 @@ def _execute_export_publish(
                     # Replace the author-year segment only inside [...] brackets
                     final_paper = _re.sub(
                         r"\[([^\]]*?)" + _re.escape(_ay_pat) + r"([^\]]*?)\]",
-                        lambda _m, _key=_ay_key: "["
-                        + _m.group(1)
-                        + _key
-                        + _m.group(2)
-                        + "]",
+                        lambda _m, _key=_ay_key: "[" + _m.group(1) + _key + _m.group(2) + "]",
                         final_paper,
                     )
 
@@ -654,9 +643,7 @@ def _execute_export_publish(
                         return "[" + ", ".join(parts) + "]"
                     return m_sc.group(0)
 
-                final_paper = _re.sub(
-                    r"\[([^\]]+;[^\]]+)\]", _fix_semicolon_cites, final_paper
-                )
+                final_paper = _re.sub(r"\[([^\]]+;[^\]]+)\]", _fix_semicolon_cites, final_paper)
                 (stage_dir / "paper_final.md").write_text(final_paper, encoding="utf-8")
 
         # R10-Fix4: Citation cross-validation
@@ -771,9 +758,7 @@ def _execute_export_publish(
                     return f"\\cite{{{key}}}"
                 return m.group(0)
 
-            final_paper_latex = _re.sub(
-                rf"\[({_CITE_KEY_PAT})\]", _replace_cite, final_paper_latex
-            )
+            final_paper_latex = _re.sub(rf"\[({_CITE_KEY_PAT})\]", _replace_cite, final_paper_latex)
 
             # Step 3: Merge adjacent \cite{a} \cite{b} → \cite{a, b}
             def _merge_adjacent_cites(m: _re.Match[str]) -> str:
@@ -786,18 +771,14 @@ def _execute_export_publish(
                 final_paper_latex,
             )
 
-            (stage_dir / "paper_final_latex.md").write_text(
-                final_paper_latex, encoding="utf-8"
-            )
+            (stage_dir / "paper_final_latex.md").write_text(final_paper_latex, encoding="utf-8")
             artifacts.append("paper_final_latex.md")
         # IMP-1: Prune uncited bibliography entries — keep only keys
         # that actually appear in the paper text (bracket or \cite form).
         if valid_keys:
             _all_cited: set[str] = set()
             # Bracket-format citations [key]
-            _all_cited.update(
-                _re.findall(r"\[([a-zA-Z]+\d{4}[a-zA-Z0-9_-]*)\]", final_paper)
-            )
+            _all_cited.update(_re.findall(r"\[([a-zA-Z]+\d{4}[a-zA-Z0-9_-]*)\]", final_paper))
             # \cite{key, key2} format (original + latex-converted)
             for _src in (
                 final_paper,
@@ -831,9 +812,7 @@ def _execute_export_publish(
         _invalid_citations_path = stage_dir / "invalid_citations.json"
         if _invalid_citations_path.is_file():
             try:
-                _invented_keys = json.loads(
-                    _invalid_citations_path.read_text(encoding="utf-8")
-                )
+                _invented_keys = json.loads(_invalid_citations_path.read_text(encoding="utf-8"))
             except (json.JSONDecodeError, OSError):
                 _invented_keys = []
             if _invented_keys:
@@ -871,13 +850,10 @@ def _execute_export_publish(
             )
             if _export_report.hallucinated > 0:
                 _halluc_keys = ", ".join(
-                    r.cite_key
-                    for r in _export_report.results
-                    if r.status.value == "hallucinated"
+                    r.cite_key for r in _export_report.results if r.status.value == "hallucinated"
                 )
                 logger.error(
-                    "Stage 22: %d hallucinated citation(s) in references.bib — "
-                    "blocking export: %s",
+                    "Stage 22: %d hallucinated citation(s) in references.bib — blocking export: %s",
                     _export_report.hallucinated,
                     _halluc_keys,
                 )
@@ -941,9 +917,7 @@ def _execute_export_publish(
             len(tex_content),
         )
         # --- Phase 1 anti-fabrication: verify paper against VerifiedRegistry ---
-        _vresult = (
-            None  # BUG-DA8-04: Initialize before try to avoid fragile dir() check
-        )
+        _vresult = None  # BUG-DA8-04: Initialize before try to avoid fragile dir() check
         try:
             from berb.pipeline.paper_verifier import verify_paper as _verify_paper
 
@@ -1028,9 +1002,7 @@ def _execute_export_publish(
 
             _sanitized_tex = tex_content
             _san2_count = 0
-            for _uv in sorted(
-                _vresult.unverified_numbers, key=lambda u: -u.line_number
-            ):
+            for _uv in sorted(_vresult.unverified_numbers, key=lambda u: -u.line_number):
                 # Only sanitize strict-section / in-table numbers
                 _uv_section_lower = (_uv.section or "").lower()
                 _uv_is_strict = any(
@@ -1045,9 +1017,7 @@ def _execute_export_publish(
                     )
                 )
                 # BUG-R49-02: Exempt protocol/setup sections from strict mode
-                if _uv_is_strict and any(
-                    kw in _uv_section_lower for kw in _STRICT_EXEMPT_KW
-                ):
+                if _uv_is_strict and any(kw in _uv_section_lower for kw in _STRICT_EXEMPT_KW):
                     _uv_is_strict = False
                 if _uv_is_strict or _uv.in_table:
                     _lines = _sanitized_tex.split("\n")
@@ -1221,23 +1191,15 @@ def _execute_export_publish(
                             HallucinationDetector,
                         )
 
-                        _bib_text_h = (
-                            _read_prior_artifact(run_dir, "references.bib") or ""
-                        )
-                        _known_keys = {
-                            e["key"] for e in parse_bibtex_entries(_bib_text_h)
-                        }
-                        _hdet = HallucinationDetector(
-                            llm_client=llm, known_bib_keys=_known_keys
-                        )
+                        _bib_text_h = _read_prior_artifact(run_dir, "references.bib") or ""
+                        _known_keys = {e["key"] for e in parse_bibtex_entries(_bib_text_h)}
+                        _hdet = HallucinationDetector(llm_client=llm, known_bib_keys=_known_keys)
                         _tex_text_h = tex_path.read_text(encoding="utf-8")
                         _halluc_report = asyncio.run(
                             _hdet.verify_paper(tex_path, paper_text=_tex_text_h)
                         )
                         (stage_dir / "hallucination_report.json").write_text(
-                            json.dumps(
-                                _halluc_report.to_dict(), indent=2, ensure_ascii=False
-                            ),
+                            json.dumps(_halluc_report.to_dict(), indent=2, ensure_ascii=False),
                             encoding="utf-8",
                         )
                         artifacts.append("hallucination_report.json")
@@ -1255,9 +1217,7 @@ def _execute_export_publish(
                                 _halluc_report.overall_score,
                             )
                     except Exception as _halluc_exc:  # noqa: BLE001
-                        logger.debug(
-                            "Stage 22: Hallucination check skipped: %s", _halluc_exc
-                        )
+                        logger.debug("Stage 22: Hallucination check skipped: %s", _halluc_exc)
                 # P1-03: 5-reviewer ensemble moved to stage 20 (_execute_quality_gate)
                 # so its verdict can actually gate the pipeline instead of being
                 # computed on the already-exported paper and read by nothing.
@@ -1272,19 +1232,13 @@ def _execute_export_publish(
                         )
 
                         _tex_text_i = tex_path.read_text(encoding="utf-8")
-                        _title_i = (
-                            _extract_paper_title(_tex_text_i) or config.research.topic
-                        )
+                        _title_i = _extract_paper_title(_tex_text_i) or config.research.topic
                         _impact_assessor = HumanitarianImpactAssessment(llm_client=llm)
                         _contribution = asyncio.run(
-                            _impact_assessor.assess_contribution_type(
-                                _tex_text_i, title=_title_i
-                            )
+                            _impact_assessor.assess_contribution_type(_tex_text_i, title=_title_i)
                         )
                         _broader_impact = asyncio.run(
-                            _impact_assessor.generate_broader_impact(
-                                _tex_text_i, title=_title_i
-                            )
+                            _impact_assessor.generate_broader_impact(_tex_text_i, title=_title_i)
                         )
                         (stage_dir / "impact_assessment.json").write_text(
                             json.dumps(
@@ -1303,19 +1257,14 @@ def _execute_export_publish(
                             _contribution.contribution_type.value,
                             _contribution.novelty_score,
                         )
-                        if (
-                            _contribution.contribution_type.value
-                            == "text_without_insight"
-                        ):
+                        if _contribution.contribution_type.value == "text_without_insight":
                             logger.warning(
                                 "Stage 22: Impact assessment flagged this paper as "
                                 "text-without-insight — %s",
                                 _contribution.reasoning,
                             )
                     except Exception as _impact_exc:  # noqa: BLE001
-                        logger.debug(
-                            "Stage 22: Impact assessment skipped: %s", _impact_exc
-                        )
+                        logger.debug("Stage 22: Impact assessment skipped: %s", _impact_exc)
                 # Source-grounding check: does the paper's text share
                 # vocabulary with the literature corpus actually gathered in
                 # Phase B? A cheap, deterministic, complementary signal to
@@ -1328,9 +1277,7 @@ def _execute_export_publish(
                         from berb.writing.source_writer import SourceGroundingVerifier
 
                         _tex_text_g = tex_path.read_text(encoding="utf-8")
-                        _candidates_text_g = (
-                            _read_prior_artifact(run_dir, "candidates.jsonl") or ""
-                        )
+                        _candidates_text_g = _read_prior_artifact(run_dir, "candidates.jsonl") or ""
                         _sources_g = [
                             row
                             for row in (
@@ -1356,9 +1303,7 @@ def _execute_export_publish(
                                 _grounding.total_claims,
                             )
                     except Exception as _ground_exc:  # noqa: BLE001
-                        logger.debug(
-                            "Stage 22: Source grounding check skipped: %s", _ground_exc
-                        )
+                        logger.debug("Stage 22: Source grounding check skipped: %s", _ground_exc)
                 # Post-compilation quality checks
                 try:
                     from berb.templates.compiler import check_compiled_quality
@@ -1425,9 +1370,7 @@ def _execute_export_publish(
 
     # WS-5.5: Generate framework diagram prompt for methodology section
     try:
-        _framework_prompt = _generate_framework_diagram_prompt(
-            final_paper, config, llm=llm
-        )
+        _framework_prompt = _generate_framework_diagram_prompt(final_paper, config, llm=llm)
         if _framework_prompt:
             _chart_dir = stage_dir / "charts"
             _chart_dir.mkdir(parents=True, exist_ok=True)
@@ -1467,9 +1410,7 @@ def _execute_export_publish(
                 for _entry in _bib_re.findall(
                     r"@(\w+)\{([^,]+),\s*(.*?)\n\}", _bib_text, _bib_re.DOTALL
                 ):
-                    _references.append(
-                        {"type": _entry[0], "key": _entry[1], "content": _entry[2]}
-                    )
+                    _references.append({"type": _entry[0], "key": _entry[1], "content": _entry[2]})
             except Exception:
                 pass
 
@@ -1494,9 +1435,7 @@ def _execute_export_publish(
         # Run async export
         import asyncio
 
-        _export_result = asyncio.run(
-            _exporter.export(_paper_content, _references, _figures)
-        )
+        _export_result = asyncio.run(_exporter.export(_paper_content, _references, _figures))
 
         if _export_result.exported_formats:
             logger.info(

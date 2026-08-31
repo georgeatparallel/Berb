@@ -15,7 +15,15 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
+from berb.integrity.anchors import Anchor
+
 logger = logging.getLogger(__name__)
+
+# Bumped when ClaimManifest's on-disk shape gains a field. v1 manifests
+# (schema_version absent, i.e. no `anchors` on any claim) load unchanged —
+# see ClaimManifest.from_dict — this is tracking metadata, not a version
+# gate. tasks/ars_integration_plan.md W1.
+CLAIM_MANIFEST_SCHEMA_VERSION = 2
 
 
 class ClaimType(StrEnum):
@@ -107,6 +115,11 @@ class ClaimRecord:
     metadata: dict[str, Any] = field(default_factory=dict)
     """Arbitrary metadata (extracted values, matched evidence keys, etc.)."""
 
+    anchors: tuple[Anchor, ...] = field(default_factory=tuple)
+    """Locator anchors supporting this claim (tasks/ars_integration_plan.md
+    W1). Empty for every claim in a v1 manifest and for any claim without a
+    citation marker in the draft — absence is not itself a finding."""
+
     def to_dict(self) -> dict[str, Any]:
         """Serialise to a JSON-compatible dict."""
         return {
@@ -119,11 +132,13 @@ class ClaimRecord:
             "confidence": self.confidence,
             "verdict": self.verdict.value,
             "metadata": self.metadata,
+            "anchors": [a.to_dict() for a in self.anchors],
         }
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ClaimRecord:
-        """Deserialise from a dict."""
+        """Deserialise from a dict. Tolerates a v1 record with no
+        ``anchors`` key — see CLAIM_MANIFEST_SCHEMA_VERSION."""
         try:
             claim_type = ClaimType(data.get("claim_type", "unknown"))
         except ValueError:
@@ -132,6 +147,12 @@ class ClaimRecord:
             verdict = ClaimVerdict(data.get("verdict", "not_checked"))
         except ValueError:
             verdict = ClaimVerdict.NOT_CHECKED
+        raw_anchors = data.get("anchors", ())
+        anchors = tuple(
+            a
+            for a in (Anchor.from_dict(item) for item in raw_anchors if isinstance(item, dict))
+            if a is not None
+        )
         return cls(
             claim_id=data["claim_id"],
             text=data["text"],
@@ -142,6 +163,7 @@ class ClaimRecord:
             confidence=str(data.get("confidence", "medium")),
             verdict=verdict,
             metadata=dict(data.get("metadata", {})),
+            anchors=anchors,
         )
 
 
@@ -157,6 +179,12 @@ class ClaimManifest:
 
     generated_at: str = ""
     """ISO-8601 timestamp of manifest generation."""
+
+    schema_version: int = CLAIM_MANIFEST_SCHEMA_VERSION
+    """On-disk shape version. A freshly created manifest always writes the
+    current version; a v1 file on disk simply has no `anchors` on any claim
+    and no `schema_version` key at all — this field is tracking metadata,
+    not a gate `from_dict` branches on."""
 
     def add_claim(self, claim: ClaimRecord) -> None:
         """Add a claim, assigning a unique ID if missing."""
@@ -181,6 +209,7 @@ class ClaimManifest:
         return {
             "paper_stage": self.paper_stage,
             "generated_at": self.generated_at,
+            "schema_version": self.schema_version,
             "total_claims": self.total_claims,
             "supported_claims": self.supported_claims,
             "unsupported_claims": self.unsupported_claims,
@@ -197,14 +226,15 @@ class ClaimManifest:
         manifest = cls(
             paper_stage=str(data.get("paper_stage", "draft")),
             generated_at=str(data.get("generated_at", "")),
+            # Absent means a v1 file, not "unknown" — record that fact
+            # rather than silently claiming the current version.
+            schema_version=int(data.get("schema_version", 1)),
         )
         for item in data.get("claims", ()):
             try:
                 manifest.claims.append(ClaimRecord.from_dict(item))
             except (KeyError, ValueError, TypeError):
-                logger.warning(
-                    "Skipping unparseable claim in manifest: %s", str(item)[:120]
-                )
+                logger.warning("Skipping unparseable claim in manifest: %s", str(item)[:120])
         return manifest
 
     @classmethod

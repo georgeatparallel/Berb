@@ -22,6 +22,7 @@ from berb.integrity import (
     EvidenceSource,
     EvidenceType,
     VerifiedEvidenceRegistry,
+    make_anchor,
 )
 from berb.integrity.evidence import make_evidence_id
 from berb.pipeline.stage_impls._paper_writing import (
@@ -64,9 +65,7 @@ def tmp_run_dir():
         }
         s14 = run_dir / "stage-14"
         s14.mkdir()
-        (s14 / "experiment_summary.json").write_text(
-            json.dumps(exp_data), encoding="utf-8"
-        )
+        (s14 / "experiment_summary.json").write_text(json.dumps(exp_data), encoding="utf-8")
         yield run_dir
 
 
@@ -531,24 +530,13 @@ class TestDraftClaimExtraction:
                 assert c.verdict == ClaimVerdict.SUPPORTED
 
     def test_classify_numeric_claim(self) -> None:
-        assert (
-            _classify_numeric_claim("Outperforms baselines", "Results")
-            == ClaimType.COMPARATIVE
-        )
+        assert _classify_numeric_claim("Outperforms baselines", "Results") == ClaimType.COMPARATIVE
         assert _classify_numeric_claim("Accuracy 95%", "Results") == ClaimType.EMPIRICAL
-        assert (
-            _classify_numeric_claim("Using ImageNet dataset", "Method")
-            == ClaimType.DATASET
-        )
-        assert (
-            _classify_numeric_claim("We run 10 experiments", "Setup")
-            == ClaimType.EMPIRICAL
-        )
+        assert _classify_numeric_claim("Using ImageNet dataset", "Method") == ClaimType.DATASET
+        assert _classify_numeric_claim("We run 10 experiments", "Setup") == ClaimType.EMPIRICAL
 
     def test_extract_dataset_claims(self) -> None:
-        text = (
-            "We use the ImageNet dataset for evaluation.\nWe evaluate on CIFAR-100.\n"
-        )
+        text = "We use the ImageNet dataset for evaluation.\nWe evaluate on CIFAR-100.\n"
         sections = {"Method": (0, 1)}
         manifest = ClaimManifest(paper_stage="draft")
         _extract_dataset_claims(text, sections, manifest)
@@ -562,9 +550,7 @@ class TestDraftClaimExtraction:
         assert section_map[5] == "Method"
         assert section_map[9] == "Method"
 
-    def test_build_draft_claim_manifest_writes_file(
-        self, tmp_run_dir, sample_draft
-    ) -> None:
+    def test_build_draft_claim_manifest_writes_file(self, tmp_run_dir, sample_draft) -> None:
         # Regression test (audit §4.2): _build_draft_claim_manifest referenced
         # the module-level name ClaimManifest without importing it, raising
         # NameError on every call. The caller in generate_paper_draft() swallows
@@ -598,13 +584,9 @@ class TestIntegrityIntegration:
         sections = _parse_draft_sections(sample_draft)
         manifest = ClaimManifest(paper_stage="draft")
 
-        evidence_reg = VerifiedEvidenceRegistry.load(
-            tmp_run_dir / "evidence_registry.json"
-        )
+        evidence_reg = VerifiedEvidenceRegistry.load(tmp_run_dir / "evidence_registry.json")
         metric_values = {
-            r.value
-            for r in evidence_reg.records.values()
-            if isinstance(r.value, (int, float))
+            r.value for r in evidence_reg.records.values() if isinstance(r.value, (int, float))
         }
 
         _extract_numeric_claims(sample_draft, sections, manifest, metric_values)
@@ -622,9 +604,7 @@ class TestIntegrityIntegration:
                     assert c.verdict == ClaimVerdict.UNSUPPORTED
                 break
 
-    def test_evidence_registry_and_claim_manifest_coexist(
-        self, tmp_run_dir, sample_draft
-    ) -> None:
+    def test_evidence_registry_and_claim_manifest_coexist(self, tmp_run_dir, sample_draft) -> None:
         """Both artifacts can be produced from the same run directory."""
         # Build evidence registry
         reg = VerifiedEvidenceRegistry.from_run_dir(tmp_run_dir)
@@ -641,12 +621,8 @@ class TestIntegrityIntegration:
         assert (tmp_run_dir / "claim_manifest.json").is_file()
 
         # They are valid JSON
-        er = json.loads(
-            (tmp_run_dir / "evidence_registry.json").read_text(encoding="utf-8")
-        )
-        cm = json.loads(
-            (tmp_run_dir / "claim_manifest.json").read_text(encoding="utf-8")
-        )
+        er = json.loads((tmp_run_dir / "evidence_registry.json").read_text(encoding="utf-8"))
+        cm = json.loads((tmp_run_dir / "claim_manifest.json").read_text(encoding="utf-8"))
         assert er["record_count"] > 0
         assert cm["total_claims"] > 0
 
@@ -695,3 +671,77 @@ class TestEdgeCases:
         for et in EvidenceType:
             assert isinstance(et.value, str)
             assert len(et.value) > 0
+
+
+class TestClaimManifestAnchorSchema:
+    """tasks/ars_integration_plan.md W1: ClaimRecord.anchors and
+    ClaimManifest.schema_version are additive fields — a v1 manifest on
+    disk (neither key present) must load unchanged."""
+
+    def test_v1_manifest_with_no_anchors_key_loads_fine(self) -> None:
+        v1_data = {
+            "paper_stage": "draft",
+            "generated_at": "2026-01-01T00:00:00Z",
+            "claims": [
+                {
+                    "claim_id": "c1",
+                    "text": "Accuracy improved by 10%.",
+                    "claim_type": "empirical",
+                    # no "anchors" key at all — a real pre-W1 file
+                }
+            ],
+        }
+        manifest = ClaimManifest.from_dict(v1_data)
+        assert manifest.schema_version == 1
+        assert manifest.total_claims == 1
+        assert manifest.claims[0].anchors == ()
+
+    def test_fresh_manifest_writes_current_schema_version(self) -> None:
+        manifest = ClaimManifest(paper_stage="draft")
+        assert manifest.to_dict()["schema_version"] == 2
+
+    def test_claim_record_anchors_round_trip(self) -> None:
+        anchor = make_anchor("he2016deep", "quote", "deep residual learning")
+        assert anchor is not None
+        record = ClaimRecord(
+            claim_id="c1",
+            text="Accuracy improved.",
+            claim_type=ClaimType.EMPIRICAL,
+            anchors=(anchor,),
+        )
+        restored = ClaimRecord.from_dict(record.to_dict())
+        assert restored.anchors == (anchor,)
+
+    def test_malformed_anchor_entry_is_skipped_not_fatal(self) -> None:
+        data = {
+            "claim_id": "c1",
+            "text": "x",
+            "claim_type": "empirical",
+            "anchors": [
+                {"cite_key": "ok2020x", "kind": "quote", "value": "v", "anchor_id": "abc123"},
+                {"cite_key": "../evil", "kind": "quote", "value": "v", "anchor_id": "def456"},
+                "not even a dict",
+                {"kind": "bogus"},
+            ],
+        }
+        record = ClaimRecord.from_dict(data)
+        assert len(record.anchors) == 1
+        assert record.anchors[0].cite_key == "ok2020x"
+
+    def test_manifest_save_load_round_trip_preserves_anchors(self, tmp_path) -> None:
+        anchor = make_anchor("he2016deep", "quote", "deep residual learning")
+        assert anchor is not None
+        manifest = ClaimManifest(paper_stage="draft")
+        manifest.add_claim(
+            ClaimRecord(
+                claim_id="",
+                text="Accuracy improved.",
+                claim_type=ClaimType.EMPIRICAL,
+                anchors=(anchor,),
+            )
+        )
+        path = tmp_path / "manifest.json"
+        manifest.save(path)
+        loaded = ClaimManifest.load(path)
+        assert loaded.schema_version == 2
+        assert loaded.claims[0].anchors == (anchor,)
