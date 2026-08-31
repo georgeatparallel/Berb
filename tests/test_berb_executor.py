@@ -1937,6 +1937,93 @@ class TestLiteratureScreenRetractionWiring:
         assert not (stage_dir / "retraction_findings.json").exists()
 
 
+class TestLiteratureScreenPaperMillWiring:
+    """tasks/ars_integration_plan.md W4: advisory tortured-phrase risk
+    screening at stage 5, using the real shipped corpus
+    (berb/data/tortured_phrases.yaml)."""
+
+    def test_clean_titles_produce_no_artifact(
+        self,
+        run_dir: Path,
+        rc_config: RCConfig,
+        adapters: AdapterBundle,
+    ) -> None:
+        _write_prior_artifact(
+            run_dir,
+            4,
+            "candidates.jsonl",
+            json.dumps({"cite_key": "real2024x", "title": "A Standard Transformer Study"}),
+        )
+        stage_dir = run_dir / "stage-05"
+        stage_dir.mkdir(parents=True, exist_ok=True)
+
+        result = rc_executor._execute_literature_screen(
+            stage_dir, run_dir, rc_config, adapters, llm=None
+        )
+
+        assert result.status is StageStatus.DONE
+        assert "paper_mill_findings.json" not in result.artifacts
+
+    def test_tortured_phrase_in_title_produces_advisory_artifact(
+        self,
+        run_dir: Path,
+        rc_config: RCConfig,
+        adapters: AdapterBundle,
+    ) -> None:
+        _write_prior_artifact(
+            run_dir,
+            4,
+            "candidates.jsonl",
+            json.dumps(
+                {
+                    "cite_key": "risky2024x",
+                    "title": "A Survey of Counterfeit Consciousness Methods",
+                }
+            ),
+        )
+        stage_dir = run_dir / "stage-05"
+        stage_dir.mkdir(parents=True, exist_ok=True)
+
+        result = rc_executor._execute_literature_screen(
+            stage_dir, run_dir, rc_config, adapters, llm=None
+        )
+
+        assert result.status is StageStatus.DONE  # advisory: never fails the stage
+        assert "paper_mill_findings.json" in result.artifacts
+        payload = json.loads((stage_dir / "paper_mill_findings.json").read_text())
+        assert len(payload) == 1
+        assert payload[0]["check"] == "paper_mill_risk"
+        assert payload[0]["severity"] == "advisory"
+        assert "counterfeit consciousness" in payload[0]["evidence"]
+
+    def test_corpus_load_exception_does_not_fail_stage(
+        self,
+        run_dir: Path,
+        rc_config: RCConfig,
+        adapters: AdapterBundle,
+    ) -> None:
+        _write_prior_artifact(
+            run_dir,
+            4,
+            "candidates.jsonl",
+            json.dumps({"cite_key": "real2024x", "title": "A Standard Study"}),
+        )
+        stage_dir = run_dir / "stage-05"
+        stage_dir.mkdir(parents=True, exist_ok=True)
+
+        def _boom(*_a: Any, **_k: Any) -> None:
+            raise RuntimeError("simulated corpus load failure")
+
+        with pytest.MonkeyPatch.context() as mp:
+            mp.setattr("berb.pipeline.stage_impls._literature._load_tortured_phrase_corpus", _boom)
+            result = rc_executor._execute_literature_screen(
+                stage_dir, run_dir, rc_config, adapters, llm=None
+            )
+
+        assert result.status is StageStatus.DONE
+        assert "paper_mill_findings.json" not in result.artifacts
+
+
 class TestQualityGateEnsembleVeto:
     """P1-03: the 5-reviewer ensemble now runs inside the quality gate
     (stage 20) instead of after export (stage 22), so its verdict can

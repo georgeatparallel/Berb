@@ -233,6 +233,7 @@ module = [
     "berb.integrity.findings",
     "berb.integrity.uncited",
     "berb.literature.retraction",
+    "berb.literature.paper_mill",
 ]
 ignore_errors = false
 

@@ -1,6 +1,6 @@
 # ARS Integration Plan — Research-Integrity Capabilities for Berb
 
-**Status:** in progress — W0, W2, W3 all done including stage wiring
+**Status:** in progress — W0, W2, W3, W4 all done including stage wiring
 **Author:** planning pass, 2026-08-31
 **Source of ideas:** [academic-research-skills](https://github.com/Imbad0202/academic-research-skills) (ARS) v3.21.1 by Cheng-I Wu
 **Supersedes:** nothing. Complements `tasks/hardening_plan_2026-08-13.md` and `tasks/arch_hardening_plan.md`.
@@ -58,12 +58,36 @@
     try/except-and-log-debug pattern).
   - 46 tests total (43 unit incl. 12 new split_sentences tests + 3 stage-17
     wiring tests), 98%+ coverage, mypy/ruff clean.
-- Remaining: W1 (citation anchors), W4 (paper-mill), W5 (cross-model), W6
-  (revision guard), W7 (seeded-defect eval), W8 (reporting
-  guidelines/disclosure), plus the DoD housekeeping items (dual-license
-  email, stale ruff entry, CLAUDE.md router-name fix, `finding_reproduction`
-  disposition), plus the plan's original stage-20 (`QUALITY_GATE`) blocking
-  touchpoint for uncited-assertion — stage 17 only ships advisory, as asked.
+- 2026-08-31 — W4 (`berb/literature/paper_mill.py`: `load_corpus`,
+  `screen_text`, `PhraseCorpus`) landed **and wired**:
+  - New `berb/data/tortured_phrases.yaml` — a small (6-entry) starter
+    corpus, explicitly attributed to the primary academic source (Cabanac,
+    Labbé & Ionescu 2021, arXiv:2107.06751), not vendored from ARS. File
+    header documents this is illustrative-only and points to the
+    Problematic Paper Screener's own dataset for real coverage; loader
+    accepts a `path` override for that.
+  - Matcher: NFKC + casefold + punctuation-as-space normalization, sliding
+    n-gram window (2-4 words) over a frozenset per n — literal string
+    matching only, corpus entries never compiled as regex.
+  - Loader validates corpus size (1 MB cap), entry count (20k cap),
+    per-phrase length (200 chars) and rejects control characters; degrades
+    to an empty `PhraseCorpus` (guaranteed no-op) on any load failure
+    rather than raising.
+  - Every finding is `Severity.ADVISORY` — never gates below `strict` mode,
+    matching the plan's "risk marker, not an authorship judgment" design.
+  - **Stage 5** (`LITERATURE_SCREEN`, advisory): corpus loaded once per
+    stage call, each shortlisted candidate's title+abstract screened;
+    writes `paper_mill_findings.json` when non-empty; never fails the
+    stage. Wired in `berb/pipeline/stage_impls/_literature.py`, right
+    beside the W2 retraction check.
+  - 29 tests total (26 unit + 3 stage-5 wiring), 97.6% coverage, mypy/ruff/
+    bandit clean (bandit: zero findings, not just filtered-Low).
+- Remaining: W1 (citation anchors), W5 (cross-model), W6 (revision guard),
+  W7 (seeded-defect eval), W8 (reporting guidelines/disclosure), plus the
+  DoD housekeeping items (dual-license email, stale ruff entry, CLAUDE.md
+  router-name fix, `finding_reproduction` disposition), plus the plan's
+  original stage-20 (`QUALITY_GATE`) blocking touchpoint for
+  uncited-assertion — stage 17 only ships advisory, as asked.
 
 ---
 

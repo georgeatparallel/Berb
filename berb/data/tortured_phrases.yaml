@@ -1,0 +1,52 @@
+# Tortured-phrase risk corpus (tasks/ars_integration_plan.md W4).
+#
+# PROVENANCE — read before editing:
+#
+# "Tortured phrases" are thesaurus-mangled technical terms characteristic of
+# paper-mill and plagiarism-laundering output (e.g. a term substituted so
+# heavily that it no longer reads as the original jargon). The phenomenon
+# and its name come from the primary academic source:
+#
+#   Cabanac, G., Labbé, C., & Ionescu, C. (2021). "Tortured phrases: A
+#   dubious writing style emerging in science." arXiv:2107.06751.
+#
+# This file is a SMALL, illustrative STARTER corpus containing a handful of
+# the phrase-pairs that paper's own findings made widely known (reproduced
+# across secondary press coverage of the paper). It is NOT a reproduction
+# of the paper's or any tool's full dataset, and it is NOT sourced from or
+# copied out of any third-party repository — no ARS bytes appear here (ARS
+# is CC BY-NC 4.0; this file ships under Berb's MIT license and must stay
+# independently sourced). See tasks/ars_integration_plan.md W4 and
+# docs/legal/ars-provenance.md.
+#
+# This corpus is DELIBERATELY small and is not fit for production use as
+# a comprehensive detector. For real coverage, point the loader (see
+# berb/literature/paper_mill.py::load_corpus) at a properly licensed,
+# maintained corpus such as the Problematic Paper Screener's own dataset
+# (https://github.com/labsquare/PPS or successor), and set
+# BERB_TORTURED_PHRASES_PATH to that file instead of editing this one.
+#
+# Schema: each entry is {phrase, likely_original, note}. `phrase` is the
+# tortured substitute matched against ingested literature text (normalized:
+# NFKC + casefold + whitespace-collapsed). `likely_original` and `note` are
+# informational only — never matched against, never treated as instructions.
+version: 1
+entries:
+  - phrase: "counterfeit consciousness"
+    likely_original: "artificial intelligence"
+    note: "widely reported example from arXiv:2107.06751"
+  - phrase: "haze figuring"
+    likely_original: "cloud computing"
+    note: "widely reported example from arXiv:2107.06751"
+  - phrase: "profound neural organization"
+    likely_original: "deep neural network"
+    note: "widely reported example from arXiv:2107.06751"
+  - phrase: "irregular backwoods"
+    likely_original: "random forest"
+    note: "widely reported example from arXiv:2107.06751"
+  - phrase: "colossal information"
+    likely_original: "big data"
+    note: "widely reported example from arXiv:2107.06751"
+  - phrase: "gullible neural organization"
+    likely_original: "artificial neural network"
+    note: "widely reported example from arXiv:2107.06751"

@@ -13,6 +13,8 @@ import yaml
 
 from berb.adapters import AdapterBundle
 from berb.config import RCConfig
+from berb.literature.paper_mill import load_corpus as _load_tortured_phrase_corpus
+from berb.literature.paper_mill import screen_text as _screen_tortured_phrases
 from berb.literature.retraction import (
     RetractionRecord,
     resolve_retraction,
@@ -912,6 +914,38 @@ def _execute_literature_screen(
             evidence_refs.append("stage-05/retraction_findings.json")
             for finding in retraction_findings:
                 logger.warning("[retraction] %s: %s", finding.locator, finding.message)
+
+    # tasks/ars_integration_plan.md W4: advisory tortured-phrase risk
+    # screening on each shortlisted candidate's title+abstract. A hit is a
+    # risk MARKER, never an authorship judgment — Severity.ADVISORY means
+    # this never gates below strict mode. Corpus loaded once per stage
+    # call, not per-row.
+    try:
+        _phrase_corpus = _load_tortured_phrase_corpus()
+    except Exception:  # noqa: BLE001 - advisory check must never fail the stage
+        logger.debug("Could not load tortured-phrase corpus", exc_info=True)
+        _phrase_corpus = None
+
+    if _phrase_corpus is not None and _phrase_corpus.size:
+        paper_mill_findings: list[Any] = []
+        for idx, row in enumerate(shortlist):
+            locator = str(row.get("cite_key") or row.get("paper_id") or f"shortlist:{idx}")
+            text_blob = f"{row.get('title', '')} {row.get('abstract', '')}"
+            try:
+                paper_mill_findings.extend(
+                    _screen_tortured_phrases(text_blob, _phrase_corpus, locator=locator)
+                )
+            except Exception:  # noqa: BLE001 - advisory check must never fail the stage
+                logger.debug("Paper-mill screening failed for %s", locator, exc_info=True)
+        if paper_mill_findings:
+            (stage_dir / "paper_mill_findings.json").write_text(
+                json.dumps([f.to_dict() for f in paper_mill_findings], indent=2),
+                encoding="utf-8",
+            )
+            artifacts.append("paper_mill_findings.json")
+            evidence_refs.append("stage-05/paper_mill_findings.json")
+            for finding in paper_mill_findings:
+                logger.warning("[paper-mill] %s: %s", finding.locator, finding.message)
 
     return StageResult(
         stage=Stage.LITERATURE_SCREEN,
