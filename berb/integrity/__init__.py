@@ -23,11 +23,24 @@ from .evidence import (
     EvidenceSource,
     EvidenceType,
 )
+from .findings import (
+    CheckId,
+    Finding,
+    Severity,
+    gates,
+)
 from .registry import (
     VerifiedEvidenceRegistry,
 )
+from .uncited import (
+    SentenceRef,
+    detect_uncited,
+    is_uncited_assertion,
+    split_sentences,
+)
 
 __all__ = [
+    "CheckId",
     "ClaimManifest",
     "ClaimRecord",
     "ClaimType",
@@ -35,5 +48,12 @@ __all__ = [
     "EvidenceRecord",
     "EvidenceSource",
     "EvidenceType",
+    "Finding",
+    "SentenceRef",
+    "Severity",
     "VerifiedEvidenceRegistry",
+    "detect_uncited",
+    "gates",
+    "is_uncited_assertion",
+    "split_sentences",
 ]

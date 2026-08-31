@@ -12,6 +12,12 @@ import yaml  # noqa: F401 — available for downstream use
 
 from berb.adapters import AdapterBundle
 from berb.config import RCConfig
+from berb.integrity.findings import gates as _integrity_gates
+from berb.literature.retraction import (
+    RetractionRecord,
+    resolve_retraction,
+    screen_bibliography,
+)
 from berb.llm.client import LLMClient
 from berb.pipeline._domain import _detect_domain  # noqa: F401
 from berb.pipeline._helpers import (
@@ -20,7 +26,7 @@ from berb.pipeline._helpers import (
     _read_prior_artifact,
     _safe_json_loads,
     _topic_constraint_block,  # noqa: F401
-    )
+)
 from berb.pipeline.contracts import StageContract
 from berb.pipeline.registry import register_stage
 from berb.pipeline.stages import Stage, StageStatus
@@ -481,11 +487,55 @@ def _execute_citation_verify(
         report.integrity_score * 100,
     )
 
+    # tasks/ars_integration_plan.md W2: retraction / expression-of-concern
+    # screening on citations with a resolved DOI. This is the enforcing
+    # touchpoint — screening at stage 5 (LITERATURE_SCREEN) is advisory
+    # only. Gated on config.integrity.mode: draft mode never fails
+    # (IntegrityConfig's documented "draft (warn only)" contract), so this
+    # cannot regress any existing draft-mode run.
+    retraction_records: dict[str, RetractionRecord] = {}
+    for cr in report.results:
+        doi = (cr.matched_paper.doi if cr.matched_paper else "") or ""
+        if not doi:
+            continue
+        try:
+            retraction_records[cr.cite_key] = resolve_retraction(cr.cite_key, doi)
+        except Exception:  # noqa: BLE001 - a lookup failure must not crash verification
+            logger.debug("Retraction lookup failed for %s", cr.cite_key, exc_info=True)
+
+    retraction_artifact_written = False
+    if retraction_records:
+        retraction_findings = screen_bibliography(
+            retraction_records, acknowledged=frozenset(config.integrity.retraction_ack)
+        )
+        if retraction_findings:
+            (stage_dir / "retraction_findings.json").write_text(
+                json.dumps([f.to_dict() for f in retraction_findings], indent=2),
+                encoding="utf-8",
+            )
+            retraction_artifact_written = True
+            for finding in retraction_findings:
+                logger.warning("[retraction] %s: %s", finding.locator, finding.message)
+
+            gated = _integrity_gates(retraction_findings, config.integrity.mode)
+            if gated:
+                blocked_keys = ", ".join(sorted(f.locator for f in gated))
+                return StageResult(
+                    stage=Stage.CITATION_VERIFY,
+                    status=StageStatus.FAILED,
+                    artifacts=("retraction_findings.json",),
+                    evidence_refs=("stage-23/retraction_findings.json",),
+                    error=(
+                        f"E23_VERIFY_FAIL: retracted or expression-of-concern "
+                        f"citation(s) in {config.integrity.mode} mode: "
+                        f"{blocked_keys}. Remove these citations or add them to "
+                        "integrity.retraction_ack if intentional."
+                    ),
+                )
+
     # --- Relevance check: assess topical relevance of verified citations ---
     if llm is not None and report.results:
-        relevance_scores = _check_citation_relevance(
-            llm, config.research.topic, report.results
-        )
+        relevance_scores = _check_citation_relevance(llm, config.research.topic, report.results)
         for cr in report.results:
             score = relevance_scores.get(cr.cite_key)
             if score is not None:
@@ -507,15 +557,12 @@ def _execute_citation_verify(
     remaining = [
         cr
         for cr in report.results
-        if cr.cite_key not in low_relevance_keys
-        and cr.status != VerifyStatus.HALLUCINATED
+        if cr.cite_key not in low_relevance_keys and cr.status != VerifyStatus.HALLUCINATED
     ]
     if len(remaining) > MAX_CITATIONS:
         remaining.sort(
             key=lambda c: (
-                c.relevance_score
-                if c.relevance_score is not None
-                else _DEFAULT_RELEVANCE
+                c.relevance_score if c.relevance_score is not None else _DEFAULT_RELEVANCE
             ),
         )
         overflow = remaining[: len(remaining) - MAX_CITATIONS]
@@ -563,9 +610,7 @@ def _execute_citation_verify(
     if paper_text.strip():
         _vbib_keys = set(re.findall(r"@\w+\{([^,]+),", verified_bib))
         _cited_in_paper: set[str] = set()
-        _cited_in_paper.update(
-            re.findall(r"\[([a-zA-Z]+\d{4}[a-zA-Z0-9_-]*)\]", paper_text)
-        )
+        _cited_in_paper.update(re.findall(r"\[([a-zA-Z]+\d{4}[a-zA-Z0-9_-]*)\]", paper_text))
         for _cm in re.finditer(r"\\cite\{([^}]+)\}", paper_text):
             _cited_in_paper.update(k.strip() for k in _cm.group(1).split(","))
         # BUG-182: Also read stage-22/paper.tex for \cite{} keys
@@ -590,13 +635,13 @@ def _execute_citation_verify(
     # write a comment instead of an empty file to avoid "Missing or empty output" error.
     if not verified_bib.strip():
         verified_bib = "% All citations were filtered out during verification\n"
-        logger.warning(
-            "Stage 23: All BibTeX entries filtered out — writing placeholder"
-        )
+        logger.warning("Stage 23: All BibTeX entries filtered out — writing placeholder")
 
     (stage_dir / "references_verified.bib").write_text(verified_bib, encoding="utf-8")
 
     artifacts = ["verification_report.json", "references_verified.bib"]
+    if retraction_artifact_written:
+        artifacts.append("retraction_findings.json")
 
     if paper_text.strip():
         annotated = annotate_paper_hallucinations(paper_text, report)

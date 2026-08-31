@@ -13,6 +13,11 @@ import yaml
 
 from berb.adapters import AdapterBundle
 from berb.config import RCConfig
+from berb.literature.retraction import (
+    RetractionRecord,
+    resolve_retraction,
+    screen_bibliography,
+)
 from berb.llm.client import LLMClient
 from berb.pipeline._helpers import (
     StageResult,
@@ -97,9 +102,7 @@ def _seed_expansion_queries(
 ) -> list[str]:
     """Seed the next search round from titles of this round's highest-cited
     new candidates, skipping titles already used as a query."""
-    ranked = sorted(
-        round_candidates, key=lambda c: c.get("citation_count", 0) or 0, reverse=True
-    )
+    ranked = sorted(round_candidates, key=lambda c: c.get("citation_count", 0) or 0, reverse=True)
     new_queries: list[str] = []
     for c in ranked:
         title = str(c.get("title", "")).strip()
@@ -224,9 +227,7 @@ def _execute_search_strategy(
             try:
                 response = adapters.web_fetch.fetch(str(src.get("url", "")))
                 src["status"] = (
-                    "verified"
-                    if response.status_code in (200, 301, 302, 405)
-                    else "unreachable"
+                    "verified" if response.status_code in (200, 301, 302, 405) else "unreachable"
                 )
                 src["http_status"] = response.status_code
             except Exception:  # noqa: BLE001
@@ -306,9 +307,7 @@ def _execute_search_strategy(
     def _extract_keywords(text: str) -> list[str]:
         """Extract meaningful keywords from text, removing stop words."""
         return [
-            w
-            for w in re.split(r"[^a-zA-Z0-9]+", text)
-            if w.lower() not in _stop and len(w) > 1
+            w for w in re.split(r"[^a-zA-Z0-9]+", text) if w.lower() not in _stop and len(w) > 1
         ]
 
     _MAX_QUERY_LEN = 60  # characters — beyond this, shorten to keywords
@@ -446,8 +445,7 @@ def _execute_literature_collect(
         _round_queries = _expand_search_queries(queries, config.research.topic)
         for _round in range(_MAX_EXPANSION_ROUNDS):
             logger.info(
-                "[literature] Round %d/%d: searching %d queries across "
-                "OpenAlex → S2 → arXiv…",
+                "[literature] Round %d/%d: searching %d queries across OpenAlex → S2 → arXiv…",
                 _round + 1,
                 _MAX_EXPANSION_ROUNDS,
                 len(_round_queries),
@@ -558,9 +556,7 @@ def _execute_literature_collect(
                     )
                     _injected += 1
             if _injected:
-                logger.info(
-                    "Stage 4: Injected %d seminal papers from seed library", _injected
-                )
+                logger.info("Stage 4: Injected %d seminal papers from seed library", _injected)
     except Exception:  # noqa: BLE001
         logger.debug("Seminal paper injection skipped", exc_info=True)
 
@@ -611,9 +607,7 @@ def _execute_literature_collect(
 
             # Convert Google Scholar papers into candidates
             for sp in web_result.scholar_papers:
-                _existing_titles = {
-                    str(c.get("title", "")).lower().strip() for c in candidates
-                }
+                _existing_titles = {str(c.get("title", "")).lower().strip() for c in candidates}
                 if sp.title.lower().strip() not in _existing_titles:
                     lit_paper = sp.to_literature_paper()
                     d = lit_paper.to_dict()
@@ -650,9 +644,7 @@ def _execute_literature_collect(
     # set correctly in the search block above. Overwriting would mislabel
     # LLM-hallucinated or seminal papers as "real search" results.
     if not candidates:
-        logger.warning(
-            "Stage 4: All literature searches failed — using placeholder papers"
-        )
+        logger.warning("Stage 4: All literature searches failed — using placeholder papers")
         candidates = [
             {
                 "id": f"candidate-{idx + 1}",
@@ -686,11 +678,7 @@ def _execute_literature_collect(
                     _a0 = (
                         _authors[0]
                         if isinstance(_authors[0], str)
-                        else (
-                            _authors[0].get("name", "")
-                            if isinstance(_authors[0], dict)
-                            else ""
-                        )
+                        else (_authors[0].get("name", "") if isinstance(_authors[0], dict) else "")
                     )
                     _surname = _a0.split()[-1].lower() if _a0.strip() else "unknown"
                 _yr = c.get("year", 2024)
@@ -733,9 +721,7 @@ def _execute_literature_collect(
         bib_content = "\n\n".join(bibtex_entries) + "\n"
         (stage_dir / "references.bib").write_text(bib_content, encoding="utf-8")
         artifacts.append("references.bib")
-        logger.info(
-            "Stage 4: Wrote %d BibTeX entries to references.bib", len(bibtex_entries)
-        )
+        logger.info("Stage 4: Wrote %d BibTeX entries to references.bib", len(bibtex_entries))
 
     # Write search metadata
     (stage_dir / "search_meta.json").write_text(
@@ -793,9 +779,7 @@ def _execute_literature_screen(
     # is meaningless if the corpus itself doesn't exist; fail here rather
     # than silently accept it, and roll back to LITERATURE_COLLECT
     # (stages.py GATE_ROLLBACK) so a retry can hit real search sources.
-    _search_meta = _safe_json_loads(
-        _read_prior_artifact(run_dir, "search_meta.json") or "", {}
-    )
+    _search_meta = _safe_json_loads(_read_prior_artifact(run_dir, "search_meta.json") or "", {})
     if isinstance(_search_meta, dict) and _search_meta.get("real_search") is False:
         return StageResult(
             stage=Stage.LITERATURE_SCREEN,
@@ -813,9 +797,7 @@ def _execute_literature_screen(
     # --- P1-1: keyword relevance pre-filter ---
     # Before LLM screening, drop papers whose title+abstract share no keywords
     # with the research topic.  This catches cross-domain noise cheaply.
-    topic_keywords = _extract_topic_keywords(
-        config.research.topic, config.research.domains
-    )
+    topic_keywords = _extract_topic_keywords(config.research.topic, config.research.domains)
     filtered_rows: list[dict[str, Any]] = []
     dropped_count = 0
     for raw_line in candidates_text.strip().splitlines():
@@ -838,9 +820,7 @@ def _execute_literature_screen(
     if not filtered_rows:
         filtered_rows = _parse_jsonl_rows(candidates_text)
     # Rebuild candidates_text from filtered rows
-    candidates_text = "\n".join(
-        json.dumps(r, ensure_ascii=False) for r in filtered_rows
-    )
+    candidates_text = "\n".join(json.dumps(r, ensure_ascii=False) for r in filtered_rows)
     logger.info(
         "Domain pre-filter: kept %d, dropped %d (keywords: %s)",
         len(filtered_rows),
@@ -856,11 +836,7 @@ def _execute_literature_screen(
             "literature_screen",
             evolution_overlay=_overlay,
             topic=config.research.topic,
-            domains=(
-                ", ".join(config.research.domains)
-                if config.research.domains
-                else "general"
-            ),
+            domains=(", ".join(config.research.domains) if config.research.domains else "general"),
             quality_threshold=config.research.quality_threshold,
             candidates_text=wrap_untrusted(candidates_text, "candidate paper metadata"),
         )
@@ -907,11 +883,41 @@ def _execute_literature_screen(
         )
     out = stage_dir / "shortlist.jsonl"
     _write_jsonl(out, shortlist)
+
+    # tasks/ars_integration_plan.md W2: advisory retraction / expression-of-
+    # concern screening. Only rows carrying a DOI trigger a lookup — most
+    # arXiv-only candidates have none, and resolve_retraction short-circuits
+    # to UNKNOWN with zero network calls when the DOI is empty. Advisory
+    # only: never fails the stage, matching plan §5's stage-5 wiring.
+    artifacts = ["shortlist.jsonl"]
+    evidence_refs = ["stage-05/shortlist.jsonl"]
+    retraction_records: dict[str, RetractionRecord] = {}
+    for idx, row in enumerate(shortlist):
+        doi = str(row.get("doi", "")).strip()
+        if not doi:
+            continue
+        locator = str(row.get("cite_key") or row.get("paper_id") or f"shortlist:{idx}")
+        try:
+            retraction_records[locator] = resolve_retraction(locator, doi)
+        except Exception:  # noqa: BLE001 - advisory check must never fail the stage
+            logger.debug("Retraction lookup failed for %s", locator, exc_info=True)
+    if retraction_records:
+        retraction_findings = screen_bibliography(retraction_records)
+        if retraction_findings:
+            (stage_dir / "retraction_findings.json").write_text(
+                json.dumps([f.to_dict() for f in retraction_findings], indent=2),
+                encoding="utf-8",
+            )
+            artifacts.append("retraction_findings.json")
+            evidence_refs.append("stage-05/retraction_findings.json")
+            for finding in retraction_findings:
+                logger.warning("[retraction] %s: %s", finding.locator, finding.message)
+
     return StageResult(
         stage=Stage.LITERATURE_SCREEN,
         status=StageStatus.DONE,
-        artifacts=("shortlist.jsonl",),
-        evidence_refs=("stage-05/shortlist.jsonl",),
+        artifacts=tuple(artifacts),
+        evidence_refs=tuple(evidence_refs),
     )
 
 
@@ -984,13 +990,9 @@ def _execute_knowledge_extract(
                     fallback_providers=llm.config.fallback_providers or [],
                 )
                 fast_llm = LLMClient(fast_config)
-                logger.info(
-                    "Stage 6: Using fast model %s for batch processing", FAST_MODEL
-                )
+                logger.info("Stage 6: Using fast model %s for batch processing", FAST_MODEL)
             except Exception as e:
-                logger.warning(
-                    "Stage 6: Could not switch to fast model, using default: %s", e
-                )
+                logger.warning("Stage 6: Could not switch to fast model, using default: %s", e)
                 fast_llm = llm
         else:
             logger.debug(
@@ -1012,17 +1014,13 @@ def _execute_knowledge_extract(
             )
 
             # Format batch as JSONL
-            batch_jsonl = "\n".join(
-                json.dumps(row, ensure_ascii=False) for row in batch_rows
-            )
+            batch_jsonl = "\n".join(json.dumps(row, ensure_ascii=False) for row in batch_rows)
 
             # Add web context only to first batch
             batch_shortlist = batch_jsonl
             if batch_idx == 0 and web_context:
                 batch_shortlist = (
-                    batch_shortlist
-                    + "\n\n--- Web Search Context ---\n"
-                    + web_context[:2_000]
+                    batch_shortlist + "\n\n--- Web Search Context ---\n" + web_context[:2_000]
                 )
 
             try:
@@ -1041,9 +1039,7 @@ def _execute_knowledge_extract(
                 )
                 payload = _safe_json_loads(resp.content, {})
                 if isinstance(payload, dict) and isinstance(payload.get("cards"), list):
-                    batch_cards = [
-                        item for item in payload["cards"] if isinstance(item, dict)
-                    ]
+                    batch_cards = [item for item in payload["cards"] if isinstance(item, dict)]
                     all_cards.extend(batch_cards)
                     logger.info(
                         "Stage 6: Batch %d extracted %d cards",

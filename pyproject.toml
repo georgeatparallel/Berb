@@ -228,6 +228,11 @@ module = [
     "berb.experiment.sandbox",
     "berb.llm.client",
     "berb.pipeline.executor",
+    # ARS-integration screening layer (tasks/ars_integration_plan.md) —
+    # written clean from the start, joins the ratchet immediately.
+    "berb.integrity.findings",
+    "berb.integrity.uncited",
+    "berb.literature.retraction",
 ]
 ignore_errors = false
 

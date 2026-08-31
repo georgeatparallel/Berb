@@ -30,6 +30,7 @@ _SOURCE_TTL: dict[str, float] = {
     "semantic_scholar": 86400 * 3,  # 3 days
     "openalex": 86400 * 3,  # 3 days
     "citation_verify": 86400 * 365,  # ~permanent
+    "retraction_status": 86400 * 30,  # 30 days — see berb/literature/retraction.py
 }
 
 
