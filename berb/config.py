@@ -296,6 +296,25 @@ class SecurityConfig:
     allow_publish_without_approval: bool = False
     redact_sensitive_logs: bool = True
 
+    cross_model_verification: bool = False
+    """Opt-in: use a second, different-family LLM provider to adversarially
+    check high-stakes integrity judgments (tasks/ars_integration_plan.md
+    W5). Off by default — enabling this alone is not consent; see
+    ``cross_model_consent_granted``."""
+
+    cross_model_consent_granted: bool = False
+    """A separate, explicit act of consent to sending bounded claim/quote/
+    reference-metadata text to a second LLM provider. Both this AND
+    ``cross_model_verification`` must be true for any cross-model call to
+    be made — see berb.llm.cross_model.cross_model_enabled()."""
+
+    cross_model_max_usd_per_run: float = 0.0
+    """Hard USD ceiling for cross-model verification spend in a single run.
+    Zero (the default) means no budget has been granted, which is treated
+    as the feature being unusable even if both flags above are true —
+    exceeding or lacking a ceiling downgrades to CROSS_MODEL_UNVERIFIED
+    rather than continuing to spend."""
+
 
 @dataclass(frozen=True)
 class IntegrityConfig:
@@ -1034,6 +1053,11 @@ class RCConfig:
                     security.get("allow_publish_without_approval", False)
                 ),
                 redact_sensitive_logs=bool(security.get("redact_sensitive_logs", True)),
+                cross_model_verification=bool(security.get("cross_model_verification", False)),
+                cross_model_consent_granted=bool(
+                    security.get("cross_model_consent_granted", False)
+                ),
+                cross_model_max_usd_per_run=float(security.get("cross_model_max_usd_per_run", 0.0)),
             ),
             integrity=IntegrityConfig(
                 mode=str(integrity.get("mode", "draft")),

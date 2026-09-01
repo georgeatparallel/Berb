@@ -1,6 +1,6 @@
 # ARS Integration Plan — Research-Integrity Capabilities for Berb
 
-**Status:** in progress — W0, W2, W3, W4 done including stage wiring; W1 core+schema+export-safety+consumer wiring done (producer prompt-side generation deferred); W6 Layer A done and wired
+**Status:** in progress — W0, W2, W3, W4 done including stage wiring; W1 core+schema+export-safety+consumer wiring done (producer prompt-side generation deferred); W6 Layer A done and wired; W5 policy layer done (stage wiring deferred)
 **Author:** planning pass, 2026-08-31
 **Source of ideas:** [academic-research-skills](https://github.com/Imbad0202/academic-research-skills) (ARS) v3.21.1 by Cheng-I Wu
 **Supersedes:** nothing. Complements `tasks/hardening_plan_2026-08-13.md` and `tasks/arch_hardening_plan.md`.
@@ -165,7 +165,57 @@
     pure-reordering-is-clean, and a bounded-runtime check on a 50k-word
     input) + 5 stage-19 wiring tests = 24 new tests, 100% coverage on
     `revision_guard.py`, mypy/ruff/bandit clean.
-- Remaining: W1 producer prompt wiring, W5 (cross-model), W6 Layer B
+- 2026-09-01 — W5 (`berb/llm/cross_model.py`) landed as a **policy layer
+  only**; no stage wiring:
+  - **Significant finding, not just an implementation note**: the plan
+    originally pointed at extending `berb/llm/extended_router.py`'s
+    `ExtendedRouter.get_provider_for_role`. Investigation found
+    `ExtendedRouter._create_provider` returns a `_MockProvider` (its own
+    docstring: "In production, this would create the actual provider
+    instance") and `ExtendedRouter` is imported nowhere under
+    `berb/pipeline/` — confirmed via
+    `python scripts/check_reachability.py`. It is not live infrastructure;
+    building on it would have produced code that looks wired but isn't.
+    Built against `berb.llm.create_llm_client(RCConfig)` /
+    `berb.llm.client.LLMClient(LlmConfig)` instead — the real, reachable
+    factory — resolving a second provider as a standalone `LlmConfig` from
+    env vars (`BERB_CROSS_MODEL_PROVIDER`/`_MODEL`/`_API_KEY_ENV`), the
+    same shape as Berb's existing optional-provider switches.
+  - `provider_family()` — handles both bare provider names (Berb's native
+    `LlmConfig.provider` values) and `"family/model"` OpenRouter-style ids.
+  - `resolve_adversarial_llm_config()` — never a same-family fallback:
+    returns `None` (not the primary provider) when nothing is configured,
+    the resolved family matches the primary, or the named API-key env var
+    isn't actually set.
+  - New `SecurityConfig` fields, all off/zero by default:
+    `cross_model_verification`, `cross_model_consent_granted` (both must
+    be true — enabling one alone is a configuration intent, not consent),
+    `cross_model_max_usd_per_run` (zero = no budget granted = treated as
+    already exceeded, fail closed).
+  - `build_cross_model_payload()` — allowlist (claim text, anchor quotes,
+    reference metadata only), every field length-capped; a metadata key
+    like `api_key` or `file_path` is silently dropped, not merely
+    discouraged — regression-tested directly.
+  - `parse_cross_model_verdict()` — JSON-only typed parse; an
+    eval/exec-injection-shaped payload (`"__import__('os').system(...)"`)
+    is inert data that fails to parse as a known verdict, never executed
+    — regression-tested, referencing the same class of bug fixed in
+    commit 334c7a0.
+  - `cross_model_unverified_finding()` — the explicit, visible `INFO`
+    result when verification can't run; never reads as "verified".
+  - **Explicitly not done**: no pipeline stage actually calls any of this
+    yet (`berb/pipeline/paper_verifier.py`, `hallucination_detector.py`,
+    `berb/review/ensemble.py` are the plan's named consumers). That wiring
+    needs its own prompt design and stage-specific integration this
+    module deliberately doesn't decide — same honesty pattern as W1's
+    producer side. `cross_model.py` shows up in
+    `check_reachability.py`'s unreachable count as a result; that is
+    correct and expected, not a check failure to paper over.
+  - 35 tests (family resolution incl. same-family-never-falls-back,
+    consent-gate truth table, cost-ceiling boundary cases, payload
+    allowlist enforcement, verdict parsing incl. the injection-payload
+    test), mypy/ruff/bandit clean.
+- Remaining: W1 producer prompt wiring, W5 stage wiring, W6 Layer B
   (claim-strength drift), W7 (seeded-defect eval), W8 (reporting
   guidelines/disclosure), plus the DoD housekeeping items (dual-license
   email, stale ruff entry, CLAUDE.md router-name fix, `finding_reproduction`
