@@ -11,11 +11,13 @@ from typing import Any
 from berb.adapters import AdapterBundle
 from berb.config import RCConfig
 from berb.integrity import (
+    Anchor,
     ClaimManifest,
     ClaimRecord,
     ClaimType,
     ClaimVerdict,
     detect_uncited,
+    make_anchor,
     split_sentences,
 )
 from berb.integrity import VerifiedEvidenceRegistry as _IntegrityRegistry  # noqa: N814
@@ -1391,6 +1393,50 @@ def _detect_result_contradictions(
     return advisories
 
 
+# tasks/ars_integration_plan.md W1 producer: the LLM emits this
+# easy-to-produce inline syntax while drafting prose (real markdown
+# citations already use \cite{}/[key], so this is deliberately distinct
+# and won't collide). _resolve_draft_anchors converts it into the real,
+# hash-derived <!--berb-cite...--> marker via make_anchor — the LLM never
+# supplies the anchor id itself, so it cannot forge one. Anchored on both
+# sides, every character class bounded ({1,64}, {1,300}) — no
+# nested/ambiguous quantifiers, ReDoS-safe by construction, matching
+# berb/integrity/anchors.py's MARKER_RE discipline.
+_RE_PSEUDO_ANCHOR = re.compile(
+    r"\[\[berb-anchor:\s*([A-Za-z0-9_:.\-]{1,64})\s*\|\s*"
+    r"(quote|page|section|paragraph)\s*\|\s*([^\]]{1,300})\]\]"
+)
+
+
+def _resolve_draft_anchors(draft: str) -> tuple[str, tuple[Anchor, ...]]:
+    """Replace every ``berb-anchor`` pseudo-marker in *draft* with its
+    final ``<!--berb-cite...-->`` marker, returning the transformed text
+    alongside the ``Anchor`` objects built along the way.
+
+    A pseudo-marker whose cite_key/kind/value fails ``make_anchor``'s
+    validation is dropped entirely — both the literal pseudo-marker text
+    and any claim to an anchor — rather than left as unparsed
+    ``[[berb-anchor: ...]]`` text leaking into the paper. Pure and total;
+    the caller wraps this in try/except anyway per this module's
+    established "must not block drafting" discipline for anything that
+    touches the draft after generation.
+    """
+    anchors: list[Anchor] = []
+
+    def _replace(match: re.Match[str]) -> str:
+        cite_key, kind, value = match.group(1), match.group(2), match.group(3).strip()
+        anchor = make_anchor(cite_key, kind, value)
+        if anchor is None:
+            return ""
+        anchors.append(anchor)
+        return (
+            f"<!--berb-cite key={anchor.cite_key} kind={anchor.kind.value} id={anchor.anchor_id}-->"
+        )
+
+    resolved = _RE_PSEUDO_ANCHOR.sub(_replace, draft)
+    return resolved, tuple(anchors)
+
+
 @register_stage(
     stage=Stage.PAPER_DRAFT,
     depends_on=frozenset({Stage.PAPER_OUTLINE}),
@@ -2195,6 +2241,26 @@ def _execute_paper_draft(
                 "- Prefer well-known, highly-cited papers over obscure ones.\n"
                 "- If unsure whether a paper exists or is relevant, DO NOT cite it.\n"
             )
+            # tasks/ars_integration_plan.md W1 producer: optional citation
+            # locator anchors. Appended to the same citation_instruction
+            # channel _write_paper_sections already interpolates 3x — no
+            # new prompt-template variable, no prompts.default.yaml change.
+            citation_instruction += (
+                "\n\nCITATION LOCATOR ANCHORS (optional, use when a source "
+                "directly supports a specific empirical or comparative claim):\n"
+                "  [[berb-anchor: cite_key | quote | exact short quote from the source]]\n"
+                "Rules:\n"
+                "- cite_key MUST be one of the keys from AVAILABLE REFERENCES above.\n"
+                "- The quote MUST be an exact, short (under 300 characters) span you "
+                "believe actually appears in that source — never paraphrase it, "
+                "never invent one.\n"
+                "- Place the marker immediately after the claim it supports, e.g.:\n"
+                "  '...achieves 76.3% accuracy [he2016deep] [[berb-anchor: he2016deep | "
+                "quote | achieves 76.3% top-1 accuracy on ImageNet]].'\n"
+                "- Only anchor claims you can back with a real quote — do NOT add "
+                "this marker to every citation, and do NOT fabricate a quote to use it.\n"
+                "- This marker is processed automatically; do not explain it in the text.\n"
+            )
 
     if llm is not None:
         _pm = prompts or PromptManager()
@@ -2307,11 +2373,24 @@ Template references.
 
 Generated: {_utcnow_iso()}
 """
+
+    # tasks/ars_integration_plan.md W1 producer: resolve any berb-anchor
+    # pseudo-markers the LLM emitted into real, hash-derived
+    # <!--berb-cite...--> markers before the draft is ever written to
+    # disk. Must run before this write: paper_draft.md is what stage 23
+    # later parses for markers, and what stage 22's strip_markers expects
+    # to find and remove before export.
+    try:
+        draft, _drafted_anchors = _resolve_draft_anchors(draft)
+    except Exception:  # noqa: BLE001 - a resolver failure must not block drafting
+        logger.debug("Could not resolve draft anchor markers", exc_info=True)
+        _drafted_anchors = ()
+
     (stage_dir / "paper_draft.md").write_text(draft, encoding="utf-8")
 
     # --- Research Integrity: best-effort claim manifest (Phase 1) ---
     try:
-        _build_draft_claim_manifest(draft, run_dir, stage_dir)
+        _build_draft_claim_manifest(draft, run_dir, stage_dir, anchors=_drafted_anchors)
     except Exception:
         logger.debug("Could not build draft claim manifest", exc_info=True)
 
@@ -2356,6 +2435,8 @@ def _build_draft_claim_manifest(
     draft: str,
     run_dir: Path,
     stage_dir: Path,
+    *,
+    anchors: tuple[Anchor, ...] = (),
 ) -> None:
     """Build and save a best-effort claim manifest from the paper draft.
 
@@ -2365,6 +2446,13 @@ def _build_draft_claim_manifest(
 
     This is intentionally simple — Phase 2+ will add LLM-backed claim
     classification and richer extraction.
+
+    *anchors* (tasks/ars_integration_plan.md W1 producer): locator anchors
+    resolved from the draft's ``berb-anchor`` pseudo-markers by
+    ``_resolve_draft_anchors``. Each is recorded as its own citation claim
+    rather than force-matched onto one of the heuristically extracted
+    numeric claims above, which are found independently and have no
+    reliable correspondence to where the LLM chose to place an anchor.
     """
     manifest = ClaimManifest(paper_stage="draft")
 
@@ -2392,6 +2480,18 @@ def _build_draft_claim_manifest(
 
     # 4. Extract dataset claims (heuristic: "we use X dataset")
     _extract_dataset_claims(draft, sections, manifest)
+
+    # 4b. Record each producer-emitted locator anchor as its own claim.
+    for anchor in anchors:
+        manifest.add_claim(
+            ClaimRecord(
+                claim_id="",
+                text=anchor.value,
+                claim_type=ClaimType.CITATION,
+                verdict=ClaimVerdict.NOT_CHECKED,
+                anchors=(anchor,),
+            )
+        )
 
     # 5. Save
     manifest.save(stage_dir / "claim_manifest.json")

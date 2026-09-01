@@ -1,6 +1,6 @@
 # ARS Integration Plan — Research-Integrity Capabilities for Berb
 
-**Status:** in progress — W0, W2, W3, W4 done including stage wiring; W1 core+schema+export-safety+consumer wiring done (producer prompt-side generation deferred); W6 Layer A done and wired; W5 policy layer done (stage wiring deferred); W8.2 (AI disclosure) done and wired; W8.1 (reporting checklists) mechanism done (stage-20 auto-selection deliberately deferred)
+**Status:** in progress. W0, W1 (fully, including producer), W2, W3, W4, W6 Layer A done and wired. W5 policy layer done, stage wiring deferred. W8.2 (AI disclosure) done and wired. W8.1 (reporting checklists) mechanism done, stage-20 auto-selection deliberately deferred.
 **Author:** planning pass, 2026-08-31
 **Source of ideas:** [academic-research-skills](https://github.com/Imbad0202/academic-research-skills) (ARS) v3.21.1 by Cheng-I Wu
 **Supersedes:** nothing. Complements `tasks/hardening_plan_2026-08-13.md` and `tasks/arch_hardening_plan.md`.
@@ -130,13 +130,64 @@
     fails, empty-keys-and-no-manifest skips computation entirely via the
     wiring's own guard, verification-exception doesn't crash the stage,
     corrupt-manifest doesn't crash the stage), mypy/ruff/bandit clean.
-  - **Still explicitly not done**: prompt-side changes so the drafting LLM
-    actually emits `key`/`kind`/`value` for empirical/comparative claims
-    (the producer side — touches `prompts.default.yaml`, materially
-    higher-risk surface, warrants its own focused pass). Until the
-    producer ships, this mechanism is fully built, tested, and wired for
-    safety end to end, but inert in practice (no markers exist for it to
-    find) — an honest state, not a hidden gap.
+  - **Still explicitly not done at that point**: prompt-side changes so
+    the drafting LLM actually emits `key`/`kind`/`value` for empirical/
+    comparative claims (the producer side). Landed in a later pass below,
+    without touching `prompts.default.yaml`.
+- 2026-09-01 (later) — W1 producer landed. The drafting LLM emits an
+  inline pseudo-marker while writing prose: `[[berb-anchor: cite_key |
+  kind | quote]]`. Chosen because it does not collide with the existing
+  `\cite{}`/`[key]` citation syntax, and because it is easy for an LLM to
+  produce reliably inside prose without JSON mode.
+  - Injected via the same `citation_instruction` string
+    `_write_paper_sections` already interpolates three times for its
+    section prompts. No new template variable, no `prompts.default.yaml`
+    edit: appended to the same Python-built instruction string right
+    after the existing citation rules, only when real references exist.
+  - `_resolve_draft_anchors()` in `_paper_writing.py`: finds every
+    pseudo-marker with a bounded regex matching `anchors.py`'s existing
+    `MARKER_RE` discipline (same character-class bounds, no nesting,
+    ReDoS-safe by construction), calls `make_anchor()` for each (so the
+    anchor id is always the real hash-derived one, never LLM-supplied),
+    and replaces the pseudo-marker with the final `<!--berb-cite...-->`
+    marker. Runs before `paper_draft.md` is ever written to disk, so the
+    same file stage 23 later parses and stage 22's `strip_markers`
+    strips already carries only real markers.
+  - A pseudo-marker whose cite_key/kind/value fails validation is dropped
+    entirely, both the literal text and any anchor. A pseudo-marker the
+    regex never matches at all (disallowed character in the key, or an
+    unrecognized kind) passes through as literal text unchanged, so a
+    near-miss the LLM might have meant as a real anchor is visible rather
+    than silently vanishing.
+  - `_build_draft_claim_manifest()` gained an `anchors` keyword parameter
+    (additive; existing callers unaffected). Each resolved anchor is
+    recorded as its own `ClaimType.CITATION` claim rather than force-
+    matched onto one of the separately, heuristically extracted numeric
+    claims, which have no reliable correspondence to where the LLM chose
+    to place a citation anchor.
+  - Caught one real test-authoring mistake while writing this: a test
+    assumed a path-traversal-shaped cite_key (`../evil`) would be
+    regex-matched then rejected by `make_anchor`. It never matches the
+    regex at all, since `/` is outside the cite_key character class, the
+    same "not matched, passes through literally" behavior already
+    verified for an unrecognized `kind`. Fixed the test to check that
+    actual behavior, and added a separate test that does exercise the
+    regex-matches-then-`make_anchor`-rejects path with a whitespace-only
+    value.
+  - 15 new tests in `tests/test_integrity.py` (`TestResolveDraftAnchors`,
+    `TestPaperDraftAnchorProducerWiring`) plus the 8 pre-existing
+    `paper_draft` tests in `tests/test_berb_executor.py`, all passing
+    (`pytest tests/test_integrity.py -q` -> 60 passed;
+    `pytest tests/test_berb_executor.py -k "paper_draft or PaperDraft" -q`
+    -> 8 passed). `mypy berb/pipeline/stage_impls/_paper_writing.py` ->
+    no issues found. `ruff check`/`ruff format --check` clean.
+    `scripts/check_reachability.py` still passes.
+  - This mechanism depends on the LLM actually following the instruction,
+    which is marked optional in the prompt. Not yet verified against a
+    real LLM call end to end, only against the deterministic parsing/
+    resolution logic and the template-fallback (no-LLM) path. Whether the
+    instruction reliably produces real, non-fabricated quotes from an
+    actual model has not been measured.
 - 2026-09-01 — W6 Layer A (`berb/integrity/revision_guard.py`:
   `conserved_tokens`) landed **and wired**:
   - Deterministic, no LLM: numeric literals and citation keys present
@@ -262,13 +313,20 @@
   - 19 tests (evaluator behavior, loader validation/caps, all 3 default
     checklists load and produce findings on a thin paper), mypy/ruff/
     bandit clean.
-- Remaining: W1 producer prompt wiring, W5 stage wiring, W6 Layer B
-  (claim-strength drift), W7 (seeded-defect eval), W8.1 stage-20 wiring
-  (needs validated domain-aware guideline selection first), plus the DoD
-  housekeeping items (dual-license email, stale ruff entry, CLAUDE.md
-  router-name fix, `finding_reproduction` disposition), plus the plan's
+- Two housekeeping items resolved 2026-09-01 (separate commit): the stale
+  `pyproject.toml:160` `cross_model_reviewer.py` ruff entry (file
+  confirmed not to exist, removed), and CLAUDE.md's LLM Routing section
+  (named two files that never existed, `model_router.py`/
+  `model_cascade.py`; corrected to name the real routers and record that
+  `extended_router.py` is not live infrastructure per the W5 finding).
+- Remaining: W5 stage wiring, W6 Layer B (claim-strength drift), W7
+  (seeded-defect eval), W8.1 stage-20 wiring (needs validated domain-aware
+  guideline selection first), dual-license email (needs the user to send
+  it, not something an agent can dispatch), `finding_reproduction`
+  disposition (stays parked, depends on W7's corpus), plus the plan's
   original stage-20 (`QUALITY_GATE`) blocking touchpoint for
-  uncited-assertion — stage 17 only ships advisory, as asked.
+  uncited-assertion (stage 17 only ships advisory, as asked) and the W1
+  producer's own open question above (unverified against a real LLM).
 
 ---
 

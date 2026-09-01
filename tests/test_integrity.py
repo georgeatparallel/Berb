@@ -32,6 +32,7 @@ from berb.pipeline.stage_impls._paper_writing import (
     _extract_dataset_claims,
     _extract_numeric_claims,
     _parse_draft_sections,
+    _resolve_draft_anchors,
 )
 
 # ---------------------------------------------------------------------------
@@ -745,3 +746,138 @@ class TestClaimManifestAnchorSchema:
         loaded = ClaimManifest.load(path)
         assert loaded.schema_version == 2
         assert loaded.claims[0].anchors == (anchor,)
+
+
+class TestResolveDraftAnchors:
+    """tasks/ars_integration_plan.md W1 producer: _resolve_draft_anchors
+    converts the LLM-facing pseudo-marker into the real, hash-derived
+    berb-cite marker before the draft is ever written to disk."""
+
+    def test_no_pseudo_markers_is_unchanged(self) -> None:
+        text = "Plain paper text with no anchors."
+        resolved, anchors = _resolve_draft_anchors(text)
+        assert resolved == text
+        assert anchors == ()
+
+    def test_valid_pseudo_marker_becomes_real_marker(self) -> None:
+        text = "Accuracy improved [[berb-anchor: he2016deep | quote | 76.3% top-1 accuracy]]."
+        resolved, anchors = _resolve_draft_anchors(text)
+        assert len(anchors) == 1
+        anchor = anchors[0]
+        assert anchor.cite_key == "he2016deep"
+        assert anchor.value == "76.3% top-1 accuracy"
+        expected_marker = f"<!--berb-cite key=he2016deep kind=quote id={anchor.anchor_id}-->"
+        assert expected_marker in resolved
+        assert "berb-anchor" not in resolved
+
+    def test_anchor_id_matches_make_anchor_directly(self) -> None:
+        from berb.integrity import make_anchor
+
+        text = "[[berb-anchor: he2016deep | quote | some quoted text]]"
+        _resolved, anchors = _resolve_draft_anchors(text)
+        direct = make_anchor("he2016deep", "quote", "some quoted text")
+        assert direct is not None
+        assert anchors[0] == direct
+
+    def test_cite_key_with_disallowed_characters_does_not_match_the_pattern(self) -> None:
+        # "/" is outside the cite_key character class, so the regex itself
+        # never matches this span at all. Same "unmatched, passes through
+        # literally" shape as test_unknown_kind_does_not_match_the_pattern
+        # below -- the pseudo-marker's own charset already excludes
+        # something a path-traversal string like "../evil" needs.
+        text = "Claim here [[berb-anchor: ../evil | quote | x]] more text."
+        resolved, anchors = _resolve_draft_anchors(text)
+        assert anchors == ()
+        assert resolved == text
+
+    def test_regex_matched_but_make_anchor_rejected_value_drops_marker_entirely(self) -> None:
+        # A whitespace-only value matches the regex's character class but
+        # fails make_anchor's non-empty-after-strip check -- this is the
+        # actual "matched, then rejected by validation" path, distinct
+        # from the two "never matched at all" cases above.
+        text = "Claim here [[berb-anchor: he2016deep | quote |    ]] more text."
+        resolved, anchors = _resolve_draft_anchors(text)
+        assert anchors == ()
+        assert "berb-anchor" not in resolved
+        assert "berb-cite" not in resolved
+
+    def test_unknown_kind_does_not_match_the_pattern(self) -> None:
+        text = "[[berb-anchor: he2016deep | footnote | x]]"
+        resolved, anchors = _resolve_draft_anchors(text)
+        assert anchors == ()
+        # Not a recognized kind, so the regex never matches this span at
+        # all -- the literal pseudo-marker text passes through unchanged
+        # rather than being silently dropped, which would hide a
+        # near-miss the LLM might have meant as a real anchor.
+        assert resolved == text
+
+    def test_multiple_markers_all_resolved(self) -> None:
+        text = (
+            "[[berb-anchor: a2020x | quote | first quote]] and [[berb-anchor: b2021y | page | 42]]"
+        )
+        resolved, anchors = _resolve_draft_anchors(text)
+        assert len(anchors) == 2
+        assert {a.cite_key for a in anchors} == {"a2020x", "b2021y"}
+        assert "berb-anchor" not in resolved
+        assert resolved.count("berb-cite") == 2
+
+    def test_bounded_runtime_on_adversarial_draft_text(self) -> None:
+        import time
+
+        adversarial = [
+            "[[berb-anchor: " + ("a" * 10000) + " | quote | x]]",
+            "[[berb-anchor: " * 5000,
+            ("x" * 50000) + "[[berb-anchor: he2016deep | quote | y]]",
+        ]
+        for text in adversarial:
+            start = time.monotonic()
+            _resolve_draft_anchors(text)
+            elapsed = time.monotonic() - start
+            assert elapsed < 1.0, f"took {elapsed:.2f}s on adversarial input"
+
+    def test_resolved_marker_is_parseable_by_verify_anchors_marker_re(self) -> None:
+        from berb.integrity.anchors import parse_markers
+
+        text = "[[berb-anchor: he2016deep | quote | exact text]]"
+        resolved, anchors = _resolve_draft_anchors(text)
+        refs = parse_markers(resolved)
+        assert len(refs) == 1
+        assert refs[0].cite_key == "he2016deep"
+        assert refs[0].anchor_id == anchors[0].anchor_id
+
+
+class TestPaperDraftAnchorProducerWiring:
+    """End-to-end: _build_draft_claim_manifest records each resolved
+    anchor as its own citation claim."""
+
+    def test_anchors_recorded_as_citation_claims(self, tmp_path) -> None:
+        from berb.integrity import make_anchor
+
+        anchor = make_anchor("he2016deep", "quote", "76.3% top-1 accuracy")
+        assert anchor is not None
+        draft = (
+            "# Paper\n\nAccuracy improved by 76.3% "
+            f"<!--berb-cite key=he2016deep kind=quote id={anchor.anchor_id}-->.\n"
+        )
+        run_dir = tmp_path / "run"
+        stage_dir = tmp_path / "run" / "stage-17"
+        stage_dir.mkdir(parents=True)
+
+        _build_draft_claim_manifest(draft, run_dir, stage_dir, anchors=(anchor,))
+
+        manifest = ClaimManifest.load(stage_dir / "claim_manifest.json")
+        citation_claims = [c for c in manifest.claims if c.claim_type == ClaimType.CITATION]
+        assert len(citation_claims) == 1
+        assert citation_claims[0].anchors == (anchor,)
+        assert citation_claims[0].text == "76.3% top-1 accuracy"
+
+    def test_no_anchors_is_backward_compatible(self, tmp_path) -> None:
+        draft = "# Paper\n\nSome plain text with no anchors."
+        run_dir = tmp_path / "run"
+        stage_dir = tmp_path / "run" / "stage-17"
+        stage_dir.mkdir(parents=True)
+
+        _build_draft_claim_manifest(draft, run_dir, stage_dir)
+
+        manifest = ClaimManifest.load(stage_dir / "claim_manifest.json")
+        assert all(c.claim_type != ClaimType.CITATION for c in manifest.claims)
