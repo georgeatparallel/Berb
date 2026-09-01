@@ -1,6 +1,6 @@
 # ARS Integration Plan — Research-Integrity Capabilities for Berb
 
-**Status:** in progress — W0, W2, W3, W4 done including stage wiring; W1 core+schema+export-safety landed, consumer/producer wiring deferred
+**Status:** in progress — W0, W2, W3, W4 done including stage wiring; W1 core+schema+export-safety+consumer wiring done, only producer prompt-side generation deferred
 **Author:** planning pass, 2026-08-31
 **Source of ideas:** [academic-research-skills](https://github.com/Imbad0202/academic-research-skills) (ARS) v3.21.1 by Cheng-I Wu
 **Supersedes:** nothing. Complements `tasks/hardening_plan_2026-08-13.md` and `tasks/arch_hardening_plan.md`.
@@ -115,18 +115,29 @@
     adversarial marker text AND on a 2.4M-char source-text haystack) + 5
     schema tests + 2 export-safety regression tests = 43 new tests, 97.9%
     coverage on anchors.py, mypy/ruff/bandit clean (bandit: zero findings).
-  - **Explicitly not done**: stage 23 (`CITATION_VERIFY`) calling
-    `verify_anchors` against the manifest + bibliography + stored source
-    texts (the consumer side — mechanically straightforward given
-    everything above, deferred only for session scope); and prompt-side
-    changes so the drafting LLM actually emits `key`/`kind`/`value` for
-    empirical/comparative claims (the producer side — touches
-    `prompts.default.yaml`, materially higher-risk surface, needs its own
-    focused pass). Until the producer ships, this mechanism is fully
-    built, tested, and wired for safety, but inert in practice (no markers
-    exist for it to find) — an honest state, not a hidden gap.
-- Remaining: W1 stage-23 consumer wiring, W1 producer prompt wiring, W5
-  (cross-model), W6 (revision guard),
+  - **Stage 23** (`CITATION_VERIFY`) consumer wiring landed: aggregates
+    `anchors_by_id` from the best-effort claim manifest built at stage 17
+    (empty until the producer ships), derives `bib_keys` from
+    `references.bib`, calls `verify_anchors` against `paper_final.md` with
+    an empty `source_texts` map (Berb has no per-citation full-text store
+    wired into the pipeline yet, so every `quote` anchor correctly reports
+    `ANCHOR_UNVERIFIABLE` rather than a false "verified" — documented as a
+    real limitation, not silently accepted). `findings.gates(mode)` decides
+    `StageStatus.FAILED` vs `DONE`, same pattern as the W2 retraction gate;
+    `ANCHOR_UNVERIFIABLE` is `INFO` so it never gates in any mode.
+    7 new wiring tests (no-markers no-op, unresolved-marker fails in
+    strict/passes in draft, resolved-quote-no-source-text is INFO-never-
+    fails, empty-keys-and-no-manifest skips computation entirely via the
+    wiring's own guard, verification-exception doesn't crash the stage,
+    corrupt-manifest doesn't crash the stage), mypy/ruff/bandit clean.
+  - **Still explicitly not done**: prompt-side changes so the drafting LLM
+    actually emits `key`/`kind`/`value` for empirical/comparative claims
+    (the producer side — touches `prompts.default.yaml`, materially
+    higher-risk surface, warrants its own focused pass). Until the
+    producer ships, this mechanism is fully built, tested, and wired for
+    safety end to end, but inert in practice (no markers exist for it to
+    find) — an honest state, not a hidden gap.
+- Remaining: W1 producer prompt wiring, W5 (cross-model), W6 (revision guard),
   W7 (seeded-defect eval), W8 (reporting guidelines/disclosure), plus the
   DoD housekeeping items (dual-license email, stale ruff entry, CLAUDE.md
   router-name fix, `finding_reproduction` disposition), plus the plan's

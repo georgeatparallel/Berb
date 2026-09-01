@@ -12,6 +12,8 @@ import yaml  # noqa: F401 — available for downstream use
 
 from berb.adapters import AdapterBundle
 from berb.config import RCConfig
+from berb.integrity import Anchor, ClaimManifest
+from berb.integrity.anchors import verify_anchors
 from berb.integrity.findings import gates as _integrity_gates
 from berb.literature.retraction import (
     RetractionRecord,
@@ -533,6 +535,57 @@ def _execute_citation_verify(
                     ),
                 )
 
+    # tasks/ars_integration_plan.md W1: citation locator anchor
+    # verification. anchors_by_id is aggregated from the best-effort claim
+    # manifest built at stage 17 — empty until a producer emits berb-cite
+    # markers there (not yet wired; see the plan's progress log). No
+    # per-citation full-text store exists in this pipeline yet, so
+    # source_texts is empty and every quote anchor correctly reports
+    # ANCHOR_UNVERIFIABLE rather than a false "verified" — that is
+    # verify_anchors's documented safe default, not a gap papered over here.
+    anchors_by_id: dict[str, Anchor] = {}
+    _manifest_text = _read_prior_artifact(run_dir, "claim_manifest.json")
+    if _manifest_text:
+        try:
+            _claim_manifest = ClaimManifest.from_dict(_safe_json_loads(_manifest_text, {}))
+            for _claim in _claim_manifest.claims:
+                for _anchor in _claim.anchors:
+                    anchors_by_id[_anchor.anchor_id] = _anchor
+        except Exception:  # noqa: BLE001 - advisory check must never fail the stage
+            logger.debug("Could not load claim manifest for anchor check", exc_info=True)
+
+    _anchor_bib_keys = frozenset(re.findall(r"@\w+\{([^,]+),", bib_text))
+    anchor_artifact_written = False
+    if anchors_by_id or _anchor_bib_keys:
+        try:
+            anchor_findings = verify_anchors(anchors_by_id, _anchor_bib_keys, paper_text, {})
+        except Exception:  # noqa: BLE001 - advisory check must never fail the stage
+            logger.debug("Anchor verification failed", exc_info=True)
+            anchor_findings = ()
+        if anchor_findings:
+            (stage_dir / "anchor_findings.json").write_text(
+                json.dumps([f.to_dict() for f in anchor_findings], indent=2),
+                encoding="utf-8",
+            )
+            anchor_artifact_written = True
+            for finding in anchor_findings:
+                logger.warning("[anchor] %s: %s", finding.locator, finding.message)
+
+            gated_anchors = _integrity_gates(anchor_findings, config.integrity.mode)
+            if gated_anchors:
+                blocked_anchor_keys = ", ".join(sorted({f.locator for f in gated_anchors}))
+                return StageResult(
+                    stage=Stage.CITATION_VERIFY,
+                    status=StageStatus.FAILED,
+                    artifacts=("anchor_findings.json",),
+                    evidence_refs=("stage-23/anchor_findings.json",),
+                    error=(
+                        f"E23_VERIFY_FAIL: citation anchor mismatch(es) in "
+                        f"{config.integrity.mode} mode: {blocked_anchor_keys}. "
+                        "Fix the quoted anchor text or remove the anchor."
+                    ),
+                )
+
     # --- Relevance check: assess topical relevance of verified citations ---
     if llm is not None and report.results:
         relevance_scores = _check_citation_relevance(llm, config.research.topic, report.results)
@@ -642,6 +695,8 @@ def _execute_citation_verify(
     artifacts = ["verification_report.json", "references_verified.bib"]
     if retraction_artifact_written:
         artifacts.append("retraction_findings.json")
+    if anchor_artifact_written:
+        artifacts.append("anchor_findings.json")
 
     if paper_text.strip():
         annotated = annotate_paper_hallucinations(paper_text, report)
