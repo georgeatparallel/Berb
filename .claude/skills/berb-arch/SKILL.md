@@ -1,3 +1,8 @@
+---
+name: berb-arch
+description: Full Berb codebase architecture reference. Use when asking how anything works in Berb, before modifying any module, or when locating where something is implemented.
+---
+
 # berb-arch — Berb Architecture Reference
 
 ## Description
@@ -19,8 +24,7 @@ Activate this skill when:
 Read the architecture file immediately:
 
 ```
-Read file: docs/CODEBASE_MIND_MAP.md
-(Full path: E:\Documents\Vibe-Coding\Berb\.claude\worktrees\adoring-shirley\docs\CODEBASE_MIND_MAP.md)
+Read file: E:\Documents\Vibe-Coding\Berb\docs\CODEBASE_MIND_MAP.md
 ```
 
 Use the file contents to:
@@ -30,6 +34,10 @@ Use the file contents to:
 3. **Trace connections** — Understand how the module fits into the pipeline
 4. **Check current TODO state** — Section 15 lists what's done vs. planned
 5. **Find entry points** — Section 16 has common `from berb.X import Y` patterns
+
+For a single module's file-by-file map, use the per-folder skill instead:
+`berb-<folder>` (e.g. `berb-llm`, `berb-pipeline`) or `repo-<folder>` for
+top-level dirs (`repo-tests`, `repo-docs`). Index of all of them: root `CLAUDE.md`.
 
 ## Key Facts (Quick Reference)
 
