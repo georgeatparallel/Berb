@@ -11,6 +11,7 @@ import yaml  # noqa: F401 — available for downstream use
 
 from berb.adapters import AdapterBundle
 from berb.config import RCConfig
+from berb.integrity.revision_guard import conserved_tokens
 from berb.llm.client import LLMClient
 from berb.pipeline._domain import _detect_domain  # noqa: F401
 from berb.pipeline._helpers import (
@@ -254,8 +255,7 @@ def _execute_paper_revision(
     data_integrity_revision = ""
     if raw_metrics_revision:
         data_integrity_revision = (
-            raw_metrics_revision
-            + "\nDATA INTEGRITY: Do NOT add new numbers that are not in the "
+            raw_metrics_revision + "\nDATA INTEGRITY: Do NOT add new numbers that are not in the "
             "experiment data above. If a reviewer asks for additional results "
             "you do not have, state 'Due to computational constraints, "
             "this analysis was not conducted' instead of fabricating data.\n"
@@ -347,8 +347,7 @@ def _execute_paper_revision(
                 f"Your revision MUST be at least {draft_word_count} words — ideally longer. "
                 f"Do NOT summarize or condense ANY section. Copy each section verbatim "
                 f"and ONLY make targeted improvements to address reviewer comments. "
-                f"If a section has no reviewer comments, include it UNCHANGED.\n\n"
-                + sp.user
+                f"If a section has no reviewer comments, include it UNCHANGED.\n\n" + sp.user
             )
             resp2 = _chat_with_prompt(
                 llm,
@@ -380,8 +379,7 @@ def _execute_paper_revision(
                 # Extract useful revision points as appendix
                 revision_words = revised.split()
                 revision_summary = (
-                    " ".join(revision_words[:500])
-                    + "\n\n*(Revision summary truncated)*"
+                    " ".join(revision_words[:500]) + "\n\n*(Revision summary truncated)*"
                     if len(revision_words) > 500
                     else revised
                 )
@@ -398,12 +396,37 @@ def _execute_paper_revision(
             revised = AntiAIEncoder().fix_mechanical(revised)
         except Exception:  # noqa: BLE001
             pass
+
+    # tasks/ars_integration_plan.md W6 Layer A: deterministic token
+    # conservation. Advisory only — WARN is high-precision but not
+    # certainty (the known false-positive shape is legitimate rewording
+    # that happens to touch a number's neighborhood), so this never fails
+    # the stage. Layer B (semantic claim-strength drift) is not
+    # implemented — see revision_guard.py's module docstring.
+    artifacts = ["paper_revised.md"]
+    evidence_refs = ["stage-19/paper_revised.md"]
+    if draft and revised:
+        try:
+            revision_findings = conserved_tokens(draft, revised)
+        except Exception:  # noqa: BLE001 - advisory check must never fail the stage
+            logger.debug("Revision token-conservation check failed", exc_info=True)
+            revision_findings = ()
+        if revision_findings:
+            (stage_dir / "revision_findings.json").write_text(
+                json.dumps([f.to_dict() for f in revision_findings], indent=2),
+                encoding="utf-8",
+            )
+            artifacts.append("revision_findings.json")
+            evidence_refs.append("stage-19/revision_findings.json")
+            for finding in revision_findings:
+                logger.warning("[revision] %s: %s", finding.locator, finding.message)
+
     (stage_dir / "paper_revised.md").write_text(revised, encoding="utf-8")
     return StageResult(
         stage=Stage.PAPER_REVISION,
         status=StageStatus.DONE,
-        artifacts=("paper_revised.md",),
-        evidence_refs=("stage-19/paper_revised.md",),
+        artifacts=tuple(artifacts),
+        evidence_refs=tuple(evidence_refs),
     )
 
 
@@ -435,14 +458,11 @@ def _build_ensemble_structured_context(run_dir: Path) -> str:
                 ]
                 for claim in manifest.claims[:40]:
                     lines.append(
-                        f"- [{claim.claim_type.value}/{claim.verdict.value}] "
-                        f"{claim.text[:200]}"
+                        f"- [{claim.claim_type.value}/{claim.verdict.value}] {claim.text[:200]}"
                     )
                 parts.append("\n".join(lines))
         except Exception:  # noqa: BLE001
-            logger.debug(
-                "Structured context: claim manifest unavailable", exc_info=True
-            )
+            logger.debug("Structured context: claim manifest unavailable", exc_info=True)
 
     exp_plan = _read_prior_artifact(run_dir, "exp_plan.yaml")
     if exp_plan:
@@ -518,20 +538,14 @@ def _execute_quality_gate(
             pass
     # Fallback to _read_prior_artifact if nothing found above
     if not _exp_summary:
-        _exp_summary_text = (
-            _read_prior_artifact(run_dir, "experiment_summary.json") or ""
-        )
-        _exp_summary = (
-            _safe_json_loads(_exp_summary_text, {}) if _exp_summary_text else {}
-        )
+        _exp_summary_text = _read_prior_artifact(run_dir, "experiment_summary.json") or ""
+        _exp_summary = _safe_json_loads(_exp_summary_text, {}) if _exp_summary_text else {}
 
     _exp_failed = False
     if isinstance(_exp_summary, dict):
         _best_run = _exp_summary.get("best_run", {})
         if isinstance(_best_run, dict):
-            _exp_failed = _best_run.get("status") == "failed" and not _best_run.get(
-                "metrics"
-            )
+            _exp_failed = _best_run.get("status") == "failed" and not _best_run.get("metrics")
         # Also check if metrics_summary is empty
         if not _exp_summary.get("metrics_summary"):
             _exp_failed = True
@@ -564,9 +578,7 @@ def _execute_quality_gate(
                 _exp_status_keys["condition_names"] = list(_cond_summ.keys())[:20]
             if _best_run := _exp_summary.get("best_run"):
                 _exp_status_keys["best_run_status"] = (
-                    _best_run.get("status")
-                    if isinstance(_best_run, dict)
-                    else str(_best_run)
+                    _best_run.get("status") if isinstance(_best_run, dict) else str(_best_run)
                 )
             _exp_context = (
                 "\n\nExperiment summary (for cross-checking reported numbers):\n"
@@ -609,9 +621,7 @@ def _execute_quality_gate(
     if report is None:
         report = _default_quality_report(config.research.quality_threshold)
     report.setdefault("generated", _utcnow_iso())
-    (stage_dir / "quality_report.json").write_text(
-        json.dumps(report, indent=2), encoding="utf-8"
-    )
+    (stage_dir / "quality_report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
 
     # T2.1: Enforce quality gate — fail if score below threshold
     score = report.get("score_1_to_10", 0)
@@ -646,9 +656,7 @@ def _execute_quality_gate(
                         "total_steps",
                         "training_steps",
                     ):
-                        _fabrication_info["real_metric_values"].append(
-                            round(float(v), 4)
-                        )
+                        _fabrication_info["real_metric_values"].append(round(float(v), 4))
         _ms = _exp_summary.get("metrics_summary", {})
         if isinstance(_ms, dict):
             for _mk, _mv in _ms.items():
@@ -656,18 +664,14 @@ def _execute_quality_gate(
                     for _stat in ("mean", "min", "max"):
                         _sv = _mv.get(_stat)
                         if isinstance(_sv, (int, float)):
-                            _fabrication_info["real_metric_values"].append(
-                                round(float(_sv), 4)
-                            )
+                            _fabrication_info["real_metric_values"].append(round(float(_sv), 4))
     _fabrication_info["has_real_data"] = bool(_fabrication_info["real_metric_values"])
     _fabrication_info["fabrication_suspected"] = (
         _exp_failed and not _fabrication_info["has_real_data"]
     )
     # Phase 1: Enhanced fabrication detection via VerifiedRegistry
     # BUG-108: Also pass refinement_log so NaN best_metric is properly handled
-    _rl20_candidates = sorted(
-        run_dir.glob("stage-13*/refinement_log.json"), reverse=True
-    )
+    _rl20_candidates = sorted(run_dir.glob("stage-13*/refinement_log.json"), reverse=True)
     _rl20_path = _rl20_candidates[0] if _rl20_candidates else None
     _rl20: dict | None = None
     if _rl20_path and _rl20_path.is_file():
@@ -706,9 +710,7 @@ def _execute_quality_gate(
     _omitted_baselines_path = _find_prior_file(run_dir, "omitted_baselines.json")
     if _omitted_baselines_path is not None:
         try:
-            _omitted_data = json.loads(
-                _omitted_baselines_path.read_text(encoding="utf-8")
-            )
+            _omitted_data = json.loads(_omitted_baselines_path.read_text(encoding="utf-8"))
             _omitted_missing = _omitted_data.get("missing", [])
             if _omitted_missing:
                 logger.warning(
@@ -736,9 +738,7 @@ def _execute_quality_gate(
                 from berb.review.interrogation import adjudicate_claims
 
                 _manifest = ClaimManifest.load(_claim_manifest_path)
-                _evidence_reg = VerifiedEvidenceRegistry.load(
-                    run_dir / "evidence_registry.json"
-                )
+                _evidence_reg = VerifiedEvidenceRegistry.load(run_dir / "evidence_registry.json")
                 _verdicts = adjudicate_claims(llm, _manifest.claims, _evidence_reg)
                 if _verdicts:
                     (stage_dir / "claim_adjudication.json").write_text(
@@ -755,9 +755,7 @@ def _execute_quality_gate(
                         ),
                         encoding="utf-8",
                     )
-                    _unsupported = [
-                        v for v in _verdicts if v.status.value == "unsupported"
-                    ]
+                    _unsupported = [v for v in _verdicts if v.status.value == "unsupported"]
                     if _unsupported:
                         logger.warning(
                             "Stage 20: claim adjudication found %d unsupported claim(s) "
@@ -875,9 +873,7 @@ def _execute_quality_gate(
     _score_failed = isinstance(score, (int, float)) and score < threshold
     if _score_failed or _ens_veto:
         _fail_reason = (
-            f"score {score:.1f} < threshold {threshold:.1f}"
-            if _score_failed
-            else _ens_veto_reason
+            f"score {score:.1f} < threshold {threshold:.1f}" if _score_failed else _ens_veto_reason
         )
         _gate_artifacts = ("quality_report.json", "fabrication_flags.json")
         if (stage_dir / "ensemble_review.md").is_file():

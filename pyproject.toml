@@ -236,6 +236,7 @@ module = [
     "berb.literature.paper_mill",
     "berb.integrity.anchors",
     "berb.integrity.claims",
+    "berb.integrity.revision_guard",
 ]
 ignore_errors = false
 

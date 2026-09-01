@@ -1,6 +1,6 @@
 # ARS Integration Plan — Research-Integrity Capabilities for Berb
 
-**Status:** in progress — W0, W2, W3, W4 done including stage wiring; W1 core+schema+export-safety+consumer wiring done, only producer prompt-side generation deferred
+**Status:** in progress — W0, W2, W3, W4 done including stage wiring; W1 core+schema+export-safety+consumer wiring done (producer prompt-side generation deferred); W6 Layer A done and wired
 **Author:** planning pass, 2026-08-31
 **Source of ideas:** [academic-research-skills](https://github.com/Imbad0202/academic-research-skills) (ARS) v3.21.1 by Cheng-I Wu
 **Supersedes:** nothing. Complements `tasks/hardening_plan_2026-08-13.md` and `tasks/arch_hardening_plan.md`.
@@ -137,10 +137,39 @@
     producer ships, this mechanism is fully built, tested, and wired for
     safety end to end, but inert in practice (no markers exist for it to
     find) — an honest state, not a hidden gap.
-- Remaining: W1 producer prompt wiring, W5 (cross-model), W6 (revision guard),
-  W7 (seeded-defect eval), W8 (reporting guidelines/disclosure), plus the
-  DoD housekeeping items (dual-license email, stale ruff entry, CLAUDE.md
-  router-name fix, `finding_reproduction` disposition), plus the plan's
+- 2026-09-01 — W6 Layer A (`berb/integrity/revision_guard.py`:
+  `conserved_tokens`) landed **and wired**:
+  - Deterministic, no LLM: numeric literals and citation keys present
+    before a revision must still be present after. Numbers compared after
+    stripping trailing zeros (`"62.0"` == `"62"`) so a legitimate
+    rounding/reformat isn't flagged — the plan's own named false-positive
+    shape, handled rather than just documented as a caveat.
+  - Found and fixed a real regex bug caught by the test suite itself: the
+    number-token pattern's trailing `\b` after an optional `%` backtracked
+    the `%` away on inputs like `"62%."` (no word-boundary transition
+    exists right after `%` when followed by `.`, since neither is a word
+    character) — silently extracting `"62"` instead of `"62%"`. The
+    trailing `\b` was redundant anyway (`\d+` is already self-terminating
+    at the first non-digit) and actively wrong here; removed.
+  - Layer B (semantic claim-strength drift, LLM-advisory) is **not
+    implemented** — explicitly out of scope for this pass per the plan's
+    own two-layer split; `revision_guard.py`'s module docstring records why
+    a deterministic and a semantic check are necessary-but-not-sufficient
+    complements, not substitutes.
+  - **Stage 19** (`PAPER_REVISION`, advisory): diffs `draft` against
+    `revised` right before the final write; writes `revision_findings.json`
+    when non-empty; never fails the stage — matches W3's stage-17 advisory
+    pattern (this plan does not gate PAPER_REVISION anywhere; a future
+    stage-20 enforcement point, if wanted, is a separate decision).
+  - 19 unit tests (incl. the regex-bug regression, rounding-tolerance,
+    pure-reordering-is-clean, and a bounded-runtime check on a 50k-word
+    input) + 5 stage-19 wiring tests = 24 new tests, 100% coverage on
+    `revision_guard.py`, mypy/ruff/bandit clean.
+- Remaining: W1 producer prompt wiring, W5 (cross-model), W6 Layer B
+  (claim-strength drift), W7 (seeded-defect eval), W8 (reporting
+  guidelines/disclosure), plus the DoD housekeeping items (dual-license
+  email, stale ruff entry, CLAUDE.md router-name fix, `finding_reproduction`
+  disposition), plus the plan's
   original stage-20 (`QUALITY_GATE`) blocking touchpoint for
   uncited-assertion — stage 17 only ships advisory, as asked.
 

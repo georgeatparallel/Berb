@@ -42,6 +42,9 @@ from .findings import (
 from .registry import (
     VerifiedEvidenceRegistry,
 )
+from .revision_guard import (
+    conserved_tokens,
+)
 from .uncited import (
     SentenceRef,
     detect_uncited,
@@ -66,6 +69,7 @@ __all__ = [
     "SentenceRef",
     "Severity",
     "VerifiedEvidenceRegistry",
+    "conserved_tokens",
     "detect_uncited",
     "gates",
     "is_uncited_assertion",
