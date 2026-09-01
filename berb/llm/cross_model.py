@@ -7,24 +7,29 @@ second, different-family provider as an adversarial check: consent
 gating, provider-family disjointness, a minimal-payload allowlist, a cost
 ceiling, and a typed (never eval/exec'd) verdict parse.
 
-Deliberately scoped to policy only. Actually making a second LLM call
-from inside a pipeline stage (``berb/pipeline/paper_verifier.py``,
-``berb/pipeline/hallucination_detector.py``) is NOT wired in this pass —
-that requires prompt design and stage-specific integration this module
-does not decide. Every function here is pure/injectable and independently
-testable without a real second provider or API key.
+This module resolves *which* adversarial provider/model to use
+(``resolve_adversarial_llm_config``, pure and injectable, never touches a
+real secret value) and builds the request payload, cost ceiling, and
+verdict parsing around it. Only ``build_adversarial_client_config`` reads
+a real API key value, and only to build the one-shot config an
+``LLMClient`` is constructed from immediately — the caller
+(``berb/pipeline/stage_impls/_export.py``) never stores or logs that
+result.
 
 Design note: the plan originally pointed at extending
 ``berb/llm/extended_router.py``'s ``ExtendedRouter``, but that class's own
 ``_create_provider`` returns a ``_MockProvider`` ("In production, this
 would create the actual provider instance") and is not imported anywhere
 under ``berb/pipeline/`` — it is not live infrastructure. The real,
-reachable factory is ``berb.llm.create_llm_client(RCConfig)`` /
-``berb.llm.client.LLMClient(LlmConfig)``, so this module resolves an
-adversarial provider as a standalone ``LlmConfig`` instead, built from
-environment variables the same way the rest of Berb's optional-provider
-switches already work (see ``berb/literature/search.py``'s Perplexity
-top-up for the same env-var-gated-optional-feature shape).
+reachable constructor is ``berb.llm.client.LLMClient(LLMConfig)``, which
+needs ``berb.llm.client.LLMConfig`` (the client's own runtime config
+type — resolved rate-limit fields, real API key, etc.), a distinct
+dataclass from ``berb.config.LlmConfig``'s declarative YAML-section type
+that this module's public resolver returns. ``build_adversarial_client_config``
+is the bridge between the two, built from environment variables the same
+way the rest of Berb's optional-provider switches already work (see
+``berb/literature/search.py``'s Perplexity top-up for the same
+env-var-gated-optional-feature shape).
 
 Security (tasks/ars_integration_plan.md W5, "largest new attack surface"):
 
@@ -57,8 +62,11 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any, Final
 
-from berb.config import LlmConfig, SecurityConfig
+from berb.config import LlmConfig as DeclaredLlmConfig
+from berb.config import SecurityConfig
 from berb.integrity.findings import CheckId, Finding, Severity
+from berb.llm import PROVIDER_PRESETS
+from berb.llm.client import LLMConfig
 
 # Untrusted, paper/claim-derived text bounds — small on purpose. A cross-
 # model call's whole point is a bounded adversarial check, not a second
@@ -106,10 +114,13 @@ def resolve_adversarial_llm_config(
     primary_provider: str,
     *,
     env: Mapping[str, str] | None = None,
-) -> LlmConfig | None:
-    """Resolve a second provider's ``LlmConfig`` whose family differs from
-    *primary_provider*, read from environment variables
-    (``BERB_CROSS_MODEL_PROVIDER`` / ``_MODEL`` / ``_API_KEY_ENV``).
+) -> DeclaredLlmConfig | None:
+    """Resolve a second provider's ``berb.config.LlmConfig`` (the
+    declarative YAML-section type — carries ``api_key_env``, the
+    environment variable *name*, never the secret value itself) whose
+    family differs from *primary_provider*, read from environment
+    variables (``BERB_CROSS_MODEL_PROVIDER`` / ``_MODEL`` /
+    ``_API_KEY_ENV``).
 
     Returns ``None`` — never a same-family fallback — when: no adversarial
     provider is configured, it resolves to the same family as the primary
@@ -120,6 +131,12 @@ def resolve_adversarial_llm_config(
 
     ``env`` defaults to ``os.environ``; injectable for testing without
     real environment variables or API keys.
+
+    This value is never resolved into ``berb.llm.client.LLMConfig``
+    directly — that type needs the real key, which must never live on an
+    object that could end up logged or disclosed. Use
+    ``build_adversarial_client_config()`` right at the point an
+    ``LLMClient`` is actually constructed.
     """
     source = env if env is not None else os.environ
 
@@ -137,7 +154,35 @@ def resolve_adversarial_llm_config(
     if not model:
         return None
 
-    return LlmConfig(provider=provider, api_key_env=api_key_env, primary_model=model)
+    return DeclaredLlmConfig(provider=provider, api_key_env=api_key_env, primary_model=model)
+
+
+def build_adversarial_client_config(
+    config: DeclaredLlmConfig,
+    *,
+    env: Mapping[str, str] | None = None,
+) -> LLMConfig | None:
+    """Resolve *config* (as returned by ``resolve_adversarial_llm_config``)
+    into the ``berb.llm.client.LLMConfig`` that ``LLMClient`` actually
+    needs — this is the one place the real API key value is read, and the
+    result must be used immediately to construct the client, never stored
+    on a field that could be logged or disclosed.
+
+    Returns ``None`` if the named environment variable is no longer set
+    (treat identically to ``resolve_adversarial_llm_config`` returning
+    ``None``).
+    """
+    source = env if env is not None else os.environ
+    api_key = source.get(config.api_key_env, "").strip()
+    if not api_key:
+        return None
+    base_url = PROVIDER_PRESETS.get(config.provider, {}).get("base_url", "")
+    return LLMConfig(
+        base_url=base_url,
+        api_key=api_key,
+        primary_model=config.primary_model,
+        provider_name=config.provider,
+    )
 
 
 def build_cross_model_payload(

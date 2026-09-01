@@ -8,6 +8,7 @@ import math
 import re
 from collections import Counter
 from pathlib import Path
+from typing import Any
 
 import yaml  # noqa: F401 — available for downstream use
 
@@ -15,7 +16,16 @@ from berb.adapters import AdapterBundle
 from berb.config import RCConfig
 from berb.integrity.anchors import strip_markers
 from berb.llm.client import LLMClient
-from berb.llm.cross_model import cross_model_enabled
+from berb.llm.cross_model import (
+    build_adversarial_client_config,
+    build_cross_model_payload,
+    cost_ceiling_exceeded,
+    cross_model_enabled,
+    cross_model_unverified_finding,
+    disclosure_record,
+    parse_cross_model_verdict,
+    resolve_adversarial_llm_config,
+)
 from berb.pipeline._domain import _detect_domain  # noqa: F401
 from berb.pipeline._helpers import (
     StageResult,
@@ -167,6 +177,141 @@ def _package_code_release(
         len(requirements),
     )
     return ["code/"]
+
+
+# tasks/ars_integration_plan.md W5: cross-model adversarial double-check,
+# bounded to claims the SAME model already flagged as hallucinated or
+# unsupported. Scope limitation, stated plainly: HallucinationReport.issues
+# only lists already-flagged items, not the full claim list, so this
+# cannot catch a false negative the primary model missed entirely -- only
+# confirm or refute an existing flag. Off unless both SecurityConfig
+# flags are set AND an adversarial provider is actually configured.
+_MAX_CROSS_MODEL_CHECKS = 5
+
+
+def _run_cross_model_double_check(
+    halluc_report: Any,
+    config: RCConfig,
+) -> list[dict[str, Any]]:
+    """For each citation/claim the primary model already flagged, ask a
+    second, different-family provider whether it agrees. Returns a
+    JSON-serializable list of records. Never raises -- every failure mode
+    (no adversarial provider, cost ceiling, a failed call, an unparseable
+    response) becomes a ``cross_model_unverified_finding`` record instead.
+
+    Cost ceiling note: this uses ``berb.llm.pricing.PricingTable`` when
+    the model's price is known, falling back to the response's own
+    ``cost`` field otherwise. If neither source knows the price, that
+    call's cost is counted as $0 -- a best-effort ceiling, not a
+    cryptographic spending guarantee.
+    """
+    flagged = [
+        issue
+        for issue in halluc_report.issues
+        if issue.get("type") in ("hallucinated_citation", "unsupported_claim")
+    ]
+    if not flagged:
+        return []
+
+    adversarial_config = resolve_adversarial_llm_config(config.llm.provider)
+    if adversarial_config is None:
+        return [
+            cross_model_unverified_finding(
+                "stage-22", "no adversarial provider configured"
+            ).to_dict()
+        ]
+
+    from berb.llm.pricing import PricingTable
+    from berb.utils.sanitize import wrap_untrusted
+
+    pricing = PricingTable()
+    adversarial_client: LLMClient | None = None
+    spent_usd = 0.0
+    disclosed = False
+    records: list[dict[str, Any]] = []
+
+    for issue in flagged[:_MAX_CROSS_MODEL_CHECKS]:
+        locator = issue.get("citation") or str(issue.get("claim", ""))[:64]
+
+        if cost_ceiling_exceeded(spent_usd, config.security.cross_model_max_usd_per_run):
+            records.append(
+                cross_model_unverified_finding(locator, "cost ceiling reached").to_dict()
+            )
+            continue
+
+        if adversarial_client is None:
+            client_config = build_adversarial_client_config(adversarial_config)
+            if client_config is None:
+                records.append(
+                    cross_model_unverified_finding(
+                        locator, "adversarial provider API key no longer available"
+                    ).to_dict()
+                )
+                continue
+            adversarial_client = LLMClient(config=client_config)
+
+        if not disclosed:
+            record = disclosure_record(
+                adversarial_config.provider,
+                adversarial_config.primary_model,
+                "claim text + citation key (cross-model hallucination double-check)",
+            )
+            logger.info("Stage 22: cross-model verification disclosure: %s", record)
+            disclosed = True
+
+        claim_text = str(issue.get("claim") or issue.get("description", ""))
+        payload = build_cross_model_payload(
+            claim_text=claim_text,
+            reference_metadata={"cite_key": str(issue.get("citation", ""))},
+        )
+        prompt = (
+            "You are independently double-checking whether a citation "
+            "supports a claim in an academic paper. Respond with strict "
+            'JSON only: {"verdict": "agrees"|"disagrees"|"uncertain", '
+            '"rationale": "<one sentence>"}. "agrees" means the claim is '
+            'properly supported by the citation. "disagrees" means it is '
+            "NOT supported (a hallucination).\n\n"
+            f"Claim: {wrap_untrusted(payload['claim_text'], 'claim text')}\n"
+            f"Cited key: {payload['reference_metadata'].get('cite_key', '')}\n"
+        )
+        try:
+            resp = adversarial_client.chat([{"role": "user", "content": prompt}])
+        except Exception as exc:  # noqa: BLE001 - a provider failure must not crash export
+            records.append(
+                cross_model_unverified_finding(
+                    locator, f"adversarial provider call failed: {exc}"
+                ).to_dict()
+            )
+            continue
+
+        call_cost = resp.cost or pricing.compute_cost(
+            resp.model, resp.prompt_tokens, resp.completion_tokens
+        )
+        spent_usd += call_cost or 0.0
+
+        verdict = parse_cross_model_verdict(
+            adversarial_config.provider, adversarial_config.primary_model, resp.content
+        )
+        if verdict is None:
+            records.append(
+                cross_model_unverified_finding(
+                    locator, "adversarial provider response could not be parsed"
+                ).to_dict()
+            )
+            continue
+
+        records.append(
+            {
+                "locator": locator,
+                "primary_flag": issue.get("type"),
+                "provider": verdict.provider,
+                "model": verdict.model,
+                "verdict": verdict.verdict.value,
+                "rationale": verdict.rationale,
+            }
+        )
+
+    return records
 
 
 # ---------------------------------------------------------------------------
@@ -1218,6 +1363,22 @@ def _execute_export_publish(
                                 "Stage 22: Hallucination check passed (%.1f/10)",
                                 _halluc_report.overall_score,
                             )
+
+                        # tasks/ars_integration_plan.md W5: adversarial
+                        # cross-model double-check on the SAME model's own
+                        # flagged citations/claims. Off by default; both
+                        # SecurityConfig.cross_model_verification and
+                        # cross_model_consent_granted must be true.
+                        if cross_model_enabled(config.security):
+                            _cross_model_records = _run_cross_model_double_check(
+                                _halluc_report, config
+                            )
+                            if _cross_model_records:
+                                (stage_dir / "cross_model_findings.json").write_text(
+                                    json.dumps(_cross_model_records, indent=2),
+                                    encoding="utf-8",
+                                )
+                                artifacts.append("cross_model_findings.json")
                     except Exception as _halluc_exc:  # noqa: BLE001
                         logger.debug("Stage 22: Hallucination check skipped: %s", _halluc_exc)
                 # P1-03: 5-reviewer ensemble moved to stage 20 (_execute_quality_gate)
