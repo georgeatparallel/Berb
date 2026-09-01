@@ -79,7 +79,7 @@ LLM prompts are centralized in `prompts.default.yaml` (~150 KB).
 
 ### LLM Routing
 
-`berb/llm/model_router.py` and `berb/llm/nadirclaw_router.py` route requests by cost/latency. The cascade pattern (`model_cascade.py`) tries cheap models first, escalating to premium only when needed. Supported providers: OpenAI, Anthropic, DeepSeek, Perplexity, xAI, OpenRouter, MiniMax.
+`berb/llm/nadirclaw_router.py` (used by `berb/llm/smart_client.py` when `config.nadirclaw.enabled`) optimizes model selection and context by cost. `berb/llm/extended_router.py` defines a role-based `ExtendedRouter`, but its provider creation is a stub (`_MockProvider`, per its own docstring) and it is not imported anywhere under `berb/pipeline/` — it is not live infrastructure (verified via `python scripts/check_reachability.py`; see `tasks/ars_integration_plan.md` W5 for the finding that motivated this correction). Supported providers, via `berb.llm.create_llm_client()`: OpenAI, Anthropic, DeepSeek, Perplexity, xAI, OpenRouter, MiniMax.
 
 ### Testing Conventions
 

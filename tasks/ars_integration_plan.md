@@ -1289,9 +1289,23 @@ Per workstream:
 Plan-level:
 
 - [ ] Dual-license request sent to the ARS author (day 1, regardless of answer)
-- [ ] `pyproject.toml:160` stale `berb/review/cross_model_reviewer.py` ruff entry removed
-- [ ] CLAUDE.md corrected: `berb/llm/model_router.py` does not exist; routers are `extended_router.py` / `nadirclaw_router.py`
-- [ ] `berb.integrity.eval.finding_reproduction` either wired (W7) or deleted; allowlist entry closed either way
+  — **not sent**: this requires the user to actually send an email; an
+  agent cannot dispatch outbound correspondence on the user's behalf
+  without explicit per-message authorization. Draft on request.
+- [x] `pyproject.toml:160` stale `berb/review/cross_model_reviewer.py` ruff
+  entry removed (2026-09-01) — confirmed the file doesn't exist,
+  `ruff check berb/` clean after removal.
+- [x] CLAUDE.md corrected (2026-09-01): `berb/llm/model_router.py` and
+  `model_cascade.py` don't exist (neither ever existed under those
+  names). Real routers: `nadirclaw_router.py` (live, used by
+  `smart_client.py`) and `extended_router.py` (NOT live — provider
+  creation is a `_MockProvider` stub, unimported under `berb/pipeline/`,
+  per the W5 finding).
+- [ ] `berb.integrity.eval.finding_reproduction` either wired (W7) or
+  deleted; allowlist entry closed either way — **still open**: W7 (the
+  seeded-defect eval that would need this corpus) wasn't done this
+  session, so touching this module now would be a scope decision made
+  without doing the work it depends on. Left parked, as-is.
 - [ ] Coverage floor in `ci.yml` raised to the new measured value minus ~2 points
 
 ---
