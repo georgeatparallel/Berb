@@ -1,6 +1,6 @@
 # ARS Integration Plan — Research-Integrity Capabilities for Berb
 
-**Status:** in progress — W0, W2, W3, W4 done including stage wiring; W1 core+schema+export-safety+consumer wiring done (producer prompt-side generation deferred); W6 Layer A done and wired; W5 policy layer done (stage wiring deferred); W8.2 (AI disclosure) done and wired
+**Status:** in progress — W0, W2, W3, W4 done including stage wiring; W1 core+schema+export-safety+consumer wiring done (producer prompt-side generation deferred); W6 Layer A done and wired; W5 policy layer done (stage wiring deferred); W8.2 (AI disclosure) done and wired; W8.1 (reporting checklists) mechanism done (stage-20 auto-selection deliberately deferred)
 **Author:** planning pass, 2026-08-31
 **Source of ideas:** [academic-research-skills](https://github.com/Imbad0202/academic-research-skills) (ARS) v3.21.1 by Cheng-I Wu
 **Supersedes:** nothing. Complements `tasks/hardening_plan_2026-08-13.md` and `tasks/arch_hardening_plan.md`.
@@ -233,11 +233,40 @@
     session.
   - 8 tests (6 unit + 2 stage-22 wiring incl. a generation-failure-does-
     not-block-export regression), mypy/ruff/bandit clean.
+- 2026-09-01 — W8.1 (`berb/writing/reporting_guidelines.py`:
+  `ChecklistItem`, `Checklist`, `load_checklist`, `evaluate_checklist`)
+  landed as **mechanism only; deliberately NOT wired into stage 20**:
+  - Checklist-as-data + one generic evaluator, exactly per plan §12 —
+    PRISMA/CONSORT/STROBE differ in items, not evaluation logic, so
+    adding a guideline is a new YAML file, not new code.
+  - Three small starter checklists (`berb/data/reporting_guidelines/
+    {prisma,consort,strobe}.yaml`, 8 items each), paraphrased in plain
+    language describing well-known public reporting-guideline concepts —
+    NOT verbatim EQUATOR Network checklist text — each attributed to its
+    primary source (Page et al. 2021 BMJ; Schulz et al. 2010 BMJ;
+    von Elm et al. 2007 Lancet).
+  - **Why not wired**: the plan's own risk register names "false-positive
+    fatigue" as the single **highest-likelihood** risk in this entire
+    integration. Auto-applying a CONSORT (randomized-trial) or STROBE
+    (observational-study) checklist to the common case — an ML/CS paper —
+    would generate irrelevant advisory noise on every run, which is
+    precisely that risk materializing, not a hypothetical. Domain-aware
+    guideline selection needs validated accuracy before it's safe to wire
+    unattended; that validation didn't happen this pass, so the mechanism
+    ships and the auto-selection decision is left for a follow-up rather
+    than guessed at.
+  - Loader shares `berb.literature.paper_mill.load_corpus`'s fail-safe
+    discipline: size cap, entry-count cap, malformed-entry skip, any
+    failure degrades to an empty (no-op) checklist rather than raising.
+  - New `CheckId.REPORTING_GUIDELINE` enum member (additive).
+  - 19 tests (evaluator behavior, loader validation/caps, all 3 default
+    checklists load and produce findings on a thin paper), mypy/ruff/
+    bandit clean.
 - Remaining: W1 producer prompt wiring, W5 stage wiring, W6 Layer B
-  (claim-strength drift), W7 (seeded-defect eval), W8.1 (reporting
-  guideline checklists), plus the DoD housekeeping items (dual-license
-  email, stale ruff entry, CLAUDE.md router-name fix, `finding_reproduction`
-  disposition), plus the plan's
+  (claim-strength drift), W7 (seeded-defect eval), W8.1 stage-20 wiring
+  (needs validated domain-aware guideline selection first), plus the DoD
+  housekeeping items (dual-license email, stale ruff entry, CLAUDE.md
+  router-name fix, `finding_reproduction` disposition), plus the plan's
   original stage-20 (`QUALITY_GATE`) blocking touchpoint for
   uncited-assertion — stage 17 only ships advisory, as asked.
 

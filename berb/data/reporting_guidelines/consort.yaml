@@ -1,0 +1,44 @@
+# CONSORT-shaped reporting checklist (tasks/ars_integration_plan.md W8.1).
+#
+# For randomized controlled trials. A SMALL, paraphrased subset of the
+# most load-bearing reporting concepts — NOT a reproduction of the actual
+# CONSORT 2010 checklist's item numbering or wording. For the
+# authoritative checklist, see: Schulz KF, Altman DG, Moher D; CONSORT
+# Group. "CONSORT 2010 Statement: updated guidelines for reporting
+# parallel group randomised trials." BMJ 2010;340:c332.
+#
+# Advisory only — see prisma.yaml's header for the same caveat.
+guideline: consort
+items:
+  - id: trial_design
+    section: Methods
+    requirement: "Describe the trial design (e.g. parallel, factorial) and allocation ratio"
+    detect: ["trial design", "parallel-group", "parallel group", "factorial design"]
+  - id: randomization
+    section: Methods
+    requirement: "Describe the method used to generate the random allocation sequence"
+    detect: ["randomi", "random allocation", "allocation sequence"]
+  - id: blinding
+    section: Methods
+    requirement: "State who was blinded after assignment to interventions"
+    detect: ["blind", "masked", "open-label"]
+  - id: sample_size
+    section: Methods
+    requirement: "State how the sample size was determined"
+    detect: ["sample size", "power calculation", "power analysis"]
+  - id: outcomes
+    section: Methods
+    requirement: "Define pre-specified primary and secondary outcome measures"
+    detect: ["primary outcome", "secondary outcome", "outcome measure"]
+  - id: participant_flow
+    section: Results
+    requirement: "Report the flow of participants through each stage of the trial"
+    detect: ["participant flow", "consort flow", "were randomized", "were randomised"]
+  - id: harms
+    section: Results
+    requirement: "Report all important harms or unintended effects"
+    detect: ["adverse event", "adverse effect", "harms"]
+  - id: limitations
+    section: Discussion
+    requirement: "Discuss trial limitations, addressing sources of potential bias"
+    detect: ["limitations"]

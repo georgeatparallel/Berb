@@ -67,6 +67,7 @@ class CheckId(StrEnum):
     TOKEN_CONSERVATION = "token_conservation"
     CLAIM_STRENGTH_DRIFT = "claim_strength_drift"
     CROSS_MODEL_UNVERIFIED = "cross_model_unverified"
+    REPORTING_GUIDELINE = "reporting_guideline"
 
 
 def _capped(spans: tuple[str, ...]) -> tuple[str, ...]:

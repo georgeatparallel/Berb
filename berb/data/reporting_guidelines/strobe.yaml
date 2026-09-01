@@ -1,0 +1,44 @@
+# STROBE-shaped reporting checklist (tasks/ars_integration_plan.md W8.1).
+#
+# For observational studies (cohort, case-control, cross-sectional). A
+# SMALL, paraphrased subset of the most load-bearing reporting concepts —
+# NOT a reproduction of the actual STROBE checklist's item numbering or
+# wording. For the authoritative checklist, see: von Elm E, Altman DG,
+# Egger M, et al. "The Strengthening the Reporting of Observational
+# Studies in Epidemiology (STROBE) statement." Lancet 2007;370:1453-7.
+#
+# Advisory only — see prisma.yaml's header for the same caveat.
+guideline: strobe
+items:
+  - id: study_design
+    section: Methods
+    requirement: "State the study design early in the methods (cohort, case-control, cross-sectional)"
+    detect: ["cohort study", "case-control", "cross-sectional study", "observational study"]
+  - id: setting
+    section: Methods
+    requirement: "Describe the setting, locations, and relevant dates"
+    detect: ["setting", "study period", "recruitment period"]
+  - id: participants
+    section: Methods
+    requirement: "Give eligibility criteria and the sources/methods of participant selection"
+    detect: ["eligibility criteria", "inclusion criteria", "participant selection"]
+  - id: variables
+    section: Methods
+    requirement: "Clearly define outcomes, exposures, predictors, and confounders"
+    detect: ["exposure", "confounder", "outcome variable"]
+  - id: bias
+    section: Methods
+    requirement: "Describe efforts to address potential sources of bias"
+    detect: ["potential bias", "sources of bias", "selection bias", "confounding"]
+  - id: study_size
+    section: Methods
+    requirement: "Explain how the study size was arrived at"
+    detect: ["study size", "sample size"]
+  - id: statistical_methods
+    section: Methods
+    requirement: "Describe all statistical methods, including how confounders were handled"
+    detect: ["statistical method", "adjusted for", "multivariable", "regression model"]
+  - id: limitations
+    section: Discussion
+    requirement: "Discuss limitations, including sources of bias and imprecision"
+    detect: ["limitations"]

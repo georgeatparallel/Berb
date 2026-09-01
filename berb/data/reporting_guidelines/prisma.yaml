@@ -1,0 +1,50 @@
+# PRISMA-shaped reporting checklist (tasks/ars_integration_plan.md W8.1).
+#
+# For systematic reviews / meta-analyses. Items below are a SMALL,
+# paraphrased subset covering the most load-bearing reporting concepts —
+# NOT a reproduction of the actual PRISMA 2020 checklist's item numbering
+# or wording (that document, and its exact item text, belongs to the
+# EQUATOR Network / PRISMA statement authors). For the authoritative
+# checklist, see: Page MJ, et al. "The PRISMA 2020 statement: an updated
+# guideline for reporting systematic reviews." BMJ 2021;372:n71.
+#
+# Advisory only (Severity.ADVISORY) — a missing detection cue means the
+# concept wasn't found by a substring search, not that the paper is
+# non-compliant. Always a human judgment call.
+#
+# Schema: {id, section, requirement, detect: [cue, ...]}. `detect` cues
+# are matched case-insensitively as plain substrings, never as regex.
+guideline: prisma
+items:
+  - id: eligibility
+    section: Methods
+    requirement: "State the eligibility criteria used to select studies for inclusion"
+    detect: ["eligibility criteria", "inclusion criteria", "exclusion criteria"]
+  - id: information_sources
+    section: Methods
+    requirement: "Name the databases and other sources searched"
+    detect: ["information sources", "databases searched", "search strategy"]
+  - id: selection_process
+    section: Methods
+    requirement: "Describe how studies were screened and selected"
+    detect: ["study selection", "screening process", "selection process"]
+  - id: risk_of_bias
+    section: Methods
+    requirement: "Describe the method used to assess risk of bias in included studies"
+    detect: ["risk of bias", "quality assessment", "methodological quality"]
+  - id: synthesis_methods
+    section: Methods
+    requirement: "Describe the methods used to synthesize results"
+    detect: ["synthesis method", "meta-analysis", "narrative synthesis"]
+  - id: registration
+    section: Methods
+    requirement: "State whether the review was registered and where"
+    detect: ["prospero", "registered", "protocol registration"]
+  - id: limitations
+    section: Discussion
+    requirement: "Discuss limitations of the evidence and of the review process"
+    detect: ["limitations"]
+  - id: flow_diagram
+    section: Results
+    requirement: "Report the number of studies screened, assessed, and included"
+    detect: ["studies were screened", "studies were included", "flow diagram", "prisma flow"]
