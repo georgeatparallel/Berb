@@ -15,6 +15,7 @@ from berb.adapters import AdapterBundle
 from berb.config import RCConfig
 from berb.integrity.anchors import strip_markers
 from berb.llm.client import LLMClient
+from berb.llm.cross_model import cross_model_enabled
 from berb.pipeline._domain import _detect_domain  # noqa: F401
 from berb.pipeline._helpers import (
     StageResult,
@@ -39,6 +40,7 @@ from berb.pipeline.stage_impls._citations import (
 from berb.pipeline.stage_impls._review import _get_review_compiled_pdf
 from berb.pipeline.stages import Stage, StageStatus
 from berb.prompts import PromptManager
+from berb.writing.disclosure import DisclosureFacts, generate_disclosure_statement
 
 logger = logging.getLogger(__name__)
 
@@ -1456,6 +1458,24 @@ def _execute_export_publish(
                             artifacts.append(str(_f.relative_to(run_dir)))
     except Exception as _exc:  # noqa: BLE001
         logger.warning("Stage 22: Export to PDF/LaTeX failed: %s", _exc)
+
+    # tasks/ars_integration_plan.md W8.2: AI-usage disclosure statement.
+    # Generic and factual — provider/model this run actually used, not a
+    # specific venue's required wording (that stays out-of-tree; the
+    # scholar adapts this to their venue). Best-effort: a failure here
+    # must not block export of the paper itself.
+    try:
+        disclosure_facts = DisclosureFacts(
+            provider=config.llm.provider,
+            model=config.llm.primary_model,
+            cross_model_verification_used=cross_model_enabled(config.security),
+        )
+        (stage_dir / "ai_disclosure.md").write_text(
+            generate_disclosure_statement(disclosure_facts), encoding="utf-8"
+        )
+        artifacts.append("ai_disclosure.md")
+    except Exception:  # noqa: BLE001
+        logger.debug("Could not generate AI disclosure statement", exc_info=True)
 
     return StageResult(
         stage=Stage.EXPORT_PUBLISH,

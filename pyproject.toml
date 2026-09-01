@@ -238,6 +238,7 @@ module = [
     "berb.integrity.claims",
     "berb.integrity.revision_guard",
     "berb.llm.cross_model",
+    "berb.writing.disclosure",
 ]
 ignore_errors = false
 

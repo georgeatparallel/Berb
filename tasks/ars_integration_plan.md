@@ -1,6 +1,6 @@
 # ARS Integration Plan — Research-Integrity Capabilities for Berb
 
-**Status:** in progress — W0, W2, W3, W4 done including stage wiring; W1 core+schema+export-safety+consumer wiring done (producer prompt-side generation deferred); W6 Layer A done and wired; W5 policy layer done (stage wiring deferred)
+**Status:** in progress — W0, W2, W3, W4 done including stage wiring; W1 core+schema+export-safety+consumer wiring done (producer prompt-side generation deferred); W6 Layer A done and wired; W5 policy layer done (stage wiring deferred); W8.2 (AI disclosure) done and wired
 **Author:** planning pass, 2026-08-31
 **Source of ideas:** [academic-research-skills](https://github.com/Imbad0202/academic-research-skills) (ARS) v3.21.1 by Cheng-I Wu
 **Supersedes:** nothing. Complements `tasks/hardening_plan_2026-08-13.md` and `tasks/arch_hardening_plan.md`.
@@ -215,9 +215,27 @@
     consent-gate truth table, cost-ceiling boundary cases, payload
     allowlist enforcement, verdict parsing incl. the injection-payload
     test), mypy/ruff/bandit clean.
+- 2026-09-01 — W8.2 (`berb/writing/disclosure.py`: `DisclosureFacts`,
+  `generate_disclosure_statement`) landed **and wired**:
+  - Generic, factual AI-usage disclosure statement built from what the
+    run's own config can actually attest to (`config.llm.provider`/
+    `primary_model`, whether W5 cross-model verification ran) — not a
+    specific venue's required wording. Matches the plan's `format_profile`
+    precedent: mechanism shipped, venue-specific policy *content* stays
+    out-of-tree; the scholar adapts the generated generic statement.
+  - **Stage 22** (`EXPORT_PUBLISH`): writes `ai_disclosure.md` right
+    before the stage's single final return; best-effort — a generation
+    failure is caught and logged, never blocks export of the paper
+    itself. Wired in `berb/pipeline/stage_impls/_export.py`.
+  - W8.1 (PRISMA/CONSORT/STROBE reporting-guideline checklists) is **not
+    implemented** — lower-priority "Tier 3 domain pack" per the plan's own
+    ranking, deferred rather than rushed alongside everything else this
+    session.
+  - 8 tests (6 unit + 2 stage-22 wiring incl. a generation-failure-does-
+    not-block-export regression), mypy/ruff/bandit clean.
 - Remaining: W1 producer prompt wiring, W5 stage wiring, W6 Layer B
-  (claim-strength drift), W7 (seeded-defect eval), W8 (reporting
-  guidelines/disclosure), plus the DoD housekeeping items (dual-license
+  (claim-strength drift), W7 (seeded-defect eval), W8.1 (reporting
+  guideline checklists), plus the DoD housekeeping items (dual-license
   email, stale ruff entry, CLAUDE.md router-name fix, `finding_reproduction`
   disposition), plus the plan's
   original stage-20 (`QUALITY_GATE`) blocking touchpoint for

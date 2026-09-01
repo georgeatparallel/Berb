@@ -1234,6 +1234,57 @@ class TestExportPublishMarkerStripping:
         assert "No markers here." in final_text
 
 
+class TestExportPublishDisclosure:
+    """tasks/ars_integration_plan.md W8.2: AI-usage disclosure statement,
+    generated from the run's own config, written at stage 22."""
+
+    def test_disclosure_statement_written_with_run_config_facts(
+        self,
+        tmp_path: Path,
+        run_dir: Path,
+        rc_config: RCConfig,
+        adapters: AdapterBundle,
+    ) -> None:
+        _write_prior_artifact(run_dir, 19, "paper_revised.md", "# Test Paper\n\nSome content.\n")
+        stage_dir = tmp_path / "run" / "stage-22"
+        stage_dir.mkdir(parents=True, exist_ok=True)
+
+        result = rc_executor._execute_export_publish(
+            stage_dir, run_dir, rc_config, adapters, llm=None
+        )
+
+        assert "ai_disclosure.md" in result.artifacts
+        statement = (stage_dir / "ai_disclosure.md").read_text(encoding="utf-8")
+        assert rc_config.llm.provider in statement
+        assert rc_config.llm.primary_model in statement
+
+    def test_disclosure_generation_failure_does_not_block_export(
+        self,
+        tmp_path: Path,
+        run_dir: Path,
+        rc_config: RCConfig,
+        adapters: AdapterBundle,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        _write_prior_artifact(run_dir, 19, "paper_revised.md", "# Test Paper\n\nSome content.\n")
+        stage_dir = tmp_path / "run" / "stage-22"
+        stage_dir.mkdir(parents=True, exist_ok=True)
+
+        def _boom(*_a: Any, **_k: Any) -> None:
+            raise RuntimeError("simulated disclosure failure")
+
+        monkeypatch.setattr(
+            "berb.pipeline.stage_impls._export.generate_disclosure_statement", _boom
+        )
+        result = rc_executor._execute_export_publish(
+            stage_dir, run_dir, rc_config, adapters, llm=None
+        )
+
+        assert result.status is StageStatus.DONE
+        assert "ai_disclosure.md" not in result.artifacts
+        assert (stage_dir / "paper_final.md").exists()
+
+
 class TestExportCitationGate:
     """P0-03: CITATION_VERIFY's own contract says hallucinated citations MUST
     block export, but stage 23 ran after stage 22 and could never do so.
