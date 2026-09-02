@@ -52,3 +52,14 @@ berb.llm.speculative_router          # Parked — revisit 2026-12-01 (strike 1).
 berb.voice.synthesizer               # Parked — revisit 2026-12-01 (strike 1). Un-park: voice output becoming a product feature.
 berb.llm.deepmind_client             # Parked — revisit 2026-12-01 (strike 1). Referenced from deep_query_client.py:21, so parked rather than deleted.
 
+# D-07: W3 capability packages (tasks/w3_capability_triage.md, 2026-09-02).
+# All tested, none with a consumer; three of four sit beside a seam the pipeline
+# already occupies. Same two-strikes rule as D-05/D-06.
+berb.memory.shared_memory        # Parked — revisit 2026-12-01 (strike 1). Un-park: a wired consumer for cross-agent shared memory. Its only importer, experiment/self_correcting.py, is itself parked — un-park together or not at all.
+berb.memory.experiment_memory    # Parked — revisit 2026-12-01 (strike 1). Un-park: a stage retaining state across runs beyond what berb/evolution.py records.
+berb.memory.ideation_memory      # Parked — revisit 2026-12-01 (strike 1). Un-park: as above.
+berb.memory.writing_memory       # Parked — revisit 2026-12-01 (strike 1). Un-park: as above.
+berb.knowledge.graph             # Parked — revisit 2026-12-01 (strike 1). Un-park: a synthesis stage wanting an entity/relation graph rather than the Markdown KB knowledge/base.py writes (wired at runner.py:21).
+berb.self_evolve                 # Parked — revisit 2026-12-01 (strike 1). Un-park: Hyperagents adopted. Tied to berb.hyperagent (D-03) — same paper (arXiv:2603.19461), same decision. berb/evolution.py occupies the wired lessons-to-prompt-overlay seam today.
+berb.assessor                    # Parked — revisit 2026-12-01 (strike 1). Un-park: a venue-recommendation or paper-comparison stage. No pipeline stage references a venue or assessor today; multi-dimensional scoring alone is occupied by review/ensemble.py.
+

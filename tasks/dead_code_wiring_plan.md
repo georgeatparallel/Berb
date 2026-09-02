@@ -1,6 +1,6 @@
 # Dead-Code Research & Wiring Plan
 
-**Status:** IN PROGRESS — W0 complete, W1 and W2 triaged (2026-09-02). Approved — disposal default, W0 scope and wave order settled 2026-09-02 (§8). Ready to execute from W0.
+**Status:** IN PROGRESS — W0 complete; W1, W2 and W3 triaged (2026-09-02). Approved — disposal default, W0 scope and wave order settled 2026-09-02 (§8). Ready to execute from W0.
 **Date:** 2026-09-02
 **Scope:** the 119 modules / 30,763 loc that `scripts/check_reachability.py` reports
 as unreachable from `berb run` / `berb serve`.
@@ -292,10 +292,27 @@ The "free wins" framing held for about half. Two findings cut against it:
 - [x] CI ratchet tightened 24,966 → **20,378**
 - [ ] Public-API group (10 mods / 6,316 loc) awaiting the `__all__` decision
 
-**W3 — Capability packages (~10h).** `reasoning` (2,188), `literature` (2,181),
-`memory` (1,147), `knowledge` (765), `modes` (753), `self_evolve` (687).
-All fully tested, zero untested modules — expect a high PARK/WIRE ratio and
-argue each one on Q2, hard.
+**W3 — Capability packages. ✅ TRIAGED 2026-09-02**
+(`tasks/w3_capability_triage.md`). 16 modules / 2,975 loc.
+
+**Two thirds of this wave did not exist.** It was budgeted at ~10h on pre-W0
+numbers; re-measured, `berb.reasoning` is 12/12 modules live and `berb.modes` is
+3/3 live — **2,941 loc that was never dead.** Both became reachable the moment W0
+credited ancestor packages: `berb/reasoning/__init__.py` eagerly imports its
+submodules, so any reachable importer of one pulls in all twelve. `literature`
+is not in this wave either; its unreachable modules are the exported-public-API
+group held pending the `__all__` decision.
+
+What remained is four packages, all tested, none with a consumer — and three of
+the four sit beside a seam the pipeline already occupies: `evolution.py` for
+self-improvement (`runner.py:20`), `knowledge/base.py` for knowledge persistence
+(`runner.py:21`), `review/ensemble.py` for paper judgment.
+
+- [x] 16 PARK entries applied as allowlist group D-07
+- [x] CI ratchet tightened 20,378 → **17,403**
+- [x] No DELETEs: none failed the import smoke test, and none is a strict
+      duplicate of a wired module. `self_evolve` is closest, and is held with
+      its Hyperagents sibling `berb.hyperagent` (D-03) rather than split from it.
 
 **W4 — Infrastructure (~4h).** `llm` (2,838), `pipeline` (1,783),
 `optimization`, `learning`, `audit`, bridges. Mostly cost/routing machinery;
