@@ -46,12 +46,13 @@ Wired = reachable from `berb run` / `berb serve`. Verify with
 
 | Module | Responsibility | Wired |
 |--------|---------------|-------|
-| `berb/llm/` | LLM providers, model routing, cost optimization | partial, plus a public API surface (`berb.llm.__all__`) that is a supported contract — `client`, `smart_client`, `nadirclaw_router`, `cost_tracker`, `prompt_cache` are live. Batching (`batch_api`), speculative execution (`speculative_gen`), `adaptive_temp`, `structured_outputs` and `eval_dataset` are parked (D-08), so "caching, batching, cascading" overstates what runs |
+| `berb/llm/` | LLM providers, model routing, cost optimization, image input | partial, plus a public API surface (`berb.llm.__all__`) that is a supported contract — `client`, `smart_client`, `nadirclaw_router`, `cost_tracker`, `prompt_cache`, `vision` and `model_cascade` are live. Batching (`batch_api`), speculative execution (`speculative_gen`), `adaptive_temp`, `structured_outputs` and `eval_dataset` are parked (D-08) |
 | `berb/literature/` | arXiv, OpenAlex, Semantic Scholar, novelty scoring, PDF ingestion, Zotero | yes — plus a public API surface (`berb.literature.__all__`) that is a supported contract, covered by `tests/test_public_api_contract.py` rather than by internal callers |
 | `berb/experiment/` | Sandboxed code execution (local, Docker, SSH, Colab), tree search, validation | partial — sandboxes, `search/` (Stage 12) and `validator` are live, and `plot_verdict` now feeds the figure gate. `compute_guard`, `progress`, `evolutionary_search`, `self_correcting`, `harness_template` and `evaluators/` are parked (D-05); `react_agent` and `split_policy` await wiring |
 | `berb/agents/` | Benchmark agent, code searcher, figure critique agent | yes |
 | `berb/review/` | 5-reviewer + Area Chair peer review ensemble | yes |
 | `berb/integrity/` | Claim manifests, evidence tracking, citation anchors, revision guards | partial — those are live; `integrity/eval/hidden_eval.py` (HCE) is parked (D-05) |
+| `berb/research/` | Research-direction state (`world_model`) and the cyclic discovery loop over stages 7-15 | yes — behind `research.discovery.enabled` (default off). Pipeline-facing half is `berb/pipeline/discovery.py` |
 | `berb/memory/` | Embeddings, retrieval, shared memory coordination | partial — `embeddings`/`retriever` are used by `review/ensemble.py` for review-diversity scoring. `shared_memory` and the three per-stage memories are parked (D-07); `shared_memory`'s only importer was the parked `experiment/self_correcting.py` |
 
 **Dead-code accounting.** `scripts/check_reachability.py` runs in CI as a
@@ -73,13 +74,38 @@ decision, not a way to quieten the gate.
 2026-09-02). Both packages are in `PUBLIC_API_PACKAGES` and both are covered by
 the contract test.
 
-**Vision models are catalogued but unusable.** `openrouter_models_data.py`
-declares `supports_vision=True` on 173 of 335 models, and nothing reads the flag:
-`berb/llm/` has no image support in any adapter — no `image_url`, no base64 media
-block. Adding it is the prerequisite for a real VLM figure critic (see
-`experiment/plot_verdict.py`) and for anything else image-shaped. Refresh the
-catalogue against OpenRouter with `scripts/refresh_openrouter_models.py --diff`;
-the model list should be fetched, not hand-edited.
+**Image input** lives in `berb/llm/vision.py` (added 2026-09-02). Build a
+multimodal message with `image_message(text, [path])`; it produces a
+provider-neutral part list that `LLMClient` encodes per wire format —
+`image_url` for chat-completions, `input_image` for the Responses API, a
+base64 `source` block for the Anthropic adapter. Only inline base64 is
+supported; remote image URLs are deliberately out of scope.
+`model_supports_vision()` is the first and only reader of the
+`supports_vision` flag that `openrouter_models_data.py` declares on 173 of its
+335 models, and `LLMClient.chat` refuses an image for any model the catalogue
+marks text-only (uncatalogued models fail open). This unblocked
+`experiment/plot_verdict.VLMPlotCritic`, which is selected over the pixel-only
+critic when `experiment.figure_agent.vision_model` is set. Refresh the
+catalogue with `scripts/refresh_openrouter_models.py --diff`; the model list
+should be fetched, not hand-edited.
+
+**LLM cost cascading** is `berb/llm/model_cascade.py`, behind `cascade.enabled`
+(default off). It tries a cheap model and escalates only when a quality
+evaluator scores the answer below that rung's threshold. Restored from
+`9d026a1` on 2026-09-02 without its in-process response cache (the same
+mechanism `prompt_cache.py` had already removed for having no repeat calls),
+without `MODEL_COSTS`/`cost_saved_estimate` (a duplicate table and a savings
+figure that was never computed), and synchronous rather than async. The
+cascade's value rests entirely on its evaluator: read
+`CascadingLLMClient.get_stats()["cascade_exits"]` before trusting it.
+
+**The research-direction loop** is `berb/research/discovery_loop.py` plus
+`berb/pipeline/discovery.py`, behind `research.discovery.enabled` (default
+off). `pipeline/iterative.py` loops stages 16-22 — how a result is written up;
+this loops stages 7-15 — *which* result to pursue. Restored from `24eefec` on
+2026-09-02 with its task-execution stub replaced by an injected `TaskExecutor`;
+the pipeline supplies one that re-runs the slice per candidate direction and
+promotes the winner's artifacts. Cost scales as `max_cycles x width` slice runs.
 
 Unwired capabilities that the docs used to claim as live: SearXNG
 (`literature/searxng_client.py`), grey literature (`literature/grey_search.py`),
@@ -87,6 +113,12 @@ multimodal figure extraction (`literature/multimodal_search.py`) and
 self-correcting simulation (`experiment/self_correcting.py`). All are present
 and tested but have no importer on any pipeline path — they do not run, and are
 parked in `.reachability-allowlist` with a revisit date.
+
+`experiment/code_agent.py` and its `config.experiment.cli_agent` section were
+deleted (2026-09-02, D-09): 836 loc with no importer on any pipeline path, and
+the sole reader of that config. The occupied seam is `pipeline/code_agent.py`,
+which reads `config.experiment.code_agent` — a different, live object. Its S0-8
+env-stripping test now asserts against `sandbox.safe_subprocess_env` directly.
 
 `experiment/auto_debugger.py`, `config/wizard.py`, `llm/retry_utils.py`,
 `llm/extended_router.py` and `pipeline/asyncio_utils.py` were deleted

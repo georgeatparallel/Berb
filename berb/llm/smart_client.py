@@ -66,6 +66,7 @@ class SmartLLMClient:
         nadirclaw_config: Any | None = None,
         tracking_config: Any | None = None,
         project_path: str | None = None,
+        base_client: Any | None = None,
     ):
         """Initialize smart LLM client.
 
@@ -74,9 +75,15 @@ class SmartLLMClient:
             nadirclaw_config: NadirClaw configuration (optional)
             tracking_config: Token tracking configuration (optional)
             project_path: Project path for tracking (optional)
+            base_client: An already-built client to wrap. Without it a plain
+                LLMClient is constructed from `config`, which silently
+                discards a MultiProviderLLMClient (configured
+                llm.fallback_providers) or an ACPClient that the caller had
+                already built — their failover and subprocess behaviour would
+                be lost the moment routing or tracking was enabled.
         """
         self.base_config = config
-        self._base_client = LLMClient(config)
+        self._base_client = base_client if base_client is not None else LLMClient(config)
 
         # Initialize NadirClaw router if enabled
         if nadirclaw_config and nadirclaw_config.enabled:
@@ -120,6 +127,53 @@ class SmartLLMClient:
             f"Tracking={self._tracking_enabled}"
         )
 
+    @property
+    def config(self) -> LLMConfig:
+        """The wrapped client's live config.
+
+        Callers reach through the client to read base_url/api_key and to
+        override timeout_sec for a single call (pipeline/_prompt_helpers.py).
+        Returning the *base* client's config rather than this wrapper's copy
+        means such an override actually reaches the object that makes the
+        request.
+        """
+        return self._base_client.config
+
+    def chat(
+        self,
+        messages: list[dict[str, Any]],
+        *,
+        model: str | None = None,
+        max_tokens: int | None = None,
+        temperature: float | None = None,
+        **kwargs: Any,
+    ) -> LLMResponse:
+        """Send a chat request, routed and tracked. Synchronous, like LLMClient.
+
+        This is the method the pipeline actually calls — every stage does
+        ``llm.chat(...)``. It was missing, so enabling `nadirclaw.enabled` or
+        `token_tracking.enabled` returned a wrapper with no `chat` at all and
+        every stage raised AttributeError on its first LLM call.
+
+        Args:
+            messages: List of message dicts.
+            model: Explicit model. When given, routing is skipped — an
+                explicit choice by the caller outranks the router's guess.
+            max_tokens: Max completion tokens.
+            temperature: Sampling temperature.
+            **kwargs: Passed through to the base client.
+
+        Returns:
+            The base client's LLMResponse.
+        """
+        return self._complete_sync(
+            messages,
+            model=model,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            **kwargs,
+        ).response
+
     async def complete(
         self,
         messages: list[dict[str, Any]],
@@ -128,6 +182,10 @@ class SmartLLMClient:
         **kwargs,
     ) -> SmartLLMResponse:
         """Complete a chat conversation with intelligent routing.
+
+        Async façade over :meth:`chat` that also returns the routing and cost
+        metadata. The underlying clients are synchronous (urllib/httpx), so the
+        call runs in a worker thread rather than blocking the event loop.
 
         Args:
             messages: List of message dicts
@@ -138,13 +196,37 @@ class SmartLLMClient:
         Returns:
             SmartLLMResponse with routing and cost info
         """
+        import asyncio
+
+        return await asyncio.to_thread(
+            self._complete_sync,
+            messages,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            **kwargs,
+        )
+
+    def _complete_sync(
+        self,
+        messages: list[dict[str, Any]],
+        *,
+        model: str | None = None,
+        max_tokens: int | None = None,
+        temperature: float | None = None,
+        **kwargs: Any,
+    ) -> SmartLLMResponse:
+        """Route, call, track. The single implementation behind chat/complete."""
         start_time = time.time()
 
         # Extract prompt for classification
         prompt = self._extract_prompt(messages)
 
         # Select optimal model via NadirClaw
-        if self._nadirclaw_enabled and self._router:
+        if model is not None:
+            selection = None
+            tier = "explicit"
+            confidence = 1.0
+        elif self._nadirclaw_enabled and self._router:
             selection = self._router.select_model(prompt)
             model = selection.model
             tier = selection.tier
@@ -177,13 +259,16 @@ class SmartLLMClient:
             optimized_tokens = 0
             tokens_saved = 0
 
-        # Execute LLM call
+        # Execute LLM call. The base clients (LLMClient, MultiProviderLLMClient,
+        # ACPClient) are synchronous and expose chat() — this called a
+        # complete() none of them has, so every routed call raised
+        # AttributeError.
         llm_start = time.time()
-        response = await self._base_client.complete(
-            messages=optimized_messages,
+        response = self._base_client.chat(
+            optimized_messages,
+            model=model,  # Use selected model
             max_tokens=max_tokens,
             temperature=temperature,
-            model=model,  # Use selected model
             **kwargs,
         )
         llm_duration_ms = int((time.time() - llm_start) * 1000)

@@ -50,36 +50,62 @@ class TestExperimentSandboxGate:
         mock_run.assert_not_called()
 
 
-class TestCliAgentEnvStripping:
-    """S0-8 (tasks/arch_hardening_plan.md): the CLI-agent subprocess must
-    not inherit host credentials — this is check_code_security's own
-    acceptance criterion, never written when S0-8 shipped."""
+class TestSubprocessEnvStripping:
+    """S0-8 (tasks/arch_hardening_plan.md): an experiment subprocess must not
+    inherit host credentials.
 
-    def test_secret_env_var_absent_from_cli_agent_child_env(self, tmp_path: Path, monkeypatch):
-        from unittest.mock import MagicMock
+    Originally asserted against experiment/code_agent.py's CLI-agent Popen.
+    That module was deleted (2026-09-02, D-09); the property belongs to
+    safe_subprocess_env itself, which every remaining spawn site uses, so the
+    test now covers the helper directly rather than one of its callers."""
 
-        from berb.experiment.code_agent import ClaudeCodeAgent
+    def test_secret_env_vars_are_stripped(self, monkeypatch):
+        from berb.experiment.sandbox import safe_subprocess_env
 
         monkeypatch.setenv("MY_SERVICE_API_KEY", "sk-super-secret-value")
+        monkeypatch.setenv("SOME_TOKEN", "t")
+        monkeypatch.setenv("A_SECRET", "s")
+        monkeypatch.setenv("DB_PASSWORD", "p")
+        monkeypatch.setenv("AWS_ACCESS_KEY_ID", "AKIA")
         monkeypatch.setenv("SAFE_UNRELATED_VAR", "fine")
 
-        captured_env: dict[str, str] = {}
+        env = safe_subprocess_env()
 
-        def _fake_popen(cmd, **kwargs):
-            captured_env.update(kwargs.get("env") or {})
-            proc = MagicMock()
-            proc.communicate.return_value = (b"ok", b"")
-            proc.returncode = 0
-            return proc
+        for leaked in (
+            "MY_SERVICE_API_KEY",
+            "SOME_TOKEN",
+            "A_SECRET",
+            "DB_PASSWORD",
+            "AWS_ACCESS_KEY_ID",
+        ):
+            assert leaked not in env
+        # Not an allowlisted key either — the env is allow-list shaped, not
+        # deny-list shaped, so an unrecognised variable is dropped too.
+        assert "SAFE_UNRELATED_VAR" not in env
 
-        with patch("berb.experiment.code_agent.subprocess.Popen", side_effect=_fake_popen):
-            agent = ClaudeCodeAgent(binary_path="claude")
-            agent._run_subprocess(["claude", "-p", "hi"], tmp_path / "work", timeout_sec=5)
+    def test_allowlisted_keys_survive(self, monkeypatch):
+        from berb.experiment.sandbox import safe_subprocess_env
 
-        assert "MY_SERVICE_API_KEY" not in captured_env
-        assert (
-            captured_env.get("SAFE_UNRELATED_VAR") is None
-        )  # not in the PATH/HOME allowlist either
+        monkeypatch.setenv("PATH", "/usr/bin")
+        env = safe_subprocess_env()
+        assert env["PATH"] == "/usr/bin"
+        assert env["PYTHONUNBUFFERED"] == "1"
+
+    def test_spawn_sites_use_the_sanitised_env(self, tmp_path: Path, monkeypatch):
+        """The helper is only a control if the sandbox actually passes it."""
+        from subprocess import CompletedProcess
+
+        monkeypatch.setenv("MY_SERVICE_API_KEY", "sk-super-secret-value")
+        captured: dict[str, dict[str, str]] = {}
+
+        def _fake_run(cmd, **kwargs):
+            captured["env"] = kwargs.get("env") or {}
+            return CompletedProcess(args=[], returncode=0, stdout="ok\n", stderr="")
+
+        with patch("berb.experiment.sandbox.subprocess.run", side_effect=_fake_run):
+            ExperimentSandbox(SandboxConfig(), tmp_path / "work").run(_SAFE)
+
+        assert "MY_SERVICE_API_KEY" not in captured["env"]
 
 
 class TestRejectedReasonField:

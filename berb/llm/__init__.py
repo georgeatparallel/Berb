@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from berb._lazy import lazy_exports
 
@@ -13,6 +13,12 @@ _EXPORTS = {
     "LLMProvider": "client",
     "get_provider_from_model": "client",
     "validate_model_for_provider": "client",
+    # Image input (see berb.llm.vision)
+    "ImagePart": "vision",
+    "VisionUnsupportedError": "vision",
+    "encode_image": "vision",
+    "image_message": "vision",
+    "model_supports_vision": "vision",
     # OpenRouter adapter
     "ModelVariant": "openrouter_adapter",
     "ProviderRouting": "openrouter_adapter",
@@ -42,6 +48,12 @@ __all__ = [
     "get_provider_from_model",
     "validate_model_for_provider",
     "PROVIDER_PRESETS",
+    # Image input
+    "ImagePart",
+    "VisionUnsupportedError",
+    "encode_image",
+    "image_message",
+    "model_supports_vision",
     # OpenRouter adapter
     "ModelVariant",
     "ProviderRouting",
@@ -175,11 +187,48 @@ def create_llm_client(
     ):
         from berb.llm.smart_client import SmartLLMClient
 
-        return SmartLLMClient(
-            config=base_client.config,
-            nadirclaw_config=getattr(config, "nadirclaw", None),
-            tracking_config=getattr(config, "token_tracking", None),
-            project_path=config.project.name if hasattr(config, "project") else None,
+        return _maybe_wrap_cascade(
+            config,
+            SmartLLMClient(
+                config=base_client.config,
+                nadirclaw_config=getattr(config, "nadirclaw", None),
+                tracking_config=getattr(config, "token_tracking", None),
+                project_path=config.project.name if hasattr(config, "project") else None,
+                # Wrap what was actually built — passing only its config rebuilt
+                # a plain LLMClient and dropped multi-provider failover / ACP.
+                base_client=base_client,
+            ),
         )
 
-    return base_client
+    return _maybe_wrap_cascade(config, base_client)
+
+
+def _maybe_wrap_cascade(config: RCConfig, client: Any) -> Any:
+    """Wrap `client` in a CascadingLLMClient when config.cascade is enabled.
+
+    A no-op unless the section is enabled AND names at least one step —
+    an enabled-but-empty cascade would raise on every call, which is a worse
+    outcome than ignoring an incomplete config.
+    """
+    cascade_cfg = getattr(config, "cascade", None)
+    if cascade_cfg is None or not cascade_cfg.enabled or not cascade_cfg.steps:
+        return client
+
+    from berb.llm.model_cascade import CascadeConfig, CascadeStep, CascadingLLMClient
+
+    return CascadingLLMClient(
+        base_client=client,
+        config=CascadeConfig(
+            cascade=tuple(
+                CascadeStep(
+                    model=step.model,
+                    min_score=step.min_score,
+                    max_tokens=step.max_tokens,
+                    temperature=step.temperature,
+                )
+                for step in cascade_cfg.steps
+            ),
+            quick_eval_enabled=cascade_cfg.quick_eval_enabled,
+            fallback_model=cascade_cfg.fallback_model or None,
+        ),
+    )

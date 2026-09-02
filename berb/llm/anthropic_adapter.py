@@ -1,8 +1,12 @@
 """Anthropic Messages API adapter for Berb."""
 
+from __future__ import annotations
+
 import logging
 import urllib.error
 from typing import Any
+
+from berb.llm.vision import content_to_text, to_anthropic_content
 
 try:
     import httpx
@@ -24,6 +28,20 @@ _STOP_REASON_MAP = {
     "stop_sequence": "stop",
     "tool_use": "tool_calls",
 }
+
+
+def _as_blocks(content: Any) -> list[dict[str, Any]]:
+    """Coerce message content to a list of Anthropic content blocks."""
+    if isinstance(content, list):
+        return list(content)
+    return [{"type": "text", "text": str(content)}]
+
+
+def _merge_content(first: Any, second: Any) -> Any:
+    """Join two same-role message contents, preserving any image blocks."""
+    if isinstance(first, str) and isinstance(second, str):
+        return first + "\n\n" + second
+    return _as_blocks(first) + _as_blocks(second)
 
 
 class AnthropicAdapter:
@@ -49,7 +67,7 @@ class AnthropicAdapter:
     @staticmethod
     def _build_message_body(
         model: str,
-        messages: list[dict[str, str]],
+        messages: list[dict[str, Any]],
         max_tokens: int,
         temperature: float,
         json_mode: bool = False,
@@ -63,25 +81,29 @@ class AnthropicAdapter:
         and batch submission (`submit_batch`), so both apply identical
         message-merging, cache_control, and json_mode semantics.
         """
-        # Extract and concatenate all system messages
+        # Extract and concatenate all system messages. Anthropic's `system`
+        # is text-only, so an image in a system message is dropped by
+        # content_to_text rather than silently corrupting the body.
         system_parts: list[str] = []
-        user_messages: list[dict[str, str]] = []
+        user_messages: list[dict[str, Any]] = []
         for msg in messages:
             if msg["role"] == "system":
-                system_parts.append(msg["content"])
+                system_parts.append(content_to_text(msg["content"]))
             else:
-                user_messages.append(msg)
+                user_messages.append({**msg, "content": to_anthropic_content(msg["content"])})
 
         system_msg = "\n\n".join(system_parts) if system_parts else None
 
         # Merge consecutive messages with the same role (Anthropic
-        # requires strict user/assistant alternation)
-        merged: list[dict[str, str]] = []
+        # requires strict user/assistant alternation). Block lists concatenate
+        # as lists; a string joined to a block list is promoted to a text block
+        # so an image is never flattened away by the merge.
+        merged: list[dict[str, Any]] = []
         for msg in user_messages:
             if merged and merged[-1]["role"] == msg["role"]:
                 merged[-1] = {
                     "role": msg["role"],
-                    "content": merged[-1]["content"] + "\n\n" + msg["content"],
+                    "content": _merge_content(merged[-1]["content"], msg["content"]),
                 }
             else:
                 merged.append(dict(msg))
@@ -197,7 +219,7 @@ class AnthropicAdapter:
     def chat_completion(
         self,
         model: str,
-        messages: list[dict[str, str]],
+        messages: list[dict[str, Any]],
         max_tokens: int,
         temperature: float,
         json_mode: bool = False,
