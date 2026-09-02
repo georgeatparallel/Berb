@@ -159,9 +159,7 @@ class MultiFormatExporter:
         for fmt in self.config.formats:
             try:
                 if fmt == ExportFormat.LATEX:
-                    path = await self._export_latex(
-                        paper, references, figures, output_dir
-                    )
+                    path = await self._export_latex(paper, references, figures, output_dir)
                     result.exported_formats.append("latex")
                     result.output_paths["latex"] = str(path)
 
@@ -171,16 +169,12 @@ class MultiFormatExporter:
                     result.output_paths["markdown"] = str(path)
 
                 elif fmt == ExportFormat.HTML:
-                    path = await self._export_html(
-                        paper, references, figures, output_dir
-                    )
+                    path = await self._export_html(paper, references, figures, output_dir)
                     result.exported_formats.append("html")
                     result.output_paths["html"] = str(path)
 
                 elif fmt == ExportFormat.WORD:
-                    path = await self._export_word(
-                        paper, references, figures, output_dir
-                    )
+                    path = await self._export_word(paper, references, figures, output_dir)
                     result.exported_formats.append("word")
                     result.output_paths["word"] = str(path)
 
@@ -195,17 +189,13 @@ class MultiFormatExporter:
                     result.output_paths["csl-json"] = str(path)
 
                 elif fmt == ExportFormat.OVERLEAF_ZIP:
-                    path = await self._export_overleaf(
-                        paper, references, figures, output_dir
-                    )
+                    path = await self._export_overleaf(paper, references, figures, output_dir)
                     result.exported_formats.append("overleaf-zip")
                     result.output_paths["overleaf-zip"] = str(path)
 
                 elif fmt == ExportFormat.PDF:
                     # PDF requires LaTeX compilation
-                    path = await self._export_pdf(
-                        paper, references, figures, output_dir
-                    )
+                    path = await self._export_pdf(paper, references, figures, output_dir)
                     result.exported_formats.append("pdf")
                     result.output_paths["pdf"] = str(path)
 
@@ -765,8 +755,7 @@ async def export_paper(
         ExportResult
     """
     config = ExportConfig(
-        formats=formats
-        or [ExportFormat.LATEX, ExportFormat.MARKDOWN, ExportFormat.HTML],
+        formats=formats or [ExportFormat.LATEX, ExportFormat.MARKDOWN, ExportFormat.HTML],
         output_dir=output_dir,
         template=template,
     )

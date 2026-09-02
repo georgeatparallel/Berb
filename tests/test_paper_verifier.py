@@ -158,9 +158,7 @@ Our method achieves 80.0.
 
 class TestFabricatedConditions:
     def test_unknown_condition_in_table(self):
-        reg = _make_registry(
-            conditions={"DQN": {0: 80.0}, "DQN+Abstraction": {0: 90.0}}
-        )
+        reg = _make_registry(conditions={"DQN": {0: 80.0}, "DQN+Abstraction": {0: 90.0}})
         tex = r"""
 \section{Results}
 \begin{table}[h]
@@ -249,9 +247,7 @@ class TestRealPapers:
         tex, reg = self._load("85fefc")
         result = verify_paper(tex, reg)
         # Should detect at least some issues
-        assert (
-            len(result.unverified_numbers) > 0 or len(result.fabricated_conditions) > 0
-        )
+        assert len(result.unverified_numbers) > 0 or len(result.fabricated_conditions) > 0
 
     def test_run_acbdfa_moderate_fabrication(self):
         """Run acbdfa (CTS) — audit found MODERATE fabrication."""

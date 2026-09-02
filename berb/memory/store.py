@@ -71,9 +71,7 @@ class MemoryStore:
         self._store_dir = Path(store_dir)
         self._max_per_category = max_entries_per_category
         self._confidence_threshold = confidence_threshold
-        self._entries: dict[str, list[MemoryEntry]] = {
-            cat: [] for cat in VALID_CATEGORIES
-        }
+        self._entries: dict[str, list[MemoryEntry]] = {cat: [] for cat in VALID_CATEGORIES}
         self._dirty = False
 
     @property
@@ -105,9 +103,7 @@ class MemoryStore:
             ValueError: If category is invalid.
         """
         if category not in VALID_CATEGORIES:
-            raise ValueError(
-                f"Invalid category '{category}'. Must be one of {VALID_CATEGORIES}"
-            )
+            raise ValueError(f"Invalid category '{category}'. Must be one of {VALID_CATEGORIES}")
 
         now = datetime.now(UTC).isoformat(timespec="seconds")
         entry_id = uuid.uuid4().hex[:12]
@@ -218,9 +214,7 @@ class MemoryStore:
             Number of entries removed.
         """
         threshold = (
-            confidence_threshold
-            if confidence_threshold is not None
-            else self._confidence_threshold
+            confidence_threshold if confidence_threshold is not None else self._confidence_threshold
         )
         now = datetime.now(UTC)
         removed = 0

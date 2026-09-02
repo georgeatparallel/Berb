@@ -188,8 +188,7 @@ class AuthorSpecification:
             return False
 
         paper_author_names = [
-            a.name.lower() if hasattr(a, "name") else str(a).lower()
-            for a in paper.authors
+            a.name.lower() if hasattr(a, "name") else str(a).lower() for a in paper.authors
         ]
 
         if self.match_all:
@@ -403,16 +402,12 @@ class PaperFilter:
 
     def in_venue(self, *venues: str, exact: bool = False) -> PaperFilter:
         """Set venue filter."""
-        self._specifications.append(
-            VenueSpecification(venues=list(venues), exact_match=exact)
-        )
+        self._specifications.append(VenueSpecification(venues=list(venues), exact_match=exact))
         return self
 
     def by_author(self, *authors: str, match_all: bool = False) -> PaperFilter:
         """Set author filter."""
-        self._specifications.append(
-            AuthorSpecification(authors=list(authors), match_all=match_all)
-        )
+        self._specifications.append(AuthorSpecification(authors=list(authors), match_all=match_all))
         return self
 
     def build(self) -> Specification:

@@ -63,9 +63,7 @@ def _execute_resource_planning(
     if llm is not None:
         _pm = prompts or PromptManager()
         _overlay = _get_evolution_overlay(run_dir, "resource_planning")
-        sp = _pm.for_stage(
-            "resource_planning", evolution_overlay=_overlay, exp_plan=exp_plan
-        )
+        sp = _pm.for_stage("resource_planning", evolution_overlay=_overlay, exp_plan=exp_plan)
         resp = _chat_with_prompt(
             llm,
             sp.system,
@@ -100,9 +98,7 @@ def _execute_resource_planning(
             "generated": _utcnow_iso(),
         }
     schedule.setdefault("generated", _utcnow_iso())
-    (stage_dir / "schedule.json").write_text(
-        json.dumps(schedule, indent=2), encoding="utf-8"
-    )
+    (stage_dir / "schedule.json").write_text(json.dumps(schedule, indent=2), encoding="utf-8")
     return StageResult(
         stage=Stage.RESOURCE_PLANNING,
         status=StageStatus.DONE,
@@ -184,18 +180,14 @@ def _execute_experiment_run(
                 Path(exp_dir_path), timeout_sec=config.experiment.time_budget_sec
             )
         else:
-            result = sandbox.run(
-                code_text, timeout_sec=config.experiment.time_budget_sec
-            )
+            result = sandbox.run(code_text, timeout_sec=config.experiment.time_budget_sec)
         # Try to read structured results.json from sandbox working dir
         structured_results: dict[str, Any] | None = None
         sandbox_project = runs_dir / "sandbox" / "_project"
         results_json_path = sandbox_project / "results.json"
         if results_json_path.exists():
             try:
-                structured_results = json.loads(
-                    results_json_path.read_text(encoding="utf-8")
-                )
+                structured_results = json.loads(results_json_path.read_text(encoding="utf-8"))
                 # Copy results.json to runs dir for easy access
                 (runs_dir / "results.json").write_text(
                     results_json_path.read_text(encoding="utf-8"),
@@ -233,9 +225,7 @@ def _execute_experiment_run(
                 "Stage 12: experiment code rejected by security policy: %s",
                 result.stderr,
             )
-        elif (
-            result.returncode == 0 and not result.timed_out and not _stdout_has_failure
-        ):
+        elif result.returncode == 0 and not result.timed_out and not _stdout_has_failure:
             run_status = "completed"
         elif result.timed_out and effective_metrics:
             run_status = "partial"
@@ -246,16 +236,10 @@ def _execute_experiment_run(
         else:
             run_status = "failed"
             if _stdout_has_failure:
-                logger.warning(
-                    "Experiment exited cleanly but stdout contains failure signals"
-                )
+                logger.warning("Experiment exited cleanly but stdout contains failure signals")
 
         # P1: Warn if experiment completed suspiciously fast (trivially easy benchmark)
-        if (
-            run_status == "completed"
-            and result.elapsed_sec
-            and result.elapsed_sec < 5.0
-        ):
+        if run_status == "completed" and result.elapsed_sec and result.elapsed_sec < 5.0:
             logger.warning(
                 "Stage 12: Experiment completed in %.2fs — benchmark may be trivially easy. "
                 "Consider increasing task difficulty.",
@@ -292,14 +276,11 @@ def _execute_experiment_run(
                 "Stage 12: Auto-generated results.json from stdout metrics (%d keys)",
                 len(effective_metrics),
             )
-        (runs_dir / "run-1.json").write_text(
-            json.dumps(run_payload, indent=2), encoding="utf-8"
-        )
+        (runs_dir / "run-1.json").write_text(json.dumps(run_payload, indent=2), encoding="utf-8")
 
         # R11-6: Time budget adequacy check
         if result.timed_out or (
-            result.elapsed_sec
-            and result.elapsed_sec > config.experiment.time_budget_sec * 0.9
+            result.elapsed_sec and result.elapsed_sec > config.experiment.time_budget_sec * 0.9
         ):
             # Parse stdout to estimate how many conditions/seeds completed
             _stdout = result.stdout or ""
@@ -490,6 +471,18 @@ def _execute_experiment_run_with_search(
 
     import asyncio
 
+    # Figure gate. scoring.score_node zeroes a candidate whose figures are
+    # invalid; without a critic here nothing ever sets that flag and the gate
+    # never fires. PixelPlotCritic needs no LLM and no network — it rejects
+    # only demonstrably degenerate output (a blank chart from a run that
+    # otherwise exited 0), so it is safe to enable by default alongside the
+    # rest of the figure agent.
+    figure_critic = None
+    if ec.figure_agent.enabled:
+        from berb.experiment.plot_verdict import PixelPlotCritic
+
+        figure_critic = PixelPlotCritic()
+
     runner = SearchRunner(
         config=search_cfg,
         policy=policy,
@@ -498,6 +491,7 @@ def _execute_experiment_run_with_search(
         cost_tracker=cost_tracker,
         metric_key=ec.metric_key,
         metric_maximize=maximize,
+        figure_critic=figure_critic,
     )
 
     # Run the search
@@ -635,9 +629,7 @@ def _execute_iterative_refine(
             "skip_reason": "Iterative refinement not meaningful in simulated mode",
             "metric_key": config.experiment.metric_key,
         }
-        (stage_dir / "refinement_log.json").write_text(
-            json.dumps(log, indent=2), encoding="utf-8"
-        )
+        (stage_dir / "refinement_log.json").write_text(json.dumps(log, indent=2), encoding="utf-8")
         return StageResult(
             stage=Stage.ITERATIVE_REFINE,
             status=StageStatus.DONE,
@@ -662,9 +654,7 @@ def _execute_iterative_refine(
             try:
                 _rp = _safe_json_loads(_rf.read_text(encoding="utf-8"), {})
                 _stdout = _rp.get("stdout", "") if isinstance(_rp, dict) else ""
-                _match = _re_detect.search(
-                    r"METRIC_DEF:.*direction\s*=\s*(higher|lower)", _stdout
-                )
+                _match = _re_detect.search(r"METRIC_DEF:.*direction\s*=\s*(higher|lower)", _stdout)
                 if _match:
                     _detected = _match.group(1)
                     _detected_dir = "maximize" if _detected == "higher" else "minimize"
@@ -758,9 +748,8 @@ def _execute_iterative_refine(
             if "stdout" in summary and isinstance(summary["stdout"], str):
                 lines = summary["stdout"].splitlines()
                 if len(lines) > 30:
-                    summary["stdout"] = (
-                        f"[...truncated {len(lines) - 30} lines...]\n"
-                        + "\n".join(lines[-30:])
+                    summary["stdout"] = f"[...truncated {len(lines) - 30} lines...]\n" + "\n".join(
+                        lines[-30:]
                     )
                 if len(summary["stdout"]) > 2000:
                     summary["stdout"] = summary["stdout"][-2000:]
@@ -778,9 +767,7 @@ def _execute_iterative_refine(
                     if isinstance(payload.get("key_metrics"), dict)
                     else {}
                 )
-            metric_val = (
-                _find_metric(metrics, metric_key) if isinstance(metrics, dict) else None
-            )
+            metric_val = _find_metric(metrics, metric_key) if isinstance(metrics, dict) else None
             if metric_val is None:
                 metric_val = _to_float(payload.get("primary_metric"))
             if _is_better(metric_val, baseline_metric):
@@ -806,12 +793,8 @@ def _execute_iterative_refine(
         _prd_log = _prd.parent / "refinement_log.json"
         if _prd_log.is_file():
             _prd_data = _safe_json_loads(_prd_log.read_text(encoding="utf-8"), {})
-            _prd_metric = (
-                _prd_data.get("best_metric") if isinstance(_prd_data, dict) else None
-            )
-            if isinstance(_prd_metric, (int, float)) and _is_better(
-                _prd_metric, _best_prev_metric
-            ):
+            _prd_metric = _prd_data.get("best_metric") if isinstance(_prd_data, dict) else None
+            if isinstance(_prd_metric, (int, float)) and _is_better(_prd_metric, _best_prev_metric):
                 _best_prev_metric = _prd_metric
                 _best_prev_dir = _prd
         elif _best_prev_dir is None:
@@ -909,9 +892,7 @@ def _execute_iterative_refine(
         _write_project(final_dir, best_files)
         # Backward compat
         if "main.py" in best_files:
-            (stage_dir / "experiment_final.py").write_text(
-                best_files["main.py"], encoding="utf-8"
-            )
+            (stage_dir / "experiment_final.py").write_text(best_files["main.py"], encoding="utf-8")
         log.update(
             {
                 "converged": True,
@@ -928,9 +909,7 @@ def _execute_iterative_refine(
                 ],
             }
         )
-        (stage_dir / "refinement_log.json").write_text(
-            json.dumps(log, indent=2), encoding="utf-8"
-        )
+        (stage_dir / "refinement_log.json").write_text(json.dumps(log, indent=2), encoding="utf-8")
 
         # F2: the stage contract requires selection_bias.json unconditionally
         # (consumed by RESULT_ANALYSIS). No refinement loop ran here, so
@@ -978,9 +957,7 @@ def _execute_iterative_refine(
                 "This is the MOST IMPORTANT improvement — a single unlabeled metric stream "
                 "cannot support any comparative conclusions.\n\n"
             )
-            logger.info(
-                "Stage 13: condition coverage gap detected, injecting multi-condition hint"
-            )
+            logger.info("Stage 13: condition coverage gap detected, injecting multi-condition hint")
 
     # P1: Track metrics history for saturation detection
     _metrics_history: list[float | None] = [baseline_metric]
@@ -1013,9 +990,7 @@ def _execute_iterative_refine(
             _last_two = _valid_metrics[-2:]
             _saturated = False
             # Use relative change rate instead of hard-coded thresholds
-            _change_rate = abs(_last_two[-1] - _last_two[-2]) / max(
-                abs(_last_two[-2]), 1e-8
-            )
+            _change_rate = abs(_last_two[-1] - _last_two[-2]) / max(abs(_last_two[-2]), 1e-8)
             if metric_direction == "minimize":
                 _saturated = all(m <= 0.001 for m in _last_two) or (
                     _change_rate < 0.001 and _last_two[-1] < 0.01
@@ -1171,9 +1146,7 @@ def _execute_iterative_refine(
             # P7: Ensure deps for refined code (subprocess sandbox only)
             if config.experiment.mode == "sandbox":
                 _refine_code = "\n".join(candidate_files.values())
-                _ensure_sandbox_deps(
-                    _refine_code, config.experiment.sandbox.python_path
-                )
+                _ensure_sandbox_deps(_refine_code, config.experiment.sandbox.python_path)
 
             sandbox = create_sandbox(
                 config.experiment,
@@ -1213,9 +1186,7 @@ def _execute_iterative_refine(
                         for c1, c2, diff in _ablation_checks
                     ]
                     if _identical_pairs:
-                        _pairs_str = ", ".join(
-                            f"{c1} vs {c2}" for c1, c2 in _identical_pairs
-                        )
+                        _pairs_str = ", ".join(f"{c1} vs {c2}" for c1, c2 in _identical_pairs)
                         logger.warning(
                             "BUG-110: Identical ablation outputs detected: %s. "
                             "Ablation conditions may not be wired correctly.",
@@ -1342,9 +1313,7 @@ def _execute_iterative_refine(
     _write_project(final_dir, best_files)
     # Backward compat: also write experiment_final.py (copy of main.py)
     if "main.py" in best_files:
-        (stage_dir / "experiment_final.py").write_text(
-            best_files["main.py"], encoding="utf-8"
-        )
+        (stage_dir / "experiment_final.py").write_text(best_files["main.py"], encoding="utf-8")
 
     log["best_metric"] = best_metric
     log["best_version"] = best_version
@@ -1357,9 +1326,7 @@ def _execute_iterative_refine(
     )
     if _all_ablation_identical:
         log["ablation_identical_warning"] = True
-    (stage_dir / "refinement_log.json").write_text(
-        json.dumps(log, indent=2), encoding="utf-8"
-    )
+    (stage_dir / "refinement_log.json").write_text(json.dumps(log, indent=2), encoding="utf-8")
 
     # --- F2: Emit selection_bias.json for the three-way split ---
     _valid_count = sum(1 for m in _metrics_history if m is not None)
@@ -1372,9 +1339,7 @@ def _execute_iterative_refine(
         "test_evaluations": 0,
         "split_available": True,
     }
-    (stage_dir / "selection_bias.json").write_text(
-        json.dumps(_sb, indent=2), encoding="utf-8"
-    )
+    (stage_dir / "selection_bias.json").write_text(json.dumps(_sb, indent=2), encoding="utf-8")
     logger.info(
         "F2: selection_bias.json written (select=%.4f, rank=%.4f, n=%d)",
         _sb["metric_select"],
@@ -1434,9 +1399,7 @@ def _write_seed_validity(
         "remediation_attempted": "none",
         "disclosed": disclosed,
     }
-    (stage_dir / "seed_validity.json").write_text(
-        _j.dumps(validity, indent=2), encoding="utf-8"
-    )
+    (stage_dir / "seed_validity.json").write_text(_j.dumps(validity, indent=2), encoding="utf-8")
     logger.info(
         "Seed validity written: %d seeds across %d conditions",
         seeds_run,

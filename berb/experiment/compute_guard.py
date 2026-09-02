@@ -210,9 +210,7 @@ class ComputeGuard:
         api_calls = experiment_design.get("api_calls", 0)
 
         # Estimate GPU hours
-        base_hours = self._estimate_gpu_hours(
-            dataset_size, num_configurations, epochs, model_size
-        )
+        base_hours = self._estimate_gpu_hours(dataset_size, num_configurations, epochs, model_size)
         gpu_hours = base_hours * (2.0 if gpu_required else 1.0)
 
         # Estimate API cost
@@ -295,9 +293,7 @@ class ComputeGuard:
 
         # Pre-mortem risk assessment if enabled
         if use_pre_mortem and experiment_design and llm_client:
-            risk_assessment = await self._pre_mortem_risk_assessment(
-                experiment_design, llm_client
-            )
+            risk_assessment = await self._pre_mortem_risk_assessment(experiment_design, llm_client)
 
             if risk_assessment.get("high_risk", False):
                 return (
@@ -463,16 +459,12 @@ Respond with JSON:
         # Suggest simpler model
         model_sizes = ["small", "medium", "large", "xlarge"]
         current_size = experiment.get("model_size", "medium")
-        current_idx = (
-            model_sizes.index(current_size) if current_size in model_sizes else 1
-        )
+        current_idx = model_sizes.index(current_size) if current_size in model_sizes else 1
 
         if current_idx > 0:
             alt = experiment.copy()
             alt["model_size"] = model_sizes[current_idx - 1]
-            alt["suggestion"] = (
-                f"Use {alt['model_size']} model instead of {current_size}"
-            )
+            alt["suggestion"] = f"Use {alt['model_size']} model instead of {current_size}"
             alternatives.append(alt)
 
         # Return first viable alternative

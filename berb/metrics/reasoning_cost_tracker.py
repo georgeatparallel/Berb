@@ -332,9 +332,7 @@ class ExtendedReasoningCostTracker:
         conn.execute(
             "CREATE TABLE IF NOT EXISTS schema_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)"
         )
-        row = conn.execute(
-            "SELECT value FROM schema_meta WHERE key='version'"
-        ).fetchone()
+        row = conn.execute("SELECT value FROM schema_meta WHERE key='version'").fetchone()
         current_version = int(row[0]) if row else 0
         if current_version < self._SCHEMA_VERSION:
             self._migrate(conn, current_version, self._SCHEMA_VERSION)
@@ -465,9 +463,7 @@ class ExtendedReasoningCostTracker:
         input_price, output_price = self.MODEL_PRICING.get(model, (0, 0))
 
         # Calculate token cost
-        cost_usd = (
-            input_tokens * input_price + output_tokens * output_price
-        ) / 1_000_000
+        cost_usd = (input_tokens * input_price + output_tokens * output_price) / 1_000_000
 
         # Add search cost for Perplexity
         if "perplexity" in model.lower() and search_count > 0:
@@ -508,9 +504,7 @@ class ExtendedReasoningCostTracker:
             ReasoningCostRecord
         """
         provider = self._extract_provider(model)
-        cost_usd = self._calculate_cost(
-            model, input_tokens, output_tokens, search_count
-        )
+        cost_usd = self._calculate_cost(model, input_tokens, output_tokens, search_count)
 
         record = ReasoningCostRecord(
             method=method,
@@ -685,27 +679,19 @@ class ExtendedReasoningCostTracker:
 
         # Check total cost
         if summary["total_cost_usd"] > 10:
-            alerts.append(
-                f"🔴 HIGH_COST: ${summary['total_cost_usd']:.2f} today (target: <$6)"
-            )
+            alerts.append(f"🔴 HIGH_COST: ${summary['total_cost_usd']:.2f} today (target: <$6)")
         elif summary["total_cost_usd"] > 8:
             alerts.append(f"🟡 WARNING: ${summary['total_cost_usd']:.2f} today")
 
         # Check provider concentration
         if summary["max_provider_pct"] > 0.60:
-            max_provider = max(
-                summary["provider_distribution"].items(), key=lambda x: x[1]
-            )
+            max_provider = max(summary["provider_distribution"].items(), key=lambda x: x[1])
             alerts.append(
                 f"🔴 HIGH_CONCENTRATION: {max_provider[0]} at {max_provider[1] * 100:.1f}% (max: 40%)"
             )
         elif summary["max_provider_pct"] > 0.40:
-            max_provider = max(
-                summary["provider_distribution"].items(), key=lambda x: x[1]
-            )
-            alerts.append(
-                f"🟡 WARNING: {max_provider[0]} at {max_provider[1] * 100:.1f}%"
-            )
+            max_provider = max(summary["provider_distribution"].items(), key=lambda x: x[1])
+            alerts.append(f"🟡 WARNING: {max_provider[0]} at {max_provider[1] * 100:.1f}%")
 
         # Check budget
         if summary["budget_status"] == "over":

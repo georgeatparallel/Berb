@@ -53,6 +53,5 @@ def get_template(name: str) -> dict[str, Any] | None:
 def list_templates() -> list[dict[str, str]]:
     """List all available templates with descriptions."""
     return [
-        {"name": name, "description": tpl.get("description", "")}
-        for name, tpl in TEMPLATES.items()
+        {"name": name, "description": tpl.get("description", "")} for name, tpl in TEMPLATES.items()
     ]

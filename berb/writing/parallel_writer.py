@@ -179,8 +179,7 @@ class ParallelSectionWriter:
             ready = [
                 plan
                 for plan in plans
-                if plan.section_name not in completed
-                and plan.can_write_parallel(completed)
+                if plan.section_name not in completed and plan.can_write_parallel(completed)
             ]
 
             if not ready:
@@ -189,8 +188,7 @@ class ParallelSectionWriter:
 
             # Write ready sections in parallel
             tasks = [
-                self._write_section(plan, outline, paper)
-                for plan in ready[: self.max_parallel]
+                self._write_section(plan, outline, paper) for plan in ready[: self.max_parallel]
             ]
 
             results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -389,9 +387,7 @@ List any coherence issues found.
 
             for ref in refs:
                 if ref not in paper.sections:
-                    logger.warning(
-                        f"Section {section_name} references non-existent section: {ref}"
-                    )
+                    logger.warning(f"Section {section_name} references non-existent section: {ref}")
 
         logger.info("Cross-reference verification complete")
 

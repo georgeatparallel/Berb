@@ -17,9 +17,7 @@ from berb.pipeline.stage_impls._synthesis import _build_domain_narrative
 from berb.pipeline.stages import StageStatus
 
 
-def _write_prior_artifact(
-    run_dir: Path, stage_num: int, filename: str, content: str
-) -> None:
+def _write_prior_artifact(run_dir: Path, stage_num: int, filename: str, content: str) -> None:
     stage_dir = run_dir / f"stage-{stage_num:02d}"
     target = stage_dir / filename
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -45,9 +43,7 @@ class TestBuildDomainNarrative:
             run_dir, 4, "candidates.jsonl", "\n".join(json.dumps(c) for c in candidates)
         )
         llm = MagicMock()
-        llm.chat.return_value = MagicMock(
-            content="The field started with X and evolved to Y."
-        )
+        llm.chat.return_value = MagicMock(content="The field started with X and evolved to Y.")
 
         result = _build_domain_narrative(llm, run_dir, "test topic")
 
@@ -74,9 +70,7 @@ class TestBuildDomainNarrative:
     def test_skips_rows_without_title(self, tmp_path: Path) -> None:
         run_dir = tmp_path / "run"
         run_dir.mkdir()
-        _write_prior_artifact(
-            run_dir, 4, "candidates.jsonl", json.dumps({"year": 2020})
-        )
+        _write_prior_artifact(run_dir, 4, "candidates.jsonl", json.dumps({"year": 2020}))
         llm = MagicMock()
 
         assert _build_domain_narrative(llm, run_dir, "test topic") == ""
@@ -127,9 +121,7 @@ class TestSynthesisStageWiring:
         llm.chat.return_value = MagicMock(content="A narrative.")
         adapters = AdapterBundle()
 
-        result = rc_executor._execute_synthesis(
-            stage_dir, run_dir, rc_config, adapters, llm=llm
-        )
+        result = rc_executor._execute_synthesis(stage_dir, run_dir, rc_config, adapters, llm=llm)
 
         assert result.status == StageStatus.DONE
         assert (stage_dir / "domain_narrative.md").is_file()
@@ -147,9 +139,7 @@ class TestSynthesisStageWiring:
         llm.chat.return_value = MagicMock(content="# Synthesis\n## Gap 1\nSomething.")
         adapters = AdapterBundle()
 
-        result = rc_executor._execute_synthesis(
-            stage_dir, run_dir, rc_config, adapters, llm=llm
-        )
+        result = rc_executor._execute_synthesis(stage_dir, run_dir, rc_config, adapters, llm=llm)
 
         assert result.status == StageStatus.DONE
         assert not (stage_dir / "domain_narrative.md").exists()

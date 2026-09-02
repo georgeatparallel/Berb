@@ -19,8 +19,8 @@ Usage:
 
     # Option 2: With router (recommended for cost optimization)
     from berb.reasoning import DialecticalMethod
-    from berb.llm.extended_router import ExtendedNadirClawRouter
-    router = ExtendedNadirClawRouter(...)
+    from berb.llm.smart_client import SmartLLMClient
+    router = SmartLLMClient(...)
     method = DialecticalMethod(router=router)
     result = await method.execute(context)
 
@@ -95,7 +95,7 @@ class DialecticalMethod(ReasoningMethod):
 
     def __init__(
         self,
-        router: Any = None,  # NEW: Primary (ExtendedNadirClawRouter)
+        router: Any = None,  # Primary: a cost-optimising router
         llm_client: Any = None,  # DEPRECATED: Fallback only
         **kwargs: Any,
     ):
@@ -142,9 +142,7 @@ class DialecticalMethod(ReasoningMethod):
                 )
 
             # Extract topic/thesis from context
-            topic = (
-                context.get("topic") or context.get("hypothesis") or context.get("idea")
-            )
+            topic = context.get("topic") or context.get("hypothesis") or context.get("idea")
             if not topic:
                 return ReasoningResult.error_result(
                     MethodType.DIALECTICAL,
@@ -161,9 +159,7 @@ class DialecticalMethod(ReasoningMethod):
             contradictions = await self._identify_contradictions(thesis, antithesis)
 
             # Step 4: Resolve through aufhebung (synthesis)
-            synthesis = await self._resolve_synthesis(
-                thesis, antithesis, contradictions, context
-            )
+            synthesis = await self._resolve_synthesis(thesis, antithesis, contradictions, context)
 
             # Build result
             result = DialecticalResult(
@@ -192,12 +188,8 @@ class DialecticalMethod(ReasoningMethod):
                     },
                     "synthesis": {
                         "statement": synthesis.statement if synthesis else "",
-                        "arguments": (
-                            synthesis.supporting_arguments if synthesis else []
-                        ),
-                        "preserved_truths": (
-                            synthesis.preserved_truths if synthesis else []
-                        ),
+                        "arguments": (synthesis.supporting_arguments if synthesis else []),
+                        "preserved_truths": (synthesis.preserved_truths if synthesis else []),
                     },
                     "contradictions_resolved": contradictions,
                     "higher_truth": result.higher_truth,
@@ -352,9 +344,7 @@ Respond in JSON format:
                 data = json.loads(response.content)
                 return data.get("contradictions", [])
             except Exception as e:
-                logger.warning(
-                    f"LLM contradiction identification failed: {e}, using fallback"
-                )
+                logger.warning(f"LLM contradiction identification failed: {e}, using fallback")
 
         # Fallback: use antithesis contradictions if available
         return antithesis.contradictions or ["General contradiction between positions"]

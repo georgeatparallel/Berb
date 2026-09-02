@@ -54,16 +54,183 @@ def resolve(cur, level, module, is_pkg):
     return f"{pref}.{module}" if module else pref
 
 
+def _lazy_export_map(tree):
+    """Extract a package's PEP 562 lazy re-export map, or None.
+
+    berb/_lazy.py's ``lazy_exports`` lets ``from berb.llm import PROVIDER_PRESETS``
+    import berb/llm/presets.py only when the attribute is read. No import
+    statement names the submodule, so the map is the only static record of the
+    edge. Returns {public_name: submodule}.
+    """
+    if not any(
+        isinstance(n, ast.Name) and n.id == "lazy_exports" for n in ast.walk(tree)
+    ) and not any(
+        isinstance(n, ast.Attribute) and n.attr == "lazy_exports" for n in ast.walk(tree)
+    ):
+        return None
+    mapping = {}
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Dict):
+            continue
+        for k, v in zip(node.keys, node.values):
+            if not (isinstance(k, ast.Constant) and isinstance(k.value, str)):
+                continue
+            if isinstance(v, ast.Constant) and isinstance(v.value, str):
+                mapping[k.value] = v.value
+            elif (
+                isinstance(v, ast.Tuple)
+                and v.elts
+                and isinstance(v.elts[0], ast.Constant)
+                and isinstance(v.elts[0].value, str)
+            ):
+                mapping[k.value] = v.elts[0].value
+    return mapping or None
+
+
+def public_api_modules(all_mods, is_pkg):
+    """Modules backing a PACKAGE's declared public API.
+
+    ``from berb.literature import CitationClassifier`` is a supported contract
+    (decision, 2026-09-02), so the module behind an exported name is an entry
+    point in its own right — the same standing as berb.cli. Without this the
+    checker reports a published, working API as dead because no *internal*
+    caller happens to use it.
+
+    Deliberately narrow, twice over:
+
+    1. Only packages in ``PUBLIC_API_PACKAGES`` below. Whether a package's
+       surface is a supported contract is a product decision, not something to
+       infer from the presence of an ``__all__`` — five packages in this repo
+       declare one, and crediting all of them would un-park modules that were
+       triaged as dead on their merits. Adding a package here is that decision
+       being made; do not add one to quieten the gate.
+    2. Only ``__all__`` on the package ``__init__.py``, resolved through that
+       package's ``lazy_exports`` map. ``__all__`` on an ordinary module is
+       re-export hygiene, not a public surface.
+
+    tests/test_public_api_contract.py asserts every one of these names actually
+    resolves, so the contract cannot rot quietly now that it is exempt from the
+    dead-code gate.
+    """
+    # Approved contracts. `from berb.literature import ...` and
+    # `from berb.llm import ...` were confirmed supported public APIs on
+    # 2026-09-02; see tasks/w2_untested_triage.md #4.
+    PUBLIC_API_PACKAGES = ("berb.literature", "berb.llm")
+
+    roots = set()
+    for m, p in all_mods.items():
+        if m not in PUBLIC_API_PACKAGES or m not in is_pkg:
+            continue
+        try:
+            with open(p, encoding="utf-8", errors="ignore") as f:
+                tree = ast.parse(f.read())
+        except Exception:
+            continue
+        mapping = _lazy_export_map(tree)
+        if not mapping:
+            continue
+        exported = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Assign) and any(
+                getattr(t, "id", "") == "__all__" for t in node.targets
+            ):
+                if isinstance(node.value, (ast.List, ast.Tuple)):
+                    exported = {
+                        e.value for e in node.value.elts if isinstance(e, ast.Constant)
+                    }
+        for name, sub in mapping.items():
+            if name in exported and f"{m}.{sub}" in all_mods:
+                roots.add(f"{m}.{sub}")
+    return roots
+
+
+def _type_checking_imports(tree):
+    """Collect import nodes that live inside an ``if TYPE_CHECKING:`` block.
+
+    These never execute at runtime — they exist so type checkers can see names
+    that are otherwise resolved lazily (see berb/_lazy.py). Crediting them as
+    edges makes a lazily-exported submodule look live merely because its parent
+    package is imported, which is the opposite of the truth: PEP 562 exports are
+    imported only when the attribute is actually read.
+    """
+    excluded = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.If):
+            continue
+        test = node.test
+        guarded = (isinstance(test, ast.Name) and test.id == "TYPE_CHECKING") or (
+            isinstance(test, ast.Attribute) and test.attr == "TYPE_CHECKING"
+        )
+        if not guarded:
+            continue
+        for stmt in node.body:
+            for sub in ast.walk(stmt):
+                if isinstance(sub, (ast.Import, ast.ImportFrom)):
+                    excluded.add(id(sub))
+    return excluded
+
+
+def _literal_import_module_target(node):
+    """Return the literal module name of an ``import_module("...")`` call.
+
+    Matches both ``importlib.import_module("x")`` and a bare
+    ``import_module("x")``. Returns None for anything computed — a variable, an
+    f-string, or a relative import with a ``package`` argument — because those
+    cannot be resolved statically.
+    """
+    fn = node.func
+    is_call = (isinstance(fn, ast.Attribute) and fn.attr == "import_module") or (
+        isinstance(fn, ast.Name) and fn.id == "import_module"
+    )
+    if not is_call or not node.args:
+        return None
+    first = node.args[0]
+    if isinstance(first, ast.Constant) and isinstance(first.value, str):
+        return first.value
+    return None
+
+
 def build_import_graph(all_mods, is_pkg, pkg_prefix):
     """Build import dependency edges from AST analysis."""
     edges = {m: set() for m in all_mods}
+
+    # Ancestor packages. Python executes every parent __init__.py on the way to
+    # a submodule — importing berb.experiment.factory runs berb/__init__.py and
+    # berb/experiment/__init__.py first — but no import statement names them,
+    # so without this a package whose submodules are reachable was itself
+    # reported dead. Its own pass, so a file that fails to parse still
+    # contributes its ancestors.
+    for m in all_mods:
+        parts = m.split(".")
+        for i in range(1, len(parts)):
+            anc = ".".join(parts[:i])
+            if anc != m and anc in is_pkg and anc in all_mods:
+                edges[m].add(anc)
+
+    # Lazy re-export maps, keyed by package. Built first because an importer is
+    # usually parsed before the package it imports from.
+    lazy_maps = {}
+    for m, p in all_mods.items():
+        if m not in is_pkg:
+            continue
+        try:
+            with open(p, encoding="utf-8", errors="ignore") as f:
+                mapping = _lazy_export_map(ast.parse(f.read()))
+        except Exception:
+            continue
+        if mapping:
+            lazy_maps[m] = mapping
+
     for m, p in all_mods.items():
         try:
             with open(p, encoding="utf-8", errors="ignore") as f:
                 tree = ast.parse(f.read())
         except Exception:
             continue
+        type_only = _type_checking_imports(tree)
         for n in ast.walk(tree):
+            if id(n) in type_only:
+                continue
             if isinstance(n, ast.Import):
                 for a in n.names:
                     if a.name.split(".")[0] == pkg_prefix:
@@ -78,11 +245,28 @@ def build_import_graph(all_mods, is_pkg, pkg_prefix):
                     cand = f"{tgt}.{a.name}"
                     if cand in all_mods:
                         edges[m].add(cand)
+                    # `from berb.llm import PROVIDER_PRESETS` resolves through
+                    # the package's lazy map to berb.llm.presets at runtime.
+                    sub = lazy_maps.get(tgt, {}).get(a.name)
+                    if sub and f"{tgt}.{sub}" in all_mods:
+                        edges[m].add(f"{tgt}.{sub}")
+            elif isinstance(n, ast.Call):
+                # Dynamic-but-literal imports, e.g. berb/pipeline/summary.py's
+                # importlib.import_module("berb.quality"). A plain import walk
+                # misses these and reports a live module dead.
+                tgt = _literal_import_module_target(n)
+                if tgt and tgt.startswith(pkg_prefix) and tgt in all_mods:
+                    edges[m].add(tgt)
     return edges
 
 
-def compute_reachable(all_mods, edges):
-    """BFS from entry points. Returns set of reachable module names."""
+def compute_reachable(all_mods, edges, is_pkg=None):
+    """BFS from entry points. Returns set of reachable module names.
+
+    Entry points are the CLI and server surfaces below, plus — when ``is_pkg``
+    is supplied — the modules backing each package's declared public API. See
+    :func:`public_api_modules`.
+    """
     ENTRY_PREFIX = (
         "berb.pipeline.stage_impls", "berb.server", "berb.api", "berb.mcp",
         "berb.benchmarks", "berb.ui", "berb.web", "berb.plugins", "berb.skills",
@@ -97,6 +281,8 @@ def compute_reachable(all_mods, edges):
         m for m in all_mods
         if m in ENTRY_EXACT or m.startswith(ENTRY_PREFIX)
     ]
+    if is_pkg is not None:
+        entry.extend(public_api_modules(all_mods, is_pkg))
 
     seen, q = set(), deque(entry)
     while q:
@@ -150,7 +336,7 @@ def main():
 
     all_mods, is_pkg = discover_modules(ROOT, PKG)
     edges = build_import_graph(all_mods, is_pkg, PKG)
-    seen = compute_reachable(all_mods, edges)
+    seen = compute_reachable(all_mods, edges, is_pkg)
 
     unreached = sorted(set(all_mods) - seen)
     total_loc = sum(loc_of(m, all_mods) for m in all_mods)
@@ -161,7 +347,14 @@ def main():
 
     # Load allowlist and compute net unreachable
     allowlist = load_allowlist(args.allowlist) if args.allowlist else set()
-    net_unreached = [m for m in unreached if m not in allowlist]
+    # An allowlist entry covers the module and everything under it: the file's
+    # entries are package names ("berb.hyperagent  # Parked"), and exact-name
+    # matching quietly parked only the package __init__ — 156 LOC of the ~4.6k
+    # those three entries were meant to cover.
+    def _allowed(mod):
+        return any(mod == a or mod.startswith(a + ".") for a in allowlist)
+
+    net_unreached = [m for m in unreached if not _allowed(m)]
     net_un_loc = sum(loc_of(m, all_mods) for m in net_unreached)
 
     if allowlist:

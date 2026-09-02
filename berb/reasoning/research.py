@@ -16,11 +16,10 @@ Usage:
     method = ResearchMethod(llm_client, search_client)
     result = await method.execute(context)
 
-    # Option 2: With router (recommended for cost optimization)
+    # Option 2: With a cost-optimising router
     from berb.reasoning import ResearchMethod
-    from berb.llm.extended_router import ExtendedNadirClawRouter
-    router = ExtendedNadirClawRouter(...)
-    method = ResearchMethod(router=router, search_client=search_client)
+    from berb.llm.smart_client import SmartLLMClient
+    method = ResearchMethod(router=SmartLLMClient(...))
     result = await method.execute(context)
 
     # Option 3: Registry singleton (recommended)
@@ -93,7 +92,7 @@ class ResearchMethod(ReasoningMethod):
 
     def __init__(
         self,
-        router: Any = None,  # NEW: Primary (ExtendedNadirClawRouter)
+        router: Any = None,  # Primary: a cost-optimising router
         llm_client: Any = None,  # DEPRECATED: Fallback only
         search_client: Any = None,
         max_iterations: int = 3,
@@ -158,9 +157,7 @@ class ResearchMethod(ReasoningMethod):
 
             # Iterative research loop
             for i in range(self.max_iterations):
-                iteration = await self._research_iteration(
-                    topic, i, remaining_gaps, context
-                )
+                iteration = await self._research_iteration(topic, i, remaining_gaps, context)
                 iterations.append(iteration)
                 all_findings.extend(iteration.findings)
                 remaining_gaps = iteration.gaps
@@ -236,8 +233,7 @@ class ResearchMethod(ReasoningMethod):
             query=query,
             findings=findings,
             gaps=new_gaps,
-            confidence=0.6
-            + (iteration_num * 0.1),  # Confidence increases with iterations
+            confidence=0.6 + (iteration_num * 0.1),  # Confidence increases with iterations
         )
 
     async def _formulate_query(

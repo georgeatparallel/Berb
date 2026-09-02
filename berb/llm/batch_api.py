@@ -181,9 +181,7 @@ class BatchClient:
 
         self._jobs[job.id] = job
 
-        logger.info(
-            f"Batch job submitted: {job.id} ({len(requests)} requests, window={window})"
-        )
+        logger.info(f"Batch job submitted: {job.id} ({len(requests)} requests, window={window})")
 
         return job
 
@@ -252,13 +250,9 @@ class BatchClient:
                 return job
 
             if time.time() - start_time > timeout:
-                raise TimeoutError(
-                    f"Batch job {job_id} did not complete within {timeout}s"
-                )
+                raise TimeoutError(f"Batch job {job_id} did not complete within {timeout}s")
 
-            logger.debug(
-                f"Polling batch {job_id}: {job.completed_requests}/{job.total_requests}"
-            )
+            logger.debug(f"Polling batch {job_id}: {job.completed_requests}/{job.total_requests}")
             await asyncio.sleep(poll_interval)
 
     async def cancel_job(self, job_id: str) -> bool:
@@ -331,19 +325,13 @@ class BatchClient:
             Dictionary with statistics
         """
         total_jobs = len(self._jobs)
-        completed_jobs = sum(
-            1 for j in self._jobs.values() if j.status == BatchStatus.COMPLETED
-        )
+        completed_jobs = sum(1 for j in self._jobs.values() if j.status == BatchStatus.COMPLETED)
 
         return {
             "total_jobs": total_jobs,
             "completed_jobs": completed_jobs,
-            "pending_jobs": sum(
-                1 for j in self._jobs.values() if j.status == BatchStatus.PENDING
-            ),
-            "failed_jobs": sum(
-                1 for j in self._jobs.values() if j.status == BatchStatus.FAILED
-            ),
+            "pending_jobs": sum(1 for j in self._jobs.values() if j.status == BatchStatus.PENDING),
+            "failed_jobs": sum(1 for j in self._jobs.values() if j.status == BatchStatus.FAILED),
         }
 
 

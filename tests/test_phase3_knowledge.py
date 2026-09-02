@@ -454,9 +454,7 @@ class TestZoteroAnnotationExport:
         )
 
         # Mock the API call
-        with patch.object(
-            client, "_get_collection_papers_api", new_callable=AsyncMock
-        ) as mock_api:
+        with patch.object(client, "_get_collection_papers_api", new_callable=AsyncMock) as mock_api:
             mock_api.return_value = [mock_item]
 
             result = await client._export_annotations_api("item-001", format="markdown")

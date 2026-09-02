@@ -425,9 +425,7 @@ def generate_modification(analysis: dict, current_code: str) -> str:
             )
             return improved
         except Exception as exc:
-            logger.warning(
-                "MetaAgent: performance optimisation generation failed: %s", exc
-            )
+            logger.warning("MetaAgent: performance optimisation generation failed: %s", exc)
             return current_code
 
     def _generate_meta_improvement(self) -> str:
@@ -462,9 +460,7 @@ def generate_modification(analysis: dict, current_code: str) -> str:
             )
             return improved
         except Exception as exc:
-            logger.warning(
-                "MetaAgent: metacognitive improvement generation failed: %s", exc
-            )
+            logger.warning("MetaAgent: metacognitive improvement generation failed: %s", exc)
             return self.modification_code
 
     def _validate_modification_code(self, code: str) -> bool:

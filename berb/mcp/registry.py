@@ -16,9 +16,7 @@ class MCPServerRegistry:
     def __init__(self) -> None:
         self._servers: dict[str, MCPClient] = {}
 
-    async def register(
-        self, name: str, uri: str, transport: str = "stdio"
-    ) -> MCPClient:
+    async def register(self, name: str, uri: str, transport: str = "stdio") -> MCPClient:
         """Register and connect to an external MCP server."""
         client = MCPClient(uri, transport=transport)
         await client.connect()

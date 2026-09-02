@@ -122,9 +122,7 @@ class TestMCPServer:
 
     def test_handle_get_paper_missing(self) -> None:
         server = BerbMCPServer()
-        result = asyncio.run(
-            server.handle_tool_call("get_paper", {"run_id": "missing"})
-        )
+        result = asyncio.run(server.handle_tool_call("get_paper", {"run_id": "missing"}))
         assert result["success"] is False
 
 

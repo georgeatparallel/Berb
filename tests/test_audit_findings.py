@@ -10,41 +10,6 @@ from pathlib import Path
 import pytest
 
 
-class TestAutoDebuggerDeadCode:
-    """FINDING: auto_debugger.py:608 - f-string prompt never used."""
-
-    def test_llm_generate_fix_uses_prompt(self):
-        """Verify that _llm_generate_fix actually uses the prompt."""
-        from berb.experiment.auto_debugger import AutomatedDebugger
-
-        debugger = AutomatedDebugger(llm_client=None)  # type: ignore
-
-        # Check source code for the bug
-        import inspect
-
-        source = inspect.getsource(debugger._llm_generate_fix)
-
-        # The bug: f-string on line 608 is not assigned to any variable
-        # After fix, the prompt should be assigned and used
-        assert (
-            "prompt =" in source or "prompt=" in source
-        ), "BUG: f-string prompt is built but never assigned to variable"
-
-
-class TestAutoDebuggerDivisionByZero:
-    """FINDING: auto_debugger.py:743 - Division by zero risk exists but is guarded at line 728."""
-
-    def test_get_debugging_statistics_empty_history(self):
-        """Verify that get_debugging_statistics handles empty fix_history."""
-        from berb.experiment.auto_debugger import AutomatedDebugger
-
-        debugger = AutomatedDebugger(llm_client=None)  # type: ignore
-
-        # With empty history, should return error message, not raise
-        stats = debugger.get_debugging_statistics()
-        assert "error" in stats, "Should return error dict for empty history"
-
-
 class TestOpenRouterAdapterContract:
     """FINDING: openrouter_adapter.py:363-370 - Missing LLMResponse fields."""
 
@@ -86,9 +51,9 @@ class TestSandboxPathTraversal:
         # validate_entry_point_resolved should catch this
         result = validate_entry_point_resolved(staging, "entry.py")
 
-        assert (
-            result is not None
-        ), "BUG: validate_entry_point_resolved should detect symlink-based path traversal"
+        assert result is not None, (
+            "BUG: validate_entry_point_resolved should detect symlink-based path traversal"
+        )
 
 
 class TestSelfCorrectingResourceLeak:
@@ -109,9 +74,7 @@ class TestSelfCorrectingResourceLeak:
 
         # Execute code that will fail (async)
         async def run_test():
-            return await executor.execute(
-                "raise ValueError('test error')", timeout_sec=1
-            )
+            return await executor.execute("raise ValueError('test error')", timeout_sec=1)
 
         asyncio.run(run_test())
 
@@ -128,13 +91,3 @@ class TestSelfCorrectingResourceLeak:
 
         if new_files:
             pytest.fail(f"BUG: Temp files not cleaned up: {new_files}")
-
-
-class TestComputeGuardDivisionByZero:
-    """FINDING: compute_guard.py - Division by zero in success rate calculation."""
-
-    def test_success_rate_with_empty_history(self):
-        """Verify success_rate calculation handles empty fix_history."""
-        # This test covers the same issue as TestAutoDebuggerDivisionByZero
-        # since the code is in auto_debugger.py, not compute_guard.py
-        pass

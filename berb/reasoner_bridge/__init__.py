@@ -259,9 +259,7 @@ class ReasonerBridge:
         # Score candidates
         scored = await self._score_candidates(candidates, research_gap)
 
-        logger.info(
-            f"Generated {len(scored)} hypotheses via multi-perspective analysis"
-        )
+        logger.info(f"Generated {len(scored)} hypotheses via multi-perspective analysis")
 
         return scored
 
@@ -284,9 +282,7 @@ class ReasonerBridge:
             PerspectiveType.SYSTEMIC: (
                 "Identify 2nd and 3rd-order effects. Consider system-wide impacts."
             ),
-            PerspectiveType.MINIMALIST: (
-                "Apply Occam's Razor. Find the simplest 80% solution."
-            ),
+            PerspectiveType.MINIMALIST: ("Apply Occam's Razor. Find the simplest 80% solution."),
         }
 
         system_prompt = system_prompts[perspective]
@@ -393,11 +389,7 @@ Score each hypothesis."""
             # Attach scores to candidates
             for candidate in candidates:
                 score = next(
-                    (
-                        s
-                        for s in scores
-                        if s.get("perspective") == candidate.perspective.value
-                    ),
+                    (s for s in scores if s.get("perspective") == candidate.perspective.value),
                     None,
                 )
                 if score:
@@ -440,9 +432,7 @@ Score each hypothesis."""
         import asyncio
 
         tasks = [
-            self._run_scenario(
-                experiment_design, hypothesis, resource_limits or {}, scenario
-            )
+            self._run_scenario(experiment_design, hypothesis, resource_limits or {}, scenario)
             for scenario in self._stress_scenarios
         ]
 
@@ -453,9 +443,7 @@ Score each hypothesis."""
         # Check for critical failures
         critical = [r for r in valid_results if r.severity == "critical"]
         if critical:
-            logger.warning(
-                f"Critical failures detected: {[r.failure_mode for r in critical]}"
-            )
+            logger.warning(f"Critical failures detected: {[r.failure_mode for r in critical]}")
 
         return valid_results
 

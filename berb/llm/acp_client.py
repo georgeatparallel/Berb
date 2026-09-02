@@ -49,9 +49,7 @@ def _find_acpx() -> str | None:
     if found:
         return found
     # Check OpenClaw's bundled acpx plugin
-    openclaw_acpx = os.path.expanduser(
-        "~/.openclaw/extensions/acpx/node_modules/.bin/acpx"
-    )
+    openclaw_acpx = os.path.expanduser("~/.openclaw/extensions/acpx/node_modules/.bin/acpx")
     if os.path.isfile(openclaw_acpx) and os.access(openclaw_acpx, os.X_OK):
         return openclaw_acpx
     return None
@@ -74,9 +72,7 @@ class ACPClient:
         self._acpx: str | None = acp_config.acpx_command or None
         self._session_ready = False
         # Prune dead weakrefs, then track this instance
-        ACPClient._live_instances = [
-            r for r in ACPClient._live_instances if r() is not None
-        ]
+        ACPClient._live_instances = [r for r in ACPClient._live_instances if r() is not None]
         ACPClient._live_instances.append(weakref.ref(self))
         if not ACPClient._atexit_registered:
             atexit.register(ACPClient._atexit_cleanup)
@@ -266,13 +262,9 @@ class ACPClient:
                 timeout=30,
             )
             if result.returncode != 0:
-                raise RuntimeError(
-                    f"Failed to create ACP session: {result.stderr.strip()}"
-                )
+                raise RuntimeError(f"Failed to create ACP session: {result.stderr.strip()}")
         self._session_ready = True
-        logger.info(
-            "ACP session '%s' ready (%s)", self.config.session_name, self.config.agent
-        )
+        logger.info("ACP session '%s' ready (%s)", self.config.session_name, self.config.agent)
 
     # Linux MAX_ARG_STRLEN is 128 KB; Windows CreateProcess limit is ~32 KB
     # for the entire command line, not just the prompt payload. acpx adds
@@ -356,9 +348,7 @@ class ACPClient:
             except RuntimeError as exc:
                 # Detect localized "command line too long" from subprocess stderr
                 exc_lower = str(exc).lower()
-                if not use_file and any(
-                    h in exc_lower for h in self._CMD_TOO_LONG_HINTS
-                ):
+                if not use_file and any(h in exc_lower for h in self._CMD_TOO_LONG_HINTS):
                     logger.warning(
                         "CLI prompt too long for OS, falling back to temp file: %s",
                         exc,
@@ -410,15 +400,11 @@ class ACPClient:
                 timeout=self.config.timeout_sec,
             )
         except subprocess.TimeoutExpired as exc:
-            raise RuntimeError(
-                f"ACP prompt timed out after {self.config.timeout_sec}s"
-            ) from exc
+            raise RuntimeError(f"ACP prompt timed out after {self.config.timeout_sec}s") from exc
 
         if result.returncode != 0:
             stderr = (result.stderr or "").strip()
-            raise RuntimeError(
-                f"ACP prompt failed (exit {result.returncode}): {stderr}"
-            )
+            raise RuntimeError(f"ACP prompt failed (exit {result.returncode}): {stderr}")
 
         return self._extract_response(result.stdout)
 
@@ -466,9 +452,7 @@ class ACPClient:
 
             if result.returncode != 0:
                 stderr = (result.stderr or "").strip()
-                raise RuntimeError(
-                    f"ACP prompt failed (exit {result.returncode}): {stderr}"
-                )
+                raise RuntimeError(f"ACP prompt failed (exit {result.returncode}): {stderr}")
 
             return self._extract_response(result.stdout)
         finally:

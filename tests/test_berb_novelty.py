@@ -424,9 +424,7 @@ class TestPerplexityNoveltyCheck:
         assert result["likely_novel"] is True
         assert result["confidence"] == 0.8
 
-    def test_unparseable_response_returns_none(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_unparseable_response_returns_none(self, monkeypatch: pytest.MonkeyPatch) -> None:
         from berb.literature.novelty import _check_perplexity_novelty
         from berb.llm.deep_query_client import DeepQueryResult
 
@@ -435,15 +433,11 @@ class TestPerplexityNoveltyCheck:
                 pass
 
             def search(self, *a: Any, **kw: Any) -> DeepQueryResult:
-                return DeepQueryResult(
-                    title="t", content="not json", url="", source="DeepQuery"
-                )
+                return DeepQueryResult(title="t", content="not json", url="", source="DeepQuery")
 
         monkeypatch.setattr("berb.llm.deep_query_client.DeepQueryClient", _FakeClient)
 
-        assert (
-            _check_perplexity_novelty("topic", "hypotheses", api_key="fake-key") is None
-        )
+        assert _check_perplexity_novelty("topic", "hypotheses", api_key="fake-key") is None
 
     @patch("berb.literature.search.search_papers_multi_query")
     def test_overlap_downgrades_proceed_to_differentiate(
@@ -468,9 +462,7 @@ class TestPerplexityNoveltyCheck:
         result = check_novelty(topic="Test topic", hypotheses_text="## H1: idea")
 
         assert result["novelty_score"] == 1.0  # local score untouched
-        assert (
-            result["recommendation"] == "differentiate"
-        )  # but recommendation downgraded
+        assert result["recommendation"] == "differentiate"  # but recommendation downgraded
         assert result["perplexity_check"]["likely_novel"] is False
 
     @patch("berb.literature.search.search_papers_multi_query")
@@ -505,9 +497,7 @@ class TestPerplexityNoveltyCheck:
             called = True
             return None
 
-        monkeypatch.setattr(
-            "berb.literature.novelty._check_perplexity_novelty", _fake_check
-        )
+        monkeypatch.setattr("berb.literature.novelty._check_perplexity_novelty", _fake_check)
 
         result = check_novelty(
             topic="Test topic", hypotheses_text="## H1: idea", perplexity_check=False

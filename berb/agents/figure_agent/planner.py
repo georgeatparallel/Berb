@@ -207,19 +207,14 @@ class PlannerAgent(BaseAgent):
 
         # Check for training history data
         for key in results:
-            if any(
-                t in str(key).lower() for t in ["history", "curve", "epoch", "step"]
-            ):
+            if any(t in str(key).lower() for t in ["history", "curve", "epoch", "step"]):
                 analysis["has_training_history"] = True
                 break
 
         # Check for ablation conditions
         for cond in conditions:
             cond_lower = cond.lower()
-            if any(
-                t in cond_lower
-                for t in ["ablat", "without", "no_", "reduced", "remove"]
-            ):
+            if any(t in cond_lower for t in ["ablat", "without", "no_", "reduced", "remove"]):
                 analysis["has_ablation"] = True
                 break
 
@@ -419,9 +414,7 @@ class PlannerAgent(BaseAgent):
                 m
                 for m in data_analysis.get("metric_names", [])
                 if m != metric_key
-                and not any(
-                    t in m.lower() for t in ["time", "elapsed", "seed", "runtime"]
-                )
+                and not any(t in m.lower() for t in ["time", "elapsed", "seed", "runtime"])
             ][:5]
             if metrics_to_show:
                 figures.append(
@@ -454,17 +447,12 @@ class PlannerAgent(BaseAgent):
         """Add default figures to meet minimum count."""
         # BUG-37: chart_type may be non-hashable (list) — force str
         existing_types = {
-            f.get("chart_type")
-            for f in existing
-            if isinstance(f.get("chart_type"), str)
+            f.get("chart_type") for f in existing if isinstance(f.get("chart_type"), str)
         }
         augmented = list(existing)
 
         # Add main comparison if missing
-        if (
-            "bar_comparison" not in existing_types
-            and data_analysis["num_conditions"] >= 2
-        ):
+        if "bar_comparison" not in existing_types and data_analysis["num_conditions"] >= 2:
             augmented.append(
                 {
                     "figure_id": "fig_main_results",
@@ -484,9 +472,7 @@ class PlannerAgent(BaseAgent):
             )
 
         # Add ablation if applicable and missing
-        if "ablation_grouped" not in existing_types and data_analysis.get(
-            "has_ablation"
-        ):
+        if "ablation_grouped" not in existing_types and data_analysis.get("has_ablation"):
             augmented.append(
                 {
                     "figure_id": "fig_ablation",

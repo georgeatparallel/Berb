@@ -182,7 +182,9 @@ class TestFileWatcher:
 
 class TestLatexFormatter:
     def test_normalize_paths(self) -> None:
-        content = r"\includegraphics[width=0.5\textwidth]{/home/user/artifacts/rc-123/figures/plot.png}"
+        content = (
+            r"\includegraphics[width=0.5\textwidth]{/home/user/artifacts/rc-123/figures/plot.png}"
+        )
         result = LatexFormatter.normalize_paths(content)
         assert "figures/plot.png" in result
         assert "/home/user" not in result

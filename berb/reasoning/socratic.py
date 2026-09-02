@@ -16,11 +16,10 @@ Usage:
     method = SocraticMethod(llm_client)
     result = await method.execute(context)
 
-    # Option 2: With router (recommended for cost optimization)
+    # Option 2: With a cost-optimising router
     from berb.reasoning import SocraticMethod
-    from berb.llm.extended_router import ExtendedNadirClawRouter
-    router = ExtendedNadirClawRouter(...)
-    method = SocraticMethod(router=router)
+    from berb.llm.smart_client import SmartLLMClient
+    method = SocraticMethod(router=SmartLLMClient(...))
     result = await method.execute(context)
 
     # Option 3: Registry singleton (recommended)
@@ -51,9 +50,7 @@ logger = logging.getLogger(__name__)
 class SocraticQuestion:
     """A Socratic question."""
 
-    category: (
-        str  # clarification, assumptions, evidence, perspectives, implications, meta
-    )
+    category: str  # clarification, assumptions, evidence, perspectives, implications, meta
     question: str
     answer: str = ""
     insights: list[str] = field(default_factory=list)
@@ -99,7 +96,7 @@ class SocraticMethod(ReasoningMethod):
 
     def __init__(
         self,
-        router: Any = None,  # NEW: Primary (ExtendedNadirClawRouter)
+        router: Any = None,  # Primary: a cost-optimising router
         llm_client: Any = None,  # DEPRECATED: Fallback only
         depth: int = 2,  # Questions per category
         **kwargs: Any,
@@ -161,9 +158,7 @@ class SocraticMethod(ReasoningMethod):
             # Iterate through question categories
             for category in self.CATEGORIES:
                 for i in range(self.depth):
-                    sq = await self._generate_question(
-                        question, category, i, questions, context
-                    )
+                    sq = await self._generate_question(question, category, i, questions, context)
                     questions.append(sq)
                     all_insights.extend(sq.insights)
 
@@ -173,9 +168,7 @@ class SocraticMethod(ReasoningMethod):
             )
 
             # Identify remaining questions
-            remaining = await self._identify_remaining_questions(
-                question, questions, context
-            )
+            remaining = await self._identify_remaining_questions(question, questions, context)
 
             result = SocraticResult(
                 original_question=question,
@@ -298,9 +291,7 @@ Respond in JSON format:
     ) -> str:
         """Synthesize final understanding from Socratic dialogue."""
         if self.llm_client:
-            qa_text = "\n\n".join(
-                f"Q{q.category}: {q.question}\nA: {q.answer}" for q in questions
-            )
+            qa_text = "\n\n".join(f"Q{q.category}: {q.question}\nA: {q.answer}" for q in questions)
 
             prompt = f"""Original question: {original_question}
 
@@ -333,9 +324,7 @@ Respond with the synthesis text only.
     ) -> list[str]:
         """Identify questions that remain after Socratic dialogue."""
         if self.llm_client:
-            qa_text = "\n".join(
-                f"{q.category}: {q.question} → {q.answer}" for q in questions
-            )
+            qa_text = "\n".join(f"{q.category}: {q.question} → {q.answer}" for q in questions)
 
             prompt = f"""Original question: {original_question}
 
@@ -376,9 +365,7 @@ Respond in JSON format:
             self.router.track_cost(
                 method="socratic",
                 phase="all",
-                model=self.router.role_models.get(
-                    "clarification", self.router.simple_model
-                ),
+                model=self.router.role_models.get("clarification", self.router.simple_model),
                 input_tokens=estimated_input,
                 output_tokens=estimated_output,
                 duration_ms=int(duration_sec * 1000),
@@ -453,9 +440,7 @@ class FalsificationCritic:
 
         ctx_str = ""
         if context:
-            ctx_str = "\nContext:\n" + "\n".join(
-                f"  {k}: {v}" for k, v in context.items()
-            )
+            ctx_str = "\nContext:\n" + "\n".join(f"  {k}: {v}" for k, v in context.items())
 
         prompt = f"""You are an interrogative critic.  Your ONLY job is to find flaws in the
 hypothesis below.  You MUST NOT propose alternatives, improvements, or
@@ -504,9 +489,7 @@ Severity: "hard" = blocks the hypothesis, "soft" = needs clarification.
 
             import json
 
-            content = (
-                response.content if hasattr(response, "content") else str(response)
-            )
+            content = response.content if hasattr(response, "content") else str(response)
             issues = json.loads(content)
             if isinstance(issues, list):
                 return issues

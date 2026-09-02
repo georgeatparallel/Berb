@@ -609,9 +609,7 @@ class TestHitlStageValidation:
             files = tpl.get_style_files()
             assert len(files) >= 1, f"No style files for {name}"
             sty_names = [f.name for f in files]
-            assert any(
-                f.endswith(".sty") for f in sty_names
-            ), f"No .sty file for {name}"
+            assert any(f.endswith(".sty") for f in sty_names), f"No .sty file for {name}"
 
     def test_iclr_icml_have_bst_files(self) -> None:
         """ICLR and ICML templates bundle custom .bst files."""

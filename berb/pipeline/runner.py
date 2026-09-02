@@ -126,9 +126,7 @@ def _build_dag_levels(order: tuple[Stage, ...]) -> list[set[Stage]]:
         ready = {s for s in remaining if in_degree.get(s, 0) == 0}
         if not ready:
             # Shouldn't happen in a valid DAG — break to avoid infinite loop
-            logger.warning(
-                "DAG level builder stalled with %d remaining stages", len(remaining)
-            )
+            logger.warning("DAG level builder stalled with %d remaining stages", len(remaining))
             break
 
         levels.append(ready)
@@ -168,11 +166,7 @@ async def _execute_single_stage(
 
     stage_num = int(stage)
     prefix = f"[{run_id}] Stage {stage_num:02d}/{total_stages}"
-    model_info = (
-        config.llm.primary_model.split("/")[-1]
-        if config.llm.primary_model
-        else "unknown"
-    )
+    model_info = config.llm.primary_model.split("/")[-1] if config.llm.primary_model else "unknown"
     print(f"{prefix} {stage.name} — running... [model: {model_info}]")
 
     start_event = StageTransitionEvent(
@@ -238,9 +232,7 @@ async def _execute_single_stage(
         from_status=StageStatus.RUNNING,
         to_status=result.status,
         event=(
-            TransitionEvent.SUCCEED
-            if result.status == StageStatus.DONE
-            else TransitionEvent.FAIL
+            TransitionEvent.SUCCEED if result.status == StageStatus.DONE else TransitionEvent.FAIL
         ),
         metadata={
             "elapsed_sec": elapsed,
@@ -535,12 +527,8 @@ async def _handle_pivot(
     """Handle a PIVOT/REFINE decision from the orchestrator."""
     pivot_count = read_pivot_count(run_dir)
     if _should_force_proceed(pivot_count, run_dir):
-        logger.warning(
-            "Consecutive REFINE cycles produced empty metrics — forcing PROCEED"
-        )
-        print(
-            f"[{run_id}] Consecutive empty metrics across REFINE cycles — forcing PROCEED"
-        )
+        logger.warning("Consecutive REFINE cycles produced empty metrics — forcing PROCEED")
+        print(f"[{run_id}] Consecutive empty metrics across REFINE cycles — forcing PROCEED")
         _promote_best_stage14(run_dir, config)
         # "Forcing PROCEED" means continue into writing with the best
         # available results — not stop the pipeline before a paper exists.
@@ -558,9 +546,7 @@ async def _handle_pivot(
         )
     elif pivot_count < MAX_DECISION_PIVOTS:
         rollback_target = _get_rollback_target(stage, result.decision)
-        record_decision_history(
-            run_dir, result.decision, rollback_target, pivot_count + 1
-        )
+        record_decision_history(run_dir, result.decision, rollback_target, pivot_count + 1)
         logger.info(
             "Decision %s: rolling back to %s (attempt %d/%d)",
             result.decision.upper(),
@@ -574,9 +560,7 @@ async def _handle_pivot(
             f"(attempt {pivot_count + 1}/{MAX_DECISION_PIVOTS})"
         )
         _version_rollback_stages(run_dir, rollback_target, pivot_count + 1)
-        pivot_event = _create_pivot_event(
-            run_id, stage, rollback_target, pivot_count + 1
-        )
+        pivot_event = _create_pivot_event(run_id, stage, rollback_target, pivot_count + 1)
         event_store.append(pivot_event)
 
         pivot_results = await execute_pipeline(
@@ -651,9 +635,7 @@ async def _run_diagnosis_and_repair(
                     run_repair_loop,
                 )
 
-                repair_result = await asyncio.to_thread(
-                    run_repair_loop, run_dir, config, run_id
-                )
+                repair_result = await asyncio.to_thread(run_repair_loop, run_dir, config, run_id)
                 (run_dir / "experiment_repair_result.json").write_text(
                     json.dumps(repair_result.to_dict(), indent=2), encoding="utf-8"
                 )
@@ -666,17 +648,13 @@ async def _run_diagnosis_and_repair(
                             existing_score = _summary_quality_score(existing)
                         except (json.JSONDecodeError, OSError):
                             pass
-                    repair_score = _summary_quality_score(
-                        repair_result.best_experiment_summary
-                    )
+                    repair_score = _summary_quality_score(repair_result.best_experiment_summary)
                     if repair_score > existing_score:
                         best_path.write_text(
                             json.dumps(repair_result.best_experiment_summary, indent=2),
                             encoding="utf-8",
                         )
                     if repair_result.success:
-                        await asyncio.to_thread(
-                            run_experiment_diagnosis, run_dir, config, run_id
-                        )
+                        await asyncio.to_thread(run_experiment_diagnosis, run_dir, config, run_id)
         except (json.JSONDecodeError, OSError):
             pass

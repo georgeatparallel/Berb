@@ -213,11 +213,7 @@ class TestConferenceCalendar:
         assert "No upcoming deadlines" in output
 
     def test_format_upcoming_with_deadlines(self):
-        confs = [
-            _make_conference(
-                name="ICML", paper_deadline=_future(15), url="https://icml.cc"
-            )
-        ]
+        confs = [_make_conference(name="ICML", paper_deadline=_future(15), url="https://icml.cc")]
         cal = ConferenceCalendar(confs)
         output = cal.format_upcoming(days=90)
         assert "ICML" in output

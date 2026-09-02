@@ -255,9 +255,7 @@ def advance(
         StageStatus.RETRYING,
         StageStatus.PAUSED,
     }:
-        return TransitionOutcome(
-            stage=stage, status=StageStatus.RUNNING, next_stage=stage
-        )
+        return TransitionOutcome(stage=stage, status=StageStatus.RUNNING, next_stage=stage)
 
     # SUCCEED while RUNNING
     if event is TransitionEvent.SUCCEED and status is StageStatus.RUNNING:
@@ -329,9 +327,7 @@ def advance(
 
     # RESUME while PAUSED
     if event is TransitionEvent.RESUME and status is StageStatus.PAUSED:
-        return TransitionOutcome(
-            stage=stage, status=StageStatus.RUNNING, next_stage=stage
-        )
+        return TransitionOutcome(stage=stage, status=StageStatus.RUNNING, next_stage=stage)
 
     # PAUSE while FAILED
     if event is TransitionEvent.PAUSE and status is StageStatus.FAILED:
@@ -570,9 +566,7 @@ class EventStore:
 
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
-            self._events = [
-                StageTransitionEvent.from_dict(e) for e in data.get("events", [])
-            ]
+            self._events = [StageTransitionEvent.from_dict(e) for e in data.get("events", [])]
         except (json.JSONDecodeError, KeyError, ValueError):
             # Corrupted file - start fresh
             self._events = []

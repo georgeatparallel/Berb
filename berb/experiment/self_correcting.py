@@ -222,9 +222,7 @@ class CodeBuilderAgent:
         code = code.replace("{domain}", spec.get("domain", "physics"))
 
         # Add parameters
-        params_str = "\n".join(
-            f"{k} = {v}" for k, v in spec.get("parameters", {}).items()
-        )
+        params_str = "\n".join(f"{k} = {v}" for k, v in spec.get("parameters", {}).items())
         code = code.replace("{parameters}", params_str)
 
         return code
@@ -727,16 +725,12 @@ class SelfCorrectingExecutor:
             logger.info(f"Iteration {iteration}/{self._max_iterations}")
 
             # Act phase 1: Generate/revise code
-            self._memory.update_agent_status(
-                "code_builder_agent", "working", "generate_code"
-            )
+            self._memory.update_agent_status("code_builder_agent", "working", "generate_code")
             current_code = await self._code_builder.generate_code(specification)
             self._memory.update_agent_status("code_builder_agent", "idle")
 
             # Act phase 2: Execute
-            self._memory.update_agent_status(
-                "executor_agent", "working", "execute_simulation"
-            )
+            self._memory.update_agent_status("executor_agent", "working", "execute_simulation")
             exec_result = await self._executor.execute(current_code)
             self._memory.update_agent_status("executor_agent", "idle")
 
@@ -760,12 +754,8 @@ class SelfCorrectingExecutor:
                 )
 
                 # Generate report
-                self._memory.update_agent_status(
-                    "reporter_agent", "working", "generate_report"
-                )
-                result.report = await self._reporter.generate_report(
-                    specification, result
-                )
+                self._memory.update_agent_status("reporter_agent", "working", "generate_report")
+                result.report = await self._reporter.generate_report(specification, result)
                 self._memory.update_agent_status("reporter_agent", "idle")
 
                 return result
@@ -774,12 +764,8 @@ class SelfCorrectingExecutor:
             error_message = exec_result.get("error", "Unknown error")
             errors_encountered.append(error_message)
 
-            self._memory.update_agent_status(
-                "diagnoser_agent", "working", "diagnose_error"
-            )
-            diagnosis = await self._diagnoser.diagnose(
-                error_message, current_code, specification
-            )
+            self._memory.update_agent_status("diagnoser_agent", "working", "diagnose_error")
+            diagnosis = await self._diagnoser.diagnose(error_message, current_code, specification)
             self._memory.update_agent_status("diagnoser_agent", "idle")
 
             logger.info(f"Diagnosis: {diagnosis['physical_meaning']}")
@@ -795,12 +781,8 @@ class SelfCorrectingExecutor:
                 logger.info(f"Applied fix: {fix}")
             else:
                 # Revise specification
-                self._memory.update_agent_status(
-                    "rewriter_agent", "working", "revise_prompt"
-                )
-                revised_prompt = await self._rewriter.revise(
-                    prompt, diagnosis, iteration
-                )
+                self._memory.update_agent_status("rewriter_agent", "working", "revise_prompt")
+                revised_prompt = await self._rewriter.revise(prompt, diagnosis, iteration)
                 specification = await self._clarifier.clarify(revised_prompt, domain)
                 self._memory.update_agent_status("rewriter_agent", "idle")
 

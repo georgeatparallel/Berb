@@ -237,8 +237,7 @@ def verify_paper(
         section_lower = section.lower() if section else ""
 
         in_table = any(
-            start <= line_idx <= end and is_results
-            for start, end, is_results in table_ranges
+            start <= line_idx <= end and is_results for start, end, is_results in table_ranges
         )
 
         for m in _NUMBER_RE.finditer(line):
@@ -267,9 +266,7 @@ def verify_paper(
             # Integer-like small numbers (likely indices, counts, etc.)
             # BUG-23 P1: In strict sections or tables, only auto-pass very small
             # integers (≤5) — larger counts (e.g. "20 datasets") could be fabricated.
-            is_strict_ctx = (
-                _is_strict_section(section_lower, strict_sections) or in_table
-            )
+            is_strict_ctx = _is_strict_section(section_lower, strict_sections) or in_table
             _int_limit = 5 if is_strict_ctx else 20
             if value == int(value) and abs(value) <= _int_limit:
                 result.total_numbers_verified += 1

@@ -67,27 +67,19 @@ def _get_evolution_overlay(run_dir: Path | None, stage_name: str) -> str:
         if not isinstance(data, list):
             return ""
         # Filter lessons relevant to this stage
-        stage_num = (
-            int(stage_name.split("_")[-1])
-            if stage_name.split("_")[-1].isdigit()
-            else None
-        )
+        stage_num = int(stage_name.split("_")[-1]) if stage_name.split("_")[-1].isdigit() else None
         relevant: list[dict[str, object]] = []
         for lesson in data:
             if not isinstance(lesson, dict):
                 continue
             lesson_stage = lesson.get("stage")
-            if lesson_stage and (
-                lesson_stage == stage_name or str(lesson_stage) == str(stage_num)
-            ):
+            if lesson_stage and (lesson_stage == stage_name or str(lesson_stage) == str(stage_num)):
                 relevant.append(lesson)
             if len(relevant) >= 5:
                 break
         if relevant:
             overlay = json.dumps(relevant, indent=2)
-            logger.debug(
-                "Evolution overlay for %s: %d lessons", stage_name, len(relevant)
-            )
+            logger.debug("Evolution overlay for %s: %d lessons", stage_name, len(relevant))
             return overlay
     except (json.JSONDecodeError, OSError, ValueError, TypeError):
         pass
@@ -265,9 +257,7 @@ def _build_context_preamble(
     return "\n".join(lines)
 
 
-def _extract_topic_keywords(
-    topic: str, domains: tuple[str, ...] | list[str] = ()
-) -> list[str]:
+def _extract_topic_keywords(topic: str, domains: tuple[str, ...] | list[str] = ()) -> list[str]:
     """Extract significant keywords from a research topic."""
     import re as _re
 

@@ -97,9 +97,7 @@ class HistoryComparator:
             prv = prev_dims.get(dim, 0.0)
             dim_deltas[dim] = round(cur - prv, 2)
 
-        trend = (
-            "improved" if delta > 0.5 else ("declined" if delta < -0.5 else "stable")
-        )
+        trend = "improved" if delta > 0.5 else ("declined" if delta < -0.5 else "stable")
 
         return {
             "comparison": "success",

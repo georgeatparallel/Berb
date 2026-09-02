@@ -179,9 +179,7 @@ class VerifiedRegistry:
                 reg.condition_names.add(cond_name)
 
         # --- 2. Extract condition_summaries ---
-        for cond_name, cond_data in experiment_summary.get(
-            "condition_summaries", {}
-        ).items():
+        for cond_name, cond_data in experiment_summary.get("condition_summaries", {}).items():
             reg.condition_names.add(cond_name)
             if cond_name not in reg.conditions:
                 reg.conditions[cond_name] = ConditionResult(name=cond_name)
@@ -282,9 +280,7 @@ class VerifiedRegistry:
                 try:
                     best_data = _json_rd.loads(best_path.read_text(encoding="utf-8"))
                     ExperimentSummary.from_dict(best_data)
-                    sub = cls.from_experiment(
-                        best_data, metric_direction=metric_direction
-                    )
+                    sub = cls.from_experiment(best_data, metric_direction=metric_direction)
                     _merge_into(target, sub)
                     logger.debug(
                         "from_run_dir(best_only): using experiment_summary_best.json (%d values)",
@@ -302,9 +298,7 @@ class VerifiedRegistry:
                     try:
                         es_data = _json_rd.loads(s14_path.read_text(encoding="utf-8"))
                         ExperimentSummary.from_dict(es_data)
-                        sub = cls.from_experiment(
-                            es_data, metric_direction=metric_direction
-                        )
+                        sub = cls.from_experiment(es_data, metric_direction=metric_direction)
                         _merge_into(target, sub)
                     except (OSError, _json_rd.JSONDecodeError, ValueError) as exc:
                         logger.warning(
@@ -318,9 +312,7 @@ class VerifiedRegistry:
                 try:
                     es_data = _json_rd.loads(es_path.read_text(encoding="utf-8"))
                     ExperimentSummary.from_dict(es_data)
-                    sub = cls.from_experiment(
-                        es_data, metric_direction=metric_direction
-                    )
+                    sub = cls.from_experiment(es_data, metric_direction=metric_direction)
                     _merge_into(target, sub)
                     logger.debug(
                         "from_run_dir: merged %s (%d values)",
@@ -328,9 +320,7 @@ class VerifiedRegistry:
                         len(sub.values),
                     )
                 except (OSError, _json_rd.JSONDecodeError, ValueError) as exc:
-                    logger.warning(
-                        "from_run_dir: skipping malformed %s: %s", es_path, exc
-                    )
+                    logger.warning("from_run_dir: skipping malformed %s: %s", es_path, exc)
 
             # --- 2. experiment_summary_best.json (repair cycle output) ---
             best_path = run_dir / "experiment_summary_best.json"
@@ -338,9 +328,7 @@ class VerifiedRegistry:
                 try:
                     best_data = _json_rd.loads(best_path.read_text(encoding="utf-8"))
                     ExperimentSummary.from_dict(best_data)
-                    sub = cls.from_experiment(
-                        best_data, metric_direction=metric_direction
-                    )
+                    sub = cls.from_experiment(best_data, metric_direction=metric_direction)
                     _merge_into(target, sub)
                     logger.debug(
                         "from_run_dir: merged experiment_summary_best.json (%d values)",
@@ -360,9 +348,7 @@ class VerifiedRegistry:
                         _enrich_from_refinement_log(target, rl_data)
                         logger.debug("from_run_dir: enriched from %s", rl_path.name)
                 except (OSError, _json_rd.JSONDecodeError) as exc:
-                    logger.warning(
-                        "from_run_dir: skipping malformed %s: %s", rl_path, exc
-                    )
+                    logger.warning("from_run_dir: skipping malformed %s: %s", rl_path, exc)
 
         # Recompute per-condition stats after merging
         for cond in target.conditions.values():
@@ -377,11 +363,7 @@ class VerifiedRegistry:
             "best_only" if best_only else "all",
             len(target.values),
             len(target.condition_names),
-            (
-                ", ".join(sorted(target.condition_names))
-                if target.condition_names
-                else "none"
-            ),
+            (", ".join(sorted(target.condition_names)) if target.condition_names else "none"),
         )
         return target
 
@@ -400,9 +382,7 @@ class VerifiedRegistry:
         ref_data = None
         if refinement_log_path and refinement_log_path.exists():
             ref_data = json.loads(refinement_log_path.read_text(encoding="utf-8"))
-        return cls.from_experiment(
-            exp_data, ref_data, metric_direction=metric_direction
-        )
+        return cls.from_experiment(exp_data, ref_data, metric_direction=metric_direction)
 
 
 def _merge_into(target: VerifiedRegistry, source: VerifiedRegistry) -> None:
@@ -457,11 +437,7 @@ def _enrich_from_refinement_log(reg: VerifiedRegistry, refinement_log: dict) -> 
             sb_metrics = sandbox.get("metrics", {})
             if isinstance(sb_metrics, dict):
                 for mk, mv in sb_metrics.items():
-                    if (
-                        isinstance(mv, (int, float))
-                        and _is_finite(mv)
-                        and mk not in _INFRA_KEYS
-                    ):
+                    if isinstance(mv, (int, float)) and _is_finite(mv) and mk not in _INFRA_KEYS:
                         reg.add_value(mv, f"refinement.{ver}.{sandbox_key}.{mk}")
 
                         # Parse per-seed keys here too
@@ -471,9 +447,7 @@ def _enrich_from_refinement_log(reg: VerifiedRegistry, refinement_log: dict) -> 
                             seed_idx = int(m.group(2))
                             reg.condition_names.add(cond_name)
                             if cond_name not in reg.conditions:
-                                reg.conditions[cond_name] = ConditionResult(
-                                    name=cond_name
-                                )
+                                reg.conditions[cond_name] = ConditionResult(name=cond_name)
                             # Only update per_seed if this is the best version
                             if ver == best_version or best_version in ver:
                                 reg.conditions[cond_name].per_seed_values[seed_idx] = mv

@@ -52,9 +52,7 @@ class TestReport:
         )
         draft_dir = tmp_path / "stage-17"
         draft_dir.mkdir()
-        (draft_dir / "paper_draft.md").write_text(
-            "This is a paper with some words in it."
-        )
+        (draft_dir / "paper_draft.md").write_text("This is a paper with some words in it.")
         report = generate_report(tmp_path)
         assert "Paper" in report
         assert "words" in report

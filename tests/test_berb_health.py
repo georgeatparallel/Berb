@@ -24,9 +24,7 @@ class _DummyHTTPResponse:
     status: int
     _payload: dict[str, object]
 
-    def __init__(
-        self, *, status: int = 200, payload: dict[str, object] | None = None
-    ) -> None:
+    def __init__(self, *, status: int = 200, payload: dict[str, object] | None = None) -> None:
         self.status = status
         self._payload = payload if payload is not None else {}
 
@@ -56,7 +54,8 @@ knowledge_base:
 llm:
   base_url: https://api.example.com/v1
   api_key_env: OPENAI_API_KEY
-""".strip() + "\n",
+""".strip()
+        + "\n",
         encoding="utf-8",
     )
 
@@ -163,9 +162,7 @@ def test_check_model_available_pass() -> None:
         "urllib.request.urlopen",
         return_value=_DummyHTTPResponse(status=200, payload=payload),
     ):
-        result = health.check_model_available(
-            "https://api.example.com/v1", "sk-test", "gpt-5.2"
-        )
+        result = health.check_model_available("https://api.example.com/v1", "sk-test", "gpt-5.2")
     assert result.status == "pass"
 
 
@@ -175,9 +172,7 @@ def test_check_model_not_available() -> None:
         "urllib.request.urlopen",
         return_value=_DummyHTTPResponse(status=200, payload=payload),
     ):
-        result = health.check_model_available(
-            "https://api.example.com/v1", "sk-test", "gpt-5.2"
-        )
+        result = health.check_model_available("https://api.example.com/v1", "sk-test", "gpt-5.2")
     assert result.status == "fail"
     assert result.detail == "Model gpt-5.2 not available"
 
@@ -387,9 +382,7 @@ def test_doctor_report_json_structure(tmp_path: Path) -> None:
         timestamp="2026-01-01T00:00:00+00:00",
         checks=[
             health.CheckResult("python_version", "pass", "ok"),
-            health.CheckResult(
-                "matplotlib", "warn", "missing", "pip install matplotlib"
-            ),
+            health.CheckResult("matplotlib", "warn", "missing", "pip install matplotlib"),
         ],
         overall="pass",
     )
@@ -437,9 +430,7 @@ def test_print_doctor_report_fail(capsys: pytest.CaptureFixture[str]) -> None:
         timestamp="2026-01-01T00:00:00+00:00",
         checks=[
             health.CheckResult("config_valid", "fail", "bad config", "fix config"),
-            health.CheckResult(
-                "matplotlib", "warn", "missing", "pip install matplotlib"
-            ),
+            health.CheckResult("matplotlib", "warn", "missing", "pip install matplotlib"),
         ],
         overall="fail",
     )

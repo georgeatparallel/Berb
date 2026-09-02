@@ -257,9 +257,7 @@ class TestPaperFilter:
 
     def test_filter_combined(self, sample_papers: list[Paper]):
         """Test combined filtering."""
-        filtered = (
-            PaperFilter().from_year(2020).with_min_citations(50).apply(sample_papers)
-        )
+        filtered = PaperFilter().from_year(2020).with_min_citations(50).apply(sample_papers)
 
         assert len(filtered) == 2
         assert filtered[0].paper_id == "1"
@@ -319,11 +317,7 @@ class TestComplexSpecifications:
         """Test complex query with fluent API."""
         # Recent papers with 50+ citations
         filtered = (
-            PaperFilter()
-            .from_year(2020)
-            .to_year(2026)
-            .with_min_citations(50)
-            .apply(sample_papers)
+            PaperFilter().from_year(2020).to_year(2026).with_min_citations(50).apply(sample_papers)
         )
 
         assert len(filtered) == 2

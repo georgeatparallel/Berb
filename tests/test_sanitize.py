@@ -69,9 +69,7 @@ class TestSafePathComponent:
         overwrite. safe_path_component must not collide."""
         a = safe_path_component("10.1234/abc")
         b = safe_path_component("10.1234_abc")
-        assert sanitize_figure_id("10.1234/abc") == sanitize_figure_id(
-            "10.1234_abc"
-        )  # the bug
+        assert sanitize_figure_id("10.1234/abc") == sanitize_figure_id("10.1234_abc")  # the bug
         assert a != b  # the fix
 
     def test_already_clean_id_is_returned_verbatim(self):

@@ -396,9 +396,7 @@ Provide:
         results = await asyncio.gather(*[test_one(tc) for tc in test_cases])
 
         all_converged = all(r.get("converged", False) for r in results)
-        convergence_rate = sum(1 for r in results if r.get("converged", False)) / len(
-            results
-        )
+        convergence_rate = sum(1 for r in results if r.get("converged", False)) / len(results)
 
         return {
             "test_results": results,
@@ -518,9 +516,7 @@ Format as a list of conditions.
 
         # Parse as list
         lines = response.content.strip().split("\n")
-        conditions = [
-            line.strip().lstrip("-*•").strip() for line in lines if line.strip()
-        ]
+        conditions = [line.strip().lstrip("-*•").strip() for line in lines if line.strip()]
 
         return conditions[:10]  # Limit to 10 conditions
 

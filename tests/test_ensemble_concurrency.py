@@ -62,9 +62,7 @@ def test_two_persona_fan_out_runs_concurrently_not_serially() -> None:
     ensemble = AutomatedReviewerEnsemble(llm_client=mock_llm)
     ensemble._personas = REVIEWER_PERSONAS[:2]
 
-    asyncio.run(
-        ensemble.review_paper(paper_path="fake.pdf", paper_text="some paper text")
-    )
+    asyncio.run(ensemble.review_paper(paper_path="fake.pdf", paper_text="some paper text"))
 
     assert mock_llm.chat.call_count == 2
     # Serial execution can never exceed 1 in flight. Before the A1-1 fix,

@@ -17,8 +17,8 @@ Usage:
 
     # Option 2: With router (recommended for cost optimization)
     from berb.reasoning import JuryMethod
-    from berb.llm.extended_router import ExtendedNadirClawRouter
-    router = ExtendedNadirClawRouter(...)
+    from berb.llm.smart_client import SmartLLMClient
+    router = SmartLLMClient(...)
     method = JuryMethod(router=router)
     result = await method.execute(context)
 
@@ -116,7 +116,7 @@ class JuryMethod(ReasoningMethod):
 
     def __init__(
         self,
-        router: Any = None,  # NEW: Primary (ExtendedNadirClawRouter)
+        router: Any = None,  # Primary: a cost-optimising router
         llm_client: Any = None,  # DEPRECATED: Fallback only
         jury_size: int = 6,
         require_unanimous: bool = False,
@@ -168,11 +168,7 @@ class JuryMethod(ReasoningMethod):
                     "Invalid context: missing required fields",
                 )
 
-            case = (
-                context.get("case")
-                or context.get("proposal")
-                or context.get("hypothesis")
-            )
+            case = context.get("case") or context.get("proposal") or context.get("hypothesis")
             if not case:
                 return ReasoningResult.error_result(
                     MethodType.JURY,
@@ -190,9 +186,7 @@ class JuryMethod(ReasoningMethod):
                 await self._juror_deliberation(juror, case, context)
 
             # Foreman synthesis
-            verdict, synthesis, vote_count = await self._foreman_synthesis(
-                jurors, case, context
-            )
+            verdict, synthesis, vote_count = await self._foreman_synthesis(jurors, case, context)
 
             # Collect key arguments and dissenting opinions
             key_args = self._collect_key_arguments(jurors)
@@ -227,9 +221,7 @@ class JuryMethod(ReasoningMethod):
                     "foreman_synthesis": synthesis,
                     "key_arguments": key_args,
                     "dissenting_opinions": dissenting,
-                    "juror_reasoning": {
-                        f"{j.name} ({j.role.value})": j.reasoning for j in jurors
-                    },
+                    "juror_reasoning": {f"{j.name} ({j.role.value})": j.reasoning for j in jurors},
                     "confidence": result.confidence,
                 },
                 confidence=result.confidence,
@@ -345,9 +337,7 @@ Respond in JSON format:
 
         # Fallback
         juror.verdict = "abstain"
-        juror.reasoning = (
-            f"As a {juror.role.value}, I need more information to reach a verdict."
-        )
+        juror.reasoning = f"As a {juror.role.value}, I need more information to reach a verdict."
         juror.confidence = 0.3
 
     async def _foreman_synthesis(
@@ -377,8 +367,7 @@ Respond in JSON format:
         # Generate synthesis
         if self.llm_client:
             juror_summaries = "\n".join(
-                f"{j.name} ({j.role.value}): {j.verdict} - {j.reasoning[:100]}..."
-                for j in jurors
+                f"{j.name} ({j.role.value}): {j.verdict} - {j.reasoning[:100]}..." for j in jurors
             )
 
             prompt = f"""As the jury foreman, synthesize the deliberations:
