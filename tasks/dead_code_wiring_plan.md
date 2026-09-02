@@ -1,6 +1,6 @@
 # Dead-Code Research & Wiring Plan
 
-**Status:** DRAFT — awaiting approval before execution (CLAUDE.md §Task Management step 2)
+**Status:** APPROVED — disposal default, W0 scope and wave order settled 2026-09-02 (§8). Ready to execute from W0.
 **Date:** 2026-09-02
 **Scope:** the 119 modules / 30,763 loc that `scripts/check_reachability.py` reports
 as unreachable from `berb run` / `berb serve`.
@@ -121,8 +121,27 @@ one-line justification.
 - **PARK** — plausible future value but no roadmap. Gets an allowlist ID, a
   justification, and a revisit date, matching the existing `D-NN` convention.
 
-**Default is DELETE, not PARK.** The allowlist currently holds 4,614 loc of
-"revisit Q1 2027" debt; a triage that grows it has not triaged anything.
+**Default is PARK on a short horizon** (decision, 2026-09-02). A module with no
+seam and no consumer is parked, not deleted, unless it fails the import smoke
+test or duplicates a wired module — those two are DELETE regardless.
+
+To keep PARK from becoming an indefinite holding pen, it carries a ratchet:
+
+- **Horizon is 90 days, not two quarters.** New entries read
+  `Parked — 2026-09-02; revisit 2026-12-01`. The existing `revisit Q1 2027`
+  entries (`berb.hyperagent`, `berb.i18n`, `berb.experimental`, 4,614 loc) are
+  re-dated to the same 2026-12-01 review so the whole list moves together.
+- **Two strikes and it goes.** A module that reaches its second review still
+  with no consumer and no seam is DELETED at that review. PARK buys one cycle
+  of benefit-of-the-doubt, not tenure.
+- **Every PARK names what would un-park it** — the stage, CLI surface or
+  config flag whose arrival would make it live. "Might be useful" is not a
+  trigger and does not qualify for PARK; that is a DELETE.
+
+Trade-off accepted with this choice: the ~25,239 loc decision surface will not
+shrink much in this pass — most of it moves from *undocumented* dead code to
+*documented, dated* dead code. That is a real gain in legibility and a deferred
+gain in size; the 2026-12-01 review is where the size gain lands.
 
 ---
 
@@ -170,24 +189,36 @@ A module is not wired because an `import` exists. All five must hold:
 - [ ] Fix parent-package edges in `check_reachability.py` (−723 loc of noise)
 - [ ] Resolve literal-string `import_module("...")` calls (−187 loc; unblocks `berb.quality`)
 - [ ] Cross-check the plugin registry for dynamically loaded modules
-- [ ] **Add a runtime trace**: `coverage.py` over `berb run` on the cheap CPU
-      config in `configs/`, emitting *executed* modules. Static reachability
-      cannot see reachable-but-never-invoked code — expect this to reveal a
-      *second* dead set hiding inside the 292 "reachable" modules
+- [ ] **Add a runtime trace**: `coverage.py` over `berb run`, emitting
+      *executed* modules. Confirmed available (decision, 2026-09-02). No
+      dedicated CPU config exists in `configs/` today — use a copy of
+      `configs/config.berb.example.yaml` with `experiment.mode: sandbox`
+      (CPU-local, no Docker/GPU) and a narrow topic, and commit it as
+      `configs/config.trace.yaml` so the trace is reproducible. API keys come
+      from the operator's environment, not the repo. Static reachability cannot
+      see reachable-but-never-invoked code — expect this to reveal a *second*
+      dead set hiding inside the 292 "reachable" modules
 - [ ] Wire `check_reachability.py` into `.github/workflows/ci.yml` with the
       corrected LOC ceiling — **it is not in CI today**, which is why this grew
 
-**W1 — Free wins (~2h).** The 25 untested + unreachable modules (6,917 loc).
-Highest confidence, lowest analysis cost. Default DELETE; anything surviving
-needs an explicit seam. Biggest: `compute_guard` (728), `traceable_citations`
-(693), `citation_engine` (673), `scite_mcp` (606), `cost_quality` (581),
-`progress` (562), `cross_project_learning` (542), `reproducibility` (498).
+**W1 — De-duplicate the experiment cluster (~6h).** *Promoted ahead of the
+free wins by decision, 2026-09-02.* `berb.experiment` is the largest surface
+(5,718 loc / 13 mods) *and* the one with the known five-way overlap. Pick one
+winner, dispose of the rest. This wave also decides `split_policy` and
+`hidden_eval`, which the separate RPM analysis flags as correctness-relevant —
+those are the strongest WIRE candidates in the repo, and the reason this wave
+goes first: it unblocks the downstream search work.
 
-**W2 — De-duplicate the experiment cluster (~6h).** `berb.experiment` is the
-largest surface (5,718 loc / 13 mods) *and* the one with the known five-way
-overlap. Pick one winner, dispose of the rest. This wave also decides
-`split_policy` and `hidden_eval`, which the separate RPM analysis flags as
-correctness-relevant — those are the strongest WIRE candidates in the repo.
+Note the interaction with default-PARK: the losers of the five-way overlap are
+duplicates of a wired module, which is an explicit DELETE case, not a PARK. This
+wave should therefore still shrink the surface.
+
+**W2 — Free wins (~2h).** The 25 untested + unreachable modules (6,917 loc).
+Highest confidence, lowest analysis cost. Under default-PARK most will park with
+a 2026-12-01 revisit; the ones that fail the import smoke test are DELETE now.
+Biggest: `compute_guard` (728), `traceable_citations` (693), `citation_engine`
+(673), `scite_mcp` (606), `cost_quality` (581), `progress` (562),
+`cross_project_learning` (542), `reproducibility` (498).
 
 **W3 — Capability packages (~10h).** `reasoning` (2,188), `literature` (2,181),
 `memory` (1,147), `knowledge` (765), `modes` (753), `self_evolve` (687).
@@ -214,7 +245,7 @@ and `docs/CODEBASE_MIND_MAP.md`; record the new CI ceiling.
 | **Wiring things because they exist, not because they're needed** | **high** | **high** | Q1 duplicate scan is mandatory and precedes seam design; default verdict is DELETE |
 | Deleting a module a user imports directly as a library | med | med | `git rm` in a single reviewable commit per wave; MIT-licensed and recoverable from history |
 | Tests give false confidence (81 tested dead modules) | high | med | Tests are evidence of intent only; W0's runtime trace is the evidence of *use* |
-| Triage stalls into a permanent PARK list | **high** | med | Every PARK needs an ID **and** a revisit date; a wave that only parks is a failed wave |
+| Triage stalls into a permanent PARK list | **high** (raised by the default-PARK decision) | med | 90-day horizon, not two quarters; two-strikes auto-DELETE at the second review; every PARK must name its un-park trigger; existing Q1 2027 entries re-dated to 2026-12-01 so nothing hides behind a longer clock |
 | W0 runtime trace needs API keys / a working run | med | med | Use the CPU test config in `configs/`; if unavailable, W0 ships static fixes only and the trace moves to its own task |
 | Churn collides with the in-flight RPM/search work | med | med | W2 sequenced to decide the experiment cluster *before* any RPM code lands |
 
@@ -233,12 +264,35 @@ and `docs/CODEBASE_MIND_MAP.md`; record the new CI ceiling.
 
 ---
 
-## 8. Open questions for the user
+## 8. Decisions taken (2026-09-02)
 
-1. **Deletion appetite.** Default-DELETE is what shrinks the number. Are you
-   comfortable deleting tested-but-unwired code, or should the default be PARK
-   with a shorter revisit horizon?
-2. **Is there a runnable cheap config** with credentials for the W0 runtime
-   trace, or should W0 ship static fixes only?
-3. **Wave ordering.** W2 (experiment cluster) is the one that unblocks the RPM
-   work. Prioritise it over W1's free wins?
+1. **Disposal default: PARK on a short horizon**, not DELETE. Encoded in §2 with
+   a 90-day revisit, a two-strikes auto-DELETE at the second review, and a
+   mandatory un-park trigger per entry. DELETE still applies unconditionally to
+   modules that fail the import smoke test and to duplicates of a wired module.
+2. **W0 runtime trace is in scope** — a runnable cheap config is available. W0
+   commits `configs/config.trace.yaml` (`experiment.mode: sandbox`, CPU-local)
+   so the trace is reproducible; credentials come from the operator's
+   environment.
+3. **Wave order: W1 is the experiment-cluster de-duplication**, promoted ahead
+   of the untested-module sweep (now W2), because it unblocks the downstream
+   search work and decides `split_policy` / `hidden_eval`.
+
+## 9. Prerequisite: CI is red on `main`
+
+Independent of this plan, `main` @ `9233e61` fails two CI checks (run
+[33582937415](https://github.com/georgehadji/Berb/actions/runs/33582937415)):
+
+- **Lint** — `ruff format --check` wants 353 of 596 files reformatted. The tree
+  was formatted by a ruff older than 0.15.8; the `ruff>=0.15,<0.16` pin at
+  `pyproject.toml:82` was not tight enough. The list includes `berb/cli.py`,
+  `berb/pipeline/runner.py` and `berb/pipeline/executor.py`, so this is the
+  whole tree, not neglected corners.
+- **Type Check** — `types-PyYAML` is missing from the `dev` extra
+  (`pyproject.toml:72-84`), producing 3 `Library stubs not installed for "yaml"`
+  errors. Nothing in `berb/` is wrong.
+
+W0 adds `scripts/check_reachability.py` to `ci.yml`. Adding a gate to a pipeline
+that is already failing produces a signal nobody reads, so **both fixes should
+land before W0** — each as its own PR (the reformat is mechanical but touches
+353 files; the stub package is a one-line change).
