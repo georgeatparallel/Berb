@@ -10,8 +10,14 @@ berb.hyperagent         # Parked — 2026-07-19; revisit Q1 2027
 berb.i18n               # Parked — 2026-07-19; revisit Q1 2027
 berb.experimental       # Parked — 2026-07-19; revisit Q1 2027
 
-# D-04: Parked finding reproduction. Needs curated known-findings corpus.
-berb.integrity.eval.finding_reproduction  # Parked — 2026-07-19; revisit when corpus exists
+# D-04: CLOSED 2026-09-01 — berb.integrity.eval.finding_reproduction deleted.
+# W7 (tasks/ars_integration_plan.md) resolved its parked status: the module's
+# "reproduction" was a random.random() coin flip against a hardcoded
+# difficulty table, never real execution, and its known-finding corpus
+# (KRAS mutations, Huntington's, ResNet, Transformer) measured something
+# unrelated to W7's actual need (recall of Berb's own defect-catching
+# checks). Deleted rather than curated a corpus for; see
+# tests/fixtures/seeded_defects.py for the corpus W7 actually built.
 
 # Other naturally unreachable or infrastructure modules.
 # These are reachable as tools/utilities but not called from pipeline entry points.

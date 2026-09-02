@@ -6,8 +6,8 @@ integrity gate policies to prevent AI-generated research fabrication.
 Sub-packages
 ------------
 eval
-    Hidden Consistent Evaluation (HCE) and finding reproduction tools.
-    Import via ``berb.integrity.eval.hidden_eval`` or ``berb.integrity.eval.finding_reproduction``.
+    Hidden Consistent Evaluation (HCE). Import via
+    ``berb.integrity.eval.hidden_eval``.
 """
 
 from __future__ import annotations
@@ -43,7 +43,10 @@ from .registry import (
     VerifiedEvidenceRegistry,
 )
 from .revision_guard import (
+    ClaimDriftCandidate,
     conserved_tokens,
+    find_claim_drift_candidates,
+    strength_advisory,
 )
 from .uncited import (
     SentenceRef,
@@ -57,6 +60,7 @@ __all__ = [
     "Anchor",
     "AnchorKind",
     "CheckId",
+    "ClaimDriftCandidate",
     "ClaimManifest",
     "ClaimRecord",
     "ClaimType",
@@ -71,11 +75,13 @@ __all__ = [
     "VerifiedEvidenceRegistry",
     "conserved_tokens",
     "detect_uncited",
+    "find_claim_drift_candidates",
     "gates",
     "is_uncited_assertion",
     "make_anchor",
     "parse_markers",
     "split_sentences",
+    "strength_advisory",
     "strip_markers",
     "verify_anchors",
 ]

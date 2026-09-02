@@ -51,7 +51,7 @@ Wired = reachable from `berb run` / `berb serve`. Verify with
 | `berb/experiment/` | Sandboxed code execution (local, Docker, SSH, Colab), tree search, validation | yes |
 | `berb/agents/` | Benchmark agent, code searcher, figure critique agent | yes |
 | `berb/review/` | 5-reviewer + Area Chair peer review ensemble | yes |
-| `berb/integrity/` | Claim manifests, evidence tracking, finding reproduction | partial — `integrity.eval.finding_reproduction` is unwired |
+| `berb/integrity/` | Claim manifests, evidence tracking, citation anchors, revision guards | yes |
 | `berb/memory/` | Embeddings, retrieval, shared memory coordination | partial — `memory.embeddings`/`memory.retriever` are used by `review/ensemble.py` (review-diversity scoring); `memory.shared_memory` has no wired caller |
 
 Unwired capabilities that the docs used to claim as live: SearXNG
