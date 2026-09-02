@@ -17,10 +17,11 @@ a real API key value, and only to build the one-shot config an
 result.
 
 Design note: the plan originally pointed at extending
-``berb/llm/extended_router.py``'s ``ExtendedRouter``, but that class's own
-``_create_provider`` returns a ``_MockProvider`` ("In production, this
-would create the actual provider instance") and is not imported anywhere
-under ``berb/pipeline/`` — it is not live infrastructure. The real,
+``berb/llm/extended_router.py``'s ``ExtendedRouter``. That module was
+deleted on 2026-09-02 (W4) precisely because it was never live
+infrastructure: its ``_create_provider`` returned a ``_MockProvider``
+("In production, this would create the actual provider instance") and
+nothing under ``berb/pipeline/`` imported it. The real,
 reachable constructor is ``berb.llm.client.LLMClient(LLMConfig)``, which
 needs ``berb.llm.client.LLMConfig`` (the client's own runtime config
 type — resolved rate-limit fields, real API key, etc.), a distinct

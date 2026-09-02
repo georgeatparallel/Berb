@@ -1,6 +1,6 @@
 # Dead-Code Research & Wiring Plan
 
-**Status:** IN PROGRESS — W0 complete; W1, W2 and W3 triaged (2026-09-02). Approved — disposal default, W0 scope and wave order settled 2026-09-02 (§8). Ready to execute from W0.
+**Status:** IN PROGRESS — W0–W4 complete (2026-09-02); W5 governance remains. Approved — disposal default, W0 scope and wave order settled 2026-09-02 (§8). Ready to execute from W0.
 **Date:** 2026-09-02
 **Scope:** the 119 modules / 30,763 loc that `scripts/check_reachability.py` reports
 as unreachable from `berb run` / `berb serve`.
@@ -314,10 +314,27 @@ self-improvement (`runner.py:20`), `knowledge/base.py` for knowledge persistence
       duplicate of a wired module. `self_evolve` is closest, and is held with
       its Hyperagents sibling `berb.hyperagent` (D-03) rather than split from it.
 
-**W4 — Infrastructure (~4h).** `llm` (2,838), `pipeline` (1,783),
-`optimization`, `learning`, `audit`, bridges. Mostly cost/routing machinery;
-`extended_router` is already documented in CLAUDE.md as a `_MockProvider` stub →
-DELETE candidate.
+**W4 — Infrastructure. ✅ TRIAGED 2026-09-02**
+(`tasks/w4_infrastructure_triage.md`). 20 modules / 6,426 loc.
+
+- [x] 18 PARK entries applied as allowlist group D-08
+- [x] 2 DELETEs: `llm/extended_router.py` (587) — `_create_provider` returned a
+      `_MockProvider`, and the wired router is `nadirclaw_router.py`; and
+      `pipeline/asyncio_utils.py` (144) — `runner.py` reimplements both its
+      functions inline (`asyncio.gather()` at `:359`, a `to_thread` stage
+      wrapper at `:494-497`). Neither was self-contained: eight `berb/reasoning/`
+      files carried docstring examples recommending the deleted router, and two
+      test modules consumed them.
+- [x] CI ratchet **10,977**, and the flag corrected — see below
+- [x] Surface fully accounted for: 13 modules / 10,977 loc remain, every one
+      blocked on a decision rather than on analysis
+
+**Ratchet drift, corrected 2026-09-02.** W1 set `--max-unreachable-loc` to
+25,990. W2 and W3 then edited only the explanatory comment above it, so CI
+enforced 25,990 for three commits while the comment claimed 20,378 and then
+17,403 — the gate passed trivially rather than holding at the tightened values
+those waves reported. The step has been rewritten so the flag is the single
+source of truth, with a note recording the failure mode.
 
 **W5 — Governance (~2h).** Rewrite `.reachability-allowlist` with the surviving
 PARK set, fresh `D-NN` IDs and revisit dates; update CLAUDE.md's subsystem table

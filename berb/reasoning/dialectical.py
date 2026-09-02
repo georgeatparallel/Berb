@@ -19,8 +19,8 @@ Usage:
 
     # Option 2: With router (recommended for cost optimization)
     from berb.reasoning import DialecticalMethod
-    from berb.llm.extended_router import ExtendedNadirClawRouter
-    router = ExtendedNadirClawRouter(...)
+    from berb.llm.smart_client import SmartLLMClient
+    router = SmartLLMClient(...)
     method = DialecticalMethod(router=router)
     result = await method.execute(context)
 
@@ -95,7 +95,7 @@ class DialecticalMethod(ReasoningMethod):
 
     def __init__(
         self,
-        router: Any = None,  # NEW: Primary (ExtendedNadirClawRouter)
+        router: Any = None,  # Primary: a cost-optimising router
         llm_client: Any = None,  # DEPRECATED: Fallback only
         **kwargs: Any,
     ):

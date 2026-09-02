@@ -153,7 +153,7 @@ class MultiPerspectiveMethod(ReasoningMethod):
 
         Args:
             router: LLM model router (provides get_provider_for_role).
-                    Use ExtendedNadirClawRouter for cost-optimized routing.
+                    Use a cost-optimising router (see berb/llm/nadirclaw_router.py).
             llm_client: LLM client for direct API calls (backward compatibility)
             parallel: Run perspectives in parallel (default: True)
             top_k: Number of top candidates to return (default: 2)
@@ -581,7 +581,7 @@ What is the most compelling case for this perspective, even if you disagree?"""
         if self.router is None or self._run_id is None:
             return
 
-        # Check if router has cost tracking (ExtendedNadirClawRouter)
+        # Check if router has cost tracking
         if hasattr(self.router, "track_cost"):
             # Estimate tokens (rough estimate: 1 perspective ≈ 500 tokens)
             estimated_input = 500 * 4  # 4 perspectives

@@ -63,3 +63,24 @@ berb.knowledge.graph             # Parked — revisit 2026-12-01 (strike 1). Un-
 berb.self_evolve                 # Parked — revisit 2026-12-01 (strike 1). Un-park: Hyperagents adopted. Tied to berb.hyperagent (D-03) — same paper (arXiv:2603.19461), same decision. berb/evolution.py occupies the wired lessons-to-prompt-overlay seam today.
 berb.assessor                    # Parked — revisit 2026-12-01 (strike 1). Un-park: a venue-recommendation or paper-comparison stage. No pipeline stage references a venue or assessor today; multi-dimensional scoring alone is occupied by review/ensemble.py.
 
+# D-08: W4 infrastructure (tasks/w4_infrastructure_triage.md, 2026-09-02).
+# Same two-strikes rule as D-05..D-07.
+berb.literature.grey_search      # Parked — revisit 2026-12-01 (strike 1). Un-park: grey-literature search becoming a supported source. Documented as unwired in CLAUDE.md.
+berb.literature.searxng_client   # Parked — revisit 2026-12-01 (strike 1). Un-park: a SearXNG instance becoming a supported backend (docker-compose.searxng.yml exists but nothing imports the client).
+berb.literature.full_text        # Parked — revisit 2026-12-01 (strike 1). Un-park: full-text retrieval beyond the wired pdf_ingestor path.
+berb.literature.specification    # Parked — revisit 2026-12-01 (strike 1). Un-park: a stage consuming structured paper specifications.
+berb.literature.trends           # Parked — revisit 2026-12-01 (strike 1). Un-park: trend analysis reaching a stage; berb/trends/ is the wired surface.
+berb.reasoner_bridge             # Parked — revisit 2026-12-01 (strike 1). Un-park: ARA reasoning patterns adopted. External-integration bridge with no in-repo consumer.
+berb.mnemo_bridge                # Parked — revisit 2026-12-01 (strike 1). Un-park: Mnemo Cortex memory adopted. Same shape as reasoner_bridge.
+berb.llm.batch_api               # Parked — revisit 2026-12-01 (strike 1). Un-park: batched LLM submission adopted for cost; smart_client + nadirclaw_router own the wired cost path.
+berb.llm.speculative_gen         # Parked — revisit 2026-12-01 (strike 1). Un-park: speculative execution adopted. Pairs with the parked llm/speculative_router.py — at most one should ever be un-parked.
+berb.llm.eval_dataset            # Parked — revisit 2026-12-01 (strike 1). Un-park: an LLM eval harness needing a dataset builder.
+berb.llm.structured_outputs      # Parked — revisit 2026-12-01 (strike 1). Un-park: provider-native structured output replacing the client's JSON-mode prompting.
+berb.llm.adaptive_temp           # Parked — revisit 2026-12-01 (strike 1). Un-park: adaptive temperature reaching the wired client.
+berb.pipeline.dependency_context # Parked — revisit 2026-12-01 (strike 1). Un-park: cross-task context injection for code generation; Stage 10 does not consume it today.
+berb.domains.experiment_schema   # Parked — revisit 2026-12-01 (strike 1). Un-park: a domain adapter needing the schema; the wired adapters do not.
+berb.writing.reporting_guidelines # Parked — revisit 2026-12-01 (strike 1). Un-park: ARS W8 landing its consumer (tasks/ars_integration_plan.md:432). Written clean 2026-09-01 and already in the mypy ratchet — recent deliberate work, not rot.
+berb.voice.commands              # Parked — revisit 2026-12-01 (strike 1). Un-park: voice input becoming a product feature. Pairs with the parked voice/synthesizer.py.
+berb.integrity.eval              # Parked — revisit 2026-12-01 (strike 1). Package shim; its only submodule hidden_eval.py is parked under D-05.
+berb.experiment.evaluators       # Parked — revisit 2026-12-01 (strike 1). Package shim; its only submodule convergence.py is parked under D-05.
+

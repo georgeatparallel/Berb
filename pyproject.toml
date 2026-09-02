@@ -229,7 +229,6 @@ module = [
     "berb.pipeline.registry",
     "berb.pipeline.resolution",
     "berb.pipeline.checkpoint",
-    "berb.pipeline.asyncio_utils",
     "berb.pipeline.contracts",
     "berb.pipeline.stages",
     "berb.adapters",

@@ -16,11 +16,10 @@ Usage:
     method = ResearchMethod(llm_client, search_client)
     result = await method.execute(context)
 
-    # Option 2: With router (recommended for cost optimization)
+    # Option 2: With a cost-optimising router
     from berb.reasoning import ResearchMethod
-    from berb.llm.extended_router import ExtendedNadirClawRouter
-    router = ExtendedNadirClawRouter(...)
-    method = ResearchMethod(router=router, search_client=search_client)
+    from berb.llm.smart_client import SmartLLMClient
+    method = ResearchMethod(router=SmartLLMClient(...))
     result = await method.execute(context)
 
     # Option 3: Registry singleton (recommended)
@@ -93,7 +92,7 @@ class ResearchMethod(ReasoningMethod):
 
     def __init__(
         self,
-        router: Any = None,  # NEW: Primary (ExtendedNadirClawRouter)
+        router: Any = None,  # Primary: a cost-optimising router
         llm_client: Any = None,  # DEPRECATED: Fallback only
         search_client: Any = None,
         max_iterations: int = 3,
