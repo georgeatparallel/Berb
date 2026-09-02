@@ -75,6 +75,10 @@ dev = [
     "pytest-cov>=4.0",
     "httpx>=0.24",
     "mypy>=1.15",
+    # Required by the Type Check CI job: berb/config.py, berb/llm/client.py,
+    # berb/literature/paper_mill.py and berb/writing/reporting_guidelines.py
+    # all `import yaml`, and mypy reports import-untyped without the stubs.
+    "types-PyYAML>=6",
     "scipy>=1.10",
     # Upper bound is deliberate: ruff's formatter changes between minor
     # versions, so an unpinned range lets CI fail on a version bump with no
