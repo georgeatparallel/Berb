@@ -1,6 +1,6 @@
 # ARS Integration Plan — Research-Integrity Capabilities for Berb
 
-**Status:** in progress. W0, W1 (fully, including producer), W2, W3, W4, W5 (fully, including stage 22 wiring), W6 (fully, Layer A + Layer B, both wired into stage 19) done. W8.2 (AI disclosure) done and wired. W8.1 (reporting checklists) mechanism done, stage-20 auto-selection deliberately deferred.
+**Status:** W0–W7 all done (W1 fully including producer; W5 fully including stage 22 wiring; W6 fully, both layers, wired into stage 19; W7 as a scoped slice — see its entry). W8.2 (AI disclosure) done and wired. W8.1 (reporting checklists) mechanism done; stage-20 auto-selection **permanently deferred by explicit user decision** (2026-09-02) — not "pending," closed. Remaining open items: the dual-license email (needs the user to send it) and the two named, out-of-scope gaps noted in W7's own entry.
 **Author:** planning pass, 2026-08-31
 **Source of ideas:** [academic-research-skills](https://github.com/Imbad0202/academic-research-skills) (ARS) v3.21.1 by Cheng-I Wu
 **Supersedes:** nothing. Complements `tasks/hardening_plan_2026-08-13.md` and `tasks/arch_hardening_plan.md`.
@@ -464,14 +464,38 @@
   (named two files that never existed, `model_router.py`/
   `model_cascade.py`; corrected to name the real routers and record that
   `extended_router.py` is not live infrastructure per the W5 finding).
-- Remaining: W7 (seeded-defect eval), W8.1 stage-20 wiring (needs
-  validated domain-aware guideline selection first), dual-license email
-  (needs the user to send it, not something an agent can dispatch),
-  `finding_reproduction` disposition (stays parked, depends on W7's
-  corpus), plus the plan's original stage-20 (`QUALITY_GATE`) blocking
-  touchpoint for uncited-assertion (stage 17 only ships advisory, as
-  asked) and the W1 producer's own open question above (unverified
-  against a real LLM).
+- 2026-09-02 — **W8.1 stage-20 wiring: closed, permanently deferred, by
+  explicit user decision.** Before attempting it, checked whether
+  "validated domain detection" (the condition this deferral was waiting
+  on) actually exists anywhere in Berb. It does not, in a way that
+  matters: `berb/pipeline/_domain.py`'s `_detect_domain` classifies
+  *academic subject* (ml/physics/chemistry/economics/mathematics/
+  engineering/biology) from the topic string, not *study design*
+  (randomized trial vs. observational vs. systematic review) — the axis
+  PRISMA/CONSORT/STROBE actually need. A "biology"-domain paper about
+  CRISPR editing in mice is not a CONSORT trial; there is no domain in
+  that classifier that reliably signals "this is a human clinical
+  trial". Also checked `IntegrityConfig.auto_strict_domains`
+  (`("biomedical", "clinical", "legal", "finance", "policy")`) as a
+  possible existing hook — it has no consumer anywhere under
+  `berb/pipeline/` and its values don't even match `_detect_domain`'s
+  domain IDs. Both are dead ends, not partial infrastructure to build
+  on. Making W8.1 safe would mean building a new study-design classifier
+  from scratch and then validating its precision — itself a W7-shaped
+  measurement problem — which is out of proportion to a "wire an
+  existing flag" task. Presented this finding and two options (build the
+  narrow opt-in classifier now, or close the deferral as final) to the
+  user; the user chose to close it. `berb/writing/reporting_guidelines.py`
+  stays exactly as W8.1 shipped it: mechanism-only, not called from any
+  stage. Revisit only if a concrete need for auto-selection (not just
+  "the plan mentions it") comes up.
+- Remaining: dual-license email (needs the user to send it, not
+  something an agent can dispatch), plus the two gaps W7's own entry
+  names as explicitly out of scope (three of the plan's five original
+  seeded-defect types have no existing deterministic checker; the LLM
+  tier's fixture has never been run against a real provider), and the
+  plan's original stage-20 (`QUALITY_GATE`) blocking touchpoint for
+  uncited-assertion (stage 17 only ships advisory, as asked).
 
 ---
 
