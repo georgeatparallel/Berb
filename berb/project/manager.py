@@ -121,9 +121,7 @@ class ProjectManager:
             "total": len(projects),
             "active": self._active,
             "by_status": _count_by(projects, "status"),
-            "projects": [
-                {"name": p.name, "status": p.status, "topic": p.topic} for p in projects
-            ],
+            "projects": [{"name": p.name, "status": p.status, "topic": p.topic} for p in projects],
         }
 
     # ── project switching ─────────────────────────────────────────
@@ -175,9 +173,7 @@ class ProjectManager:
         self._save_registry()
         return run_id
 
-    def finish_run(
-        self, name: str, status: str, metrics: dict[str, Any] | None = None
-    ) -> None:
+    def finish_run(self, name: str, status: str, metrics: dict[str, Any] | None = None) -> None:
         """Mark a project run as completed or failed."""
         proj = self.get(name)
         proj.status = status

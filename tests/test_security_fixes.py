@@ -479,12 +479,10 @@ class TestLLMRateLimiting:
         limiter = TokenBucketRateLimiter()
 
         # _lock must be a Lock immediately after construction — before any call
-        assert (
-            limiter._lock is not None
-        ), "_lock is None after __init__ — lazy init TOCTOU not fixed (BUG-004)."
-        assert isinstance(
-            limiter._lock, type(threading.Lock())
-        ), "_lock is not a threading.Lock."
+        assert limiter._lock is not None, (
+            "_lock is None after __init__ — lazy init TOCTOU not fixed (BUG-004)."
+        )
+        assert isinstance(limiter._lock, type(threading.Lock())), "_lock is not a threading.Lock."
 
     def test_rate_limiter_lock_identity_stable_under_concurrency(self):
         """REGRESSION BUG-004: concurrent _get_lock() calls must return identical object."""

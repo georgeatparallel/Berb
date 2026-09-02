@@ -28,9 +28,7 @@ def check_url_ssrf(url: str) -> str | None:
     except ValueError:
         # It's a domain name — resolve to IP
         try:
-            info = socket.getaddrinfo(
-                hostname, None, socket.AF_UNSPEC, socket.SOCK_STREAM
-            )
+            info = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
             addr = ipaddress.ip_address(info[0][4][0])
         except (socket.gaierror, OSError, IndexError):
             # Fail closed: if we cannot resolve the hostname we cannot verify

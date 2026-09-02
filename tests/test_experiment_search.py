@@ -161,9 +161,7 @@ def test_score_node_hard_gates() -> None:
     assert score_node(crashed_node, "accuracy").total == 0.0
 
     # Gate 2: Buggy plots
-    buggy_plots_node = JournalNode(
-        node_id="buggy-plots", returncode=0, is_buggy_plots=True
-    )
+    buggy_plots_node = JournalNode(node_id="buggy-plots", returncode=0, is_buggy_plots=True)
     assert score_node(buggy_plots_node, "accuracy").total == 0.0
 
 

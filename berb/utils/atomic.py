@@ -52,9 +52,6 @@ def replace_with_retry(
             if attempt == last_attempt:
                 raise
         except OSError as exc:
-            if (
-                getattr(exc, "winerror", None) != _SHARING_VIOLATION
-                or attempt == last_attempt
-            ):
+            if getattr(exc, "winerror", None) != _SHARING_VIOLATION or attempt == last_attempt:
                 raise
         time.sleep(base_delay_sec * (2**attempt))

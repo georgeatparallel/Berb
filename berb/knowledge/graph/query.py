@@ -46,9 +46,7 @@ class KnowledgeGraphQuery:
         for dataset in datasets:
             # Count methods applied to this dataset
             rels = self._graph.get_relations_for(dataset.id, direction="incoming")
-            method_rels = [
-                r for r in rels if r.relation_type == RelationType.USES_DATASET
-            ]
+            method_rels = [r for r in rels if r.relation_type == RelationType.USES_DATASET]
             if len(method_rels) < 2 and methods:
                 gaps.append(
                     f"Dataset '{dataset.name}' has only {len(method_rels)} "
@@ -131,16 +129,10 @@ class KnowledgeGraphQuery:
         outperforms_a = []
         outperforms_b = []
         for rel in self._graph.get_relations_for(entity_a.id, direction="outgoing"):
-            if (
-                rel.relation_type == RelationType.OUTPERFORMS
-                and rel.target_id == entity_b.id
-            ):
+            if rel.relation_type == RelationType.OUTPERFORMS and rel.target_id == entity_b.id:
                 outperforms_a.append(rel.attributes)
         for rel in self._graph.get_relations_for(entity_b.id, direction="outgoing"):
-            if (
-                rel.relation_type == RelationType.OUTPERFORMS
-                and rel.target_id == entity_a.id
-            ):
+            if rel.relation_type == RelationType.OUTPERFORMS and rel.target_id == entity_a.id:
                 outperforms_b.append(rel.attributes)
 
         comparison["a_outperforms_b"] = outperforms_a

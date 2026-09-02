@@ -130,9 +130,7 @@ class TestExperimentSandboxEntryPointValidation:
             result = sandbox.run_project(project, entry_point="/etc/passwd")
 
         assert result.returncode == -1
-        assert (
-            "relative" in result.stderr.lower() or "absolute" in result.stderr.lower()
-        )
+        assert "relative" in result.stderr.lower() or "absolute" in result.stderr.lower()
         mock_run.assert_not_called()
 
     # NOTE: A symlink integration test is not included here because the

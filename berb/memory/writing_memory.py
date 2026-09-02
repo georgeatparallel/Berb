@@ -77,9 +77,7 @@ class WritingMemory:
         Returns:
             The generated memory entry ID.
         """
-        content = (
-            f"Section: {section}\nStructure: {structure}\nQuality score: {score:.1f}/10"
-        )
+        content = f"Section: {section}\nStructure: {structure}\nQuality score: {score:.1f}/10"
         metadata = {
             "type": "structure_pattern",
             "section": section,

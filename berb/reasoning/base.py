@@ -310,9 +310,7 @@ class ReasoningMethod(ABC):
         """
         return {
             "name": self.name,
-            "type": (
-                self.method_type.value if hasattr(self, "method_type") else "unknown"
-            ),
+            "type": (self.method_type.value if hasattr(self, "method_type") else "unknown"),
             "description": self.description,
         }
 

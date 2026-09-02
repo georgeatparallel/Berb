@@ -315,9 +315,7 @@ class ExtendedNadirClawRouter(NadirClawRouter):
             current_provider.value not in [p.value for p in under_weight_providers]
             and under_weight_providers
         ):
-            alternative = self._find_alternative_model(
-                base_model, under_weight_providers, role
-            )
+            alternative = self._find_alternative_model(base_model, under_weight_providers, role)
             if alternative:
                 logger.debug(
                     f"Diversity routing: {model} → {alternative} "

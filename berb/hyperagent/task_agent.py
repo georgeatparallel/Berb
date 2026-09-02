@@ -242,9 +242,7 @@ def execute_task(task: str, **kwargs) -> dict:
                     "Docker not available — falling back to simulated execution. "
                     "This provides NO security guarantees."
                 )
-                return await self._execute_simulated(
-                    task, self.task_config.max_execution_time
-                )
+                return await self._execute_simulated(task, self.task_config.max_execution_time)
             raise NotImplementedError(
                 "TaskAgent._execute_task_code requires Docker (not found on PATH). "
                 "Set fallback_to_simulated=True for development use, or install Docker. "
@@ -296,9 +294,7 @@ def execute_task(task: str, **kwargs) -> dict:
         sandbox_cfg = DockerSandboxConfig(
             image=self.task_config.docker_image,
             memory_limit_mb=self.task_config.docker_memory_mb,
-            network_policy=(
-                "none" if self.task_config.docker_network_disabled else "setup_only"
-            ),
+            network_policy=("none" if self.task_config.docker_network_disabled else "setup_only"),
             fallback_to_sandbox=False,
         )
 
@@ -307,9 +303,7 @@ def execute_task(task: str, **kwargs) -> dict:
             loop = asyncio.get_event_loop()
             result = await loop.run_in_executor(
                 None,
-                lambda: sandbox.run(
-                    runner, timeout_sec=self.task_config.max_execution_time
-                ),
+                lambda: sandbox.run(runner, timeout_sec=self.task_config.max_execution_time),
             )
 
         if result.timed_out:
@@ -324,18 +318,12 @@ def execute_task(task: str, **kwargs) -> dict:
             return TaskResult(
                 task_id=task,
                 success=False,
-                error=(
-                    result.stderr[:500]
-                    if result.stderr
-                    else f"exit code {result.returncode}"
-                ),
+                error=(result.stderr[:500] if result.stderr else f"exit code {result.returncode}"),
                 metrics={"exit_code": float(result.returncode)},
             )
 
         # Parse the last JSON line from stdout
-        stdout_lines = [
-            line for line in result.stdout.splitlines() if line.strip().startswith("{")
-        ]
+        stdout_lines = [line for line in result.stdout.splitlines() if line.strip().startswith("{")]
         if stdout_lines:
             try:
                 output = json.loads(stdout_lines[-1])
@@ -358,11 +346,7 @@ def execute_task(task: str, **kwargs) -> dict:
             task_id=task,
             success=True,
             output={"raw_output": result.stdout[:2000]},
-            metrics={
-                k: float(v)
-                for k, v in result.metrics.items()
-                if isinstance(v, (int, float))
-            },
+            metrics={k: float(v) for k, v in result.metrics.items() if isinstance(v, (int, float))},
         )
 
     async def _execute_simulated(self, task: str, timeout: int) -> Any:
@@ -466,9 +450,7 @@ def execute_task(task: str, **kwargs) -> dict:
             if self.task_config.code_path:
                 self.task_config.code_path.write_text(new_code, encoding="utf-8")
 
-            logger.info(
-                "Code modification applied (version: %d)", self.state.code_version
-            )
+            logger.info("Code modification applied (version: %d)", self.state.code_version)
             return True
 
         except Exception as e:
@@ -504,9 +486,7 @@ def execute_task(task: str, **kwargs) -> dict:
             # Guard against memory exhaustion from huge inputs BEFORE any
             # further processing — keep this check first.
             if len(code) > 1_000_000:  # 1 MB hard limit
-                logger.warning(
-                    "Code rejected: size %d bytes exceeds 1 MB limit", len(code)
-                )
+                logger.warning("Code rejected: size %d bytes exceeds 1 MB limit", len(code))
                 return False
 
             # Syntax check
@@ -578,9 +558,7 @@ def execute_task(task: str, **kwargs) -> dict:
         return {
             "config": {
                 "code_path": (
-                    str(self.task_config.code_path)
-                    if self.task_config.code_path
-                    else None
+                    str(self.task_config.code_path) if self.task_config.code_path else None
                 ),
                 "max_execution_time": self.task_config.max_execution_time,
                 "sandbox_enabled": self.task_config.sandbox_enabled,

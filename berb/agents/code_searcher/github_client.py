@@ -93,9 +93,7 @@ class GitHubClient:
             time.sleep(wait)
         self._last_search_time = time.time()
 
-    def _get(
-        self, url: str, params: dict[str, str] | None = None
-    ) -> dict[str, Any] | None:
+    def _get(self, url: str, params: dict[str, str] | None = None) -> dict[str, Any] | None:
         """Make a GET request to the GitHub API."""
         import json
         import urllib.error
@@ -261,9 +259,7 @@ class GitHubClient:
 
         size = data.get("size", 0)
         if size > max_size_kb * 1024:
-            logger.debug(
-                "File too large (%d KB): %s/%s", size // 1024, repo_full_name, path
-            )
+            logger.debug("File too large (%d KB): %s/%s", size // 1024, repo_full_name, path)
             return None
 
         content = data.get("content", "")

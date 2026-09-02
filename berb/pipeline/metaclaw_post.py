@@ -73,9 +73,7 @@ def metaclaw_post_pipeline(
         )
         from berb.metaclaw_bridge.stage_skill_map import get_stage_config
 
-        feedback_store = SkillFeedbackStore(
-            run_dir / "evolution" / "skill_effectiveness.jsonl"
-        )
+        feedback_store = SkillFeedbackStore(run_dir / "evolution" / "skill_effectiveness.jsonl")
         for result in results:
             stage_num = int(getattr(result, "stage", 0))
             stage_name = {
@@ -110,13 +108,9 @@ def metaclaw_post_pipeline(
             status = str(getattr(result, "status", ""))
             success = "done" in status.lower()
             if active_skills:
-                record_stage_skills(
-                    feedback_store, stage_name, run_id, success, active_skills
-                )
+                record_stage_skills(feedback_store, stage_name, run_id, success, active_skills)
     except Exception as exc:
-        logger.warning(
-            "MetaClaw skill feedback recording failed (%s: %s)", type(exc).__name__, exc
-        )
+        logger.warning("MetaClaw skill feedback recording failed (%s: %s)", type(exc).__name__, exc)
 
     # 3. Signal session end (fire-and-forget)
     try:

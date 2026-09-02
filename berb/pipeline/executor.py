@@ -246,9 +246,7 @@ def execute_stage(
         # adapters.llm mirrors the same LLMClient passed as `llm=` above, for
         # the few call paths that thread the adapter bundle through instead.
         if _accepts_prompts:
-            result = executor(
-                stage_dir, run_dir, config, adapters, llm=llm, prompts=prompts
-            )
+            result = executor(stage_dir, run_dir, config, adapters, llm=llm, prompts=prompts)
         else:
             result = executor(stage_dir, run_dir, config, adapters, llm=llm)
     except Exception as exc:  # noqa: BLE001
@@ -291,11 +289,7 @@ def execute_stage(
     # --- MetaClaw PRM quality gate evaluation ---
     try:
         mc_bridge = getattr(config, "metaclaw_bridge", None)
-        if (
-            mc_bridge
-            and getattr(mc_bridge, "enabled", False)
-            and result.status == StageStatus.DONE
-        ):
+        if mc_bridge and getattr(mc_bridge, "enabled", False) and result.status == StageStatus.DONE:
             mc_prm = getattr(mc_bridge, "prm", None)
             if mc_prm and getattr(mc_prm, "enabled", False):
                 prm_stages = getattr(mc_prm, "gate_stages", (5, 9, 15, 20))
@@ -310,9 +304,7 @@ def execute_stage(
                             art_path = stage_dir / art
                             if art_path.exists() and art_path.is_file():
                                 try:
-                                    output_text += art_path.read_text(encoding="utf-8")[
-                                        :4000
-                                    ]
+                                    output_text += art_path.read_text(encoding="utf-8")[:4000]
                                 except (UnicodeDecodeError, OSError):
                                     pass
                         if output_text:

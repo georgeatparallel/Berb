@@ -274,12 +274,8 @@ class AcquirerAgent(BaseAgent):
             return self._make_result(False, error="No benchmarks selected")
 
         # 1. Generate data loading code
-        self.logger.info(
-            "Generating data loading code for %d datasets", len(benchmarks)
-        )
-        data_loader_code = self._strip_fences(
-            self._generate_data_loader(benchmarks, topic)
-        )
+        self.logger.info("Generating data loading code for %d datasets", len(benchmarks))
+        data_loader_code = self._strip_fences(self._generate_data_loader(benchmarks, topic))
 
         # 2. Generate baseline code
         baseline_code = ""

@@ -158,14 +158,11 @@ class BestFirstDiversePolicy:
             buggy_leaves = [
                 leaf
                 for leaf in leaves
-                if leaf.is_buggy is True
-                and _debug_depth(leaf, journal) < config.max_debug_depth
+                if leaf.is_buggy is True and _debug_depth(leaf, journal) < config.max_debug_depth
             ]
             if buggy_leaves:
                 selected = self._rng.choice(buggy_leaves)
-                logger.debug(
-                    "Policy: repair — selected buggy leaf %s", selected.node_id[:8]
-                )
+                logger.debug("Policy: repair — selected buggy leaf %s", selected.node_id[:8])
                 return selected
 
         # Rule 3: Exploit with diversity

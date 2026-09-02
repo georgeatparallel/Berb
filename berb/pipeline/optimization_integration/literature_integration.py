@@ -116,9 +116,7 @@ class LiteratureFSIntegration:
             Summary text or None
         """
         if not self._current_workspace:
-            logger.warning(
-                "get_summary called before organize_literature. No workspace loaded."
-            )
+            logger.warning("get_summary called before organize_literature. No workspace loaded.")
             return None
 
         return await self.processor.get_summary(
@@ -136,9 +134,7 @@ class LiteratureFSIntegration:
             List of claims or None
         """
         if not self._current_workspace:
-            logger.warning(
-                "get_claims called before organize_literature. No workspace loaded."
-            )
+            logger.warning("get_claims called before organize_literature. No workspace loaded.")
             return None
 
         return await self.processor.get_claims(

@@ -37,9 +37,7 @@ class _FakeLLM:
         return LLMResponse(content=self.response_text, model="fake")
 
 
-def _claim(
-    claim_id: str, verdict: ClaimVerdict = ClaimVerdict.NOT_CHECKED
-) -> ClaimRecord:
+def _claim(claim_id: str, verdict: ClaimVerdict = ClaimVerdict.NOT_CHECKED) -> ClaimRecord:
     return ClaimRecord(
         claim_id=claim_id,
         text=f"Claim {claim_id}: our method outperforms the baseline.",
@@ -50,18 +48,14 @@ def _claim(
 
 class TestAdjudicateClaim:
     def test_supported_verdict_parsed(self) -> None:
-        llm = _FakeLLM(
-            json.dumps({"status": "supported", "reasoning": "matches evidence"})
-        )
+        llm = _FakeLLM(json.dumps({"status": "supported", "reasoning": "matches evidence"}))
         result = adjudicate_claim(llm, _claim("c1"), "- accuracy: 0.95")
         assert result == Verdict(
             claim_id="c1", status=ClaimVerdict.SUPPORTED, reasoning="matches evidence"
         )
 
     def test_unsupported_verdict_parsed(self) -> None:
-        llm = _FakeLLM(
-            json.dumps({"status": "unsupported", "reasoning": "no such evidence"})
-        )
+        llm = _FakeLLM(json.dumps({"status": "unsupported", "reasoning": "no such evidence"}))
         result = adjudicate_claim(llm, _claim("c1"), "- accuracy: 0.50")
         assert result.status == ClaimVerdict.UNSUPPORTED
 
@@ -108,9 +102,7 @@ class TestAdjudicateClaims:
                 evidence_id=make_evidence_id(),
                 evidence_type=EvidenceType.METRIC,
                 value=0.95,
-                source=EvidenceSource(
-                    stage=14, artifact_path="experiment_summary.json"
-                ),
+                source=EvidenceSource(stage=14, artifact_path="experiment_summary.json"),
                 label="accuracy",
             )
         )

@@ -130,9 +130,7 @@ class PipelineDashboard:
             from rich.live import Live
 
             self.console = Console()
-            self.live = Live(
-                self._generate_table(), console=self.console, refresh_per_second=4
-            )
+            self.live = Live(self._generate_table(), console=self.console, refresh_per_second=4)
             self.live.start()
             self.start_time = datetime.now(UTC)
 

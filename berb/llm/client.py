@@ -166,9 +166,7 @@ class LLMConfig:
     api_key: str
     wire_api: str = "chat_completions"
     primary_model: str = "gpt-4o"
-    fallback_models: list[str] = field(
-        default_factory=lambda: ["gpt-4.1", "gpt-4o-mini"]
-    )
+    fallback_models: list[str] = field(default_factory=lambda: ["gpt-4.1", "gpt-4o-mini"])
     max_tokens: int = 4096
     temperature: float = 0.7
     max_retries: int = 3
@@ -186,9 +184,7 @@ class LLMConfig:
     rate_limit_tokens_per_minute: int = 90000  # Default: 90k tokens/min
     # P1 FIX: Multi-provider failover configuration
     provider_name: str = ""  # Current provider name (for logging)
-    fallback_providers: list[str] = field(
-        default_factory=list
-    )  # Provider names for failover
+    fallback_providers: list[str] = field(default_factory=list)  # Provider names for failover
     # OpenRouter-only: pins the upstream provider instead of OpenRouter's
     # default cross-provider load balancing. Shape matches OpenRouter's
     # `provider` request field: {"order": [...], "allow_fallbacks": bool}.
@@ -263,15 +259,11 @@ class TokenBucketRateLimiter:
 
             # Check if we have enough tokens
             if self._request_tokens < 1.0:
-                wait_time = (
-                    (1.0 - self._request_tokens) * 60.0 / self.requests_per_minute
-                )
+                wait_time = (1.0 - self._request_tokens) * 60.0 / self.requests_per_minute
                 return (False, wait_time)
 
             if tokens > 0 and self._token_tokens < tokens:
-                wait_time = (
-                    (tokens - self._token_tokens) * 60.0 / self.tokens_per_minute
-                )
+                wait_time = (tokens - self._token_tokens) * 60.0 / self.tokens_per_minute
                 return (False, wait_time)
 
             # Consume tokens
@@ -489,18 +481,14 @@ class LLMClient:
         return not any(model.startswith(prefix) for prefix in _NO_TEMPERATURE_MODELS)
 
     @classmethod
-    def from_rc_config(
-        cls, rc_config: Any, circuit_breaker_enabled: bool = True
-    ) -> LLMClient:
+    def from_rc_config(cls, rc_config: Any, circuit_breaker_enabled: bool = True) -> LLMClient:
         from berb.llm import PROVIDER_PRESETS
 
         provider = getattr(rc_config.llm, "provider", "openai")
         preset = PROVIDER_PRESETS.get(provider, {})
         preset_base_url = preset.get("base_url")
 
-        api_key = str(
-            rc_config.llm.api_key or os.environ.get(rc_config.llm.api_key_env, "") or ""
-        )
+        api_key = str(rc_config.llm.api_key or os.environ.get(rc_config.llm.api_key_env, "") or "")
 
         # Use preset base_url if available and config doesn't override
         base_url = rc_config.llm.base_url or preset_base_url or ""
@@ -537,9 +525,7 @@ class LLMClient:
         # providers don't have a cross-provider load balancer to pin.
         provider_routing: dict[str, Any] | None = None
         if provider == "openrouter":
-            routing_order = list(
-                getattr(rc_config.llm, "provider_routing_order", ()) or ()
-            )
+            routing_order = list(getattr(rc_config.llm, "provider_routing_order", ()) or ())
             if routing_order:
                 provider_routing = {
                     "order": routing_order,
@@ -628,7 +614,8 @@ class LLMClient:
         if self._rate_limiter:
             # Estimate tokens from message content (rough estimate)
             estimated_tokens = sum(
-                len(m.get("content", "")) // 4 for m in messages  # ~4 chars per token
+                len(m.get("content", "")) // 4
+                for m in messages  # ~4 chars per token
             )
             estimated_tokens += max_tokens or self.config.max_tokens
 
@@ -642,9 +629,7 @@ class LLMClient:
                         f"Consider reducing request frequency or increasing limits."
                     )
                 # Wait and retry
-                logger.warning(
-                    "Rate limit hit. Waiting %.1f seconds before retry.", wait_time
-                )
+                logger.warning("Rate limit hit. Waiting %.1f seconds before retry.", wait_time)
                 time.sleep(wait_time)
                 # Try again after waiting
                 allowed, _ = self._rate_limiter.acquire(estimated_tokens)
@@ -690,9 +675,7 @@ class LLMClient:
                 logger.warning("Model %s failed: %s. Trying next.", m, exc)
                 last_error = exc
 
-        raise RuntimeError(
-            f"All models failed. Last error: {last_error}"
-        ) from last_error
+        raise RuntimeError(f"All models failed. Last error: {last_error}") from last_error
 
     def preflight(self) -> tuple[bool, str]:
         """Quick connectivity check - one minimal chat call.
@@ -701,9 +684,7 @@ class LLMClient:
         Distinguishes: 401 (bad key), 403 (model forbidden),
                        404 (bad endpoint), 429 (rate limited), timeout.
         """
-        is_reasoning = any(
-            self.config.primary_model.startswith(p) for p in _NEW_PARAM_MODELS
-        )
+        is_reasoning = any(self.config.primary_model.startswith(p) for p in _NEW_PARAM_MODELS)
         min_tokens = 64 if is_reasoning else 1
         try:
             _ = self.chat(
@@ -892,10 +873,7 @@ class LLMClient:
             # prepend it (other providers cache automatically). Skipped for
             # the "responses" wire API — _messages_to_responses_input
             # stringifies content and would mangle a block list.
-            if (
-                cached_prefix
-                and self._normalize_wire_api(self.config.wire_api) != "responses"
-            ):
+            if cached_prefix and self._normalize_wire_api(self.config.wire_api) != "responses":
                 msgs = self._apply_cached_prefix(msgs, model, cached_prefix, cache_ttl)
 
             # MiniMax API requires temperature in [0, 1.0]
@@ -969,9 +947,7 @@ class LLMClient:
             req = urllib.request.Request(url, data=payload, headers=headers)
 
             try:
-                with urllib.request.urlopen(
-                    req, timeout=self.config.timeout_sec
-                ) as resp:
+                with urllib.request.urlopen(req, timeout=self.config.timeout_sec) as resp:
                     data = json.loads(resp.read())
             except (urllib.error.URLError, OSError) as exc:
                 # MetaClaw bridge: fallback to direct LLM if proxy unreachable
@@ -1077,29 +1053,19 @@ class LLMClient:
 
         existing_system = ""
         rest = msgs
-        if (
-            msgs
-            and msgs[0].get("role") == "system"
-            and isinstance(msgs[0].get("content"), str)
-        ):
+        if msgs and msgs[0].get("role") == "system" and isinstance(msgs[0].get("content"), str):
             existing_system = msgs[0]["content"]
             rest = msgs[1:]
 
         if not model_needs_explicit_cache_control(model):
             # Automatic-caching providers: no cache_control field needed —
             # just make the stable text part of the (auto-cached) prefix.
-            merged = cached_prefix + (
-                "\n\n" + existing_system if existing_system else ""
-            )
+            merged = cached_prefix + ("\n\n" + existing_system if existing_system else "")
             return [{"role": "system", "content": merged}] + rest
 
-        blocks = build_cached_system_blocks(
-            cached_prefix, existing_system or None, ttl=cache_ttl
-        )
+        blocks = build_cached_system_blocks(cached_prefix, existing_system or None, ttl=cache_ttl)
         if blocks is None:
-            merged = cached_prefix + (
-                "\n\n" + existing_system if existing_system else ""
-            )
+            merged = cached_prefix + ("\n\n" + existing_system if existing_system else "")
             return [{"role": "system", "content": merged}] + rest
         return [{"role": "system", "content": blocks}] + rest
 
@@ -1119,9 +1085,7 @@ class LLMClient:
         body["max_output_tokens"] = max_tokens
         return body
 
-    def _messages_to_responses_input(
-        self, messages: list[dict[str, str]]
-    ) -> list[dict[str, Any]]:
+    def _messages_to_responses_input(self, messages: list[dict[str, str]]) -> list[dict[str, Any]]:
         items: list[dict[str, Any]] = []
         for message in messages:
             role = str(message.get("role", "user") or "user")
@@ -1134,9 +1098,7 @@ class LLMClient:
             )
         return items
 
-    def _parse_chat_completions_response(
-        self, data: dict[str, Any], model: str
-    ) -> LLMResponse:
+    def _parse_chat_completions_response(self, data: dict[str, Any], model: str) -> LLMResponse:
         if "choices" not in data or not data["choices"]:
             raise ValueError(f"Malformed API response: missing choices. Got: {data}")
 
@@ -1168,14 +1130,10 @@ class LLMClient:
             cached_tokens=cached_tokens,
         )
 
-    def _parse_responses_response(
-        self, data: dict[str, Any], model: str
-    ) -> LLMResponse:
+    def _parse_responses_response(self, data: dict[str, Any], model: str) -> LLMResponse:
         output_items = data.get("output")
         if not isinstance(output_items, list) or not output_items:
-            raise ValueError(
-                f"Malformed responses API payload: missing output. Got: {data}"
-            )
+            raise ValueError(f"Malformed responses API payload: missing output. Got: {data}")
 
         chunks: list[str] = []
         finish_reason = str(data.get("status", "") or "")
@@ -1211,9 +1169,7 @@ class LLMClient:
         if isinstance(usage, dict):
             prompt_tokens = int(usage.get("input_tokens", 0) or 0)
             completion_tokens = int(usage.get("output_tokens", 0) or 0)
-            total_tokens = int(
-                usage.get("total_tokens", prompt_tokens + completion_tokens) or 0
-            )
+            total_tokens = int(usage.get("total_tokens", prompt_tokens + completion_tokens) or 0)
 
         return LLMResponse(
             content="".join(chunks),
@@ -1255,9 +1211,7 @@ def create_client_from_yaml(yaml_path: str | None = None) -> LLMClient:
             api_key=api_key,
             wire_api=llm_section.get("wire_api", "chat_completions"),
             primary_model=llm_section.get("primary_model", "gpt-4o"),
-            fallback_models=llm_section.get(
-                "fallback_models", ["gpt-4.1", "gpt-4o-mini"]
-            ),
+            fallback_models=llm_section.get("fallback_models", ["gpt-4.1", "gpt-4o-mini"]),
             max_retries=int(llm_section.get("max_retries", 3)),
         )
     )
@@ -1312,9 +1266,7 @@ class MultiProviderLLMClient:
 
         # Model IDs are not portable across providers (e.g. "deepseek-chat"
         # vs OpenRouter-style "deepseek/deepseek-v3.2"). Resolve per-provider.
-        model_overrides = dict(
-            getattr(rc_config.llm, "fallback_provider_models", ()) or ()
-        )
+        model_overrides = dict(getattr(rc_config.llm, "fallback_provider_models", ()) or ())
 
         for fallback_provider in fallback_providers:
             if fallback_provider == rc_config.llm.provider:

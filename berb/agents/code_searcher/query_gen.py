@@ -69,9 +69,7 @@ def generate_search_queries(
         3-5 search queries.
     """
     if llm is not None:
-        return _llm_generate(
-            topic, domain_name, core_libraries, specific_needs or [], llm
-        )
+        return _llm_generate(topic, domain_name, core_libraries, specific_needs or [], llm)
 
     return _heuristic_generate(topic, domain_name, core_libraries, specific_needs or [])
 

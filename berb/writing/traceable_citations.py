@@ -90,13 +90,11 @@ class CitationTraceReport(BaseModel):
         self.untraceable_citations = self.total_citations - self.traceable_citations
 
         if self.citations:
-            self.average_alignment = sum(
-                c.alignment_score for c in self.citations
-            ) / len(self.citations)
+            self.average_alignment = sum(c.alignment_score for c in self.citations) / len(
+                self.citations
+            )
 
-        self.low_alignment_citations = [
-            c for c in self.citations if c.alignment_score < 0.6
-        ]
+        self.low_alignment_citations = [c for c in self.citations if c.alignment_score < 0.6]
 
 
 @dataclass
@@ -524,9 +522,7 @@ class CitationTracer:
         claim_lower = claim.lower()
         source_lower = source_text.lower()
 
-        has_contradiction = any(
-            w in claim_lower or w in source_lower for w in contradiction_words
-        )
+        has_contradiction = any(w in claim_lower or w in source_lower for w in contradiction_words)
 
         # Adjust score
         if has_contradiction:

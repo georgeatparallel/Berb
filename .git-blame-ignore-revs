@@ -1,0 +1,8 @@
+# Revisions to skip in `git blame`. Enable locally with:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# Only whole-tree formatting commits belong here — never a commit that
+# changes behaviour.
+
+# style: run ruff format across berb/ and tests/, pin ruff exactly
+50df1bcd247e993376b532e7eb95e3b4ae4d32de

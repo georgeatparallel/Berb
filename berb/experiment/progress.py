@@ -187,9 +187,7 @@ class ExperimentProgressManager:
 
             # Check if stage passed
             if result.status == StageStatus.FAILED:
-                logger.error(
-                    f"Stage {stage_config.stage.value} failed: {result.error_message}"
-                )
+                logger.error(f"Stage {stage_config.stage.value} failed: {result.error_message}")
 
                 if self._config.early_stopping_enabled:
                     logger.info("Early stopping enabled, halting experiment")
@@ -198,9 +196,7 @@ class ExperimentProgressManager:
             # Check for diminishing returns
             if self._config.early_stopping_enabled:
                 if not self._check_improvement_threshold():
-                    logger.warning(
-                        "Improvement below threshold, considering early stop"
-                    )
+                    logger.warning("Improvement below threshold, considering early stop")
 
         # Generate final report
         return self._generate_report(experiment_config)
@@ -226,9 +222,7 @@ class ExperimentProgressManager:
                 ExperimentStage.INVESTIGATION
             ),
             "baseline_established": lambda: self._has_metric("baseline_score"),
-            "tuning_complete": lambda: self._has_completed_stage(
-                ExperimentStage.TUNING
-            ),
+            "tuning_complete": lambda: self._has_completed_stage(ExperimentStage.TUNING),
             "main_results_established": lambda: self._has_completed_stage(
                 ExperimentStage.AGENDA_EXECUTION
             ),
@@ -286,9 +280,9 @@ class ExperimentProgressManager:
 
                 # Check if iteration succeeded
                 if iteration_result.get("success", False):
-                    stage_result.success_rate = (
-                        stage_result.iterations_completed * 1.0
-                    ) / (iteration + 1)
+                    stage_result.success_rate = (stage_result.iterations_completed * 1.0) / (
+                        iteration + 1
+                    )
 
                     # Check exit criteria
                     if self._check_exit_criteria(stage_config):
@@ -427,9 +421,7 @@ class ExperimentProgressManager:
             return True
 
         # Compare last two completed stages
-        completed = [
-            r for r in self._stage_results if r.status == StageStatus.COMPLETED
-        ]
+        completed = [r for r in self._stage_results if r.status == StageStatus.COMPLETED]
         if len(completed) < 2:
             return True
 
@@ -443,17 +435,14 @@ class ExperimentProgressManager:
             return True
 
         avg_improvement = sum(
-            (curr_metrics[m] - prev_metrics[m]) / max(prev_metrics[m], 0.01)
-            for m in common_metrics
+            (curr_metrics[m] - prev_metrics[m]) / max(prev_metrics[m], 0.01) for m in common_metrics
         ) / len(common_metrics)
 
         return avg_improvement >= self._config.early_stopping_threshold
 
     def _generate_report(self, experiment_config: dict[str, Any]) -> ExperimentReport:
         """Generate final experiment report."""
-        completed_stages = [
-            r for r in self._stage_results if r.status == StageStatus.COMPLETED
-        ]
+        completed_stages = [r for r in self._stage_results if r.status == StageStatus.COMPLETED]
 
         # Aggregate metrics from all stages
         all_metrics: dict[str, list[float]] = {}
@@ -465,9 +454,7 @@ class ExperimentProgressManager:
                     all_metrics[key].append(value)
 
         # Calculate final metrics (average across stages)
-        final_metrics = {
-            key: sum(values) / len(values) for key, values in all_metrics.items()
-        }
+        final_metrics = {key: sum(values) / len(values) for key, values in all_metrics.items()}
 
         return ExperimentReport(
             experiment_id=str(datetime.now().timestamp()),
@@ -489,9 +476,7 @@ class ExperimentProgressManager:
                 1 for r in self._stage_results if r.status == StageStatus.COMPLETED
             ),
             "total_stages": len(self._config.stages),
-            "current_stage": (
-                self._stage_results[-1].stage.value if self._stage_results else None
-            ),
+            "current_stage": (self._stage_results[-1].stage.value if self._stage_results else None),
             "total_cost": self._total_cost,
             "total_duration_sec": sum(r.duration_sec for r in self._stage_results),
             "stage_results": [

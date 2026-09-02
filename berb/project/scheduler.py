@@ -41,9 +41,7 @@ class ProjectScheduler:
         if project_name in self._running:
             logger.info("Project %s already running", project_name)
             return
-        heapq.heappush(
-            self._queue, _QueueEntry(priority=priority, project_name=project_name)
-        )
+        heapq.heappush(self._queue, _QueueEntry(priority=priority, project_name=project_name))
         logger.info("Enqueued project %s with priority %d", project_name, priority)
 
     def dequeue(self) -> str | None:

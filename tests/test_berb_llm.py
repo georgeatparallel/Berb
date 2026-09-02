@@ -64,9 +64,7 @@ def _capture_raw_call(
 
     monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
     client = _make_client()
-    resp = client._raw_call(
-        model, [{"role": "user", "content": "hello"}], 123, 0.2, False
-    )
+    resp = client._raw_call(model, [{"role": "user", "content": "hello"}], 123, 0.2, False)
     request = captured["request"]
     assert isinstance(request, urllib.request.Request)
     data = request.data
@@ -124,9 +122,7 @@ def test_llm_client_initialization_stores_config():
 
 
 def test_llm_client_model_chain_is_primary_plus_fallbacks():
-    client = _make_client(
-        primary_model="gpt-5.4", fallback_models=["gpt-4.1", "gpt-4o"]
-    )
+    client = _make_client(primary_model="gpt-5.4", fallback_models=["gpt-4.1", "gpt-4o"])
     assert client._model_chain == ["gpt-5.4", "gpt-4.1", "gpt-4o"]
 
 
@@ -199,9 +195,7 @@ def test_raw_call_attributes_cost_to_ambient_stage(monkeypatch: pytest.MonkeyPat
         _capture_raw_call(monkeypatch, model="gpt-4o", response_data=response)
 
     assert tracker.by_stage() == {17: pytest.approx(tracker.total_usd())}
-    assert tracker.by_phase() == {
-        "G: Paper Writing": pytest.approx(tracker.total_usd())
-    }
+    assert tracker.by_phase() == {"G: Paper Writing": pytest.approx(tracker.total_usd())}
 
 
 def test_cost_attribution_does_not_leak_outside_its_block(
@@ -260,9 +254,7 @@ def test_parse_response_with_valid_payload_via_raw_call(
         "choices": [{"message": {"content": "hello"}, "finish_reason": "stop"}],
         "usage": {"prompt_tokens": 1, "completion_tokens": 2, "total_tokens": 3},
     }
-    _, parsed, _ = _capture_raw_call(
-        monkeypatch, model="gpt-5.2", response_data=response
-    )
+    _, parsed, _ = _capture_raw_call(monkeypatch, model="gpt-5.2", response_data=response)
     assert parsed.content == "hello"
     assert parsed.model == "gpt-5.2"
     assert parsed.prompt_tokens == 1
@@ -276,9 +268,7 @@ def test_parse_response_truncated_when_finish_reason_length(
         "choices": [{"message": {"content": "partial"}, "finish_reason": "length"}],
         "usage": {},
     }
-    _, parsed, _ = _capture_raw_call(
-        monkeypatch, model="gpt-5.2", response_data=response
-    )
+    _, parsed, _ = _capture_raw_call(monkeypatch, model="gpt-5.2", response_data=response)
     assert parsed.finish_reason == "length"
     assert parsed.truncated is True
 
@@ -287,9 +277,7 @@ def test_parse_response_missing_optional_fields_graceful(
     monkeypatch: pytest.MonkeyPatch,
 ):
     response = {"choices": [{"message": {"content": None}}]}
-    _, parsed, _ = _capture_raw_call(
-        monkeypatch, model="gpt-5.2", response_data=response
-    )
+    _, parsed, _ = _capture_raw_call(monkeypatch, model="gpt-5.2", response_data=response)
     assert parsed.content == ""
     assert parsed.prompt_tokens == 0
     assert parsed.completion_tokens == 0
@@ -511,9 +499,7 @@ def test_responses_wire_api_uses_responses_endpoint(monkeypatch: pytest.MonkeyPa
 
     monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
     client = _make_client(primary_model="gpt-4.1", wire_api="responses")
-    resp = client._raw_call(
-        "gpt-4.1", [{"role": "user", "content": "hello"}], 123, 0.2, False
-    )
+    resp = client._raw_call("gpt-4.1", [{"role": "user", "content": "hello"}], 123, 0.2, False)
 
     request = captured["request"]
     assert isinstance(request, urllib.request.Request)
@@ -524,9 +510,7 @@ def test_responses_wire_api_uses_responses_endpoint(monkeypatch: pytest.MonkeyPa
     assert isinstance(data, bytes)
     body = json.loads(data.decode("utf-8"))
     assert body["model"] == "gpt-4.1"
-    assert body["input"] == [
-        {"role": "user", "content": [{"type": "input_text", "text": "hello"}]}
-    ]
+    assert body["input"] == [{"role": "user", "content": [{"type": "input_text", "text": "hello"}]}]
     assert body["max_output_tokens"] == 123
     assert resp.content == "hello"
     assert resp.prompt_tokens == 11
@@ -557,9 +541,7 @@ def test_responses_wire_api_includes_temperature_for_gpt5_models(
 
     monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
     client = _make_client(primary_model="gpt-5.2", wire_api="responses")
-    _ = client._raw_call(
-        "gpt-5.2", [{"role": "user", "content": "hello"}], 55, 0.2, False
-    )
+    _ = client._raw_call("gpt-5.2", [{"role": "user", "content": "hello"}], 55, 0.2, False)
 
     request = captured["request"]
     assert isinstance(request, urllib.request.Request)
@@ -713,9 +695,7 @@ def test_raw_call_adds_json_mode_response_format(monkeypatch: pytest.MonkeyPatch
 
     monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
     client = _make_client()
-    _ = client._raw_call(
-        "gpt-5.2", [{"role": "user", "content": "json"}], 50, 0.1, True
-    )
+    _ = client._raw_call("gpt-5.2", [{"role": "user", "content": "json"}], 50, 0.1, True)
     request = captured["request"]
     assert isinstance(request, urllib.request.Request)
     data = request.data

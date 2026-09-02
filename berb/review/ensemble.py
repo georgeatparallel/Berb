@@ -328,14 +328,10 @@ class AutomatedReviewerEnsemble:
                     f"Generated {len(batch_reviews)} reviews via batch for {paper_path.name}"
                 )
                 return batch_reviews
-            logger.info(
-                "Batch review unavailable or timed out — falling back to per-call reviews"
-            )
+            logger.info("Batch review unavailable or timed out — falling back to per-call reviews")
 
         # Generate reviews in parallel
-        review_tasks = [
-            self._generate_review(persona, paper_text) for persona in self._personas
-        ]
+        review_tasks = [self._generate_review(persona, paper_text) for persona in self._personas]
 
         reviews = await asyncio.gather(*review_tasks)
 
@@ -363,9 +359,7 @@ class AutomatedReviewerEnsemble:
         if anthropic is None:
             return None
 
-        model = getattr(
-            getattr(self._llm_client, "config", None), "primary_model", None
-        )
+        model = getattr(getattr(self._llm_client, "config", None), "primary_model", None)
         if not model:
             return None
         client_config = self._llm_client.config
@@ -425,9 +419,7 @@ class AutomatedReviewerEnsemble:
             return None
 
         try:
-            raw_results = await asyncio.to_thread(
-                anthropic.fetch_batch_results, results_url
-            )
+            raw_results = await asyncio.to_thread(anthropic.fetch_batch_results, results_url)
         except Exception as exc:  # noqa: BLE001
             logger.warning("Batch result fetch failed: %s", exc)
             return None
@@ -471,24 +463,18 @@ Return ONLY the JSON object, no other text.
         to the honestly-marked "unavailable" placeholder on empty/malformed
         content. Shared by the sync per-call path and the batch path."""
         parsed = _safe_json_loads(content, None) if content else None
-        review_data = (
-            parsed if isinstance(parsed, dict) and "scores" in parsed else None
-        )
+        review_data = parsed if isinstance(parsed, dict) and "scores" in parsed else None
 
         if review_data is None:
             review_data = self._generate_unavailable_review(persona)
 
         try:
-            scores = {
-                ReviewDimension(k): int(v) for k, v in review_data["scores"].items()
-            }
+            scores = {ReviewDimension(k): int(v) for k, v in review_data["scores"].items()}
             decision = Decision(review_data["decision"])
         except (KeyError, ValueError):
             logger.warning("Reviewer '%s' returned malformed review data", persona.name)
             review_data = self._generate_unavailable_review(persona)
-            scores = {
-                ReviewDimension(k): int(v) for k, v in review_data["scores"].items()
-            }
+            scores = {ReviewDimension(k): int(v) for k, v in review_data["scores"].items()}
             decision = Decision(review_data["decision"])
 
         return Review(
@@ -563,9 +549,7 @@ Return ONLY the JSON object, no other text.
                         cache_ttl="1h",
                         max_tokens=persona.max_tokens,
                     )
-                content = (
-                    response.content if hasattr(response, "content") else str(response)
-                )
+                content = response.content if hasattr(response, "content") else str(response)
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Reviewer '%s' LLM call failed: %s", persona.name, exc)
 
@@ -585,9 +569,7 @@ Return ONLY the JSON object, no other text.
             "overall_score": 5.0,
             "decision": "weak_reject",
             "strengths": [],
-            "weaknesses": [
-                "Review unavailable — no LLM client configured or call failed."
-            ],
+            "weaknesses": ["Review unavailable — no LLM client configured or call failed."],
             "questions_for_authors": [],
             "confidence": 1,
             "detailed_feedback": (
@@ -647,9 +629,7 @@ Return ONLY the JSON object, no other text.
             MetaReview with aggregated decision
         """
         if len(reviews) != len(self._personas):
-            logger.warning(
-                f"Expected {len(self._personas)} reviews, got {len(reviews)}"
-            )
+            logger.warning(f"Expected {len(self._personas)} reviews, got {len(reviews)}")
 
         # Calculate score statistics
         overall_scores = [r.overall_score for r in reviews]
@@ -665,9 +645,7 @@ Return ONLY the JSON object, no other text.
             if r.reviewer_id in persona_by_id
         ]
         total_weight = sum(
-            persona_by_id[r.reviewer_id].weight
-            for r in reviews
-            if r.reviewer_id in persona_by_id
+            persona_by_id[r.reviewer_id].weight for r in reviews if r.reviewer_id in persona_by_id
         )
         avg_score = (
             sum(weighted_scores) / total_weight

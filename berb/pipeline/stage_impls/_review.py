@@ -423,9 +423,11 @@ def _execute_paper_revision(
                 drift_candidates = find_claim_drift_candidates(draft, revised)
                 drift_findings = strength_advisory(
                     drift_candidates,
-                    lambda prompt: _chat_with_prompt(
-                        _drift_llm, "", prompt, json_mode=True, max_tokens=256
-                    ).content,
+                    lambda prompt: (
+                        _chat_with_prompt(
+                            _drift_llm, "", prompt, json_mode=True, max_tokens=256
+                        ).content
+                    ),
                 )
                 revision_findings = revision_findings + drift_findings
             except Exception:  # noqa: BLE001 - advisory check must never fail the stage

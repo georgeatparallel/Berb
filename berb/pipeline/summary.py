@@ -36,12 +36,8 @@ def build_pipeline_summary(
         "run_id": run_id,
         "stages_executed": len(results),
         "stages_done": sum(1 for item in results if item.status == StageStatus.DONE),
-        "stages_blocked": sum(
-            1 for item in results if item.status == StageStatus.BLOCKED_APPROVAL
-        ),
-        "stages_failed": sum(
-            1 for item in results if item.status == StageStatus.FAILED
-        ),
+        "stages_blocked": sum(1 for item in results if item.status == StageStatus.BLOCKED_APPROVAL),
+        "stages_failed": sum(1 for item in results if item.status == StageStatus.FAILED),
         "degraded": any(r.decision == "degraded" for r in results),
         "from_stage": int(from_stage),
         "final_stage": int(results[-1].stage) if results else int(from_stage),
@@ -96,18 +92,14 @@ def _collect_content_metrics(run_dir: Path | None) -> dict[str, object]:
             if isinstance(vdata, dict):
                 summary = vdata.get("summary", vdata)
                 total = summary.get("total", 0) if isinstance(summary, dict) else None
-                verified = (
-                    summary.get("verified", 0) if isinstance(summary, dict) else None
-                )
+                verified = summary.get("verified", 0) if isinstance(summary, dict) else None
                 if isinstance(total, int | float) and isinstance(verified, int | float):
                     total_num = int(total)
                     verified_num = int(verified)
                     metrics["total_citations"] = total_num
                     metrics["verified_citations"] = verified_num
                     if total_num > 0:
-                        metrics["citation_verify_score"] = round(
-                            verified_num / total_num, 4
-                        )
+                        metrics["citation_verify_score"] = round(verified_num / total_num, 4)
         except (json.JSONDecodeError, OSError, TypeError, ValueError):
             pass
 

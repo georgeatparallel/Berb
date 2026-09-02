@@ -141,9 +141,7 @@ class TestSearXNGClient:
         mock_response = MagicMock()
         mock_response.raise_for_status.return_value = None
         mock_response.json.return_value = {
-            "results": [
-                {"title": "Result", "url": "https://example.com", "content": ""}
-            ],
+            "results": [{"title": "Result", "url": "https://example.com", "content": ""}],
             "search_time": 0.3,
         }
 
@@ -179,9 +177,7 @@ class TestSearXNGClient:
     async def test_health_check_failure(self, mock_http_client):
         """Test health check when server is down."""
         mock_client_instance = AsyncMock()
-        mock_client_instance.get = AsyncMock(
-            side_effect=Exception("Connection refused")
-        )
+        mock_client_instance.get = AsyncMock(side_effect=Exception("Connection refused"))
         mock_http_client.return_value = mock_client_instance
 
         client = SearXNGClient()

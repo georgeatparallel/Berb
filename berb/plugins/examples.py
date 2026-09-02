@@ -13,9 +13,7 @@ logger = logging.getLogger(__name__)
 class SecurityScannerPlugin(Plugin):
     """Security scanning plugin using Bandit and Safety."""
 
-    def __init__(
-        self, manifest: PluginManifest, config: dict[str, Any] | None = None
-    ) -> None:
+    def __init__(self, manifest: PluginManifest, config: dict[str, Any] | None = None) -> None:
         """Initialize security scanner plugin."""
         super().__init__(manifest, config)
         self._scan_results: list[dict[str, Any]] = []
@@ -83,9 +81,7 @@ class SecurityScannerPlugin(Plugin):
 
         return issues
 
-    def on_post_stage(
-        self, stage: int, stage_name: str, result: Any, **kwargs: Any
-    ) -> None:
+    def on_post_stage(self, stage: int, stage_name: str, result: Any, **kwargs: Any) -> None:
         """Scan generated code after code generation stage."""
         if stage_name == "code_generation":
             # Extract code from result if possible
@@ -98,9 +94,7 @@ class SecurityScannerPlugin(Plugin):
 class CitationManagerPlugin(Plugin):
     """Citation management plugin for Zotero/Mendeley integration."""
 
-    def __init__(
-        self, manifest: PluginManifest, config: dict[str, Any] | None = None
-    ) -> None:
+    def __init__(self, manifest: PluginManifest, config: dict[str, Any] | None = None) -> None:
         """Initialize citation manager."""
         super().__init__(manifest, config)
         self._zotero_api_key = config.get("zotero_api_key") if config else None
@@ -163,9 +157,7 @@ class CitationManagerPlugin(Plugin):
 class DjangoTemplatePlugin(Plugin):
     """Django experiment template plugin."""
 
-    def __init__(
-        self, manifest: PluginManifest, config: dict[str, Any] | None = None
-    ) -> None:
+    def __init__(self, manifest: PluginManifest, config: dict[str, Any] | None = None) -> None:
         """Initialize Django template plugin."""
         super().__init__(manifest, config)
         self._templates_applied = 0

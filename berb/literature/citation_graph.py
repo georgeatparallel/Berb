@@ -231,9 +231,7 @@ class CitationGraphEngine:
 
             to_process = next_level
 
-        logger.info(
-            f"Forward traversal complete: {len(all_citing)} papers at depth {depth}"
-        )
+        logger.info(f"Forward traversal complete: {len(all_citing)} papers at depth {depth}")
         return all_citing[:max_papers]
 
     async def traverse_backward(
@@ -290,9 +288,7 @@ class CitationGraphEngine:
 
             to_process = next_level
 
-        logger.info(
-            f"Backward traversal complete: {len(all_referenced)} papers at depth {depth}"
-        )
+        logger.info(f"Backward traversal complete: {len(all_referenced)} papers at depth {depth}")
         return all_referenced[:max_papers]
 
     async def find_citation_clusters(
@@ -330,9 +326,7 @@ class CitationGraphEngine:
 
         # Enhance cluster confidence with Bayesian updates if enabled
         if use_bayesian_confidence and llm_client:
-            clusters = await self._enhance_cluster_confidence_bayesian(
-                clusters, papers, llm_client
-            )
+            clusters = await self._enhance_cluster_confidence_bayesian(clusters, papers, llm_client)
 
         logger.info(f"Found {len(clusters)} clusters from {len(papers)} papers")
         return clusters
@@ -383,14 +377,11 @@ class CitationGraphEngine:
             prior_invalid = 1 - prior_confidence
 
             evidence_prob = (
-                likelihood_given_valid * prior_valid
-                + likelihood_given_invalid * prior_invalid
+                likelihood_given_valid * prior_valid + likelihood_given_invalid * prior_invalid
             )
 
             if evidence_prob > 0:
-                posterior_confidence = (
-                    likelihood_given_valid * prior_valid
-                ) / evidence_prob
+                posterior_confidence = (likelihood_given_valid * prior_valid) / evidence_prob
             else:
                 posterior_confidence = prior_confidence
 
@@ -558,11 +549,7 @@ class CitationGraphEngine:
             if len(cluster_papers) >= min_cluster_size:
                 # Extract keywords from cluster
                 keywords = self._extract_cluster_keywords(
-                    [
-                        self._cache.get(pid)
-                        for pid in cluster_papers
-                        if pid in self._cache
-                    ]
+                    [self._cache.get(pid) for pid in cluster_papers if pid in self._cache]
                 )
 
                 clusters.append(
@@ -648,9 +635,7 @@ class CitationGraphEngine:
 
         # Use multi-perspective analysis if enabled
         if use_multi_perspective and llm_client:
-            contradictions = await self._detect_contradictions_multiperspective(
-                papers, llm_client
-            )
+            contradictions = await self._detect_contradictions_multiperspective(papers, llm_client)
         else:
             # Fallback to simplified detection
             for i, paper1 in enumerate(papers):
@@ -713,9 +698,7 @@ class CitationGraphEngine:
 
                 # Run perspective analyses (simplified - would use full MP framework)
                 # For now, use keyword-based analysis as placeholder
-                method_analysis = self._analyze_perspective(
-                    paper1, paper2, "methodology"
-                )
+                method_analysis = self._analyze_perspective(paper1, paper2, "methodology")
                 results_analysis = self._analyze_perspective(paper1, paper2, "results")
                 interpretation_analysis = self._analyze_perspective(
                     paper1, paper2, "interpretation"
@@ -864,9 +847,7 @@ class CitationGraphEngine:
             evidence_parts.append("Different interpretations")
 
         return (
-            "; ".join(evidence_parts)
-            if evidence_parts
-            else "Multiple perspective contradictions"
+            "; ".join(evidence_parts) if evidence_parts else "Multiple perspective contradictions"
         )
 
     def _might_contradict(

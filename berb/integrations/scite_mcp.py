@@ -360,14 +360,10 @@ class SciteClient:
 
                 issues = []
                 if data.get("retracted_count", 0) > 0:
-                    issues.append(
-                        f"{data['retracted_count']} retracted references found"
-                    )
+                    issues.append(f"{data['retracted_count']} retracted references found")
 
                 if data.get("contradicted_count", 0) > 0:
-                    issues.append(
-                        f"{data['contradicted_count']} contradicted references found"
-                    )
+                    issues.append(f"{data['contradicted_count']} contradicted references found")
 
                 # Calculate overall score
                 total = data.get("total_references", 1)

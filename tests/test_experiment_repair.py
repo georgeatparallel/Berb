@@ -347,16 +347,10 @@ class TestRunRepairLoop:
         s14.mkdir()
         (s14 / "runs").mkdir()
 
-        conds = {
-            f"Cond{i}": {"metrics": {"accuracy": 70.0 + i}} for i in range(n_conditions)
-        }
+        conds = {f"Cond{i}": {"metrics": {"accuracy": 70.0 + i}} for i in range(n_conditions)}
         summary = {
             "condition_summaries": conds,
-            "best_run": {
-                "metrics": {
-                    f"Cond{i}/0/accuracy": 70.0 + i for i in range(n_conditions)
-                }
-            },
+            "best_run": {"metrics": {f"Cond{i}/0/accuracy": 70.0 + i for i in range(n_conditions)}},
             "metrics_summary": {"accuracy": {"mean": 70.5}},
         }
         (s14 / "experiment_summary.json").write_text(json.dumps(summary))
@@ -454,9 +448,7 @@ class TestRunRepairLoop:
             class experiment:
                 time_budget_sec = 2400
                 mode = "simulated"
-                repair = ExperimentRepairConfig(
-                    enabled=True, max_cycles=1, use_opencode=False
-                )
+                repair = ExperimentRepairConfig(enabled=True, max_cycles=1, use_opencode=False)
                 opencode = OpenCodeConfig(enabled=False)
                 metric_key = "primary_metric"
 
@@ -666,18 +658,14 @@ class TestRepairSummaryPromotion:
         assert rich_score > empty_score
 
         # Verify that the existing file is preserved (simulate what runner does)
-        existing = json.loads(
-            (s14 / "experiment_summary.json").read_text(encoding="utf-8")
-        )
+        existing = json.loads((s14 / "experiment_summary.json").read_text(encoding="utf-8"))
         existing_score = _summary_quality_score(existing)
         repair_score = _summary_quality_score(empty_summary)
 
         # runner.py should NOT overwrite because repair_score <= existing_score
         assert repair_score <= existing_score
         # The file should still contain the rich data
-        after = json.loads(
-            (s14 / "experiment_summary.json").read_text(encoding="utf-8")
-        )
+        after = json.loads((s14 / "experiment_summary.json").read_text(encoding="utf-8"))
         assert len(after["condition_summaries"]) == 3
 
     def test_richer_repair_does_overwrite(self, tmp_path):

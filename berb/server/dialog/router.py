@@ -119,9 +119,7 @@ async def _handle_results(text: str, session: ChatSession) -> str:
 
     latest = runs[0]
     if not latest.metrics:
-        return (
-            f"Run {latest.run_id} has no metrics yet (stage {latest.current_stage}/23)."
-        )
+        return f"Run {latest.run_id} has no metrics yet (stage {latest.current_stage}/23)."
 
     lines = [f"**Results for {latest.run_id}**:\n"]
     for key, value in latest.metrics.items():

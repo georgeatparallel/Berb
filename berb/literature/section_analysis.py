@@ -117,9 +117,7 @@ class PaperCitationProfile(BaseModel):
         if not self.section_distribution:
             return None
 
-        return PaperSection(
-            max(self.section_distribution, key=self.section_distribution.get)
-        )
+        return PaperSection(max(self.section_distribution, key=self.section_distribution.get))
 
 
 class CitationRecommendation(BaseModel):
@@ -298,9 +296,7 @@ class SectionCitationAnalyzer:
         section_summary = self._generate_section_summary(citations)
 
         # Generate recommendations
-        recommendations = await self._generate_recommendations(
-            citations, profiles, paper_text
-        )
+        recommendations = await self._generate_recommendations(citations, profiles, paper_text)
 
         analysis = SectionCitationAnalysis(
             paper_text=paper_text,
@@ -310,9 +306,7 @@ class SectionCitationAnalyzer:
             recommendations=recommendations,
         )
 
-        logger.info(
-            f"Analysis complete: {len(citations)} citations, {len(profiles)} unique papers"
-        )
+        logger.info(f"Analysis complete: {len(citations)} citations, {len(profiles)} unique papers")
 
         return analysis
 
@@ -363,9 +357,7 @@ class SectionCitationAnalyzer:
             if section_positions:
                 for i, (section, start_pos) in enumerate(section_positions):
                     end_pos = (
-                        section_positions[i + 1][1]
-                        if i + 1 < len(section_positions)
-                        else len(text)
+                        section_positions[i + 1][1] if i + 1 < len(section_positions) else len(text)
                     )
                     section_text = text[start_pos:end_pos]
                     sections.append((section, section_text, start_pos))
@@ -660,9 +652,7 @@ class SectionCitationAnalyzer:
             if primary_section:
                 # Calculate confidence based on distribution concentration
                 total = profile.total_citations
-                primary_count = profile.section_distribution.get(
-                    primary_section.value, 0
-                )
+                primary_count = profile.section_distribution.get(primary_section.value, 0)
                 confidence = primary_count / total if total > 0 else 0.5
 
                 # Find alternative sections
@@ -704,9 +694,7 @@ class SectionCitationAnalyzer:
         ]
 
         if primary_purpose != CitationPurpose.BACKGROUND:
-            reasoning_parts.append(
-                f"typically for {primary_purpose.value.replace('_', ' ')}"
-            )
+            reasoning_parts.append(f"typically for {primary_purpose.value.replace('_', ' ')}")
 
         reasoning_parts.append(f"({profile.total_citations} total citations)")
 

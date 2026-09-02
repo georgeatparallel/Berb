@@ -19,9 +19,7 @@ from berb.logging_setup import (
 
 def _record(name: str = "berb.pipeline.runner") -> logging.LogRecord:
     """Build a record through the live factory, as logging itself would."""
-    return logging.getLogRecordFactory()(
-        name, logging.INFO, __file__, 1, "hello", None, None
-    )
+    return logging.getLogRecordFactory()(name, logging.INFO, __file__, 1, "hello", None, None)
 
 
 def test_record_carries_run_id_and_stage() -> None:

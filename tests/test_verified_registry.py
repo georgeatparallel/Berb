@@ -63,9 +63,7 @@ class TestConditionResult:
         assert cr.std == 0.0
 
     def test_compute_stats_with_nan(self):
-        cr = ConditionResult(
-            name="test", per_seed_values={0: 10.0, 1: float("nan"), 2: 30.0}
-        )
+        cr = ConditionResult(name="test", per_seed_values={0: 10.0, 1: float("nan"), 2: 30.0})
         cr.compute_stats()
         assert cr.n_seeds == 2  # NaN excluded
         assert cr.mean == pytest.approx(20.0)
@@ -453,9 +451,9 @@ class TestFromRunDir:
 
         reg = VerifiedRegistry.from_run_dir(run_dir, best_only=True)
         assert reg.is_verified(0.7452)
-        assert not reg.is_verified(
-            0.6930
-        ), "Refinement log sandbox values should NOT be in best_only registry"
+        assert not reg.is_verified(0.6930), (
+            "Refinement log sandbox values should NOT be in best_only registry"
+        )
 
     def test_best_only_falls_back_to_stage14(self, tmp_path: Path) -> None:
         """best_only=True without best.json falls back to stage-14/ (non-versioned)."""

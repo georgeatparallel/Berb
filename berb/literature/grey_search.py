@@ -499,9 +499,7 @@ class GreyLiteratureSearch:
         self._biorxiv = BioRxivClient()
         self._medrxiv = MedRxivClient()
         self._clinical = ClinicalTrialsClient()
-        self._zenodo = ZenodoClient(
-            api_key=api_keys.get("zenodo") if api_keys else None
-        )
+        self._zenodo = ZenodoClient(api_key=api_keys.get("zenodo") if api_keys else None)
         self._ssrn = SSRNClient(api_key=api_keys.get("ssrn") if api_keys else None)
         self._dart = DARTEuropeClient()
 

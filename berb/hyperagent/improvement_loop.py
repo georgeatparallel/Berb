@@ -121,9 +121,7 @@ class ImprovementLoop:
 
             if modification.code_diff:
                 # Step 4: Apply modification to create new variant
-                success = hyperagent.task_agent.apply_code_modification(
-                    modification.code_diff
-                )
+                success = hyperagent.task_agent.apply_code_modification(modification.code_diff)
 
                 if success:
                     import uuid
@@ -153,9 +151,7 @@ class ImprovementLoop:
             meta_modification = await hyperagent.meta_agent.modify_self()
 
             if meta_modification.code_diff:
-                success = hyperagent.meta_agent.apply_self_modification(
-                    meta_modification.code_diff
-                )
+                success = hyperagent.meta_agent.apply_self_modification(meta_modification.code_diff)
 
                 if success:
                     import uuid
@@ -250,9 +246,7 @@ class ImprovementLoop:
 
         return scores
 
-    def _calculate_performance_delta(
-        self, evaluation_scores: dict[str, float]
-    ) -> float:
+    def _calculate_performance_delta(self, evaluation_scores: dict[str, float]) -> float:
         """
         Calculate performance delta from evaluation scores.
 
@@ -281,9 +275,7 @@ class ImprovementLoop:
 
         return delta
 
-    def store_variant(
-        self, hyperagent: Hyperagent, evaluation_scores: dict[str, float]
-    ) -> None:
+    def store_variant(self, hyperagent: Hyperagent, evaluation_scores: dict[str, float]) -> None:
         """
         Store current variant for comparison.
 
@@ -300,9 +292,7 @@ class ImprovementLoop:
             variant_id=state.variant_id,
             task_agent_code=hyperagent.task_agent.get_code(),
             meta_agent_code=(
-                hyperagent.meta_agent.get_modification_code()
-                if hyperagent.meta_agent
-                else None
+                hyperagent.meta_agent.get_modification_code() if hyperagent.meta_agent else None
             ),
             performance_score=evaluation_scores.get("overall", 0.0),
             evaluation_results=evaluation_scores,

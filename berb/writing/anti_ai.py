@@ -521,9 +521,7 @@ class AntiAIEncoder:
         for category, pattern_list in patterns.items():
             for pattern, explanation in pattern_list:
                 try:
-                    compiled.append(
-                        (re.compile(pattern, re.IGNORECASE), category, explanation)
-                    )
+                    compiled.append((re.compile(pattern, re.IGNORECASE), category, explanation))
                 except re.error as e:
                     logger.warning("Invalid regex pattern '%s': %s", pattern, e)
         return compiled
@@ -728,9 +726,7 @@ class AntiAIEncoder:
             if phrase.alternatives:
                 # Use first alternative (or empty string if first is "")
                 replacement = phrase.alternatives[0]
-                result = (
-                    result[: phrase.start_pos] + replacement + result[phrase.end_pos :]
-                )
+                result = result[: phrase.start_pos] + replacement + result[phrase.end_pos :]
         return result
 
     def _generate_suggestions(
@@ -744,9 +740,7 @@ class AntiAIEncoder:
         # Count categories
         category_counts: dict[PhraseCategory, int] = {}
         for phrase in phrases:
-            category_counts[phrase.category] = (
-                category_counts.get(phrase.category, 0) + 1
-            )
+            category_counts[phrase.category] = category_counts.get(phrase.category, 0) + 1
 
         # Generate suggestions based on patterns
         if category_counts.get(PhraseCategory.HEDGING, 0) > 3:
@@ -769,9 +763,7 @@ class AntiAIEncoder:
 
         if category_counts.get(PhraseCategory.TRANSITION, 0) > 4:
             if language == Language.ENGLISH:
-                suggestions.append(
-                    "Reduce mechanical transitions - let ideas flow naturally"
-                )
+                suggestions.append("Reduce mechanical transitions - let ideas flow naturally")
             else:
                 suggestions.append("减少机械化的过渡词 - 让思路自然流畅")
 
@@ -787,9 +779,7 @@ class AntiAIEncoder:
             )
 
         if category_counts.get(PhraseCategory.COPULA, 0) > 2:
-            suggestions.append(
-                "Replace 'serves as'/'stands as'/'boasts' with 'is'/'has'"
-            )
+            suggestions.append("Replace 'serves as'/'stands as'/'boasts' with 'is'/'has'")
 
         return suggestions
 
@@ -857,9 +847,7 @@ class AntiAIEncoder:
         word_count = len(text.split())
         sentences = [s for s in re.split(r"[.!?]+", text) if s.strip()]
         sentence_count = len(sentences)
-        avg_sentence_length = (
-            round(word_count / sentence_count, 2) if sentence_count else 0.0
-        )
+        avg_sentence_length = round(word_count / sentence_count, 2) if sentence_count else 0.0
         return {
             "word_count": word_count,
             "sentence_count": sentence_count,
@@ -915,9 +903,7 @@ class AntiAIEncoder:
             )
 
         dup_matches = _DUPLICATE_WORDS_RE.findall(text)
-        dup_count = len(
-            [d for d in dup_matches if d.lower() not in _DUPLICATE_WORDS_ALLOWLIST]
-        )
+        dup_count = len([d for d in dup_matches if d.lower() not in _DUPLICATE_WORDS_ALLOWLIST])
         if dup_count > 0:
             warnings.append(
                 f"Duplicate adjacent words found: {dup_count} instance(s) "
@@ -982,9 +968,7 @@ class AntiAIEncoder:
                 return category
         return "unknown"
 
-    def _generate_recommendations(
-        self, phrases: list[AIPhrases], threshold: float
-    ) -> list[str]:
+    def _generate_recommendations(self, phrases: list[AIPhrases], threshold: float) -> list[str]:
         """Generate human-readable recommendations from detected phrases."""
         _ = threshold
         counts: dict[str, int] = {}
@@ -993,9 +977,7 @@ class AntiAIEncoder:
 
         recommendations: list[str] = []
         if counts.get("cliche", 0) >= 2:
-            recommendations.append(
-                "Replace cliche phrases with specific, concrete language"
-            )
+            recommendations.append("Replace cliche phrases with specific, concrete language")
         if counts.get("hedging", 0) >= 3 or counts.get("filler", 0) >= 3:
             recommendations.append("Reduce hedging/filler language")
         if counts.get("redundancy", 0) >= 1:
@@ -1005,17 +987,11 @@ class AntiAIEncoder:
         if counts.get("significance", 0) >= 2:
             recommendations.append("Remove inflated significance/legacy language")
         if counts.get("attribution", 0) >= 1:
-            recommendations.append(
-                "Replace vague authority claims with specific citations"
-            )
+            recommendations.append("Replace vague authority claims with specific citations")
         if counts.get("copula", 0) >= 3:
-            recommendations.append(
-                "Replace 'serves as'/'stands as'/'boasts' with 'is'/'has'"
-            )
+            recommendations.append("Replace 'serves as'/'stands as'/'boasts' with 'is'/'has'")
         if not recommendations and phrases:
-            recommendations.append(
-                f"Review {len(phrases)} flagged phrase(s) for clarity"
-            )
+            recommendations.append(f"Review {len(phrases)} flagged phrase(s) for clarity")
         return recommendations
 
 
@@ -1089,9 +1065,7 @@ def create_encoder_from_env() -> AntiAIEncoder:
 
     language = os.environ.get("ANTI_AI_LANGUAGE", "en,zh").split(",")
     strictness = float(os.environ.get("ANTI_AI_STRICTNESS", 0.7))
-    preserve_meaning = (
-        os.environ.get("ANTI_AI_PRESERVE_MEANING", "true").lower() == "true"
-    )
+    preserve_meaning = os.environ.get("ANTI_AI_PRESERVE_MEANING", "true").lower() == "true"
     config = EncoderConfig(
         language=language, strictness=strictness, preserve_meaning=preserve_meaning
     )

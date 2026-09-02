@@ -68,9 +68,9 @@ class PipelinePreset(BaseModel):
     # ------------------------------------------------------------------
     # Experiment execution
     # ------------------------------------------------------------------
-    experiment_mode: Literal[
-        "simulated", "sandbox", "docker", "ssh_remote", "colab_drive"
-    ] = "docker"
+    experiment_mode: Literal["simulated", "sandbox", "docker", "ssh_remote", "colab_drive"] = (
+        "docker"
+    )
     experiment_frameworks: list[str] = Field(default_factory=list)
     validation_methods: list[str] = Field(default_factory=list)
 

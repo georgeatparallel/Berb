@@ -23,17 +23,12 @@ def test_trim_preserves_required_baselines_under_tight_budget() -> None:
         "ablations": [f"ablation_{i}" for i in range(7)],
     }
 
-    result = _trim_plan_to_condition_budget(
-        plan, time_budget_sec=3000, required_baseline_count=3
-    )
+    result = _trim_plan_to_condition_budget(plan, time_budget_sec=3000, required_baseline_count=3)
 
     assert set(result["baselines"]) >= {"resnet50", "vit_b16", "efficientnet"}
     assert len(result["proposed_methods"]) < 15
     assert (
-        len(result["baselines"])
-        + len(result["proposed_methods"])
-        + len(result["ablations"])
-        <= 8
+        len(result["baselines"]) + len(result["proposed_methods"]) + len(result["ablations"]) <= 8
     )
 
 
@@ -44,9 +39,7 @@ def test_trim_expands_budget_when_required_baselines_alone_exceed_it() -> None:
         "ablations": [],
     }
 
-    result = _trim_plan_to_condition_budget(
-        plan, time_budget_sec=3000, required_baseline_count=10
-    )
+    result = _trim_plan_to_condition_budget(plan, time_budget_sec=3000, required_baseline_count=10)
 
     # All 10 required baselines survive even though the nominal budget is 8.
     assert len(result["baselines"]) == 10
@@ -55,9 +48,7 @@ def test_trim_expands_budget_when_required_baselines_alone_exceed_it() -> None:
 def test_trim_no_op_when_under_budget() -> None:
     plan = {"baselines": ["a"], "proposed_methods": ["b"], "ablations": ["c"]}
 
-    result = _trim_plan_to_condition_budget(
-        plan, time_budget_sec=3000, required_baseline_count=1
-    )
+    result = _trim_plan_to_condition_budget(plan, time_budget_sec=3000, required_baseline_count=1)
 
     assert result["baselines"] == ["a"]
     assert result["proposed_methods"] == ["b"]
@@ -75,11 +66,7 @@ def test_trim_defaults_required_baseline_count_to_zero() -> None:
 
     result = _trim_plan_to_condition_budget(plan, time_budget_sec=3000)
 
-    total = (
-        len(result["baselines"])
-        + len(result["proposed_methods"])
-        + len(result["ablations"])
-    )
+    total = len(result["baselines"]) + len(result["proposed_methods"]) + len(result["ablations"])
     assert total <= 8
     assert len(result["baselines"]) >= 1
 
@@ -92,8 +79,6 @@ def test_trim_handles_dict_shaped_baselines() -> None:
         "ablations": [],
     }
 
-    result = _trim_plan_to_condition_budget(
-        plan, time_budget_sec=3000, required_baseline_count=2
-    )
+    result = _trim_plan_to_condition_budget(plan, time_budget_sec=3000, required_baseline_count=2)
 
     assert len(result["baselines"]) == 2

@@ -347,11 +347,7 @@ class ExperimentJournal:
         node = self._node_map.get(node_id)
         if node is None or node.parent_id is None:
             return []
-        return [
-            n
-            for n in self._nodes
-            if n.parent_id == node.parent_id and n.node_id != node_id
-        ]
+        return [n for n in self._nodes if n.parent_id == node.parent_id and n.node_id != node_id]
 
     def ancestors_of(self, node_id: str) -> list[JournalNode]:
         """All ancestors of a node, root-first."""
@@ -398,8 +394,7 @@ class ExperimentJournal:
             n
             for n in self._nodes
             if n.is_buggy is not True  # clean run (True=buggy, False/None=ok)
-            and n.is_buggy_plots
-            is not True  # valid plots (True=invalid, False/None=ok)
+            and n.is_buggy_plots is not True  # valid plots (True=invalid, False/None=ok)
         ]
 
     def best_node(
@@ -594,15 +589,13 @@ class ExperimentJournal:
             "phases": {
                 p: len(nodes)
                 for p, nodes in {
-                    phase: self.by_phase(phase)
-                    for phase in {n.phase for n in self._nodes}
+                    phase: self.by_phase(phase) for phase in {n.phase for n in self._nodes}
                 }.items()
             },
             "origins": {
                 o: len(nodes)
                 for o, nodes in {
-                    origin: self.by_origin(origin)
-                    for origin in {n.origin for n in self._nodes}
+                    origin: self.by_origin(origin) for origin in {n.origin for n in self._nodes}
                 }.items()
             },
             "total_cost_usd": round(sum(n.cost_usd for n in self._nodes), 6),

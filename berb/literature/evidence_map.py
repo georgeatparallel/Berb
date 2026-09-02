@@ -129,12 +129,8 @@ class ClaimEvidence(BaseModel):
     contrasting_count: int = 0
     key_supporters: list[StudyProfile] = Field(default_factory=list)
     key_challengers: list[StudyProfile] = Field(default_factory=list)
-    trend: Literal["stable", "growing_support", "declining", "emerging_debate"] = (
-        "stable"
-    )
-    recommended_hedging: Literal[
-        "assertive", "moderate", "cautious", "highly_hedged"
-    ] = "moderate"
+    trend: Literal["stable", "growing_support", "declining", "emerging_debate"] = "stable"
+    recommended_hedging: Literal["assertive", "moderate", "cautious", "highly_hedged"] = "moderate"
     bayesian_posterior: float = Field(default=0.5, ge=0.0, le=1.0)
 
     def to_dict(self) -> dict[str, Any]:
@@ -176,9 +172,7 @@ class EvidenceMap(BaseModel):
             evidence: ClaimEvidence object
         """
         self.claims[claim] = evidence
-        self.total_studies_analyzed += (
-            evidence.supporting_count + evidence.contrasting_count
-        )
+        self.total_studies_analyzed += evidence.supporting_count + evidence.contrasting_count
 
     def get_consensus_summary(self) -> dict[str, int]:
         """Get summary of consensus levels.
@@ -370,19 +364,13 @@ class EvidenceConsensusMapper:
         hedging = self._recommend_hedging(consensus, posterior)
 
         # Get top studies
-        key_supporters = sorted(
-            supporting_studies, key=lambda s: s.weight(), reverse=True
-        )[:3]
-        key_challengers = sorted(
-            contrasting_studies, key=lambda s: s.weight(), reverse=True
-        )[:3]
+        key_supporters = sorted(supporting_studies, key=lambda s: s.weight(), reverse=True)[:3]
+        key_challengers = sorted(contrasting_studies, key=lambda s: s.weight(), reverse=True)[:3]
 
         return ClaimEvidence(
             claim=claim,
             consensus=consensus,
-            confidence=min(
-                1.0, len(all_studies) / 10.0
-            ),  # More studies = more confidence
+            confidence=min(1.0, len(all_studies) / 10.0),  # More studies = more confidence
             supporting_count=len(supporting_studies),
             contrasting_count=len(contrasting_studies),
             key_supporters=key_supporters,
@@ -423,9 +411,7 @@ class EvidenceConsensusMapper:
             ]
 
             # Check for term overlap
-            overlap = sum(
-                1 for term in claim_terms if term in title or term in findings
-            )
+            overlap = sum(1 for term in claim_terms if term in title or term in findings)
 
             if overlap >= 2:  # At least 2 term matches
                 # Determine study type (simplified)
@@ -651,14 +637,10 @@ class EvidenceConsensusMapper:
         # Split by recency (last 5 years vs older)
         recent_cutoff = current_year - 5
 
-        recent_support = sum(
-            1 for s in supporting if s.year and s.year >= recent_cutoff
-        )
+        recent_support = sum(1 for s in supporting if s.year and s.year >= recent_cutoff)
         old_support = len(supporting) - recent_support
 
-        recent_contrast = sum(
-            1 for s in contrasting if s.year and s.year >= recent_cutoff
-        )
+        recent_contrast = sum(1 for s in contrasting if s.year and s.year >= recent_cutoff)
         old_contrast = len(contrasting) - recent_contrast
 
         # Calculate recent ratio

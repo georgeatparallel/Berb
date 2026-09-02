@@ -733,9 +733,7 @@ class AcademicProsePolisher:
         for pattern, replacement, explanation in weak_phrases:
             for match in re.finditer(pattern, text, re.IGNORECASE):
                 # Check if near a citation
-                context = text[
-                    max(0, match.start() - 50) : min(len(text), match.end() + 50)
-                ]
+                context = text[max(0, match.start() - 50) : min(len(text), match.end() + 50)]
                 if re.search(r"\[\d+\]|\([A-Z][a-z]+,\s*\d{4}\)", context):
                     suggestions.append(
                         PolishSuggestion(
@@ -790,9 +788,7 @@ class AcademicProsePolisher:
         # Apply replacements (reverse order to preserve positions)
         polished = text
         for suggestion in applicable:
-            if suggestion.start_pos < len(polished) and suggestion.end_pos <= len(
-                polished
-            ):
+            if suggestion.start_pos < len(polished) and suggestion.end_pos <= len(polished):
                 polished = (
                     polished[: suggestion.start_pos]
                     + suggestion.suggested_replacement

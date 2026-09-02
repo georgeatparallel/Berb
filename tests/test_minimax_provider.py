@@ -140,9 +140,7 @@ class TestMiniMaxTemperatureClamping:
     ) -> dict[str, Any]:
         captured: dict[str, Any] = {}
 
-        def fake_urlopen(
-            req: urllib.request.Request, timeout: int
-        ) -> _DummyHTTPResponse:
+        def fake_urlopen(req: urllib.request.Request, timeout: int) -> _DummyHTTPResponse:
             captured["body"] = json.loads(req.data.decode("utf-8"))
             return _DummyHTTPResponse(
                 {"choices": [{"message": {"content": "ok"}, "finish_reason": "stop"}]}
@@ -188,18 +186,14 @@ class TestMiniMaxTemperatureClamping:
         client = LLMClient(config)
         captured: dict[str, Any] = {}
 
-        def fake_urlopen(
-            req: urllib.request.Request, timeout: int
-        ) -> _DummyHTTPResponse:
+        def fake_urlopen(req: urllib.request.Request, timeout: int) -> _DummyHTTPResponse:
             captured["body"] = json.loads(req.data.decode("utf-8"))
             return _DummyHTTPResponse(
                 {"choices": [{"message": {"content": "ok"}, "finish_reason": "stop"}]}
             )
 
         monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
-        client._raw_call(
-            "gpt-4o", [{"role": "user", "content": "hi"}], 1024, 1.5, False
-        )
+        client._raw_call("gpt-4o", [{"role": "user", "content": "hi"}], 1024, 1.5, False)
         assert captured["body"]["temperature"] == 1.5  # no clamping
 
 
@@ -239,18 +233,14 @@ class TestMiniMaxRawCall:
         client = _make_minimax_client()
         captured: dict[str, Any] = {}
 
-        def fake_urlopen(
-            req: urllib.request.Request, timeout: int
-        ) -> _DummyHTTPResponse:
+        def fake_urlopen(req: urllib.request.Request, timeout: int) -> _DummyHTTPResponse:
             captured["url"] = req.full_url
             captured["body"] = json.loads(req.data.decode("utf-8"))
             captured["headers"] = {k.lower(): v for k, v in req.headers.items()}
             return _DummyHTTPResponse(
                 {
                     "model": "MiniMax-M2.5",
-                    "choices": [
-                        {"message": {"content": "pong"}, "finish_reason": "stop"}
-                    ],
+                    "choices": [{"message": {"content": "pong"}, "finish_reason": "stop"}],
                     "usage": {
                         "prompt_tokens": 5,
                         "completion_tokens": 1,
@@ -278,9 +268,7 @@ class TestMiniMaxRawCall:
         client = _make_minimax_client()
         captured: dict[str, Any] = {}
 
-        def fake_urlopen(
-            req: urllib.request.Request, timeout: int
-        ) -> _DummyHTTPResponse:
+        def fake_urlopen(req: urllib.request.Request, timeout: int) -> _DummyHTTPResponse:
             captured["body"] = json.loads(req.data.decode("utf-8"))
             return _DummyHTTPResponse(
                 {"choices": [{"message": {"content": "{}"}, "finish_reason": "stop"}]}

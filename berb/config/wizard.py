@@ -228,9 +228,7 @@ class ConfigWizard:
             "project": {
                 "name": "my-research",
                 "mode": (
-                    "collaborative"
-                    if self.responses.get("collaborative_mode")
-                    else "full-auto"
+                    "collaborative" if self.responses.get("collaborative_mode") else "full-auto"
                 ),
             },
             "research": {
@@ -332,12 +330,12 @@ def generate_example_config(
         "domain": domain,
         "recommended_preset": wizard.DOMAIN_PRESETS.get(domain, "ml-conference"),
         "budget_level": budget,
-        "budget_preset": wizard.BUDGET_PRESETS.get(
-            budget, wizard.BUDGET_PRESETS["balanced"]
-        )["preset"],
-        "max_budget": wizard.BUDGET_PRESETS.get(
-            budget, wizard.BUDGET_PRESETS["balanced"]
-        )["max_budget"],
+        "budget_preset": wizard.BUDGET_PRESETS.get(budget, wizard.BUDGET_PRESETS["balanced"])[
+            "preset"
+        ],
+        "max_budget": wizard.BUDGET_PRESETS.get(budget, wizard.BUDGET_PRESETS["balanced"])[
+            "max_budget"
+        ],
         "llm_providers": providers or ["openai"],
         "collaborative_mode": False,
         "output_formats": ["pdf"],

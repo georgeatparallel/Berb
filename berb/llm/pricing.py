@@ -396,9 +396,7 @@ class PricingTable:
                 data = yaml.safe_load(f)
 
             if not isinstance(data, dict):
-                logger.warning(
-                    "Invalid pricing.yaml format: expected dict, got %s", type(data)
-                )
+                logger.warning("Invalid pricing.yaml format: expected dict, got %s", type(data))
                 return
 
             self.version = data.get("version", self.version)

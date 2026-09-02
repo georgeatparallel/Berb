@@ -254,9 +254,7 @@ class TestAtomicCacheWrite:
         def failing_replace(src, dst):
             raise OSError("Simulated rename failure")
 
-        with patch(
-            "berb.literature.cache.replace_with_retry", side_effect=failing_replace
-        ):
+        with patch("berb.literature.cache.replace_with_retry", side_effect=failing_replace):
             with pytest.raises(OSError):
                 put_cache("fail_q", "arxiv", 1, [{"id": "x"}], cache_base=tmp_path)
 

@@ -56,9 +56,7 @@ class MetricSpec:
 class EvaluationSpec:
     """Evaluation protocol for the experiment."""
 
-    primary_metric: MetricSpec = field(
-        default_factory=lambda: MetricSpec(name="primary_metric")
-    )
+    primary_metric: MetricSpec = field(default_factory=lambda: MetricSpec(name="primary_metric"))
     secondary_metrics: list[MetricSpec] = field(default_factory=list)
     protocol: str = ""
     statistical_test: str = "paired_t_test"
@@ -115,12 +113,8 @@ class UniversalExperimentPlan:
         This allows the universal plan to be consumed by existing pipeline
         code that expects the old key names.
         """
-        baselines = [
-            {"name": c.name, "description": c.description} for c in self.references
-        ]
-        proposed = [
-            {"name": c.name, "description": c.description} for c in self.proposed
-        ]
+        baselines = [{"name": c.name, "description": c.description} for c in self.references]
+        proposed = [{"name": c.name, "description": c.description} for c in self.proposed]
         ablations = [
             {
                 "name": c.name,
@@ -259,8 +253,6 @@ def from_legacy_exp_plan(
             primary_metric=MetricSpec(name=primary_name, direction=primary_direction),
         ),
         raw_yaml=(
-            yaml.dump(data, default_flow_style=False)
-            if isinstance(data, dict)
-            else str(plan_yaml)
+            yaml.dump(data, default_flow_style=False) if isinstance(data, dict) else str(plan_yaml)
         ),
     )

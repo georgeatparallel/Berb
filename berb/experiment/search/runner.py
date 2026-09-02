@@ -72,7 +72,9 @@ class BudgetGovernor:
         """
         elapsed = time.monotonic() - self._start_time
         if elapsed > self._config.budget_wallclock_sec:
-            return f"wallclock budget exceeded ({elapsed:.0f}s > {self._config.budget_wallclock_sec}s)"
+            return (
+                f"wallclock budget exceeded ({elapsed:.0f}s > {self._config.budget_wallclock_sec}s)"
+            )
 
         total_cost = self._cost_tracker.total_usd()
         if total_cost > self._config.budget_usd:
@@ -409,9 +411,7 @@ class SearchRunner:
         if hasattr(sandbox, "run"):
             return await sandbox.run()
 
-        raise NotImplementedError(
-            f"Sandbox {type(sandbox).__name__} does not support run()"
-        )
+        raise NotImplementedError(f"Sandbox {type(sandbox).__name__} does not support run()")
 
     def _parse_metrics_from_stdout(self, stdout: str) -> dict[str, float]:
         """Parse metrics from stdout fallback.
