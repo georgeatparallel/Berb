@@ -1,6 +1,6 @@
 # ARS Integration Plan — Research-Integrity Capabilities for Berb
 
-**Status:** in progress. W0, W1 (fully, including producer), W2, W3, W4, W6 Layer A done and wired. W5 policy layer done, stage wiring deferred. W8.2 (AI disclosure) done and wired. W8.1 (reporting checklists) mechanism done, stage-20 auto-selection deliberately deferred.
+**Status:** in progress. W0, W1 (fully, including producer), W2, W3, W4, W5 (fully, including stage 22 wiring), W6 Layer A done and wired. W8.2 (AI disclosure) done and wired. W8.1 (reporting checklists) mechanism done, stage-20 auto-selection deliberately deferred.
 **Author:** planning pass, 2026-08-31
 **Source of ideas:** [academic-research-skills](https://github.com/Imbad0202/academic-research-skills) (ARS) v3.21.1 by Cheng-I Wu
 **Supersedes:** nothing. Complements `tasks/hardening_plan_2026-08-13.md` and `tasks/arch_hardening_plan.md`.
@@ -266,6 +266,42 @@
     consent-gate truth table, cost-ceiling boundary cases, payload
     allowlist enforcement, verdict parsing incl. the injection-payload
     test), mypy/ruff/bandit clean.
+- 2026-09-01 — W5 stage wiring completed: `_run_cross_model_double_check()`
+  wired into **stage 22** (`EXPORT_PUBLISH`), called right after the
+  existing hallucination check when `cross_model_enabled(config.security)`;
+  writes `cross_model_findings.json` (only when non-empty) alongside the
+  stage's other artifacts.
+  - **Real bug found and fixed during wiring, not just a missing test**:
+    `berb.llm.client.LLMClient.__init__` reads `config.rate_limit_enabled`
+    unconditionally — it needs its own runtime `LLMConfig`
+    (`berb/llm/client.py`), not `berb.config.LlmConfig`'s declarative
+    YAML-section type that `resolve_adversarial_llm_config()` originally
+    returned. Passing the declarative type raised
+    `AttributeError: 'LlmConfig' object has no attribute 'rate_limit_enabled'`
+    — caught by the first real test run against `LLMClient`, not by
+    reasoning about the types in isolation.
+  - First fix attempt changed `resolve_adversarial_llm_config()` to return
+    the client's `LLMConfig` directly, resolving the real API key value
+    into it. That broke an existing security-property test,
+    `test_resolved_config_never_carries_the_key_value_itself` — the
+    declarative return type was deliberately kept secret-free so a
+    resolved config could be logged/passed around without leaking the key.
+    Correct fix: `resolve_adversarial_llm_config()` keeps its original
+    contract and return type (declarative, `api_key_env` only); a new
+    `build_adversarial_client_config()` resolves the real key into a
+    client `LLMConfig` *only* at the point `LLMClient` is actually
+    constructed in `_export.py`, never stored or logged.
+  - `_MAX_CROSS_MODEL_CHECKS = 5` bounds calls per run regardless of how
+    many issues the primary model flagged; cost-ceiling check happens
+    before every call, not just once.
+  - 8 new tests (`tests/test_stage_export_cross_model.py`): success path,
+    unparseable/failed adversarial-provider response, cost-ceiling cutoff,
+    the `_MAX_CROSS_MODEL_CHECKS` bound, same-family env rejection.
+    `python -m pytest tests/test_llm_cross_model.py
+    tests/test_stage_export_cross_model.py -q` → `43 passed`;
+    `python -m pytest tests/ -k "export or cross_model" -q` (broader
+    regression sweep) → `96 passed`; mypy and ruff clean on both changed
+    files.
 - 2026-09-01 — W8.2 (`berb/writing/disclosure.py`: `DisclosureFacts`,
   `generate_disclosure_statement`) landed **and wired**:
   - Generic, factual AI-usage disclosure statement built from what the
@@ -319,14 +355,14 @@
   (named two files that never existed, `model_router.py`/
   `model_cascade.py`; corrected to name the real routers and record that
   `extended_router.py` is not live infrastructure per the W5 finding).
-- Remaining: W5 stage wiring, W6 Layer B (claim-strength drift), W7
-  (seeded-defect eval), W8.1 stage-20 wiring (needs validated domain-aware
-  guideline selection first), dual-license email (needs the user to send
-  it, not something an agent can dispatch), `finding_reproduction`
-  disposition (stays parked, depends on W7's corpus), plus the plan's
-  original stage-20 (`QUALITY_GATE`) blocking touchpoint for
-  uncited-assertion (stage 17 only ships advisory, as asked) and the W1
-  producer's own open question above (unverified against a real LLM).
+- Remaining: W6 Layer B (claim-strength drift), W7 (seeded-defect eval),
+  W8.1 stage-20 wiring (needs validated domain-aware guideline selection
+  first), dual-license email (needs the user to send it, not something an
+  agent can dispatch), `finding_reproduction` disposition (stays parked,
+  depends on W7's corpus), plus the plan's original stage-20
+  (`QUALITY_GATE`) blocking touchpoint for uncited-assertion (stage 17
+  only ships advisory, as asked) and the W1 producer's own open question
+  above (unverified against a real LLM).
 
 ---
 
