@@ -133,8 +133,61 @@ option: it would look supported and do nothing.
 
 ---
 
-## 5. Applied in this pass
+## 5. Applied
 
-Only the PARK entries, which are additive and reversible. The two DELETEs and the three
-WIREs are proposals — the deletions because one is not self-contained (§4), the wirings
-because two of the three depend on work sequenced elsewhere.
+**Pass 1 (2026-09-02):** the 8 PARK entries, additive and reversible.
+
+**Pass 2 (2026-09-02), on approval:** `plot_verdict` wired and `auto_debugger` deleted.
+`experiment/code_agent` and its `cli_agent` config were explicitly left alone.
+
+### Correction: `plot_verdict` was not a drop-in
+
+§3 called it "the smallest, highest-value wiring in the wave" and a drop-in. That was
+wrong, and the error only surfaced on contact with the code.
+
+`verify_plots` was written against a critic exposing
+`async analyze_figure(figure_path=..., paper_context=...)`. **No such critic exists in
+this repository.** The only one — `agents/figure_agent/CriticAgent` — is synchronous and
+reviews figure *metadata* (scripts, metrics, rendered dicts), not an image path. So the
+consumer side of the gate was inert *and* the producer side had never been implemented.
+
+A true VLM critic was not buildable either: `berb/llm/` has no image support at all — no
+`image_url`, no base64 media blocks, nothing. Inventing one was out of scope for a
+de-duplication wave.
+
+What was buildable, and what shipped, is `PixelPlotCritic`: pure pixel analysis of the
+rendered file, no LLM and no network. It answers one question — did this candidate draw a
+real figure, or an empty canvas? — and abstains on everything else. That is the failure
+mode that actually matters during search: a run that exits 0 having rendered a blank
+chart previously scored normally.
+
+The logic already existed, privately, inside `CriticAgent._check_rendered_image`. It now
+lives in `plot_verdict.detect_pixel_defects` and `CriticAgent` delegates to it, so the
+search-time gate and the figure agent cannot drift apart.
+
+**Honest limits of what shipped:**
+
+- Only `critical` defects gate. Edge-clipping warnings are reported, never gating — they
+  false-positive on dense plots.
+- Pixel checks need Pillow. It reaches a real install transitively via `matplotlib` in
+  the `[all]` extra, so the gate is live exactly when plotting is possible, and fails
+  open otherwise. Pillow was added to the `dev` extra so CI runs the two tests that
+  would otherwise silently skip.
+- Fail-open at every step: no critic, no sandbox workdir, no images, or any raised
+  exception leaves `is_buggy_plots` as `None`. The only outcome that can change a score
+  is a critic actively judging a figure invalid.
+
+### `auto_debugger` deletion
+
+Removed with its two audit-regression test classes, plus a third
+(`TestComputeGuardDivisionByZero`) whose body was `pass` and whose own comment stated the
+code under test lived in `auto_debugger.py` — it asserted nothing and had no subject left.
+
+A prior independent audit reached the same verdict: `tasks/pat_scholarpeer_plan.md:1005`
+records both `self_correcting.py` and `auto_debugger.py` as "inferior to the already-wired
+LLM repair loops", noting `self_correcting._apply_fix` literally appends
+`f"# Applied fix: {fix}"` to the source rather than editing it.
+
+### Still not done, by instruction
+
+`experiment/code_agent.py` (836) and `config.experiment.cli_agent` remain in place. See §4.

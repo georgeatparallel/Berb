@@ -76,7 +76,7 @@
 | 3 | Vision-Based Figure Critique | `berb/vision/figure_generator.py` | ✅ Complete | +15-20% quality |
 | 4 | Experiment Progress Manager | `berb/experiment/progress.py` | ✅ Complete | +25% completeness |
 | 5 | Idea Quality Scoring | `berb/research/idea_scorer.py` | ✅ Complete | +30% conversion rate |
-| 6 | Automated Debugging | `berb/experiment/auto_debugger.py` | ✅ Complete | -30% failure rate |
+| 6 | Automated Debugging | `berb/pipeline/experiment_diagnosis.py` + `experiment_repair.py` | ✅ Wired | `experiment/auto_debugger.py` deleted 2026-09-02 (W1) — never had a caller |
 | 7 | Citation Verification Enhancement | `berb/pipeline/hallucination_detector.py` | ✅ Complete | 100% citation accuracy |
 | 8 | Cost-Quality Optimization Loop | `berb/optimization/cost_quality.py` | ✅ Complete | -20% cost |
 
@@ -447,7 +447,6 @@ berb/
 │   ├── sandbox.py          ✅ Local sandbox
 │   ├── docker_sandbox.py   ✅ Docker with GPU
 │   ├── progress.py         ✅ 4-stage progression (P4-OPT-004)
-│   ├── auto_debugger.py    ✅ Automated debugging (P4-OPT-006)
 │   └── self_correcting.py  ✅ Self-correcting simulation (P5-OPT-002)
 ├── literature/             ✅ Literature search
 │   ├── openalex.py         ✅ OpenAlex API

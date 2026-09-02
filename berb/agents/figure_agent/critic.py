@@ -389,57 +389,11 @@ class CriticAgent(BaseAgent):
     def _check_rendered_image(self, output_path: str) -> list[dict[str, str]]:
         """Check the rendered PNG for visual defects via pixel analysis.
 
-        Detects:
-        - Near-blank images (>95% white) indicating degenerate/empty charts
-        - Text/graphics touching image edges (possible label clipping)
+        Delegates to :func:`berb.experiment.plot_verdict.detect_pixel_defects`,
+        which owns this logic so the search-time figure gate and this agent
+        cannot drift apart. Detects near-blank images and content clipped at an
+        edge; fails open on a missing PIL/numpy or an unreadable file.
         """
-        issues: list[dict[str, str]] = []
-        try:
-            import numpy as np
-            from PIL import Image
+        from berb.experiment.plot_verdict import detect_pixel_defects
 
-            img = Image.open(output_path).convert("RGB")
-            arr = np.array(img)
-            h, w, _ = arr.shape
-
-            # Check 1: Near-blank image (>95% white pixels)
-            white_mask = np.all(arr > 250, axis=2)
-            white_ratio = float(np.mean(white_mask))
-            if white_ratio > 0.95:
-                issues.append(
-                    {
-                        "type": "rendered_quality",
-                        "severity": "critical",
-                        "message": (
-                            f"Image is {white_ratio:.0%} white — likely degenerate or empty chart"
-                        ),
-                    }
-                )
-
-            # Check 2: Non-white pixels touching edges (possible clipping)
-            margin = 3  # pixels
-            for edge_name, edge_slice in [
-                ("top", arr[:margin, :]),
-                ("bottom", arr[-margin:, :]),
-                ("left", arr[:, :margin]),
-                ("right", arr[:, -margin:]),
-            ]:
-                dark_mask = np.any(edge_slice < 80, axis=-1)
-                dark_ratio = float(np.mean(dark_mask))
-                if dark_ratio > 0.05:
-                    issues.append(
-                        {
-                            "type": "rendered_quality",
-                            "severity": "warning",
-                            "message": (
-                                f"Content touching {edge_name} edge ({dark_ratio:.0%} "
-                                f"dark pixels) — possible label/title clipping"
-                            ),
-                        }
-                    )
-        except ImportError:
-            logger.debug("PIL not available — skipping rendered image checks")
-        except Exception as exc:
-            logger.debug("Rendered image check failed: %s", exc)
-
-        return issues
+        return detect_pixel_defects(output_path)

@@ -207,7 +207,7 @@ The SearXNG case is the sharpest: the repo ships `docker-compose.searxng.yml` an
 | Module | LOC | What it does | Documented? |
 |---|---|---|---|
 | `self_correcting.py` | 835 | 7-agent self-correcting simulation loop | **yes — CLAUDE.md** |
-| `auto_debugger.py` | 775 | Error categorization + fix suggestion | **yes — CLAUDE.md** |
+| ~~`auto_debugger.py`~~ | 775 | Error categorization + fix suggestion | **DELETED 2026-09-02 (W1)** — superseded by the wired `pipeline/experiment_diagnosis.py` + `experiment_repair.py` |
 | `compute_guard.py` | 718 | Cost estimation, affordability gate, monitoring | — |
 | `progress.py` | 547 | Structured multi-stage experiment runner | — |
 | `evolutionary_search.py` | 540 | Design-proposal evolution | — |

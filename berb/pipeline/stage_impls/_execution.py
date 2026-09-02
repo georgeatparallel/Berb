@@ -471,6 +471,18 @@ def _execute_experiment_run_with_search(
 
     import asyncio
 
+    # Figure gate. scoring.score_node zeroes a candidate whose figures are
+    # invalid; without a critic here nothing ever sets that flag and the gate
+    # never fires. PixelPlotCritic needs no LLM and no network — it rejects
+    # only demonstrably degenerate output (a blank chart from a run that
+    # otherwise exited 0), so it is safe to enable by default alongside the
+    # rest of the figure agent.
+    figure_critic = None
+    if ec.figure_agent.enabled:
+        from berb.experiment.plot_verdict import PixelPlotCritic
+
+        figure_critic = PixelPlotCritic()
+
     runner = SearchRunner(
         config=search_cfg,
         policy=policy,
@@ -479,6 +491,7 @@ def _execute_experiment_run_with_search(
         cost_tracker=cost_tracker,
         metric_key=ec.metric_key,
         metric_maximize=maximize,
+        figure_critic=figure_critic,
     )
 
     # Run the search

@@ -56,10 +56,16 @@ Wired = reachable from `berb run` / `berb serve`. Verify with
 
 Unwired capabilities that the docs used to claim as live: SearXNG
 (`literature/searxng_client.py`), grey literature (`literature/grey_search.py`),
-multimodal figure extraction (`literature/multimodal_search.py`),
-self-correcting simulation (`experiment/self_correcting.py`), and the
-auto-debugger (`experiment/auto_debugger.py`). All are present and tested but
-have no importer on any pipeline path — they do not run.
+multimodal figure extraction (`literature/multimodal_search.py`) and
+self-correcting simulation (`experiment/self_correcting.py`). These are present
+and tested but have no importer on any pipeline path — they do not run, and are
+parked in `.reachability-allowlist` with a revisit date.
+
+`experiment/auto_debugger.py` was deleted (2026-09-02, W1): post-failure repair
+is owned by the wired `pipeline/experiment_diagnosis.py` +
+`pipeline/experiment_repair.py`, which do classification, fix generation, re-run
+and re-assessment. `experiment/plot_verdict.py` is now wired — it produces the
+`is_buggy_plots` verdict that `experiment/search/scoring.py` gates on.
 
 ### Bridges (External Integrations)
 

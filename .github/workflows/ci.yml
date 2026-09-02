@@ -92,11 +92,11 @@ jobs:
           # module, delete it, or park it in .reachability-allowlist with an
           # ID and a revisit date (see tasks/dead_code_wiring_plan.md).
           #
-          # 25990 = 35212 unreachable LOC minus 9222 allowlisted, measured
-          # 2026-09-02 after W1 parked the experiment cluster. Was 30658 after
-          # W0 corrected the checker; parking tightens this number rather than
-          # loosening it, which is the point — a parked module is accounted
-          # for, and anything new is not.
+          # 24966 = 34188 unreachable LOC minus 9222 allowlisted, measured
+          # 2026-09-02. Was 30658 after W0 corrected the checker, 25990 once W1
+          # parked the experiment cluster, and 24966 once W1 deleted
+          # auto_debugger.py (-775) and wired plot_verdict.py (-249). Parking,
+          # deleting and wiring all tighten this number; nothing loosens it.
           #
           # W0 changed the number in both directions: crediting ancestor
           # packages and literal import_module() calls reclaimed 4611 LOC that

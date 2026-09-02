@@ -79,6 +79,11 @@ dev = [
     # berb/literature/paper_mill.py and berb/writing/reporting_guidelines.py
     # all `import yaml`, and mypy reports import-untyped without the stubs.
     "types-PyYAML>=6",
+    # Test-only: exercises berb/experiment/plot_verdict.py's pixel checks, which
+    # gate search candidates that render a blank chart. Pillow reaches a real
+    # install transitively via matplotlib in the [all] extra; without it here
+    # those two tests would silently skip in CI.
+    "Pillow>=10",
     "scipy>=1.10",
     # Exact pin, deliberately. The previous `>=0.15,<0.16` range was written
     # to stop formatter drift, but ruff changed `ruff format` output WITHIN
