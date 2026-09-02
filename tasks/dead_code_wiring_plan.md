@@ -1,6 +1,6 @@
 # Dead-Code Research & Wiring Plan
 
-**Status:** IN PROGRESS — W0 complete (2026-09-02). Approved — disposal default, W0 scope and wave order settled 2026-09-02 (§8). Ready to execute from W0.
+**Status:** IN PROGRESS — W0 complete, W1 triaged (2026-09-02). Approved — disposal default, W0 scope and wave order settled 2026-09-02 (§8). Ready to execute from W0.
 **Date:** 2026-09-02
 **Scope:** the 119 modules / 30,763 loc that `scripts/check_reachability.py` reports
 as unreachable from `berb run` / `berb serve`.
@@ -236,17 +236,38 @@ A module is not wired because an `import` exists. All five must hold:
 execution is weaker evidence than absence of an import*. Run several configs
 before deleting anything on the trace's say-so alone.
 
-**W1 — De-duplicate the experiment cluster (~6h).** *Promoted ahead of the
-free wins by decision, 2026-09-02.* `berb.experiment` is the largest surface
-(5,718 loc / 13 mods) *and* the one with the known five-way overlap. Pick one
-winner, dispose of the rest. This wave also decides `split_policy` and
-`hidden_eval`, which the separate RPM analysis flags as correctness-relevant —
-those are the strongest WIRE candidates in the repo, and the reason this wave
-goes first: it unblocks the downstream search work.
+**W1 — De-duplicate the experiment cluster. ✅ TRIAGED 2026-09-02**
+(`tasks/w1_experiment_cluster_triage.md`). 19 modules / 7,240 loc.
 
-Note the interaction with default-PARK: the losers of the five-way overlap are
-duplicates of a wired module, which is an explicit DELETE case, not a PARK. This
-wave should therefore still shrink the surface.
+Outcome: the "five competing search mechanisms" framing was mis-drawn. There are
+**two occupied seams with three dead challengers**, not a five-way search
+overlap — post-failure repair (occupied by wired `experiment_diagnosis` +
+`experiment_repair`) and Stage-10 code generation (occupied twice, by
+`pipeline/code_agent` for the LLM path and `opencode_bridge` for external CLI).
+
+Two findings are defects rather than debt:
+
+- **`is_buggy_plots` is gated on but never set.** `search/scoring.py:104-108`
+  zeroes a candidate whose figures are invalid; nothing anywhere sets the field,
+  so a wired quality gate is permanently inert. `plot_verdict.verify_plots` is
+  the missing producer. → WIRE.
+- **The three-way split contract has no producer.** `contracts.SplitEvidence` is
+  wired and declares metric_select/rank/report; `admit()` and `GateConfig` have
+  zero callers outside `split_policy`. Nothing separates selection from
+  reporting, so no selection-bias correction is applied to reported metrics. →
+  WIRE, after a producer is built.
+
+- [x] 8 PARK entries applied to `.reachability-allowlist` as D-05, each naming
+      its un-park trigger; the three pre-existing D-03 entries re-dated to the
+      same 2026-12-01 review
+- [x] CI ratchet tightened 30,658 → **25,990** (parking tightens, never loosens)
+- [ ] 2 DELETEs proposed, not applied — `auto_debugger` (775) and
+      `experiment/code_agent` (836). The second is **not self-contained**: it is
+      the sole reader of `config.experiment.cli_agent`, so deleting it also
+      means removing `CliAgentConfig` from `berb/config.py` or the config keeps
+      advertising a backend that no longer exists.
+- [ ] 3 WIREs identified with seams; `plot_verdict` is a drop-in, `split_policy`
+      needs a producer, `react_agent` waits on the candidate-generator work
 
 **W2 — Free wins (~2h).** The 25 untested + unreachable modules (6,917 loc).
 Highest confidence, lowest analysis cost. Under default-PARK most will park with

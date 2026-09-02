@@ -6,9 +6,24 @@
 # deleted along with their test suites. Do not re-add without a caller.
 
 # D-03: Parked modules. No active roadmap evidence.
-berb.hyperagent         # Parked — 2026-07-19; revisit Q1 2027
-berb.i18n               # Parked — 2026-07-19; revisit Q1 2027
-berb.experimental       # Parked — 2026-07-19; revisit Q1 2027
+# Re-dated 2026-09-02: the plan's PARK policy is a 90-day horizon with a
+# two-strikes rule, so the whole list moves together on one review date rather
+# than some entries hiding behind a longer clock.
+berb.hyperagent         # Parked — 2026-07-19; revisit 2026-12-01 (strike 1)
+berb.i18n               # Parked — 2026-07-19; revisit 2026-12-01 (strike 1)
+berb.experimental       # Parked — 2026-07-19; revisit 2026-12-01 (strike 1)
+
+# D-05: W1 experiment-cluster triage (tasks/w1_experiment_cluster_triage.md,
+# 2026-09-02). Each entry names what would un-park it; a module still without a
+# consumer at its second review is deleted then, not parked again.
+berb.experiment.self_correcting          # Parked — revisit 2026-12-01 (strike 1). Un-park: a domain needing plan-act-reflect-revise beyond experiment_repair + physics_guards.
+berb.experiment.compute_guard            # Parked — revisit 2026-12-01 (strike 1). Un-park: a paid-compute/GPU mode needing pre-flight affordability checks; BudgetGovernor + cost_tracker cover the wired path today.
+berb.integrity.eval.hidden_eval          # Parked — revisit 2026-12-01 (strike 1). Un-park: HCE adopted for Stage-12 selection. Today its only importers are themselves dead.
+berb.experiment.progress                 # Parked — revisit 2026-12-01 (strike 1). Un-park: stage-level progress UI beyond dashboard/collector.
+berb.experiment.evolutionary_search      # Parked — revisit 2026-12-01 (strike 1). Un-park: Stage 9 wanting multi-candidate design evolution (a different object from SearchRunner's code search).
+berb.experiment.evaluators.convergence   # Parked — revisit 2026-12-01 (strike 1). Un-park: a search policy needing a convergence stop beyond BudgetGovernor.
+berb.experiment.harness_template         # Parked — revisit 2026-12-01 (strike 1). Un-park: used only by the parked cluster above.
+berb.pipeline.optimization_integration   # Parked — revisit 2026-12-01 (strike 1). The AIRA2 shims wire modules that are themselves parked, so they park as a group and un-park with whichever they serve.
 
 # D-04: CLOSED 2026-09-01 — berb.integrity.eval.finding_reproduction deleted.
 # W7 (tasks/ars_integration_plan.md) resolved its parked status: the module's
