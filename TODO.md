@@ -72,10 +72,10 @@
 | # | Feature | Module | Status | Impact |
 |---|---------|--------|--------|--------|
 | 1 | Automated Reviewer Ensemble | `berb/review/ensemble.py` | ✅ Complete | +20-25% acceptance prediction |
-| 2 | Parallelized Agentic Tree Search | `berb/research/tree_search.py` | ✅ Complete | +30-40% quality |
-| 3 | Vision-Based Figure Critique | `berb/vision/figure_generator.py` | ✅ Complete | +15-20% quality |
+| 2 | Parallelized Agentic Tree Search | `berb/research/tree_search.py` | Removed — `berb/research/` is now an empty directory, no importer | — |
+| 3 | Vision-Based Figure Critique | `berb/vision/figure_generator.py` | Removed — `berb/vision/` is now an empty directory; figure critique now lives at `berb/agents/figure_agent/` | — |
 | 4 | Experiment Progress Manager | `berb/experiment/progress.py` | ✅ Complete | +25% completeness |
-| 5 | Idea Quality Scoring | `berb/research/idea_scorer.py` | ✅ Complete | +30% conversion rate |
+| 5 | Idea Quality Scoring | `berb/research/idea_scorer.py` | Removed — `berb/research/` is now an empty directory, no importer | — |
 | 6 | Automated Debugging | `berb/pipeline/experiment_diagnosis.py` + `experiment_repair.py` | ✅ Wired | `experiment/auto_debugger.py` deleted 2026-09-02 (W1) — never had a caller |
 | 7 | Citation Verification Enhancement | `berb/pipeline/hallucination_detector.py` | ✅ Complete | 100% citation accuracy |
 | 8 | Cost-Quality Optimization Loop | `berb/optimization/cost_quality.py` | ✅ Complete | -20% cost |
@@ -90,8 +90,8 @@
 |---|---------|--------|--------|--------|
 | 1 | Multimodal Literature Agent | `berb/literature/multimodal_search.py` | ✅ Complete | +50% understanding |
 | 2 | Self-Correcting Simulation | `berb/experiment/self_correcting.py` | ✅ Complete | -50% failures |
-| 3 | Open-Ended Discovery Agent | `berb/research/open_ended_discovery.py` | ✅ Complete | +40% novelty |
-| 4 | Finding Reproduction | `berb/validation/finding_reproduction.py` | ✅ Complete | 100% validation |
+| 3 | Open-Ended Discovery Agent | `berb/research/open_ended_discovery.py` | Removed — file no longer exists under `berb/` (dead-code cleanup) | — |
+| 4 | Finding Reproduction | ~~`berb/validation/finding_reproduction.py`~~ (actually lived at `berb/integrity/eval/finding_reproduction.py`) | Deleted 2026-09-01 — was a `random.random()` coin flip, not real execution | — |
 | 5 | Memory-Centric Coordination | `berb/memory/shared_memory.py` | ✅ Complete | -30% redundancy |
 
 **Documentation:** `docs/P5_ENHANCEMENT_PLAN.md`
@@ -477,17 +477,25 @@ berb/
 │   ├── code_agent.py       ✅ Multi-phase code gen
 │   ├── paper_verifier.py   ✅ 4-layer citation check
 │   └── hallucination_detector.py ✅ Hallucination detection (P4-OPT-007)
-├── research/               ✅ Research exploration
-│   ├── tree_search.py      ✅ Parallelized search (P4-OPT-001)
-│   ├── idea_scorer.py      ✅ Quality scoring (P4-OPT-005)
-│   └── open_ended_discovery.py ✅ Open-ended discovery (P5-OPT-003)
 ├── review/                 ✅ Peer review
 │   └── ensemble.py         ✅ 5-reviewer ensemble (P4-OPT-002)
-├── validation/             ✅ Validation
-│   └── finding_reproduction.py ✅ Finding reproduction (P5-OPT-004)
-└── vision/                 ✅ Vision-based figures
-    └── figure_generator.py ✅ VLM critique (P5-OPT-003)
+└── agents/figure_agent/    ✅ Figure critique (VLM), 9 modules
+    └── critic.py           ✅ VLM critique
 ```
+
+(`berb/research/`, `berb/vision/`, and `berb/validation/` were listed here as of an earlier
+snapshot of this file. `research/` and `vision/` are now empty directories in the current
+tree — their code was removed in later dead-code cleanup passes; `open_ended_discovery.py`
+and `figure_generator.py` no longer exist anywhere under `berb/`, and figure-critique
+functionality now lives under `berb/agents/figure_agent/` instead. `berb/validation/` never
+existed under that name — `finding_reproduction.py` actually lived at
+`berb/integrity/eval/finding_reproduction.py`, and was deleted 2026-09-01
+(tasks/ars_integration_plan.md W7): its "reproduction" was a `random.random()` coin flip
+against a hardcoded difficulty table, not real execution. This whole "Implemented Modules"
+tree predates several other changes too — e.g. `berb/llm/model_router.py` and
+`model_cascade.py`, listed above, do not exist either; see CLAUDE.md's LLM Routing section
+for the current, corrected picture. Treat this tree as a historical snapshot, not current
+state.)
 
 ### **Planned Modules**
 

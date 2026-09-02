@@ -233,15 +233,16 @@ berb/
 │   ├── socratic.py            ← Socratic questioning
 │   └── registry.py            ← Reasoning registry
 │
-├── validation/                ← Validation suite (8 modules)
-│   ├── claim_confidence.py    ← Claim confidence scoring
-│   ├── claim_tracker.py       ← Claim tracking
-│   ├── claim_verification.py  ← Claim verification
-│   ├── finding_reproduction.py← Finding reproduction
-│   ├── hidden_eval.py         ← Hidden evaluation
-│   ├── manuscript_self_check.py← Manuscript self-check
-│   ├── reference_integrity.py ← Reference integrity
-│   └── source_alignment.py    ← Source alignment
+├── integrity/                  ← Research-integrity subsystem (anti-fabrication)
+│   ├── findings.py             ← Finding/Severity/CheckId vocabulary + gates()
+│   ├── anchors.py              ← Citation locator anchors (quote/page/section/paragraph)
+│   ├── claims.py               ← ClaimManifest/ClaimRecord/ClaimType/ClaimVerdict
+│   ├── evidence.py             ← EvidenceRecord/EvidenceSource/EvidenceType schema
+│   ├── registry.py             ← VerifiedEvidenceRegistry (evidence_registry.json)
+│   ├── revision_guard.py       ← Token conservation + claim-strength drift
+│   ├── uncited.py              ← Uncited-assertion detection
+│   └── eval/                   ← Evaluation held out of the agent-visible pipeline
+│       └── hidden_eval.py      ← Hidden Consistent Evaluation (HCE, three-way criteria split)
 │
 ├── assessor/                  ← Quality assessment
 │   ├── scorer.py              ← Quality scoring
@@ -432,8 +433,8 @@ berb/
 │   ├── operation_mode.py      ← Operation mode
 │   └── workflow.py            ← Workflow definitions
 │
-├── vision/                    ← VLM figure critique
-│   └── figure_generator.py    ← Figure generation
+│   (VLM figure critique lives under agents/figure_agent/, listed above —
+│   this used to be a separate top-level vision/ package; it no longer exists)
 │
 ├── voice/                     ← Voice interaction
 │   ├── commands.py            ← Voice commands
@@ -830,7 +831,7 @@ Coverage: 75%+
 | Reasoning methods | ✅ Done | 9 methods implemented |
 | Domain adapters | ✅ Done | 10 adapters + 25 domain profiles |
 | Physics/Chaos tools | ✅ Done | Symplectic integrators, chaos analysis |
-| Validation suite | ✅ Done | 8-module validation system |
+| Integrity subsystem | ✅ Done | `berb/integrity/` — findings, anchors, claims, evidence, registry, revision guard, uncited-assertion, HCE eval (see §2 above; the old 8-module `validation/` package this row described no longer exists) |
 | Knowledge graph | ✅ Done | Full graph with entities/relations |
 | Server/API | ✅ Done | HTTP API + WebSocket support |
 | UI/Web Dashboard | ✅ Done | Vite/React/TypeScript application |
@@ -986,7 +987,7 @@ from berb.presets import load_preset
 2. **Web UI** - `berb/ui/web/` (Vite/React/TypeScript)
 3. **Dashboard** - Real-time monitoring
 4. **Memory Vault** - Long-term memory bridge
-5. **Validation** - 8-module validation suite
+5. **Integrity** - `berb/integrity/` research-integrity subsystem (see §2 above)
 6. **Knowledge Graph** - Graph implementation
 7. **Domain Adapters** - 10 domain adapters
 8. **Physics/Chaos Tools** - Scientific computing
