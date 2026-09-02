@@ -47,7 +47,7 @@ Wired = reachable from `berb run` / `berb serve`. Verify with
 | Module | Responsibility | Wired |
 |--------|---------------|-------|
 | `berb/llm/` | LLM providers, model routing, cost optimization | partial — `client`, `smart_client`, `nadirclaw_router`, `cost_tracker`, `prompt_cache` are live. Batching (`batch_api`), speculative execution (`speculative_gen`), `adaptive_temp`, `structured_outputs` and `eval_dataset` are parked (D-08), so "caching, batching, cascading" overstates what runs |
-| `berb/literature/` | arXiv, OpenAlex, Semantic Scholar, novelty scoring, PDF ingestion, Zotero | partial — those six are live. Seven further modules (citation graph, structured notes, section analysis, evidence map, multimodal search, citation classifier, recency filter) are exported via `berb.literature.__all__` but reached by nothing internal; see the public-API question below |
+| `berb/literature/` | arXiv, OpenAlex, Semantic Scholar, novelty scoring, PDF ingestion, Zotero | yes — plus a public API surface (`berb.literature.__all__`) that is a supported contract, covered by `tests/test_public_api_contract.py` rather than by internal callers |
 | `berb/experiment/` | Sandboxed code execution (local, Docker, SSH, Colab), tree search, validation | partial — sandboxes, `search/` (Stage 12) and `validator` are live, and `plot_verdict` now feeds the figure gate. `compute_guard`, `progress`, `evolutionary_search`, `self_correcting`, `harness_template` and `evaluators/` are parked (D-05); `react_agent` and `split_policy` await wiring |
 | `berb/agents/` | Benchmark agent, code searcher, figure critique agent | yes |
 | `berb/review/` | 5-reviewer + Area Chair peer review ensemble | yes |
@@ -61,12 +61,17 @@ pipeline-reachable) and PARK (debt on a 90-day clock, two strikes then delete).
 Never raise the ceiling to make a build pass. Method and per-module verdicts:
 `tasks/dead_code_wiring_plan.md` and the `tasks/w*_triage.md` docs.
 
-**Open: is `from berb.literature import ...` a public contract?** Ten modules
-(6,316 loc, ~3,500 more transitively) are exported through package `__all__`
-lists and resolve correctly, but nothing internal imports them and
-`README.md`'s "Programmatic API" documents only `RCConfig`, `execute_pipeline`
-and `AdapterBundle`. Until that is settled they are neither parked nor deleted.
-See `tasks/w2_untested_triage.md` §4.
+**`from berb.literature import ...` is a supported public API** (decided
+2026-09-02). `scripts/check_reachability.py` treats the modules behind that
+package's `__all__` as entry points, so a published-but-internally-unused module
+is not reported dead. `tests/test_public_api_contract.py` asserts every exported
+name resolves — the contract is exempt from the dead-code gate, so that test is
+what stops it rotting. Adding a package to `PUBLIC_API_PACKAGES` is a product
+decision, not a way to quieten the gate.
+
+Still open: whether `from berb.llm import ...` is the same kind of contract.
+`presets`, `openrouter_adapter` and `openrouter_models_data` (4,366 loc) hang on
+that answer.
 
 Unwired capabilities that the docs used to claim as live: SearXNG
 (`literature/searxng_client.py`), grey literature (`literature/grey_search.py`),

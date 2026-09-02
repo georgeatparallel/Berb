@@ -93,20 +93,24 @@ jobs:
           # .reachability-allowlist with an ID and a revisit date
           # (tasks/dead_code_wiring_plan.md).
           #
-          # 10977 = 32995 unreachable LOC minus 22018 allowlisted, measured
-          # 2026-09-02 with W0-W4 complete. Everything still counted is blocked
-          # on a decision rather than on analysis: the exported public-API
-          # group, experiment/code_agent.py, and two modules pending wiring.
-          # See tasks/w4_infrastructure_triage.md section 4.
+          # 5888 = 27906 unreachable LOC minus 22018 allowlisted, measured
+          # 2026-09-02. `from berb.literature import ...` was confirmed a
+          # supported contract, so the modules behind that package's __all__
+          # are entry points now (PUBLIC_API_PACKAGES in the script), which took
+          # ~5k LOC of published-but-internally-unused API off the surface.
+          # tests/test_public_api_contract.py is what watches that API now that
+          # this gate does not.
           #
-          # Keep the number in the flag below and the number in this comment in
-          # step. They drifted once already: W1 set the flag to 25990, then W2
-          # and W3 edited only the comment, so CI enforced 25990 for three
-          # commits while the comment claimed 20378 and then 17403. The flag is
-          # what runs; the comment is only ever an explanation of it.
+          # Trajectory: 30658 (W0 corrected the checker) -> 25990 -> 24966 (W1)
+          # -> 20378 (W2) -> 17403 (W3) -> 10977 (W4) -> 5888. What remains is
+          # blocked on decisions, not analysis.
+          #
+          # Keep the flag and this comment in step. They drifted once already:
+          # W1 set the flag to 25990, then W2 and W3 edited only the comment, so
+          # CI enforced 25990 for three commits. The flag is what runs.
           python scripts/check_reachability.py \
             --allowlist .reachability-allowlist \
-            --max-unreachable-loc 10977
+            --max-unreachable-loc 5888
 
   type-check:
     name: Type Check

@@ -87,6 +87,62 @@ def _lazy_export_map(tree):
     return mapping or None
 
 
+def public_api_modules(all_mods, is_pkg):
+    """Modules backing a PACKAGE's declared public API.
+
+    ``from berb.literature import CitationClassifier`` is a supported contract
+    (decision, 2026-09-02), so the module behind an exported name is an entry
+    point in its own right — the same standing as berb.cli. Without this the
+    checker reports a published, working API as dead because no *internal*
+    caller happens to use it.
+
+    Deliberately narrow, twice over:
+
+    1. Only packages in ``PUBLIC_API_PACKAGES`` below. Whether a package's
+       surface is a supported contract is a product decision, not something to
+       infer from the presence of an ``__all__`` — five packages in this repo
+       declare one, and crediting all of them would un-park modules that were
+       triaged as dead on their merits. Adding a package here is that decision
+       being made; do not add one to quieten the gate.
+    2. Only ``__all__`` on the package ``__init__.py``, resolved through that
+       package's ``lazy_exports`` map. ``__all__`` on an ordinary module is
+       re-export hygiene, not a public surface.
+
+    tests/test_public_api_contract.py asserts every one of these names actually
+    resolves, so the contract cannot rot quietly now that it is exempt from the
+    dead-code gate.
+    """
+    # Approved contracts. `from berb.literature import ...` was confirmed as a
+    # supported public API on 2026-09-02; see tasks/w2_untested_triage.md #4.
+    PUBLIC_API_PACKAGES = ("berb.literature",)
+
+    roots = set()
+    for m, p in all_mods.items():
+        if m not in PUBLIC_API_PACKAGES or m not in is_pkg:
+            continue
+        try:
+            with open(p, encoding="utf-8", errors="ignore") as f:
+                tree = ast.parse(f.read())
+        except Exception:
+            continue
+        mapping = _lazy_export_map(tree)
+        if not mapping:
+            continue
+        exported = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Assign) and any(
+                getattr(t, "id", "") == "__all__" for t in node.targets
+            ):
+                if isinstance(node.value, (ast.List, ast.Tuple)):
+                    exported = {
+                        e.value for e in node.value.elts if isinstance(e, ast.Constant)
+                    }
+        for name, sub in mapping.items():
+            if name in exported and f"{m}.{sub}" in all_mods:
+                roots.add(f"{m}.{sub}")
+    return roots
+
+
 def _type_checking_imports(tree):
     """Collect import nodes that live inside an ``if TYPE_CHECKING:`` block.
 
@@ -203,8 +259,13 @@ def build_import_graph(all_mods, is_pkg, pkg_prefix):
     return edges
 
 
-def compute_reachable(all_mods, edges):
-    """BFS from entry points. Returns set of reachable module names."""
+def compute_reachable(all_mods, edges, is_pkg=None):
+    """BFS from entry points. Returns set of reachable module names.
+
+    Entry points are the CLI and server surfaces below, plus — when ``is_pkg``
+    is supplied — the modules backing each package's declared public API. See
+    :func:`public_api_modules`.
+    """
     ENTRY_PREFIX = (
         "berb.pipeline.stage_impls", "berb.server", "berb.api", "berb.mcp",
         "berb.benchmarks", "berb.ui", "berb.web", "berb.plugins", "berb.skills",
@@ -219,6 +280,8 @@ def compute_reachable(all_mods, edges):
         m for m in all_mods
         if m in ENTRY_EXACT or m.startswith(ENTRY_PREFIX)
     ]
+    if is_pkg is not None:
+        entry.extend(public_api_modules(all_mods, is_pkg))
 
     seen, q = set(), deque(entry)
     while q:
@@ -272,7 +335,7 @@ def main():
 
     all_mods, is_pkg = discover_modules(ROOT, PKG)
     edges = build_import_graph(all_mods, is_pkg, PKG)
-    seen = compute_reachable(all_mods, edges)
+    seen = compute_reachable(all_mods, edges, is_pkg)
 
     unreached = sorted(set(all_mods) - seen)
     total_loc = sum(loc_of(m, all_mods) for m in all_mods)

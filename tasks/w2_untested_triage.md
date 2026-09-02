@@ -94,7 +94,23 @@ The PARK entries (allowlist group D-06) and the two DELETEs above. The public-AP
 
 ---
 
-## 4. Open question: what is `__all__` worth here?
+## 4. RESOLVED 2026-09-02 — `berb.literature` is a contract
+
+**Decision: option 1, scoped to `berb.literature`.** Its `__all__` modules are entry
+points in `check_reachability.py` (`PUBLIC_API_PACKAGES`), and
+`tests/test_public_api_contract.py` asserts every exported name resolves — the
+mitigation for the risk option 1 carried, that exempting the API from the gate
+leaves nothing watching it. Verified by breaking `__all__` deliberately and
+confirming the test fails.
+
+Scoped narrowly on purpose: five packages in this repo declare an `__all__`, and
+crediting all of them would have un-parked `compute_guard`, `evolutionary_search`,
+`hidden_eval` and `optimization_integration` — modules triaged as dead on their
+own merits in W1. `berb.llm` (4,366 loc) remains undecided.
+
+Ratchet: 10,977 → 5,888.
+
+### The original question, for the record
 
 10 modules / 6,316 loc — a quarter of the decision surface — are unreachable from `berb run` but
 are the package's exported, working, undocumented public API.
