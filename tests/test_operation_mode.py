@@ -342,9 +342,7 @@ class TestOperationModeManager:
         )
 
         manager.audit_trail.record_approval(stage_number=5)
-        manager.audit_trail.record_rejection(
-            stage_number=8, reason="test", requested_action="fix"
-        )
+        manager.audit_trail.record_rejection(stage_number=8, reason="test", requested_action="fix")
 
         report = manager.get_audit_report()
         assert report["total_entries"] == 2

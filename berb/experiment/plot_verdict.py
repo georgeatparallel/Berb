@@ -109,9 +109,7 @@ async def verify_plots(
     """
     # Guardrail 3: Fail-open — no critic = no verdict
     if critic is None:
-        logger.warning(
-            "verify_plots: no critic provided — reverting to fail-open (no verdict)"
-        )
+        logger.warning("verify_plots: no critic provided — reverting to fail-open (no verdict)")
         return PlotVerdict(
             valid_plots_received=False,
             summary="No VLM critic available; figures not evaluated.",
@@ -138,18 +136,14 @@ async def verify_plots(
             selected_paths,
             key=lambda p: p.stat().st_mtime if p.exists() else 0,
             reverse=True,
-        )[
-            :max_plots
-        ]  # noqa: E501
+        )[:max_plots]  # noqa: E501
 
     # Guardrail 2 + 4: Evaluate each plot with anti-hallucination prompt
     analyses: list[PlotAnalysis] = []
 
     for plot_path in selected_paths:
         if not plot_path.exists():
-            logger.debug(
-                "verify_plots: plot %s not found — treating as invalid", plot_path
-            )
+            logger.debug("verify_plots: plot %s not found — treating as invalid", plot_path)
             analyses.append(
                 PlotAnalysis(
                     file_name=plot_path.name,
@@ -177,9 +171,7 @@ async def verify_plots(
             overall_score = getattr(critique, "overall_score", 5.0)
             issues = getattr(critique, "issues", [])
             confidence = (
-                getattr(critique, "confidence", overall_score / 10.0)
-                if overall_score
-                else 0.5
+                getattr(critique, "confidence", overall_score / 10.0) if overall_score else 0.5
             )
 
             # Normalize confidence to 0-1

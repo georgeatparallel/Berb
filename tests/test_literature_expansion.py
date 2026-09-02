@@ -34,9 +34,7 @@ class TestSeedExpansionQueries:
         assert _seed_expansion_queries(candidates, seen) == []
 
     def test_respects_max_new_cap(self) -> None:
-        candidates = [
-            {"title": f"Paper {i}", "citation_count": 100 - i} for i in range(10)
-        ]
+        candidates = [{"title": f"Paper {i}", "citation_count": 100 - i} for i in range(10)]
         queries = _seed_expansion_queries(candidates, set(), max_new=3)
         assert len(queries) == 3
 

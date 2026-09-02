@@ -151,9 +151,7 @@ def score_node(
                 if maximize:
                     metric_normalized = metric_value / max(abs(baseline), 1e-10)
                 else:
-                    metric_normalized = max(abs(baseline), 1e-10) / max(
-                        metric_value, 1e-10
-                    )
+                    metric_normalized = max(abs(baseline), 1e-10) / max(metric_value, 1e-10)
             else:
                 metric_normalized = 0.5  # Neutral without baseline
 

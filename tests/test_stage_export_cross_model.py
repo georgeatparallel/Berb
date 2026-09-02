@@ -78,9 +78,7 @@ def test_no_adversarial_provider_configured_returns_unverified(tmp_path) -> None
     assert records[0]["severity"] == "info"
 
 
-def test_successful_double_check_records_verdict(
-    tmp_path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_successful_double_check_records_verdict(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
     _env(monkeypatch)
 
     def _fake_chat(self, messages, **kwargs):

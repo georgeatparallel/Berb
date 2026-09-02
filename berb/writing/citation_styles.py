@@ -220,9 +220,7 @@ class CitationFormatter:
             author2 = ""
 
         # Get template based on author count and style
-        template = self._get_inline_template(
-            len(authors), page is not None, ref_number is not None
-        )
+        template = self._get_inline_template(len(authors), page is not None, ref_number is not None)
 
         # Format citation
         citation = template.format(
@@ -270,9 +268,7 @@ class CitationFormatter:
         # Author-year styles
         if num_authors == 0 or num_authors == 1:
             if has_page:
-                return self._rules.get(
-                    "inline_with_page", "({author}, {year}, p. {page})"
-                )
+                return self._rules.get("inline_with_page", "({author}, {year}, p. {page})")
             return self._rules.get("inline_one", "({author}, {year})")
 
         elif num_authors == 2:
@@ -283,9 +279,7 @@ class CitationFormatter:
                 return self._rules.get(
                     "inline_with_page", "({first_author} {et_al}, {year}, p. {page})"
                 )
-            return self._rules.get(
-                "inline_three_plus", "({first_author} {et_al}, {year})"
-            )
+            return self._rules.get("inline_three_plus", "({first_author} {et_al}, {year})")
 
     def _format_author(
         self,

@@ -263,9 +263,7 @@ class CrossProjectLearning:
                 continue
 
             stage_name, domain, model = key.split("|")
-            avg_quality = sum(s.metrics.get("quality", 0.0) for s in stages) / len(
-                stages
-            )
+            avg_quality = sum(s.metrics.get("quality", 0.0) for s in stages) / len(stages)
             avg_cost = sum(s.cost for s in stages) / len(stages)
             success_rate = sum(1 for s in stages if s.status == "success") / len(stages)
             avg_repair_cycles = sum(s.repair_count for s in stages) / len(stages)
@@ -330,9 +328,7 @@ class CrossProjectLearning:
             risk_factors = self._generate_risk_factors(
                 domain, stage_name, failure_rate, common_errors
             )
-            mitigation_strategies = self._generate_mitigations(
-                domain, stage_name, common_errors
-            )
+            mitigation_strategies = self._generate_mitigations(domain, stage_name, common_errors)
 
             predictor = FailurePredictor(
                 domain=domain,
@@ -345,9 +341,7 @@ class CrossProjectLearning:
 
             self._failure_predictors[key] = predictor
 
-        logger.info(
-            f"Extracted {len(self._failure_predictors)} failure predictor patterns"
-        )
+        logger.info(f"Extracted {len(self._failure_predictors)} failure predictor patterns")
 
     def _generate_risk_factors(
         self, domain: str, stage: str, failure_rate: float, errors: list[str]
@@ -369,9 +363,7 @@ class CrossProjectLearning:
 
         return risks
 
-    def _generate_mitigations(
-        self, domain: str, stage: str, errors: list[str]
-    ) -> list[str]:
+    def _generate_mitigations(self, domain: str, stage: str, errors: list[str]) -> list[str]:
         """Generate mitigation strategies."""
         mitigations = []
 
@@ -413,9 +405,7 @@ class CrossProjectLearning:
         mean_x = sum(complexities) / n
         mean_y = sum(repairs) / n
 
-        numerator = sum(
-            (complexities[i] - mean_x) * (repairs[i] - mean_y) for i in range(n)
-        )
+        numerator = sum((complexities[i] - mean_x) * (repairs[i] - mean_y) for i in range(n))
         denom_x = sum((x - mean_x) ** 2 for x in complexities) ** 0.5
         denom_y = sum((y - mean_y) ** 2 for y in repairs) ** 0.5
 

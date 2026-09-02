@@ -67,11 +67,7 @@ class OpportunityFinder:
             parts = line.split("|")
             topic = parts[0].split(":", 1)[-1].strip() if parts else line
             why = parts[1].split(":", 1)[-1].strip() if len(parts) > 1 else ""
-            feasibility = (
-                parts[2].split(":", 1)[-1].strip().lower()
-                if len(parts) > 2
-                else "medium"
-            )
+            feasibility = parts[2].split(":", 1)[-1].strip().lower() if len(parts) > 2 else "medium"
 
             if topic:
                 opportunities.append(

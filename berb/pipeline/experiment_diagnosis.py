@@ -94,9 +94,7 @@ class ExperimentDiagnosis:
             if d.error_message:
                 lines.append(f"**Error**: ```{d.error_message[:500]}```")
             if d.affected_conditions:
-                lines.append(
-                    f"**Affected conditions**: {', '.join(d.affected_conditions)}"
-                )
+                lines.append(f"**Affected conditions**: {', '.join(d.affected_conditions)}")
             lines.append(f"**Fix**: {d.suggested_fix}\n")
 
         return "\n".join(lines)
@@ -206,9 +204,7 @@ def _select_paper_mode(
 ) -> PaperMode:
     """Select paper mode based on experiment quality."""
     # Check for synthetic data
-    if any(
-        d.type == DeficiencyType.SYNTHETIC_DATA_FALLBACK for d in diagnosis.deficiencies
-    ):
+    if any(d.type == DeficiencyType.SYNTHETIC_DATA_FALLBACK for d in diagnosis.deficiencies):
         return PaperMode.TECHNICAL_REPORT
 
     # Check for no conditions
@@ -228,19 +224,11 @@ def _select_paper_mode(
         # Heuristic: count per-seed keys in best_run metrics
         metrics = experiment_summary.get("best_run", {}).get("metrics", {})
         seed_keys = [
-            k
-            for k in metrics
-            if k.startswith(f"{cond_name}/") and re.match(r".*/\d+/", k)
+            k for k in metrics if k.startswith(f"{cond_name}/") and re.match(r".*/\d+/", k)
         ]
         # BUG-R6-05: Guard against re.match returning None
         actual_seeds = (
-            len(
-                {
-                    m.group(1)
-                    for k in seed_keys
-                    if (m := re.match(r".*/(\d+)/", k)) is not None
-                }
-            )
+            len({m.group(1) for k in seed_keys if (m := re.match(r".*/(\d+)/", k)) is not None})
             if seed_keys
             else 1
         )
@@ -429,9 +417,7 @@ def _check_permission_errors(diag: ExperimentDiagnosis, output: str) -> None:
 
 def _check_gpu_oom(diag: ExperimentDiagnosis, output: str) -> None:
     """Detect GPU out-of-memory errors."""
-    if re.search(
-        r"CUDA out of memory|RuntimeError.*?OOM|torch\.cuda\.OutOfMemoryError", output
-    ):
+    if re.search(r"CUDA out of memory|RuntimeError.*?OOM|torch\.cuda\.OutOfMemoryError", output):
         diag.deficiencies.append(
             Deficiency(
                 type=DeficiencyType.GPU_OOM,
@@ -570,9 +556,7 @@ def _check_code_crashes(diag: ExperimentDiagnosis, stderr: str, output: str) -> 
 def _check_hyperparams(diag: ExperimentDiagnosis, output: str, summary: dict) -> None:
     """Detect hyperparameter issues (diverging loss, NaN gradients)."""
     # NaN in training — use word boundary to avoid matching "Shannan" etc.
-    if re.search(
-        r"loss.*?\bnan\b|\bnan\b.*?loss|gradient.*?\bnan\b", output, re.IGNORECASE
-    ):
+    if re.search(r"loss.*?\bnan\b|\bnan\b.*?loss|gradient.*?\bnan\b", output, re.IGNORECASE):
         diag.deficiencies.append(
             Deficiency(
                 type=DeficiencyType.HYPERPARAMETER_ISSUE,
@@ -708,10 +692,7 @@ def _get_planned_conditions(plan: dict | None, summary: dict) -> set[str]:
     if plan:
         conditions = plan.get("conditions", [])
         if isinstance(conditions, list):
-            return {
-                c.get("name", str(c)) if isinstance(c, dict) else str(c)
-                for c in conditions
-            }
+            return {c.get("name", str(c)) if isinstance(c, dict) else str(c) for c in conditions}
     # Fallback: use condition_summaries from summary
     return set(summary.get("condition_summaries", {}).keys())
 
@@ -791,9 +772,7 @@ def _assess_repairability(diag: ExperimentDiagnosis, prior: list[dict] | None) -
         repeated = current_types & prior_types
         if len(repeated) >= 3:
             diag.repairable = False
-            diag.reason = (
-                f"Same deficiencies recur after {len(prior)} repair cycles: {repeated}"
-            )
+            diag.reason = f"Same deficiencies recur after {len(prior)} repair cycles: {repeated}"
             return
 
     # All types are potentially repairable

@@ -133,9 +133,7 @@ class ValidatorAgent(BaseAgent):
 
         for mod in imports:
             if mod not in allowed:
-                warnings.append(
-                    f"{label}: import '{mod}' not in Docker image or requirements"
-                )
+                warnings.append(f"{label}: import '{mod}' not in Docker image or requirements")
 
         return warnings
 

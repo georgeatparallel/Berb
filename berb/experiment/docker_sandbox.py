@@ -225,9 +225,7 @@ class DockerSandbox:
             # Inject experiment harness
             self._inject_harness(staging)
 
-            return self._execute(
-                staging, entry_point="main.py", timeout_sec=timeout_sec
-            )
+            return self._execute(staging, entry_point="main.py", timeout_sec=timeout_sec)
         finally:
             # Clean up staging dir unconditionally — results.json has already
             # been read by _execute() before it returns, so we don't need it.
@@ -280,9 +278,7 @@ class DockerSandbox:
             for src_item in project_dir.iterdir():
                 dest = staging / src_item.name
                 if src_item.name == "experiment_harness.py":
-                    logger.warning(
-                        "Project contains experiment_harness.py — skipping (immutable)"
-                    )
+                    logger.warning("Project contains experiment_harness.py — skipping (immutable)")
                     continue
                 if src_item.is_file():
                     dest.write_bytes(src_item.read_bytes())
@@ -310,9 +306,7 @@ class DockerSandbox:
                     metrics={},
                 )
 
-            return self._execute(
-                staging, entry_point=entry_point, timeout_sec=timeout_sec
-            )
+            return self._execute(staging, entry_point=entry_point, timeout_sec=timeout_sec)
         finally:
             shutil.rmtree(staging, ignore_errors=True)
 
@@ -384,9 +378,7 @@ class DockerSandbox:
     # Internals
     # ------------------------------------------------------------------
 
-    def _execute(
-        self, staging_dir: Path, *, entry_point: str, timeout_sec: int
-    ) -> SandboxResult:
+    def _execute(self, staging_dir: Path, *, entry_point: str, timeout_sec: int) -> SandboxResult:
         """Core execution: single container, three-phase via entrypoint.sh."""
         cfg = self.config
         container_name = _next_container_name()
@@ -562,9 +554,7 @@ class DockerSandbox:
         if not hf_mounted:
             hf_cache_host = Path.home() / ".cache" / "huggingface"
             if hf_cache_host.is_dir():
-                cmd.extend(
-                    ["-v", f"{_to_docker_path(hf_cache_host)}:{_hf_hub_cache}:ro"]
-                )
+                cmd.extend(["-v", f"{_to_docker_path(hf_cache_host)}:{_hf_hub_cache}:ro"])
                 cmd.extend(["-e", f"HF_HUB_CACHE={_hf_hub_cache}"])
 
         # BUG-107 fix: Set TORCH_HOME to writable location so torchvision
@@ -580,9 +570,7 @@ class DockerSandbox:
         # Pass HF token if available (for gated model downloads).
         # Write to a staging-dir env file instead of the command line so the
         # secret does not appear in `ps aux`, `docker inspect`, or CI logs.
-        hf_token = os.environ.get("HF_TOKEN") or os.environ.get(
-            "HUGGING_FACE_HUB_TOKEN"
-        )
+        hf_token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
         if hf_token:
             env_file = staging_dir / ".hf_secrets.env"
             env_file.write_text(f"HF_TOKEN={hf_token}\n", encoding="utf-8")

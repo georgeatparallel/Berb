@@ -40,9 +40,7 @@ def _review(reviewer_id: str, feedback: str) -> Review:
 def test_review_diversity_low_for_identical_reviews() -> None:
     ensemble = AutomatedReviewerEnsemble()
     reviews = [
-        _review(
-            p.id, "This paper presents a novel method with strong experimental results."
-        )
+        _review(p.id, "This paper presents a novel method with strong experimental results.")
         for p in REVIEWER_PERSONAS
     ]
 
@@ -61,9 +59,7 @@ def test_review_diversity_high_for_distinct_reviews() -> None:
         "Significant contribution to few-shot learning benchmarks with strong gains.",
         "Theorem 2's proof has a sign error in the third inequality step.",
     ]
-    reviews = [
-        _review(p.id, fb) for p, fb in zip(REVIEWER_PERSONAS, feedbacks, strict=True)
-    ]
+    reviews = [_review(p.id, fb) for p, fb in zip(REVIEWER_PERSONAS, feedbacks, strict=True)]
 
     meta = ensemble.area_chair_decision(reviews)
 
@@ -74,9 +70,7 @@ def test_review_diversity_defaults_to_zero_on_embedding_failure(monkeypatch) -> 
     def _broken_embedding_provider(*args: object, **kwargs: object) -> None:
         raise RuntimeError("embedding backend unavailable")
 
-    monkeypatch.setattr(
-        "berb.memory.embeddings.EmbeddingProvider", _broken_embedding_provider
-    )
+    monkeypatch.setattr("berb.memory.embeddings.EmbeddingProvider", _broken_embedding_provider)
     ensemble = AutomatedReviewerEnsemble()
     reviews = [_review(p.id, f"Feedback from {p.id}.") for p in REVIEWER_PERSONAS]
 

@@ -89,9 +89,7 @@ class TestSubmitBatch:
         error_resp.text = "bad request"
         error_resp.headers = {}
         mock_post = MagicMock(
-            side_effect=httpx.HTTPStatusError(
-                "bad", request=MagicMock(), response=error_resp
-            )
+            side_effect=httpx.HTTPStatusError("bad", request=MagicMock(), response=error_resp)
         )
         with (
             patch("httpx.Client.post", mock_post),
@@ -147,9 +145,7 @@ class TestFetchBatchResults:
         )
         mock_get = MagicMock(return_value=_mock_response({}, text=jsonl))
         with patch("httpx.Client.get", mock_get):
-            results = adapter.fetch_batch_results(
-                "https://api.anthropic.com/results/batch_123"
-            )
+            results = adapter.fetch_batch_results("https://api.anthropic.com/results/batch_123")
 
         assert set(results.keys()) == {"reviewer-1", "reviewer-2"}
         assert results["reviewer-1"]["choices"][0]["message"]["content"] == "review 1"
@@ -167,9 +163,7 @@ class TestFetchBatchResults:
         )
         mock_get = MagicMock(return_value=_mock_response({}, text=jsonl))
         with patch("httpx.Client.get", mock_get):
-            results = adapter.fetch_batch_results(
-                "https://api.anthropic.com/results/batch_123"
-            )
+            results = adapter.fetch_batch_results("https://api.anthropic.com/results/batch_123")
 
         assert set(results.keys()) == {"reviewer-2"}
 
@@ -177,9 +171,7 @@ class TestFetchBatchResults:
         adapter = AnthropicAdapter(base_url="https://api.anthropic.com", api_key="k")
         mock_get = MagicMock(return_value=_mock_response({}, text=""))
         with patch("httpx.Client.get", mock_get):
-            results = adapter.fetch_batch_results(
-                "https://api.anthropic.com/results/batch_123"
-            )
+            results = adapter.fetch_batch_results("https://api.anthropic.com/results/batch_123")
 
         assert results == {}
 

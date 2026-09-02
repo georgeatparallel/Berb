@@ -176,9 +176,7 @@ def check_strict_quality(text: str, *, threshold: float = 0.05) -> tuple[bool, s
     report = assess_quality(text)
 
     if report.template_ratio > threshold:
-        details = "; ".join(
-            f"L{m.line_number}: {m.excerpt}" for m in report.template_matches[:5]
-        )
+        details = "; ".join(f"L{m.line_number}: {m.excerpt}" for m in report.template_matches[:5])
         return False, (
             f"Template content detected: ratio={report.template_ratio:.2%}, "
             f"{report.match_count} matches. Examples: {details}"

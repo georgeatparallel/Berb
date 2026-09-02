@@ -128,9 +128,7 @@ def build_repair_prompt(
     sections.append(diagnosis.to_repair_prompt())
 
     # Scope reduction guidance
-    if any(
-        d.type == DeficiencyType.TIME_GUARD_DOMINANT for d in diagnosis.deficiencies
-    ):
+    if any(d.type == DeficiencyType.TIME_GUARD_DOMINANT for d in diagnosis.deficiencies):
         n_planned = diagnosis.total_planned
         n_completed = len(diagnosis.conditions_completed)
         max_conditions = max(3, n_completed + 1)
@@ -148,9 +146,7 @@ def build_repair_prompt(
         )
 
     # Dependency fixes
-    dep_issues = [
-        d for d in diagnosis.deficiencies if d.type == DeficiencyType.MISSING_DEPENDENCY
-    ]
+    dep_issues = [d for d in diagnosis.deficiencies if d.type == DeficiencyType.MISSING_DEPENDENCY]
     if dep_issues:
         sections.append("\n## DEPENDENCY FIXES\n")
         sections.append("Add these to requirements.txt:\n")
@@ -230,9 +226,7 @@ def select_best_results(
     # Sort by quality score (descending)
     candidates.sort(key=lambda x: x[0], reverse=True)
     best_score, best_cycle, best_summary = candidates[0]
-    logger.info(
-        "Best experiment results from cycle %d (score=%.2f)", best_cycle, best_score
-    )
+    logger.info("Best experiment results from cycle %d (score=%.2f)", best_cycle, best_score)
     return best_summary
 
 
@@ -409,9 +403,7 @@ def run_repair_loop(
                 error="Failed to generate repaired code",
             )
             cycle_history.append(cycle_result)
-            logger.warning(
-                "[%s] Repair cycle %d: code generation failed", run_id, cycle
-            )
+            logger.warning("[%s] Repair cycle %d: code generation failed", run_id, cycle)
             break
 
         # 4. Save fixed code to versioned directory
@@ -447,9 +439,7 @@ def run_repair_loop(
                 error="Sandbox execution failed",
             )
             cycle_history.append(cycle_result)
-            logger.warning(
-                "[%s] Repair cycle %d: sandbox execution failed", run_id, cycle
-            )
+            logger.warning("[%s] Repair cycle %d: sandbox execution failed", run_id, cycle)
             continue
 
         # 6. Build new experiment summary from sandbox results
@@ -546,9 +536,7 @@ def run_repair_loop(
 
 def _load_experiment_summary(run_dir: Path) -> dict | None:
     """Load the most recent experiment_summary.json."""
-    for candidate in sorted(
-        run_dir.glob("stage-14*/experiment_summary.json"), reverse=True
-    ):
+    for candidate in sorted(run_dir.glob("stage-14*/experiment_summary.json"), reverse=True):
         try:
             return json.loads(candidate.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
@@ -558,9 +546,7 @@ def _load_experiment_summary(run_dir: Path) -> dict | None:
 
 def _load_refinement_log(run_dir: Path) -> dict | None:
     """Load the most recent refinement_log.json."""
-    for candidate in sorted(
-        run_dir.glob("stage-13*/refinement_log.json"), reverse=True
-    ):
+    for candidate in sorted(run_dir.glob("stage-13*/refinement_log.json"), reverse=True):
         try:
             return json.loads(candidate.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
@@ -627,9 +613,7 @@ def _load_experiment_code(run_dir: Path) -> dict[str, str]:
 
 def _load_experiment_plan(run_dir: Path) -> dict | None:
     """Load experiment plan from stage-09."""
-    for candidate in sorted(
-        run_dir.glob("stage-09*/experiment_design.json"), reverse=True
-    ):
+    for candidate in sorted(run_dir.glob("stage-09*/experiment_design.json"), reverse=True):
         try:
             return json.loads(candidate.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
@@ -679,9 +663,7 @@ def _get_repaired_code(
 
     # Try OpenCode first if enabled
     if repair_cfg.use_opencode and config.experiment.opencode.enabled:
-        result = _repair_via_opencode(
-            repair_prompt, current_code, config, run_dir, cycle
-        )
+        result = _repair_via_opencode(repair_prompt, current_code, config, run_dir, cycle)
         if result:
             return result
         logger.info("OpenCode repair unavailable, falling back to LLM")
@@ -896,9 +878,7 @@ def _build_experiment_summary_from_run(
                 condition_summaries[cond_name] = {"metrics": {}, "seeds": {}}
             condition_summaries[cond_name]["metrics"][metric_name] = value
             seed_key = "/".join(parts[1:-1])
-            condition_summaries[cond_name]["seeds"].setdefault(seed_key, {})[
-                metric_name
-            ] = value
+            condition_summaries[cond_name]["seeds"].setdefault(seed_key, {})[metric_name] = value
         elif len(parts) == 2:
             # BUG-199: Stage 13 refinement produces 2-part keys
             # (condition_name/metric_name) without a seed component.
@@ -907,9 +887,7 @@ def _build_experiment_summary_from_run(
             if cond_name not in condition_summaries:
                 condition_summaries[cond_name] = {"metrics": {}, "seeds": {}}
             condition_summaries[cond_name]["metrics"][metric_name] = value
-            condition_summaries[cond_name]["seeds"].setdefault("0", {})[
-                metric_name
-            ] = value
+            condition_summaries[cond_name]["seeds"].setdefault("0", {})[metric_name] = value
         elif len(parts) == 1:
             # Top-level metric like "primary_metric"
             pass

@@ -594,9 +594,7 @@ def create_isolation(
     }
 
     if mode not in strategies:
-        raise ValueError(
-            f"Unknown isolation mode: {mode}. Valid modes: {list(strategies.keys())}"
-        )
+        raise ValueError(f"Unknown isolation mode: {mode}. Valid modes: {list(strategies.keys())}")
 
     # Create config class based on mode
     config_classes = {

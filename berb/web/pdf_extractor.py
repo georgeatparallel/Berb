@@ -112,9 +112,7 @@ class PDFExtractor:
                 authors = [a.strip() for a in author.split(",")] if author else []
 
                 abstract = self._extract_abstract(full_text)
-                sections = (
-                    self._detect_sections(full_text) if self.extract_sections else []
-                )
+                sections = self._detect_sections(full_text) if self.extract_sections else []
 
                 page_count = doc.page_count
 
@@ -141,9 +139,7 @@ class PDFExtractor:
 
         tmp_path = None
         try:
-            req = Request(
-                url, headers={"User-Agent": "Berb/0.5 (Academic Research Bot)"}
-            )
+            req = Request(url, headers={"User-Agent": "Berb/0.5 (Academic Research Bot)"})
             resp = urlopen(req, timeout=30)  # noqa: S310
             data = resp.read()
 
@@ -188,9 +184,7 @@ class PDFExtractor:
     def _detect_sections(text: str) -> list[dict[str, str]]:
         """Detect section boundaries in paper text."""
         sections: list[dict[str, str]] = []
-        pattern = re.compile(
-            r"(?:^|\n)\s*(\d+\.?\s+[A-Z][^\n]{2,50})\s*\n", re.MULTILINE
-        )
+        pattern = re.compile(r"(?:^|\n)\s*(\d+\.?\s+[A-Z][^\n]{2,50})\s*\n", re.MULTILINE)
         matches = list(pattern.finditer(text))
         for i, match in enumerate(matches):
             heading = match.group(1).strip()

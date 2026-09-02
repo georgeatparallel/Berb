@@ -53,9 +53,7 @@ class CodePatterns:
 
     @property
     def has_content(self) -> bool:
-        return bool(
-            self.api_patterns or self.file_structure or self.evaluation_patterns
-        )
+        return bool(self.api_patterns or self.file_structure or self.evaluation_patterns)
 
 
 _EXTRACT_PROMPT = """\

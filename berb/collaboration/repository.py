@@ -107,9 +107,7 @@ class ResearchRepository:
                 except (json.JSONDecodeError, OSError):
                     continue
 
-                content_str = json.dumps(
-                    payload.get("content", ""), default=str
-                ).lower()
+                content_str = json.dumps(payload.get("content", ""), default=str).lower()
                 if query_lower in content_str:
                     results.append(payload)
                     if len(results) >= max_results:

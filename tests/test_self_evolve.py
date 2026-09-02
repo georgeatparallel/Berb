@@ -167,9 +167,7 @@ class TestExperienceCollector:
                 run_id=f"run_{i}",
                 topic="Test",
                 stage="STAGE",
-                experience_type=(
-                    ExperienceType.SUCCESS if i < 3 else ExperienceType.FAILURE
-                ),
+                experience_type=(ExperienceType.SUCCESS if i < 3 else ExperienceType.FAILURE),
                 input_prompt="p",
                 output_response="r",
                 quality_score=9.0 if i < 3 else 3.0,

@@ -79,9 +79,7 @@ class Evidence:
 
     name: str
     description: str = ""
-    likelihood_given_h: dict[str, float] = field(
-        default_factory=dict
-    )  # P(E|H) for each hypothesis
+    likelihood_given_h: dict[str, float] = field(default_factory=dict)  # P(E|H) for each hypothesis
     likelihood_given_not_h: dict[str, float] = field(default_factory=dict)  # P(E|¬H)
 
     def likelihood_ratio(self, hypothesis_name: str) -> float:
@@ -160,8 +158,7 @@ class BayesianMethod(ReasoningMethod):
         """
         super().__init__(
             name=name or "Bayesian Reasoning",
-            description=description
-            or ("Evidence-grounded belief updates using Bayes' rule"),
+            description=description or ("Evidence-grounded belief updates using Bayes' rule"),
         )
         self.router = router
         self.llm_client = llm_client
@@ -202,9 +199,7 @@ class BayesianMethod(ReasoningMethod):
             hypotheses = await self._elicit_priors(hypotheses_data, context)
 
             # Phase 2: Assess likelihoods (if evidence provided)
-            evidence = await self._assess_likelihoods(
-                evidence_data, hypotheses, context
-            )
+            evidence = await self._assess_likelihoods(evidence_data, hypotheses, context)
 
             # Phase 3: Update posteriors using Bayes' rule
             posteriors = self._update_posteriors(hypotheses, evidence)
@@ -339,9 +334,7 @@ class BayesianMethod(ReasoningMethod):
         if evidence and self.router:
             provider = self.router.get_provider_for_role("scoring")
 
-            prompt = self._build_likelihood_assessment_prompt(
-                evidence, hypotheses, context
-            )
+            prompt = self._build_likelihood_assessment_prompt(evidence, hypotheses, context)
             response = await provider.complete(prompt)
 
             # Parse likelihoods from response
@@ -372,8 +365,7 @@ class BayesianMethod(ReasoningMethod):
         for ev in evidence:
             # Calculate marginal likelihood P(E)
             p_e = sum(
-                ev.likelihood_given_h.get(h.name, 0.5) * posteriors[h.name]
-                for h in hypotheses
+                ev.likelihood_given_h.get(h.name, 0.5) * posteriors[h.name] for h in hypotheses
             )
 
             # Update each hypothesis
@@ -440,9 +432,7 @@ class BayesianMethod(ReasoningMethod):
 
                 # Calculate sensitivity
                 sensitivity_score = sum(
-                    abs(
-                        perturbed_posteriors.get(name, 0) - base_posteriors.get(name, 0)
-                    )
+                    abs(perturbed_posteriors.get(name, 0) - base_posteriors.get(name, 0))
                     for name in base_posteriors
                 )
 
@@ -616,9 +606,7 @@ Output format (JSON):
                         for h in hypotheses:
                             if h.name in ev_data:
                                 h_data = ev_data[h.name]
-                                ev.likelihood_given_h[h.name] = h_data.get(
-                                    "p_e_given_h", 0.5
-                                )
+                                ev.likelihood_given_h[h.name] = h_data.get("p_e_given_h", 0.5)
                                 ev.likelihood_given_not_h[h.name] = h_data.get(
                                     "p_e_given_not_h", 0.5
                                 )

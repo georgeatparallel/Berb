@@ -162,37 +162,24 @@ class WorkflowConfig(BaseModel):
         if self.enabled_stages:
             for stage in self.enabled_stages:
                 if not (1 <= stage <= 23):
-                    raise ValueError(
-                        f"Stage number must be between 1 and 23, got {stage}"
-                    )
+                    raise ValueError(f"Stage number must be between 1 and 23, got {stage}")
 
         # Validate workflow-specific constraints
-        if (
-            self.workflow == WorkflowType.LITERATURE_ONLY
-            and not self.include_experiments
-        ):
+        if self.workflow == WorkflowType.LITERATURE_ONLY and not self.include_experiments:
             # Literature-only doesn't run experiments, which is the default
             pass
 
         if self.workflow == WorkflowType.PAPER_FROM_RESULTS and not self.uploaded_data:
-            logger.warning(
-                "paper-from-results workflow selected but no uploaded_data provided"
-            )
+            logger.warning("paper-from-results workflow selected but no uploaded_data provided")
 
         if self.workflow == WorkflowType.REVIEW_ONLY and not self.uploaded_manuscript:
-            logger.warning(
-                "review-only workflow selected but no uploaded_manuscript provided"
-            )
+            logger.warning("review-only workflow selected but no uploaded_manuscript provided")
 
         if self.workflow == WorkflowType.REBUTTAL:
             if not self.uploaded_manuscript:
-                logger.warning(
-                    "rebuttal workflow selected but no uploaded_manuscript provided"
-                )
+                logger.warning("rebuttal workflow selected but no uploaded_manuscript provided")
             if not self.uploaded_reviews:
-                logger.warning(
-                    "rebuttal workflow selected but no uploaded_reviews provided"
-                )
+                logger.warning("rebuttal workflow selected but no uploaded_reviews provided")
 
 
 # Stage mapping per workflow type
@@ -251,9 +238,7 @@ WORKFLOW_STAGES: dict[WorkflowType, list[int]] = {
         22,
         23,
     ],  # Scoping + Literature + Synthesis + Paper Writing (skip experiments)
-    WorkflowType.MATH_PAPER: list(
-        range(1, 24)
-    ),  # All 23 stages + mathematical content engine (O2)
+    WorkflowType.MATH_PAPER: list(range(1, 24)),  # All 23 stages + mathematical content engine (O2)
     WorkflowType.COMPUTATIONAL_PAPER: list(
         range(1, 24)
     ),  # All 23 stages + pseudocode appendix (O3) + code quality (O4)
@@ -338,9 +323,7 @@ class WorkflowManager:
             22: "EXPORT_PUBLISH",
             23: "CITATION_VERIFY",
         }
-        return {
-            num: name for num, name in stage_names.items() if self.is_stage_enabled(num)
-        }
+        return {num: name for num, name in stage_names.items() if self.is_stage_enabled(num)}
 
     def to_dict(self) -> dict:
         """Convert workflow configuration to dictionary.
@@ -354,14 +337,10 @@ class WorkflowManager:
             "uploaded_pdfs": [str(p) for p in self.config.uploaded_pdfs],
             "uploaded_data": [str(p) for p in self.config.uploaded_data],
             "uploaded_manuscript": (
-                str(self.config.uploaded_manuscript)
-                if self.config.uploaded_manuscript
-                else None
+                str(self.config.uploaded_manuscript) if self.config.uploaded_manuscript else None
             ),
             "uploaded_reviews": (
-                str(self.config.uploaded_reviews)
-                if self.config.uploaded_reviews
-                else None
+                str(self.config.uploaded_reviews) if self.config.uploaded_reviews else None
             ),
             "include_math": self.config.include_math,
             "include_experiments": self.config.include_experiments,
@@ -387,9 +366,7 @@ class WorkflowManager:
             uploaded_pdfs=[Path(p) for p in data.get("uploaded_pdfs", [])],
             uploaded_data=[Path(p) for p in data.get("uploaded_data", [])],
             uploaded_manuscript=(
-                Path(data["uploaded_manuscript"])
-                if data.get("uploaded_manuscript")
-                else None
+                Path(data["uploaded_manuscript"]) if data.get("uploaded_manuscript") else None
             ),
             uploaded_reviews=(
                 Path(data["uploaded_reviews"]) if data.get("uploaded_reviews") else None
@@ -454,9 +431,7 @@ def create_workflow_manager(
         enabled_stages=stages,
         uploaded_pdfs=[Path(p) for p in uploaded_pdfs or []],
         uploaded_data=[Path(p) for p in uploaded_data or []],
-        uploaded_manuscript=(
-            Path(uploaded_manuscript) if uploaded_manuscript else None
-        ),
+        uploaded_manuscript=(Path(uploaded_manuscript) if uploaded_manuscript else None),
         uploaded_reviews=(Path(uploaded_reviews) if uploaded_reviews else None),
         include_math=include_math,
         include_experiments=include_experiments,

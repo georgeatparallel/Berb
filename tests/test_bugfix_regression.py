@@ -66,9 +66,7 @@ class TestBugFix1ExpandSearchQueriesExport:
         result = rc_executor._expand_search_queries(queries, topic)
         assert isinstance(result, list)
         # Should preserve original unique queries
-        assert "deep learning survey" in result or any(
-            "deep learning" in q for q in result
-        )
+        assert "deep learning survey" in result or any("deep learning" in q for q in result)
 
     def test_expand_search_queries_handles_empty_input(self) -> None:
         """Verify graceful handling of empty query list."""
@@ -144,9 +142,7 @@ class TestBugFix2SecurityValidation:
         assert "SECURITY VIOLATION" in str(exc_info.value)
         assert "Plaintext API key" in str(exc_info.value)
 
-    def test_config_rejects_api_key_env_that_looks_like_key(
-        self, tmp_path: Path
-    ) -> None:
+    def test_config_rejects_api_key_env_that_looks_like_key(self, tmp_path: Path) -> None:
         """Verify config warns when api_key_env looks like actual API key.
 
         Note: This generates a WARNING (not an error) during validation,
@@ -218,9 +214,7 @@ class TestBugFix3ImportOrganization:
 
         registrations = get_all_registrations()
         assert len(registrations) == 23, "Should have exactly 23 stage executors"
-        assert set(registrations.keys()) == set(
-            Stage
-        ), "Registry should cover all stages"
+        assert set(registrations.keys()) == set(Stage), "Registry should cover all stages"
 
     def test_executor_imports_have_no_circular_dependencies(self) -> None:
         """Verify executor module can be imported without circular dependencies."""
@@ -233,9 +227,9 @@ class TestBugFix3ImportOrganization:
         # Every stage must resolve to a registration (registry populated
         # without circular-import failures during module load).
         for stage in Stage:
-            assert (
-                get_registration(stage) is not None
-            ), f"Stage {stage.name} should have a registered executor"
+            assert get_registration(stage) is not None, (
+                f"Stage {stage.name} should have a registered executor"
+            )
 
     def test_stage_execution_order_matches_import_order(self) -> None:
         """Verify imports are organized by pipeline execution order."""
@@ -252,9 +246,7 @@ class TestBugFix3ImportOrganization:
 
         # Verify all expected stages have registered executors
         for stage in expected_order:
-            assert (
-                get_registration(stage) is not None
-            ), f"Stage {stage.name} should have executor"
+            assert get_registration(stage) is not None, f"Stage {stage.name} should have executor"
 
     def test_helper_functions_are_accessible(self) -> None:
         """Verify helper functions are properly imported and accessible."""
@@ -337,9 +329,7 @@ class TestCombinedBugFixVerification:
                 content = Path(test_file).read_text(encoding="utf-8")
                 matches = api_key_pattern.findall(content)
                 # Should find no plaintext API keys in actual test fixtures
-                assert (
-                    len(matches) == 0
-                ), f"Found plaintext API keys in {test_file}: {matches}"
+                assert len(matches) == 0, f"Found plaintext API keys in {test_file}: {matches}"
             except FileNotFoundError:
                 # File might not exist yet, that's OK for this test
                 pass

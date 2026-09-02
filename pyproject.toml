@@ -75,11 +75,19 @@ dev = [
     "pytest-cov>=4.0",
     "httpx>=0.24",
     "mypy>=1.15",
+    # Required by the Type Check CI job: berb/config.py, berb/llm/client.py,
+    # berb/literature/paper_mill.py and berb/writing/reporting_guidelines.py
+    # all `import yaml`, and mypy reports import-untyped without the stubs.
+    "types-PyYAML>=6",
     "scipy>=1.10",
-    # Upper bound is deliberate: ruff's formatter changes between minor
-    # versions, so an unpinned range lets CI fail on a version bump with no
-    # code change. Raise both bounds together after running `ruff format`.
-    "ruff>=0.15,<0.16",
+    # Exact pin, deliberately. The previous `>=0.15,<0.16` range was written
+    # to stop formatter drift, but ruff changed `ruff format` output WITHIN
+    # 0.15.x: the tree was formatted by a ruff older than 0.15.8, and by the
+    # time CI resolved 0.15.22 the format check wanted 353 of 596 files
+    # rewritten with no code change. A range cannot express "the formatter
+    # that produced this tree", so pin the exact version and bump it in the
+    # same commit as a fresh `ruff format berb/ tests/`.
+    "ruff==0.15.22",
     "fastapi>=0.100",
     "uvicorn>=0.23",
     "python-multipart>=0.0.7",

@@ -125,9 +125,7 @@ class TestDegradationChain:
                 "source": "semantic_scholar",
             }
         ]
-        put_cache(
-            "test degradation", "semantic_scholar", 20, cached, cache_base=tmp_path
-        )
+        put_cache("test degradation", "semantic_scholar", 20, cached, cache_base=tmp_path)
 
         with patch(
             "berb.literature.search.search_semantic_scholar",
@@ -183,9 +181,7 @@ class TestLLMFallback:
 
         call_models: list[str] = []
 
-        def mock_raw_call(
-            model, messages, max_tokens, temperature, json_mode, *args, **kwargs
-        ):
+        def mock_raw_call(model, messages, max_tokens, temperature, json_mode, *args, **kwargs):
             _ = messages, max_tokens, temperature, json_mode, args, kwargs
             call_models.append(model)
             if model == "gpt-blocked":
@@ -270,9 +266,7 @@ class TestNoncriticalStageSkip:
                     artifacts=(),
                     error="archive error",
                 )
-            return StageResult(
-                stage=stage, status=StageStatus.DONE, artifacts=("ok.md",)
-            )
+            return StageResult(stage=stage, status=StageStatus.DONE, artifacts=("ok.md",))
 
         with patch.object(rc_runner, "execute_stage", side_effect=mock_execute_stage):
             results = asyncio.run(
@@ -288,8 +282,7 @@ class TestNoncriticalStageSkip:
         assert len(results) == len(resolve_stage_order())
         assert results[-1].stage is Stage.CITATION_VERIFY
         assert any(
-            r.stage is Stage.KNOWLEDGE_ARCHIVE and r.status is StageStatus.FAILED
-            for r in results
+            r.stage is Stage.KNOWLEDGE_ARCHIVE and r.status is StageStatus.FAILED for r in results
         )
 
     def test_critical_stage_failure_still_aborts(self, tmp_path: Path) -> None:
@@ -314,9 +307,7 @@ class TestNoncriticalStageSkip:
                     artifacts=(),
                     error="draft error",
                 )
-            return StageResult(
-                stage=stage, status=StageStatus.DONE, artifacts=("ok.md",)
-            )
+            return StageResult(stage=stage, status=StageStatus.DONE, artifacts=("ok.md",))
 
         with patch.object(rc_runner, "execute_stage", side_effect=mock_execute_stage):
             results = asyncio.run(

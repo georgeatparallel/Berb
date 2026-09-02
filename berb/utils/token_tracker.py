@@ -196,9 +196,7 @@ class TokenTracker:
         conn.execute(
             "CREATE TABLE IF NOT EXISTS schema_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)"
         )
-        row = conn.execute(
-            "SELECT value FROM schema_meta WHERE key='version'"
-        ).fetchone()
+        row = conn.execute("SELECT value FROM schema_meta WHERE key='version'").fetchone()
         current_version = int(row[0]) if row else 0
         if current_version < self._SCHEMA_VERSION:
             self._migrate(conn, current_version, self._SCHEMA_VERSION)
@@ -250,9 +248,7 @@ class TokenTracker:
         assert isinstance(conn, _sqlite3.Connection)
         # Version 0 → 1: initial schema (nothing to ALTER; CREATE IF NOT EXISTS handles it)
         if from_version < 1:
-            logger.debug(
-                "Schema migration: 0 → 1 (initial schema, no DDL changes needed)"
-            )
+            logger.debug("Schema migration: 0 → 1 (initial schema, no DDL changes needed)")
         # Future: elif from_version < 2: conn.execute("ALTER TABLE token_usage ADD COLUMN ...")
         logger.debug("Schema migrated from v%d to v%d", from_version, to_version)
 
@@ -455,9 +451,7 @@ class TokenTracker:
             total_saved_tokens=row["total_saved"] or 0,
             avg_savings_pct=row["avg_savings_pct"] or 0.0,
             total_execution_time_ms=total_time_ms,
-            avg_execution_time_ms=(
-                total_time_ms // total_commands if total_commands > 0 else 0
-            ),
+            avg_execution_time_ms=(total_time_ms // total_commands if total_commands > 0 else 0),
         )
 
     def get_daily_stats(

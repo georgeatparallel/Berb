@@ -148,9 +148,7 @@ def search_perplexity(
         if not title:
             continue
         authors = tuple(
-            Author(name=str(a).strip())
-            for a in item.get("authors", [])
-            if str(a).strip()
+            Author(name=str(a).strip()) for a in item.get("authors", []) if str(a).strip()
         )
         papers.append(
             Paper(

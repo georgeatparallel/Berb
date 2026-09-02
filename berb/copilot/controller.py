@@ -123,9 +123,7 @@ class CoPilotController:
             if self.config.allow_branching:
                 branch_name = feedback.branch_name or f"branch_{feedback.stage}"
                 try:
-                    branch_path = self.branch_manager.create_branch(
-                        branch_name, feedback.stage
-                    )
+                    branch_path = self.branch_manager.create_branch(branch_name, feedback.stage)
                     result["instruction"] = "branch_created"
                     result["branch_name"] = branch_name
                     result["branch_path"] = branch_path

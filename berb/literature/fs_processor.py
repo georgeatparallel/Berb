@@ -285,9 +285,7 @@ class FileSystemLiteratureProcessor:
                         else p.get("citation_count", 0)
                     ),
                     "doi": p.doi if hasattr(p, "doi") else p.get("doi"),
-                    "arxiv_id": (
-                        p.arxiv_id if hasattr(p, "arxiv_id") else p.get("arxiv_id")
-                    ),
+                    "arxiv_id": (p.arxiv_id if hasattr(p, "arxiv_id") else p.get("arxiv_id")),
                     "relevance_score": getattr(p, "relevance_score", 0.0),
                     "topics": getattr(p, "topics", []),
                 }
@@ -354,9 +352,7 @@ class FileSystemLiteratureProcessor:
 
         # Write cluster info
         for label in range(n_clusters):
-            cluster_papers = [
-                papers[i] for i in range(len(papers)) if labels[i] == label
-            ]
+            cluster_papers = [papers[i] for i in range(len(papers)) if labels[i] == label]
             info_file = topic_dir / f"cluster_{label}_info.md"
             info_file.write_text(
                 f"# Cluster {label}\n\n"
@@ -390,9 +386,7 @@ class FileSystemLiteratureProcessor:
             (topic_dir / keyword).mkdir(exist_ok=True)
 
         for i, paper in enumerate(papers):
-            title = (
-                paper.title if hasattr(paper, "title") else paper.get("title", "")
-            ).lower()
+            title = (paper.title if hasattr(paper, "title") else paper.get("title", "")).lower()
 
             assigned = False
             for keyword in keywords[:-1]:
@@ -501,11 +495,7 @@ class FileSystemLiteratureProcessor:
         client = get_llm_client(model=self.model)
 
         for i, paper in enumerate(papers):
-            title = (
-                paper.title
-                if hasattr(paper, "title")
-                else paper.get("title", "Unknown")
-            )
+            title = paper.title if hasattr(paper, "title") else paper.get("title", "Unknown")
             abstract = getattr(paper, "abstract", paper.get("abstract", "No abstract"))
 
             prompt = f"""
@@ -555,11 +545,7 @@ Provide a concise summary focusing on:
         client = get_llm_client(model=self.model)
 
         for i, paper in enumerate(papers):
-            title = (
-                paper.title
-                if hasattr(paper, "title")
-                else paper.get("title", "Unknown")
-            )
+            title = paper.title if hasattr(paper, "title") else paper.get("title", "Unknown")
             abstract = getattr(paper, "abstract", paper.get("abstract", "No abstract"))
 
             prompt = f"""
@@ -656,17 +642,12 @@ List any contradictory findings, claims, or interpretations.
                 )
 
                 contradiction_file = (
-                    contradictions_dir
-                    / f"{sanitize_figure_id(topic, fallback='topic')}.md"
+                    contradictions_dir / f"{sanitize_figure_id(topic, fallback='topic')}.md"
                 )
-                contradiction_file.write_text(
-                    f"# Contradictions: {topic}\n\n{response.content}"
-                )
+                contradiction_file.write_text(f"# Contradictions: {topic}\n\n{response.content}")
 
             except Exception as e:
-                logger.warning(
-                    f"Failed to identify contradictions for topic {topic}: {e}"
-                )
+                logger.warning(f"Failed to identify contradictions for topic {topic}: {e}")
 
         logger.info(f"Identified contradictions to {contradictions_dir}")
 
@@ -686,11 +667,7 @@ List any contradictory findings, claims, or interpretations.
         client = get_llm_client(model=self.model)
 
         for i, paper in enumerate(papers):
-            title = (
-                paper.title
-                if hasattr(paper, "title")
-                else paper.get("title", "Unknown")
-            )
+            title = paper.title if hasattr(paper, "title") else paper.get("title", "Unknown")
             abstract = getattr(paper, "abstract", paper.get("abstract", "No abstract"))
 
             prompt = f"""
@@ -730,35 +707,23 @@ Format as structured markdown.
         Returns:
             Markdown string
         """
-        paper_id = (
-            paper.paper_id if hasattr(paper, "paper_id") else paper.get("id", "unknown")
-        )
-        title = (
-            paper.title if hasattr(paper, "title") else paper.get("title", "Unknown")
-        )
+        paper_id = paper.paper_id if hasattr(paper, "paper_id") else paper.get("id", "unknown")
+        title = paper.title if hasattr(paper, "title") else paper.get("title", "Unknown")
         authors = (
             ", ".join(str(a) for a in paper.authors)
             if hasattr(paper, "authors")
             else paper.get("authors", [])
         )
         year = paper.year if hasattr(paper, "year") else paper.get("year", "Unknown")
-        venue = (
-            paper.venue if hasattr(paper, "venue") else paper.get("venue", "Unknown")
-        )
+        venue = paper.venue if hasattr(paper, "venue") else paper.get("venue", "Unknown")
         citations = (
             paper.citation_count
             if hasattr(paper, "citation_count")
             else paper.get("citation_count", 0)
         )
         doi = paper.doi if hasattr(paper, "doi") else paper.get("doi", "N/A")
-        arxiv = (
-            paper.arxiv_id
-            if hasattr(paper, "arxiv_id")
-            else paper.get("arxiv_id", "N/A")
-        )
-        abstract = getattr(
-            paper, "abstract", paper.get("abstract", "No abstract available")
-        )
+        arxiv = paper.arxiv_id if hasattr(paper, "arxiv_id") else paper.get("arxiv_id", "N/A")
+        abstract = getattr(paper, "abstract", paper.get("abstract", "No abstract available"))
 
         return f"""# {title}
 
@@ -800,9 +765,7 @@ Format as structured markdown.
 
         return results
 
-    async def get_summary(
-        self, workspace: LiteratureWorkspace, paper_id: str
-    ) -> str | None:
+    async def get_summary(self, workspace: LiteratureWorkspace, paper_id: str) -> str | None:
         """Get summary for a specific paper.
 
         Args:
@@ -817,9 +780,7 @@ Format as structured markdown.
             return summary_file.read_text(encoding="utf-8")
         return None
 
-    async def get_claims(
-        self, workspace: LiteratureWorkspace, paper_id: str
-    ) -> list[dict] | None:
+    async def get_claims(self, workspace: LiteratureWorkspace, paper_id: str) -> list[dict] | None:
         """Get claims for a specific paper.
 
         Args:

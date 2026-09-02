@@ -557,9 +557,7 @@ class MultilingualPipelineAdapter:
         result = self._detector.detect(topic)
         self._current_language = result.language
 
-        logger.info(
-            f"Detected language: {self._detector.get_language_name(result.language)}"
-        )
+        logger.info(f"Detected language: {self._detector.get_language_name(result.language)}")
         logger.info(f"Confidence: {result.confidence:.0%}")
 
         return result.language

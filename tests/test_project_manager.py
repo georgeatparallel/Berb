@@ -101,16 +101,12 @@ class TestProjectManager:
         assert proj.topic == "RL"
         assert proj.status == "idle"
 
-    def test_create_sets_active(
-        self, manager: ProjectManager, config_yaml: Path
-    ) -> None:
+    def test_create_sets_active(self, manager: ProjectManager, config_yaml: Path) -> None:
         manager.create("first", str(config_yaml))
         assert manager.active is not None
         assert manager.active.name == "first"
 
-    def test_create_duplicate_raises(
-        self, manager: ProjectManager, config_yaml: Path
-    ) -> None:
+    def test_create_duplicate_raises(self, manager: ProjectManager, config_yaml: Path) -> None:
         manager.create("dup", str(config_yaml))
         with pytest.raises(ValueError, match="already exists"):
             manager.create("dup", str(config_yaml))
@@ -190,9 +186,7 @@ class TestProjectManager:
         assert "persist" in m2.projects
         assert m2.projects["persist"].topic == "persistence"
 
-    def test_delete_switches_active(
-        self, manager: ProjectManager, config_yaml: Path
-    ) -> None:
+    def test_delete_switches_active(self, manager: ProjectManager, config_yaml: Path) -> None:
         manager.create("first", str(config_yaml))
         manager.create("second", str(config_yaml))
         manager.switch("first")
@@ -201,9 +195,7 @@ class TestProjectManager:
         assert manager.active is not None
         assert manager.active.name == "second"
 
-    def test_config_copied_to_project_dir(
-        self, manager: ProjectManager, config_yaml: Path
-    ) -> None:
+    def test_config_copied_to_project_dir(self, manager: ProjectManager, config_yaml: Path) -> None:
         proj = manager.create("copy_test", str(config_yaml))
         copied = Path(proj.config_path)
         assert copied.exists()
@@ -223,9 +215,7 @@ class TestProjectScheduler:
         name = sched.next()
         assert name == "proj"
 
-    def test_concurrency_limit(
-        self, manager: ProjectManager, config_yaml: Path
-    ) -> None:
+    def test_concurrency_limit(self, manager: ProjectManager, config_yaml: Path) -> None:
         manager.create("a", str(config_yaml))
         manager.create("b", str(config_yaml))
         sched = ProjectScheduler(manager, max_concurrent=1)
@@ -234,9 +224,7 @@ class TestProjectScheduler:
         sched.next()  # starts "a"
         assert sched.next() is None  # can't start "b"
 
-    def test_mark_done_frees_slot(
-        self, manager: ProjectManager, config_yaml: Path
-    ) -> None:
+    def test_mark_done_frees_slot(self, manager: ProjectManager, config_yaml: Path) -> None:
         manager.create("a", str(config_yaml))
         manager.create("b", str(config_yaml))
         sched = ProjectScheduler(manager, max_concurrent=1)
@@ -262,9 +250,7 @@ class TestProjectScheduler:
         with pytest.raises(KeyError):
             sched.enqueue("ghost")
 
-    def test_duplicate_enqueue_ignored(
-        self, manager: ProjectManager, config_yaml: Path
-    ) -> None:
+    def test_duplicate_enqueue_ignored(self, manager: ProjectManager, config_yaml: Path) -> None:
         manager.create("dup", str(config_yaml))
         sched = ProjectScheduler(manager)
         sched.enqueue("dup")
@@ -292,9 +278,7 @@ class TestProjectScheduler:
 class TestIdeaPool:
     def test_add_idea(self, pool_path: Path) -> None:
         pool = IdeaPool(pool_path)
-        idea = pool.add(
-            "GNN for proteins", "Apply GNN to protein folding", ["bio", "ml"]
-        )
+        idea = pool.add("GNN for proteins", "Apply GNN to protein folding", ["bio", "ml"])
         assert idea.title == "GNN for proteins"
         assert len(idea.id) == 8
 
@@ -352,9 +336,7 @@ class TestIdeaPool:
         assert len(pool2.ideas) == 1
         assert list(pool2.ideas.values())[0].title == "persist"
 
-    def test_to_project(
-        self, pool_path: Path, tmp_path: Path, config_yaml: Path
-    ) -> None:
+    def test_to_project(self, pool_path: Path, tmp_path: Path, config_yaml: Path) -> None:
         pool = IdeaPool(pool_path)
         idea = pool.add("my idea", "a nice description")
         projects_dir = tmp_path / "projects"

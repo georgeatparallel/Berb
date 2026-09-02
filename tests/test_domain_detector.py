@@ -98,10 +98,7 @@ class TestProfileLoading:
 class TestKeywordDetection:
     def test_ml_vision_keywords(self):
         assert _keyword_detect("image classification with ResNet") == "ml_vision"
-        assert (
-            _keyword_detect("convolutional neural network for object detection")
-            == "ml_vision"
-        )
+        assert _keyword_detect("convolutional neural network for object detection") == "ml_vision"
 
     def test_ml_nlp_keywords(self):
         assert _keyword_detect("text classification using BERT") == "ml_nlp"
@@ -116,10 +113,7 @@ class TestKeywordDetection:
             _keyword_detect("molecular dynamics simulation with Lennard-Jones")
             == "physics_simulation"
         )
-        assert (
-            _keyword_detect("finite element method for Navier-Stokes equation")
-            == "physics_pde"
-        )
+        assert _keyword_detect("finite element method for Navier-Stokes equation") == "physics_pde"
 
     def test_chemistry_keywords(self):
         assert _keyword_detect("DFT calculation with PySCF") == "chemistry_qm"
@@ -129,29 +123,16 @@ class TestKeywordDetection:
         )
 
     def test_biology_keywords(self):
-        assert (
-            _keyword_detect("single-cell RNA-seq analysis with scanpy")
-            == "biology_singlecell"
-        )
+        assert _keyword_detect("single-cell RNA-seq analysis with scanpy") == "biology_singlecell"
 
     def test_economics_keywords(self):
-        assert (
-            _keyword_detect("panel data regression with fixed effects")
-            == "economics_empirical"
-        )
-        assert (
-            _keyword_detect("instrumental variable causal inference")
-            == "economics_empirical"
-        )
+        assert _keyword_detect("panel data regression with fixed effects") == "economics_empirical"
+        assert _keyword_detect("instrumental variable causal inference") == "economics_empirical"
 
     def test_math_keywords(self):
+        assert _keyword_detect("Runge-Kutta ODE solver convergence") == "mathematics_numerical"
         assert (
-            _keyword_detect("Runge-Kutta ODE solver convergence")
-            == "mathematics_numerical"
-        )
-        assert (
-            _keyword_detect("numerical analysis of quadrature methods")
-            == "mathematics_numerical"
+            _keyword_detect("numerical analysis of quadrature methods") == "mathematics_numerical"
         )
 
     def test_security_keywords(self):
@@ -343,9 +324,9 @@ class TestDetectionAccuracy:
                 correct += 1
 
         accuracy = correct / total
-        assert (
-            accuracy > 0.90
-        ), f"Keyword detection accuracy: {accuracy:.1%} ({correct}/{total}). Expected > 90%."
+        assert accuracy > 0.90, (
+            f"Keyword detection accuracy: {accuracy:.1%} ({correct}/{total}). Expected > 90%."
+        )
 
     def test_full_detection_accuracy(self):
         """Test that full detect_domain achieves > 90% accuracy."""
@@ -358,6 +339,6 @@ class TestDetectionAccuracy:
                 correct += 1
 
         accuracy = correct / total
-        assert (
-            accuracy > 0.90
-        ), f"Full detection accuracy: {accuracy:.1%} ({correct}/{total}). Expected > 90%."
+        assert accuracy > 0.90, (
+            f"Full detection accuracy: {accuracy:.1%} ({correct}/{total}). Expected > 90%."
+        )

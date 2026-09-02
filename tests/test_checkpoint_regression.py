@@ -46,9 +46,9 @@ class TestCheckpointDurability:
                 _write_checkpoint(run_dir, Stage.TOPIC_INIT, "test-run-123")
 
             expected_min_calls = 2 if hasattr(os, "O_DIRECTORY") else 1
-            assert (
-                len(fsync_calls) >= expected_min_calls
-            ), f"Expected >={expected_min_calls} fsync calls, got {len(fsync_calls)}"
+            assert len(fsync_calls) >= expected_min_calls, (
+                f"Expected >={expected_min_calls} fsync calls, got {len(fsync_calls)}"
+            )
 
     def test_checkpoint_write_includes_flush(self):
         """BUG-003 REGRESSION: Verify flush is called before fsync."""

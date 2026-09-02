@@ -53,9 +53,7 @@ class SpeculativeConfig:
     premium_model: str = "anthropic/claude-sonnet-4-5-20250929"
     quality_threshold: float = 0.85  # Accept cheap if quality >= this
     cheap_timeout: float = 30.0  # Timeout for cheap model
-    premium_head_start: float = (
-        0.0  # Delay before starting premium (for staggered execution)
-    )
+    premium_head_start: float = 0.0  # Delay before starting premium (for staggered execution)
     enable_cancellation: bool = True  # Cancel premium if cheap is good enough
 
     # Quality evaluation
@@ -342,9 +340,7 @@ class SpeculativeClient:
         Returns:
             Dictionary with statistics
         """
-        cheap_rate = (
-            self._cheap_used / self._total_requests if self._total_requests > 0 else 0.0
-        )
+        cheap_rate = self._cheap_used / self._total_requests if self._total_requests > 0 else 0.0
 
         return {
             "total_requests": self._total_requests,
@@ -353,9 +349,7 @@ class SpeculativeClient:
             "cheap_usage_rate": cheap_rate,
             "total_saved": self._total_saved,
             "avg_saved_per_request": (
-                self._total_saved / self._total_requests
-                if self._total_requests > 0
-                else 0.0
+                self._total_saved / self._total_requests if self._total_requests > 0 else 0.0
             ),
         }
 

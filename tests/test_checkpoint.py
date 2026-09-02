@@ -28,9 +28,7 @@ def test_validate_checkpoint_checksum_accepts_valid() -> None:
     }
     import hashlib
 
-    checksum_data = (
-        f"{data['last_completed_stage']}:{data['last_completed_name']}:{data['run_id']}"
-    )
+    checksum_data = f"{data['last_completed_stage']}:{data['last_completed_name']}:{data['run_id']}"
     data["checksum"] = hashlib.sha256(checksum_data.encode()).hexdigest()[:16]
 
     assert validate_checkpoint_checksum(data) is True
@@ -123,9 +121,7 @@ class TestReplaceWithRetry:
         assert dst.read_text(encoding="utf-8") == "content"
         assert not src.exists()
 
-    def test_retries_and_succeeds_after_transient_permission_error(
-        self, tmp_path: Path
-    ) -> None:
+    def test_retries_and_succeeds_after_transient_permission_error(self, tmp_path: Path) -> None:
         src = tmp_path / "src.tmp"
         dst = tmp_path / "dst.json"
         src.write_text("content", encoding="utf-8")

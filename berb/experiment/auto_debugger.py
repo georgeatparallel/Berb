@@ -217,9 +217,7 @@ class AutomatedDebugger:
         # Check knowledge base first
         kb_match = self._search_knowledge_base(error_message, code)
         if kb_match:
-            logger.info(
-                f"Found fix in knowledge base (confidence: {kb_match['confidence']:.0%})"
-            )
+            logger.info(f"Found fix in knowledge base (confidence: {kb_match['confidence']:.0%})")
             result = self._create_result_from_kb(kb_match, code)
             result.knowledge_base_match = True
             return result
@@ -451,9 +449,7 @@ class AutomatedDebugger:
         patterns = self._error_patterns.get(diagnosis.category, [])
 
         for pattern_info in patterns:
-            if re.search(
-                pattern_info["pattern"], diagnosis.error_message, re.IGNORECASE
-            ):
+            if re.search(pattern_info["pattern"], diagnosis.error_message, re.IGNORECASE):
                 return pattern_info
 
         return None
@@ -526,9 +522,7 @@ class AutomatedDebugger:
         def add_check(match):
             list_name = match.group(1)
             index_name = match.group(2)
-            return (
-                f"{list_name}[{index_name} if {index_name} < len({list_name}) else 0]"
-            )
+            return f"{list_name}[{index_name} if {index_name} < len({list_name}) else 0]"
 
         return re.sub(pattern, add_check, code)
 
@@ -572,8 +566,7 @@ class AutomatedDebugger:
                     check = " " * indent + "import os\n"
                     check += " " * indent + f"if not os.path.exists('{path}'):\n"
                     check += (
-                        " " * (indent + 4)
-                        + f"raise FileNotFoundError('File not found: {path}')\n"
+                        " " * (indent + 4) + f"raise FileNotFoundError('File not found: {path}')\n"
                     )
                     fixed_lines.append(check)
             fixed_lines.append(line)
@@ -583,9 +576,7 @@ class AutomatedDebugger:
     def _define_variable(self, code: str, diagnosis: ErrorDiagnosis) -> str:
         """Define missing variable."""
         # Extract variable name from error
-        match = re.search(
-            r"name\s+'(\w+)'\s+is\s+not\s+defined", diagnosis.error_message
-        )
+        match = re.search(r"name\s+'(\w+)'\s+is\s+not\s+defined", diagnosis.error_message)
         if match:
             var_name = match.group(1)
             # Add definition at top of code
@@ -598,9 +589,7 @@ class AutomatedDebugger:
         """Get potential side effects of a fix strategy."""
         side_effects = {
             "fix_indentation": ["May change code formatting"],
-            "balance_parens": [
-                "May change expression logic if parens were intentional"
-            ],
+            "balance_parens": ["May change expression logic if parens were intentional"],
             "bounds_check": ["May return default value instead of raising error"],
             "dict_key_check": ["Returns None for missing keys instead of raising"],
             "add_zero_check": ["Returns 0 for division by zero instead of raising"],
@@ -629,9 +618,7 @@ CODE:
 Provide the fixed code only, no explanation. Keep changes minimal."""
 
         if self._llm_client is not None:
-            response = await self._llm_client.chat(
-                messages=[{"role": "user", "content": prompt}]
-            )
+            response = await self._llm_client.chat(messages=[{"role": "user", "content": prompt}])
             fixed_code = response.content
         else:
             fixed_code = code  # No LLM client configured — no change

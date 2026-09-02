@@ -34,9 +34,7 @@ class ModelConfig:
     price_output: float  # $/1M output tokens
     context_window: int = 128000  # Default context window
     stages: list[str] = field(default_factory=list)  # Target pipeline stages
-    capabilities: list[str] = field(
-        default_factory=list
-    )  # e.g., ["reasoning", "coding"]
+    capabilities: list[str] = field(default_factory=list)  # e.g., ["reasoning", "coding"]
 
 
 @dataclass
@@ -378,9 +376,7 @@ def print_preset_info(name: str | None = None) -> None:
         for model in preset.models:
             print(f"  • {model.model_id}")
             print(f"    Provider: {model.provider}")
-            print(
-                f"    Price: ${model.price_input:.2f}/${model.price_output:.2f} per 1M tokens"
-            )
+            print(f"    Price: ${model.price_input:.2f}/${model.price_output:.2f} per 1M tokens")
             print(f"    Context: {model.context_window:,}")
             print(f"    Stages: {', '.join(model.stages)}")
             print(f"    Capabilities: {', '.join(model.capabilities)}")

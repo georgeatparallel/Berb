@@ -53,9 +53,7 @@ class ReasonerRegistry:
     """
 
     # Registry storage: method_type -> (class, factory_func)
-    _registry: dict[
-        MethodType, tuple[type[ReasoningMethod], ReasonerFactory | None]
-    ] = {}
+    _registry: dict[MethodType, tuple[type[ReasoningMethod], ReasonerFactory | None]] = {}
 
     # Lock for thread-safe singleton creation (BUG-R001 FIX)
     _init_lock: asyncio.Lock | None = None
@@ -410,10 +408,7 @@ def auto_register_all() -> None:
     for module_name, method_type in modules:
         full_name = f"berb.reasoning.{module_name}"
         try:
-            if (
-                full_name in sys.modules
-                and method_type not in ReasonerRegistry._registry
-            ):
+            if full_name in sys.modules and method_type not in ReasonerRegistry._registry:
                 # BUG-NEW-002 FIX: Module already imported — plain __import__ is
                 # a no-op and will NOT re-run the module-level
                 # ReasonerRegistry.register(...) call. Drop it from

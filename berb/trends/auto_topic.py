@@ -35,9 +35,7 @@ class AutoTopicGenerator:
         trend_analysis = self.trend_analyzer.analyze(papers or [])
 
         # 2. Find opportunities
-        opportunities = await self.opportunity_finder.find_opportunities(
-            trend_analysis, domains
-        )
+        opportunities = await self.opportunity_finder.find_opportunities(trend_analysis, domains)
 
         # 3. Score and rank candidates
         candidates = []

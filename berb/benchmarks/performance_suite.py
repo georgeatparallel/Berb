@@ -148,9 +148,7 @@ class OptimizationBenchmarkSuite:
 
         report.save(self.output_dir / "benchmark_report.json")
 
-        logger.info(
-            f"Benchmark suite complete: {len(self.metrics)} metrics, passed={passed}"
-        )
+        logger.info(f"Benchmark suite complete: {len(self.metrics)} metrics, passed={passed}")
 
         return report
 
@@ -297,9 +295,7 @@ result = arr * 2  # Vectorized
         good_issues = await guard.check_experiment_code(good_code)
 
         # Effectiveness: reduction in issues
-        effectiveness = (
-            (len(bad_issues) - len(good_issues)) / max(len(bad_issues), 1) * 100
-        )
+        effectiveness = (len(bad_issues) - len(good_issues)) / max(len(bad_issues), 1) * 100
 
         self.metrics.append(
             BenchmarkMetric(

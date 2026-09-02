@@ -61,8 +61,7 @@ class ScholarPaper:
 
         authors_tuple = tuple(Author(name=a) for a in self.authors)
         return Paper(
-            paper_id=self.scholar_id
-            or f"s2-{hashlib.sha256(self.title.encode()).hexdigest()[:8]}",
+            paper_id=self.scholar_id or f"s2-{hashlib.sha256(self.title.encode()).hexdigest()[:8]}",
             title=self.title,
             authors=authors_tuple,
             year=self.year,
@@ -142,9 +141,7 @@ class GoogleScholarClient:
         for item in (data.get("data") or [])[:limit]:
             citing = item.get("citingPaper") or item
             papers.append(self._parse_item(citing))
-        logger.info(
-            "Semantic Scholar: found %d citations for %s", len(papers), scholar_id
-        )
+        logger.info("Semantic Scholar: found %d citations for %s", len(papers), scholar_id)
         return papers
 
     def search_author(self, name: str) -> list[dict[str, Any]]:
@@ -203,9 +200,7 @@ class GoogleScholarClient:
         authors = [a.get("name", "") for a in (item.get("authors") or [])]
         ext_ids = item.get("externalIds") or {}
         scholar_id = str(item.get("paperId") or "")
-        url = item.get("url") or (
-            f"https://doi.org/{ext_ids['DOI']}" if "DOI" in ext_ids else ""
-        )
+        url = item.get("url") or (f"https://doi.org/{ext_ids['DOI']}" if "DOI" in ext_ids else "")
         return ScholarPaper(
             title=item.get("title") or "",
             authors=authors,

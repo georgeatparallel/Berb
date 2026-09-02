@@ -383,9 +383,7 @@ Provide the complete refactored code with all fixes applied.
                         CodeQualityIssue(
                             issue_type="unvectorized_loops",
                             severity="warning",
-                            line_number=(
-                                node.lineno if hasattr(node, "lineno") else None
-                            ),
+                            line_number=(node.lineno if hasattr(node, "lineno") else None),
                             description="Loop may be vectorizable using NumPy operations",
                             suggestion="Use NumPy array operations instead of Python loops",
                             anti_pattern="unvectorized_loops",
@@ -423,9 +421,7 @@ Provide the complete refactored code with all fixes applied.
                             CodeQualityIssue(
                                 issue_type="explicit_kronecker_product",
                                 severity="info",
-                                line_number=(
-                                    node.lineno if hasattr(node, "lineno") else None
-                                ),
+                                line_number=(node.lineno if hasattr(node, "lineno") else None),
                                 description="Explicit Kronecker product may be inefficient",
                                 suggestion="Consider tensor reshaping or np.einsum",
                                 anti_pattern="explicit_kronecker_product",
@@ -475,9 +471,7 @@ Provide the complete refactored code with all fixes applied.
                                 CodeQualityIssue(
                                     issue_type="missing_numerical_precision",
                                     severity="warning",
-                                    line_number=(
-                                        node.lineno if hasattr(node, "lineno") else None
-                                    ),
+                                    line_number=(node.lineno if hasattr(node, "lineno") else None),
                                     description="Missing dtype specification may cause numerical instability",
                                     suggestion="Add dtype=np.float64 for numerical stability",
                                     anti_pattern="missing_numerical_precision",
@@ -524,9 +518,7 @@ Provide the complete refactored code with all fixes applied.
             "max_iterations",
         ]
 
-        has_convergence = any(
-            keyword in code.lower() for keyword in convergence_keywords
-        )
+        has_convergence = any(keyword in code.lower() for keyword in convergence_keywords)
 
         if has_while and not has_convergence:
             issues.append(
@@ -566,9 +558,7 @@ Provide the complete refactored code with all fixes applied.
         for node in ast.walk(tree):
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 # Count assignments
-                assignments = sum(
-                    1 for child in ast.walk(node) if isinstance(child, ast.Assign)
-                )
+                assignments = sum(1 for child in ast.walk(node) if isinstance(child, ast.Assign))
 
                 # Threshold: more than 10 assignments suggests poor organization
                 if assignments > 10:
@@ -576,9 +566,7 @@ Provide the complete refactored code with all fixes applied.
                         CodeQualityIssue(
                             issue_type="loose_variable_organization",
                             severity="info",
-                            line_number=(
-                                node.lineno if hasattr(node, "lineno") else None
-                            ),
+                            line_number=(node.lineno if hasattr(node, "lineno") else None),
                             description=f"Function has {assignments} variable assignments",
                             suggestion="Consider using dataclass or named tuple to organize variables",
                             anti_pattern="loose_variable_organization",
@@ -621,9 +609,7 @@ Provide the complete refactored code with all fixes applied.
         for child in ast.walk(node):
             if isinstance(child, ast.BinOp):
                 # Check for indexing operations
-                if isinstance(child.left, ast.Subscript) or isinstance(
-                    child.right, ast.Subscript
-                ):
+                if isinstance(child.left, ast.Subscript) or isinstance(child.right, ast.Subscript):
                     return True
         return False
 

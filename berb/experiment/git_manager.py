@@ -32,9 +32,7 @@ class ExperimentGitManager:
         self._active_branch = branch
         return branch
 
-    def commit_experiment(
-        self, run_id: str, metrics: dict[str, object], description: str
-    ) -> str:
+    def commit_experiment(self, run_id: str, metrics: dict[str, object], description: str) -> str:
         add_result = self._run_git(["add", "-A"])
         if add_result is None or add_result.returncode != 0:
             self._log_git_failure("git add", add_result)
@@ -63,9 +61,7 @@ class ExperimentGitManager:
         return True
 
     def get_experiment_history(self) -> list[dict[str, str]]:
-        result = self._run_git(
-            ["log", "--oneline", "--fixed-strings", "--grep", "experiment("]
-        )
+        result = self._run_git(["log", "--oneline", "--fixed-strings", "--grep", "experiment("])
         if result is None or result.returncode != 0:
             self._log_git_failure("git log", result)
             return []
@@ -127,9 +123,7 @@ class ExperimentGitManager:
             return None
 
     @staticmethod
-    def _format_commit_message(
-        *, run_id: str, metrics: dict[str, object], description: str
-    ) -> str:
+    def _format_commit_message(*, run_id: str, metrics: dict[str, object], description: str) -> str:
         metrics_json = json.dumps(metrics, sort_keys=True)
         return f"experiment({run_id}): {description}\n\nMetrics: {metrics_json}"
 
@@ -147,9 +141,7 @@ class ExperimentGitManager:
         return {"hash": commit_hash, "run_id": run_id, "message": message}
 
     @staticmethod
-    def _log_git_failure(
-        operation: str, result: subprocess.CompletedProcess[str] | None
-    ) -> None:
+    def _log_git_failure(operation: str, result: subprocess.CompletedProcess[str] | None) -> None:
         if result is None:
             logger.warning("Git operation failed for %s", operation)
             return
@@ -157,9 +149,7 @@ class ExperimentGitManager:
         if stderr:
             logger.warning("Git operation failed for %s: %s", operation, stderr)
         else:
-            logger.warning(
-                "Git operation failed for %s with code %s", operation, result.returncode
-            )
+            logger.warning("Git operation failed for %s with code %s", operation, result.returncode)
 
     def _detect_current_branch(self) -> str | None:
         """Detect the current git branch name, or None if not in a repo."""

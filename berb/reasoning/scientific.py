@@ -110,9 +110,7 @@ class ExperimentDesign:
     """Design for testing hypothesis."""
 
     description: str
-    variables: dict[str, str] = field(
-        default_factory=dict
-    )  # independent, dependent, controlled
+    variables: dict[str, str] = field(default_factory=dict)  # independent, dependent, controlled
     methodology: list[str] = field(default_factory=list)
     expected_outcomes: list[str] = field(default_factory=list)
     potential_confounds: list[str] = field(default_factory=list)
@@ -217,9 +215,7 @@ class ScientificMethod(ReasoningMethod):
             analysis = await self._analyze_results(hypothesis, experiment, context)
 
             # Step 4: Draw conclusion
-            conclusion = await self._draw_conclusion(
-                observation, hypothesis, analysis, context
-            )
+            conclusion = await self._draw_conclusion(observation, hypothesis, analysis, context)
 
             # Step 5: Identify next steps
             next_steps = await self._identify_next_steps(conclusion, context)
@@ -528,9 +524,7 @@ Respond in JSON format:
             self.router.track_cost(
                 method="scientific",
                 phase="all",
-                model=self.router.role_models.get(
-                    "hypothesis", self.router.complex_model
-                ),
+                model=self.router.role_models.get("hypothesis", self.router.complex_model),
                 input_tokens=estimated_input,
                 output_tokens=estimated_output,
                 duration_ms=int(duration_sec * 1000),

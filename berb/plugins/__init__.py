@@ -85,9 +85,7 @@ class PluginManifest:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> PluginManifest:
         """Create manifest from dictionary."""
-        hooks = [
-            PluginHook(h) for h in data.get("hooks", []) if h in PluginHook.__members__
-        ]
+        hooks = [PluginHook(h) for h in data.get("hooks", []) if h in PluginHook.__members__]
         return cls(
             id=data.get("id", "unknown"),
             name=data.get("name", "Unknown Plugin"),
@@ -117,9 +115,7 @@ class PluginManifest:
 class Plugin:
     """Base plugin class."""
 
-    def __init__(
-        self, manifest: PluginManifest, config: dict[str, Any] | None = None
-    ) -> None:
+    def __init__(self, manifest: PluginManifest, config: dict[str, Any] | None = None) -> None:
         """Initialize plugin.
 
         Args:
@@ -169,15 +165,11 @@ class Plugin:
         """Called before stage execution."""
         pass
 
-    def on_post_stage(
-        self, stage: int, stage_name: str, result: Any, **kwargs: Any
-    ) -> None:
+    def on_post_stage(self, stage: int, stage_name: str, result: Any, **kwargs: Any) -> None:
         """Called after stage execution."""
         pass
 
-    def on_stage_failed(
-        self, stage: int, stage_name: str, error: Exception, **kwargs: Any
-    ) -> None:
+    def on_stage_failed(self, stage: int, stage_name: str, error: Exception, **kwargs: Any) -> None:
         """Called when stage fails."""
         pass
 
@@ -279,18 +271,14 @@ class PluginManager:
                     if plugin:
                         self.register_plugin(plugin)
                         loaded += 1
-                        logger.info(
-                            f"Loaded plugin: {manifest.name} v{manifest.version}"
-                        )
+                        logger.info(f"Loaded plugin: {manifest.name} v{manifest.version}")
                 except Exception as e:
                     logger.error(f"Failed to load plugin {plugin_path}: {e}")
 
         logger.info(f"Discovered {loaded} plugins")
         return loaded
 
-    def _load_plugin(
-        self, manifest: PluginManifest, plugin_path: Path
-    ) -> Plugin | None:
+    def _load_plugin(self, manifest: PluginManifest, plugin_path: Path) -> Plugin | None:
         """Load plugin from entry point.
 
         Args:

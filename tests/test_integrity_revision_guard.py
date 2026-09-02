@@ -192,7 +192,9 @@ def test_empty_inputs_yield_no_candidates() -> None:
 
 def test_candidates_bounded_and_most_changed_first() -> None:
     before = " ".join(f"Sentence {i} is associated with outcome {i}." for i in range(30))
-    after = " ".join(f"Sentence {i} absolutely causes outcome {i} without question." for i in range(30))
+    after = " ".join(
+        f"Sentence {i} absolutely causes outcome {i} without question." for i in range(30)
+    )
     candidates = find_claim_drift_candidates(before, after)
     assert len(candidates) <= 20
 
@@ -203,16 +205,12 @@ def test_candidates_bounded_and_most_changed_first() -> None:
 
 
 def test_llm_none_returns_empty_and_never_calls() -> None:
-    candidates = find_claim_drift_candidates(
-        "X is associated with Y.", "X causes Y."
-    )
+    candidates = find_claim_drift_candidates("X is associated with Y.", "X causes Y.")
     assert strength_advisory(candidates, None) == ()
 
 
 def test_drifted_verdict_produces_advisory_finding() -> None:
-    candidates = find_claim_drift_candidates(
-        "X is associated with Y.", "X causes Y."
-    )
+    candidates = find_claim_drift_candidates("X is associated with Y.", "X causes Y.")
 
     def fake_llm(prompt: str) -> str:
         return json.dumps(
@@ -227,9 +225,7 @@ def test_drifted_verdict_produces_advisory_finding() -> None:
 
 
 def test_not_drifted_verdict_produces_no_finding() -> None:
-    candidates = find_claim_drift_candidates(
-        "X is associated with Y.", "X correlates with Y."
-    )
+    candidates = find_claim_drift_candidates("X is associated with Y.", "X correlates with Y.")
 
     def fake_llm(prompt: str) -> str:
         return json.dumps({"drifted": False, "direction": "none", "rationale": "same strength"})
@@ -238,16 +234,12 @@ def test_not_drifted_verdict_produces_no_finding() -> None:
 
 
 def test_unparseable_response_is_skipped_not_raised() -> None:
-    candidates = find_claim_drift_candidates(
-        "X is associated with Y.", "X causes Y."
-    )
+    candidates = find_claim_drift_candidates("X is associated with Y.", "X causes Y.")
     assert strength_advisory(candidates, lambda prompt: "not json at all") == ()
 
 
 def test_llm_exception_is_skipped_not_raised() -> None:
-    candidates = find_claim_drift_candidates(
-        "X is associated with Y.", "X causes Y."
-    )
+    candidates = find_claim_drift_candidates("X is associated with Y.", "X causes Y.")
 
     def raising_llm(prompt: str) -> str:
         raise RuntimeError("simulated provider failure")
@@ -258,9 +250,7 @@ def test_llm_exception_is_skipped_not_raised() -> None:
 def test_injection_payload_in_response_is_inert_data() -> None:
     # Same class of regression as berb.llm.cross_model's verdict parsing --
     # JSON-only, never eval/exec (commit 334c7a0).
-    candidates = find_claim_drift_candidates(
-        "X is associated with Y.", "X causes Y."
-    )
+    candidates = find_claim_drift_candidates("X is associated with Y.", "X causes Y.")
 
     def malicious_llm(prompt: str) -> str:
         return '{"drifted": true, "direction": "__import__(\'os\').system(\'echo pwned\')", "rationale": "x"}'
@@ -274,9 +264,7 @@ def test_injection_payload_in_response_is_inert_data() -> None:
 
 
 def test_advisory_finding_never_gates_below_strict() -> None:
-    candidates = find_claim_drift_candidates(
-        "X is associated with Y.", "X causes Y."
-    )
+    candidates = find_claim_drift_candidates("X is associated with Y.", "X causes Y.")
 
     def fake_llm(prompt: str) -> str:
         return json.dumps({"drifted": True, "direction": "strengthened", "rationale": "x"})

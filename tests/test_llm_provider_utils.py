@@ -54,9 +54,7 @@ class TestGetProviderFromModel:
         """Test provider extraction from standard model format."""
         assert get_provider_from_model("qwen/qwen3.5-flash") == LLMProvider.QWEN
         assert get_provider_from_model("openai/gpt-4") == LLMProvider.OPENAI
-        assert (
-            get_provider_from_model("anthropic/claude-sonnet") == LLMProvider.ANTHROPIC
-        )
+        assert get_provider_from_model("anthropic/claude-sonnet") == LLMProvider.ANTHROPIC
         assert get_provider_from_model("minimax/minimax-m2.5") == LLMProvider.MINIMAX
 
     def test_case_insensitive(self):
@@ -94,9 +92,9 @@ class TestGetProviderFromModel:
 
         for model, expected_provider in test_cases:
             result = get_provider_from_model(model)
-            assert (
-                result == expected_provider
-            ), f"Failed for {model}: expected {expected_provider}, got {result}"
+            assert result == expected_provider, (
+                f"Failed for {model}: expected {expected_provider}, got {result}"
+            )
 
 
 class TestValidateModelForProvider:
@@ -104,25 +102,15 @@ class TestValidateModelForProvider:
 
     def test_valid_model_provider(self):
         """Test valid model-provider pairs."""
-        assert (
-            validate_model_for_provider("qwen/qwen3.5-flash", LLMProvider.QWEN) is True
-        )
+        assert validate_model_for_provider("qwen/qwen3.5-flash", LLMProvider.QWEN) is True
         assert validate_model_for_provider("openai/gpt-4", LLMProvider.OPENAI) is True
-        assert (
-            validate_model_for_provider("anthropic/claude", LLMProvider.ANTHROPIC)
-            is True
-        )
+        assert validate_model_for_provider("anthropic/claude", LLMProvider.ANTHROPIC) is True
 
     def test_invalid_model_provider(self):
         """Test invalid model-provider pairs."""
-        assert (
-            validate_model_for_provider("qwen/qwen3.5-flash", LLMProvider.OPENAI)
-            is False
-        )
+        assert validate_model_for_provider("qwen/qwen3.5-flash", LLMProvider.OPENAI) is False
         assert validate_model_for_provider("openai/gpt-4", LLMProvider.QWEN) is False
-        assert (
-            validate_model_for_provider("anthropic/claude", LLMProvider.GOOGLE) is False
-        )
+        assert validate_model_for_provider("anthropic/claude", LLMProvider.GOOGLE) is False
 
     def test_unknown_provider(self):
         """Test UNKNOWN provider always validates."""
@@ -149,12 +137,10 @@ class TestIntegration:
 
         for model in test_models:
             provider = get_provider_from_model(model)
-            assert (
-                provider != LLMProvider.UNKNOWN
-            ), f"Could not extract provider from {model}"
-            assert validate_model_for_provider(
-                model, provider
-            ), f"Validation failed for {model} with {provider}"
+            assert provider != LLMProvider.UNKNOWN, f"Could not extract provider from {model}"
+            assert validate_model_for_provider(model, provider), (
+                f"Validation failed for {model} with {provider}"
+            )
 
     def test_mismatch_detection(self):
         """Test detection of provider-model mismatch."""

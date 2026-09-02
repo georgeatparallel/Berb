@@ -47,10 +47,7 @@ def test_proof_persona_present_and_distinct_from_experimental_rigor() -> None:
     proof_persona = next(p for p in REVIEWER_PERSONAS if p.id == "reviewer_6")
     rigor_persona = next(p for p in REVIEWER_PERSONAS if p.id == "reviewer_3")
     assert proof_persona.name != rigor_persona.name
-    assert (
-        "proof" in proof_persona.name.lower()
-        or "derivation" in proof_persona.name.lower()
-    )
+    assert "proof" in proof_persona.name.lower() or "derivation" in proof_persona.name.lower()
 
 
 def test_proof_persona_reuses_technical_quality_dimension() -> None:
@@ -65,8 +62,7 @@ def test_proof_persona_has_larger_max_tokens_than_others() -> None:
     others = [p for p in REVIEWER_PERSONAS if p.id != "reviewer_6"]
     assert proof_persona.max_tokens is not None
     assert all(
-        other.max_tokens is None or proof_persona.max_tokens > other.max_tokens
-        for other in others
+        other.max_tokens is None or proof_persona.max_tokens > other.max_tokens for other in others
     )
 
 
@@ -83,9 +79,7 @@ def test_sync_path_passes_proof_persona_max_tokens() -> None:
 
     asyncio.run(ensemble.review_paper("paper.md", paper_text="text", use_batch=False))
 
-    proof_calls = [
-        c for c in mock_llm.chat.call_args_list if c.kwargs.get("max_tokens") == 8192
-    ]
+    proof_calls = [c for c in mock_llm.chat.call_args_list if c.kwargs.get("max_tokens") == 8192]
     assert len(proof_calls) == 1
 
 
@@ -94,9 +88,7 @@ def test_meta_review_text_reports_actual_reviewer_count() -> None:
     mock_llm.chat.return_value = MagicMock(content=_VALID_REVIEW_JSON)
     ensemble = AutomatedReviewerEnsemble(llm_client=mock_llm)
 
-    reviews = asyncio.run(
-        ensemble.review_paper("paper.md", paper_text="text", use_batch=False)
-    )
+    reviews = asyncio.run(ensemble.review_paper("paper.md", paper_text="text", use_batch=False))
     meta = ensemble.area_chair_decision(reviews)
 
     assert f"from {len(REVIEWER_PERSONAS)} reviewers" in meta.meta_review_text

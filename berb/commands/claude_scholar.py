@@ -62,9 +62,7 @@ def cmd_research_init(args: argparse.Namespace) -> int:
 
         print(f"Found {len(collections)} collections:")
         for i, coll in enumerate(collections[:10], 1):
-            print(
-                f"  {i}. {coll.get('name', 'Unknown')} ({coll.get('count', 0)} papers)"
-            )
+            print(f"  {i}. {coll.get('name', 'Unknown')} ({coll.get('count', 0)} papers)")
 
         if len(collections) > 10:
             print(f"  ... and {len(collections) - 10} more")
@@ -391,9 +389,7 @@ def cmd_rebuttal_enhanced(args: argparse.Namespace) -> int:
         # Simple rebuttal generation (would use LLM in full implementation)
         rebuttal = "# Rebuttal Letter\n\n"
         rebuttal += "Dear Area Chair and Reviewers,\n\n"
-        rebuttal += (
-            "We thank the reviewers for their constructive feedback on our manuscript. "
-        )
+        rebuttal += "We thank the reviewers for their constructive feedback on our manuscript. "
         rebuttal += "Below we provide point-by-point responses to all comments.\n\n"
         rebuttal += "---\n\n"
 
@@ -471,9 +467,7 @@ def cmd_mine_writing_patterns(args: argparse.Namespace) -> int:
 
         print(f"\nMined {len(patterns)} writing patterns:")
         for i, pattern in enumerate(list(patterns)[:10], 1):
-            print(
-                f"  {i}. {pattern.get('type', 'unknown')}: {pattern.get('example', '')[:60]}"
-            )
+            print(f"  {i}. {pattern.get('type', 'unknown')}: {pattern.get('example', '')[:60]}")
 
         # Save patterns
         if args.output:
@@ -719,9 +713,7 @@ zotero_link: ""
 <!-- Links to related papers -->
 """
 
-        (templates_dir / "Literature Note.md").write_text(
-            lit_template, encoding="utf-8"
-        )
+        (templates_dir / "Literature Note.md").write_text(lit_template, encoding="utf-8")
 
         # Experiment report template
         exp_template = """---
@@ -758,9 +750,7 @@ experiment_id: ""
 <!-- Follow-up experiments -->
 """
 
-        (templates_dir / "Experiment Report.md").write_text(
-            exp_template, encoding="utf-8"
-        )
+        (templates_dir / "Experiment Report.md").write_text(exp_template, encoding="utf-8")
 
         print("\nCreated templates:")
         print("  - Knowledge Card.md")
@@ -818,9 +808,7 @@ def setup_claude_scholar_commands(parser: argparse._SubParsersAction) -> None:
     )
     cmd.add_argument("--topic", "-t", required=True, help="Research topic")
     cmd.add_argument("--output", "-o", default=".", help="Output directory")
-    cmd.add_argument(
-        "--mcp-url", default="http://localhost:8765", help="Zotero MCP URL"
-    )
+    cmd.add_argument("--mcp-url", default="http://localhost:8765", help="Zotero MCP URL")
     cmd.add_argument("--zotero-api-key", default="", help="Zotero API key")
 
     # Zotero review
@@ -829,9 +817,7 @@ def setup_claude_scholar_commands(parser: argparse._SubParsersAction) -> None:
         help="Review Zotero collection",
     )
     cmd.add_argument("--collection", "-c", required=True, help="Collection name")
-    cmd.add_argument(
-        "--mcp-url", default="http://localhost:8765", help="Zotero MCP URL"
-    )
+    cmd.add_argument("--mcp-url", default="http://localhost:8765", help="Zotero MCP URL")
 
     # Zotero notes
     cmd = parser.add_parser(
@@ -866,9 +852,7 @@ def setup_claude_scholar_commands(parser: argparse._SubParsersAction) -> None:
     cmd.add_argument("--manuscript", required=True, help="Manuscript PDF")
     cmd.add_argument("--reviews", required=True, help="Reviewer comments file")
     cmd.add_argument("--output", "-o", help="Output file")
-    cmd.add_argument(
-        "--no-ai-check", action="store_true", help="Skip AI phrasing check"
-    )
+    cmd.add_argument("--no-ai-check", action="store_true", help="Skip AI phrasing check")
 
     # Mine writing patterns
     cmd = parser.add_parser(
@@ -886,12 +870,8 @@ def setup_claude_scholar_commands(parser: argparse._SubParsersAction) -> None:
     )
     cmd.add_argument("--paper", required=True, help="Paper file")
     cmd.add_argument("--output", "-o", help="Output results file")
-    cmd.add_argument(
-        "--max-citations", type=int, default=50, help="Max citations to verify"
-    )
-    cmd.add_argument(
-        "--no-api-check", action="store_true", help="Skip API verification"
-    )
+    cmd.add_argument("--max-citations", type=int, default=50, help="Max citations to verify")
+    cmd.add_argument("--no-api-check", action="store_true", help="Skip API verification")
 
     # Anti-AI editing
     cmd = parser.add_parser(
@@ -900,9 +880,7 @@ def setup_claude_scholar_commands(parser: argparse._SubParsersAction) -> None:
     )
     cmd.add_argument("--input", "-i", required=True, help="Input file")
     cmd.add_argument("--output", "-o", help="Output file")
-    cmd.add_argument(
-        "--sensitivity", type=float, default=0.7, help="Detection sensitivity"
-    )
+    cmd.add_argument("--sensitivity", type=float, default=0.7, help="Detection sensitivity")
 
     # Obsidian init
     cmd = parser.add_parser(

@@ -349,9 +349,7 @@ class TestSharedResearchMemoryThreadSafety:
                 results.append(("error", thread_id, str(e)))
 
         # Run concurrent stores from threads
-        threads = [
-            threading.Thread(target=store_from_thread, args=(i,)) for i in range(10)
-        ]
+        threads = [threading.Thread(target=store_from_thread, args=(i,)) for i in range(10)]
         for t in threads:
             t.start()
         for t in threads:

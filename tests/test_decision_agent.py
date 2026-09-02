@@ -188,9 +188,7 @@ class TestHeuristicDecide:
     def _agent(self, min_figures=3, max_figures=10):
         from berb.agents.figure_agent.decision import FigureDecisionAgent
 
-        return FigureDecisionAgent(
-            _FakeLLM(), min_figures=min_figures, max_figures=max_figures
-        )
+        return FigureDecisionAgent(_FakeLLM(), min_figures=min_figures, max_figures=max_figures)
 
     def test_with_experiments(self):
         agent = self._agent()
@@ -286,9 +284,7 @@ class TestEnforceBounds:
     def _agent(self, min_figures=3, max_figures=6):
         from berb.agents.figure_agent.decision import FigureDecisionAgent
 
-        return FigureDecisionAgent(
-            _FakeLLM(), min_figures=min_figures, max_figures=max_figures
-        )
+        return FigureDecisionAgent(_FakeLLM(), min_figures=min_figures, max_figures=max_figures)
 
     def test_min_padding(self):
         """When fewer than min figures, should pad."""
@@ -548,9 +544,7 @@ class TestDockerRenderer:
         output_dir.mkdir()
 
         with mock.patch("subprocess.run") as mock_run:
-            mock_run.side_effect = subprocess.TimeoutExpired(
-                cmd=["docker", "run"], timeout=10
-            )
+            mock_run.side_effect = subprocess.TimeoutExpired(cmd=["docker", "run"], timeout=10)
             result = agent._execute_in_docker(
                 script_path=script_path,
                 output_dir=output_dir,
@@ -773,9 +767,7 @@ class TestChatStripThinking:
         )
         client = LLMClient(config)
 
-        response_with_think = (
-            "<think>internal reasoning</think>The actual answer is 42."
-        )
+        response_with_think = "<think>internal reasoning</think>The actual answer is 42."
         fake_api_response = {
             "choices": [
                 {
@@ -812,9 +804,7 @@ class TestChatStripThinking:
         )
         client = LLMClient(config)
 
-        response_with_think = (
-            "<think>internal reasoning</think>The actual answer is 42."
-        )
+        response_with_think = "<think>internal reasoning</think>The actual answer is 42."
         fake_api_response = {
             "choices": [
                 {

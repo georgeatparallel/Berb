@@ -17,9 +17,7 @@ _SAFE = "print('hello')"
 
 class TestExperimentSandboxGate:
     @patch("berb.experiment.sandbox.subprocess.run")
-    def test_run_rejects_malicious_code_without_spawning(
-        self, mock_run, tmp_path: Path
-    ):
+    def test_run_rejects_malicious_code_without_spawning(self, mock_run, tmp_path: Path):
         sandbox = ExperimentSandbox(SandboxConfig(), tmp_path / "work")
         result = sandbox.run(_MALICIOUS)
 
@@ -31,9 +29,7 @@ class TestExperimentSandboxGate:
     def test_run_allows_safe_code(self, mock_run, tmp_path: Path):
         from subprocess import CompletedProcess
 
-        mock_run.return_value = CompletedProcess(
-            args=[], returncode=0, stdout="ok\n", stderr=""
-        )
+        mock_run.return_value = CompletedProcess(args=[], returncode=0, stdout="ok\n", stderr="")
         sandbox = ExperimentSandbox(SandboxConfig(), tmp_path / "work")
         result = sandbox.run(_SAFE)
 
@@ -41,9 +37,7 @@ class TestExperimentSandboxGate:
         mock_run.assert_called_once()
 
     @patch("berb.experiment.sandbox.subprocess.run")
-    def test_run_project_rejects_malicious_file_without_spawning(
-        self, mock_run, tmp_path: Path
-    ):
+    def test_run_project_rejects_malicious_file_without_spawning(self, mock_run, tmp_path: Path):
         project_dir = tmp_path / "project"
         project_dir.mkdir()
         (project_dir / "main.py").write_text(_MALICIOUS, encoding="utf-8")
@@ -61,9 +55,7 @@ class TestCliAgentEnvStripping:
     not inherit host credentials — this is check_code_security's own
     acceptance criterion, never written when S0-8 shipped."""
 
-    def test_secret_env_var_absent_from_cli_agent_child_env(
-        self, tmp_path: Path, monkeypatch
-    ):
+    def test_secret_env_var_absent_from_cli_agent_child_env(self, tmp_path: Path, monkeypatch):
         from unittest.mock import MagicMock
 
         from berb.experiment.code_agent import ClaudeCodeAgent
@@ -80,13 +72,9 @@ class TestCliAgentEnvStripping:
             proc.returncode = 0
             return proc
 
-        with patch(
-            "berb.experiment.code_agent.subprocess.Popen", side_effect=_fake_popen
-        ):
+        with patch("berb.experiment.code_agent.subprocess.Popen", side_effect=_fake_popen):
             agent = ClaudeCodeAgent(binary_path="claude")
-            agent._run_subprocess(
-                ["claude", "-p", "hi"], tmp_path / "work", timeout_sec=5
-            )
+            agent._run_subprocess(["claude", "-p", "hi"], tmp_path / "work", timeout_sec=5)
 
         assert "MY_SERVICE_API_KEY" not in captured_env
         assert (
@@ -100,9 +88,7 @@ class TestRejectedReasonField:
     callers can distinguish it from a crashed experiment."""
 
     @patch("berb.experiment.sandbox.subprocess.run")
-    def test_experiment_sandbox_run_sets_rejected_reason(
-        self, mock_run, tmp_path: Path
-    ):
+    def test_experiment_sandbox_run_sets_rejected_reason(self, mock_run, tmp_path: Path):
         sandbox = ExperimentSandbox(SandboxConfig(), tmp_path / "work")
         result = sandbox.run(_MALICIOUS)
 
@@ -115,9 +101,7 @@ class TestRejectedReasonField:
     ):
         from subprocess import CompletedProcess
 
-        mock_run.return_value = CompletedProcess(
-            args=[], returncode=0, stdout="ok\n", stderr=""
-        )
+        mock_run.return_value = CompletedProcess(args=[], returncode=0, stdout="ok\n", stderr="")
         sandbox = ExperimentSandbox(SandboxConfig(), tmp_path / "work")
         result = sandbox.run(_SAFE)
 
@@ -153,20 +137,14 @@ class TestRequirementsTxtGate:
         mock_run.assert_not_called()
 
     @patch("berb.experiment.sandbox.subprocess.run")
-    def test_experiment_sandbox_allows_plain_requirements(
-        self, mock_run, tmp_path: Path
-    ):
+    def test_experiment_sandbox_allows_plain_requirements(self, mock_run, tmp_path: Path):
         from subprocess import CompletedProcess
 
-        mock_run.return_value = CompletedProcess(
-            args=[], returncode=0, stdout="ok\n", stderr=""
-        )
+        mock_run.return_value = CompletedProcess(args=[], returncode=0, stdout="ok\n", stderr="")
         project_dir = tmp_path / "project"
         project_dir.mkdir()
         (project_dir / "main.py").write_text(_SAFE, encoding="utf-8")
-        (project_dir / "requirements.txt").write_text(
-            "numpy==1.26.4\n", encoding="utf-8"
-        )
+        (project_dir / "requirements.txt").write_text("numpy==1.26.4\n", encoding="utf-8")
 
         sandbox = ExperimentSandbox(SandboxConfig(), tmp_path / "work")
         result = sandbox.run_project(project_dir)
@@ -193,9 +171,7 @@ class TestRequirementsTxtGate:
 
 class TestDockerSandboxGate:
     @patch("berb.experiment.docker_sandbox.subprocess.run")
-    def test_run_rejects_malicious_code_without_spawning(
-        self, mock_run, tmp_path: Path
-    ):
+    def test_run_rejects_malicious_code_without_spawning(self, mock_run, tmp_path: Path):
         sandbox = DockerSandbox(DockerSandboxConfig(), tmp_path / "work")
         result = sandbox.run(_MALICIOUS)
 
@@ -204,9 +180,7 @@ class TestDockerSandboxGate:
         mock_run.assert_not_called()
 
     @patch("berb.experiment.docker_sandbox.subprocess.run")
-    def test_run_project_rejects_malicious_file_without_spawning(
-        self, mock_run, tmp_path: Path
-    ):
+    def test_run_project_rejects_malicious_file_without_spawning(self, mock_run, tmp_path: Path):
         project_dir = tmp_path / "project"
         project_dir.mkdir()
         (project_dir / "main.py").write_text(_MALICIOUS, encoding="utf-8")

@@ -440,9 +440,7 @@ class TestRetriever:
 
 
 class TestIdeationMemory:
-    def test_record_topic_success(
-        self, store: MemoryStore, embedding_fn: object
-    ) -> None:
+    def test_record_topic_success(self, store: MemoryStore, embedding_fn: object) -> None:
         retriever = MemoryRetriever(store)
         im = IdeationMemory(store, retriever, embed_fn=embedding_fn)
         entry_id = im.record_topic_outcome("RL for robotics", "success", 8.0)
@@ -566,10 +564,7 @@ class TestSharedResearchMemoryConcurrency:
             except Exception as exc:
                 errors.append(exc)
 
-        threads = [
-            threading.Thread(target=writer, args=(f"v{i}", f"code_{i}"))
-            for i in range(5)
-        ]
+        threads = [threading.Thread(target=writer, args=(f"v{i}", f"code_{i}")) for i in range(5)]
         for t in threads:
             t.start()
         for t in threads:
@@ -595,10 +590,7 @@ class TestSharedResearchMemoryConcurrency:
             except Exception as exc:
                 errors.append(exc)
 
-        threads = [
-            threading.Thread(target=writer, args=(f"err_{i}", f"fix_{i}"))
-            for i in range(5)
-        ]
+        threads = [threading.Thread(target=writer, args=(f"err_{i}", f"fix_{i}")) for i in range(5)]
         for t in threads:
             t.start()
         for t in threads:
@@ -623,9 +615,7 @@ class TestSharedResearchMemoryConcurrency:
             except Exception as exc:
                 errors.append(exc)
 
-        threads = [
-            threading.Thread(target=registrar, args=(f"agent_{i}",)) for i in range(8)
-        ]
+        threads = [threading.Thread(target=registrar, args=(f"agent_{i}",)) for i in range(8)]
         for t in threads:
             t.start()
         for t in threads:
@@ -799,6 +789,6 @@ class TestSharedResearchMemoryConcurrency:
 
         assert not errors
         # All threads must have received the same instance.
-        assert (
-            len({id(r) for r in results}) == 1
-        ), "Multiple SharedResearchMemory instances created — singleton race condition."
+        assert len({id(r) for r in results}) == 1, (
+            "Multiple SharedResearchMemory instances created — singleton race condition."
+        )

@@ -77,12 +77,8 @@ class ExperimentResults:
                 for seed_or_metric, value in seeds.items():
                     if isinstance(value, dict):
                         for metric_name, metric_val in value.items():
-                            if isinstance(metric_val, (int, float)) and math.isfinite(
-                                metric_val
-                            ):
-                                metrics[f"{cond_name}/{metric_name}"] = float(
-                                    metric_val
-                                )
+                            if isinstance(metric_val, (int, float)) and math.isfinite(metric_val):
+                                metrics[f"{cond_name}/{metric_name}"] = float(metric_val)
                     elif isinstance(value, (int, float)) and math.isfinite(value):
                         metrics[f"{cond_name}/{seed_or_metric}"] = float(value)
 
@@ -91,11 +87,7 @@ class ExperimentResults:
             if points:
                 last = points[-1]
                 for key, val in last.items():
-                    if (
-                        key != "h"
-                        and isinstance(val, (int, float))
-                        and math.isfinite(val)
-                    ):
+                    if key != "h" and isinstance(val, (int, float)) and math.isfinite(val):
                         metrics[f"{method}/{key}"] = float(val)
 
         # Flatten regression table
@@ -196,13 +188,9 @@ class UniversalMetricParser:
                         if isinstance(metrics, dict):
                             for metric_name, val in metrics.items():
                                 if isinstance(val, (int, float)) and math.isfinite(val):
-                                    result.scalars[f"{cond_name}/{metric_name}"] = (
-                                        float(val)
-                                    )
+                                    result.scalars[f"{cond_name}/{metric_name}"] = float(val)
                                     result.scalars[metric_name] = float(val)
-                        elif isinstance(metrics, (int, float)) and math.isfinite(
-                            metrics
-                        ):
+                        elif isinstance(metrics, (int, float)) and math.isfinite(metrics):
                             result.scalars[f"{cond_name}/{seed_key}"] = float(metrics)
 
         # Extract convergence data
@@ -282,9 +270,7 @@ class UniversalMetricParser:
 
         metrics = parse_metrics(stdout)
         return ExperimentResults(
-            scalars={
-                k: float(v) for k, v in metrics.items() if isinstance(v, (int, float))
-            },
+            scalars={k: float(v) for k, v in metrics.items() if isinstance(v, (int, float))},
             source="stdout",
         )
 

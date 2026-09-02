@@ -105,9 +105,7 @@ arr = np.array([1, 2, 3])
         issues = await guard.check_experiment_code(code)
 
         # Should detect missing dtype
-        precision_issues = [
-            i for i in issues if i.issue_type == "missing_numerical_precision"
-        ]
+        precision_issues = [i for i in issues if i.issue_type == "missing_numerical_precision"]
         assert len(precision_issues) > 0
 
     @pytest.mark.asyncio
@@ -121,9 +119,7 @@ while True:
 """
         issues = await guard.check_experiment_code(code)
 
-        convergence_issues = [
-            i for i in issues if i.issue_type == "no_convergence_test"
-        ]
+        convergence_issues = [i for i in issues if i.issue_type == "no_convergence_test"]
         assert len(convergence_issues) > 0
 
     def test_code_quality_issue_to_dict(self):
@@ -454,10 +450,7 @@ class TestContributionType:
 
     def test_contribution_types(self):
         """Test contribution type values."""
-        assert (
-            ContributionType.FUNDAMENTAL_UNDERSTANDING.value
-            == "fundamental_understanding"
-        )
+        assert ContributionType.FUNDAMENTAL_UNDERSTANDING.value == "fundamental_understanding"
         assert ContributionType.USEFUL_TOOLS_METHODS.value == "useful_tools_methods"
         assert ContributionType.TEXT_WITHOUT_INSIGHT.value == "text_without_insight"
 

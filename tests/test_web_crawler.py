@@ -170,9 +170,7 @@ class TestCrawlAsync:
         fallback path this test actually targets.
         """
         mock_resp = MagicMock()
-        mock_resp.read.return_value = (
-            b"<html><title>Async</title><body><p>Works</p></body></html>"
-        )
+        mock_resp.read.return_value = b"<html><title>Async</title><body><p>Works</p></body></html>"
         mock_resp.headers = {"Content-Type": "text/html"}
         mock_urlopen.return_value = mock_resp
 
@@ -206,11 +204,7 @@ class TestCheckUrlSsrf:
     def test_rejects_localhost(self):
         err = check_url_ssrf("http://localhost:8080")
         assert err is not None
-        assert (
-            "internal" in err.lower()
-            or "private" in err.lower()
-            or "blocked" in err.lower()
-        )
+        assert "internal" in err.lower() or "private" in err.lower() or "blocked" in err.lower()
 
     def test_rejects_127(self):
         err = check_url_ssrf("http://127.0.0.1:6379")

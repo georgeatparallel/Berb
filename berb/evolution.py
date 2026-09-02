@@ -301,17 +301,14 @@ def _parse_justification_from_excerpt(text: str) -> str:
     content_lines = [
         line
         for line in lines
-        if not line.startswith("##")
-        and not (line.startswith("**") and line.endswith("**"))
+        if not line.startswith("##") and not (line.startswith("**") and line.endswith("**"))
     ]
     if content_lines:
         return " ".join(content_lines)[:300]
     return ""
 
 
-def _extract_runtime_lessons(
-    run_dir: Path, timestamp: str, run_id: str
-) -> list[LessonEntry]:
+def _extract_runtime_lessons(run_dir: Path, timestamp: str, run_id: str) -> list[LessonEntry]:
     """Extract fine-grained lessons from experiment run artifacts."""
     import math
 
@@ -332,8 +329,7 @@ def _extract_runtime_lessons(
             # Check stderr for runtime warnings
             stderr = payload.get("stderr", "")
             if stderr and any(
-                kw in stderr
-                for kw in ("Warning", "Error", "divide", "overflow", "invalid value")
+                kw in stderr for kw in ("Warning", "Error", "divide", "overflow", "invalid value")
             ):
                 lessons.append(
                     LessonEntry(
@@ -445,9 +441,7 @@ class EvolutionStore:
                 continue
         return lessons
 
-    def query_for_stage(
-        self, stage_name: str, *, max_lessons: int = 5
-    ) -> list[LessonEntry]:
+    def query_for_stage(self, stage_name: str, *, max_lessons: int = 5) -> list[LessonEntry]:
         """Return the most relevant lessons for a stage, weighted by recency.
 
         Includes lessons that directly match the stage, plus high-severity
@@ -495,9 +489,7 @@ class EvolutionStore:
                 severity_icon = {"error": "❌", "warning": "⚠️", "info": "ℹ️"}.get(
                     lesson.severity, "•"
                 )
-                parts.append(
-                    f"{i}. {severity_icon} [{lesson.category}] {lesson.description}"
-                )
+                parts.append(f"{i}. {severity_icon} [{lesson.category}] {lesson.description}")
             parts.append("\nUse these lessons to avoid repeating past mistakes.")
 
         # --- Section 2: cross-run MetaClaw arc-* skills ---
