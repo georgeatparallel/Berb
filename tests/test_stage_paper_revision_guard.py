@@ -1,7 +1,7 @@
-"""Stage 19 (PAPER_REVISION) token-conservation wiring.
+"""Stage 19 (PAPER_REVISION) token-conservation and claim-strength-drift wiring.
 
-tasks/ars_integration_plan.md W6 Layer A. No existing test calls
-_execute_paper_revision directly, so this file owns its own minimal
+tasks/ars_integration_plan.md W6 (Layer A + Layer B). No existing test
+calls _execute_paper_revision directly, so this file owns its own minimal
 fixtures. A tiny fake LLM client stands in for a real one — no network.
 """
 
@@ -43,6 +43,26 @@ class _FakeLLMClient:
         from berb.llm.client import LLMResponse
 
         return LLMResponse(content=self.response_text, model="fake-model")
+
+
+class _SequencedFakeLLMClient:
+    """First ``.chat()`` call returns *first_response* (the revision
+    prose); every call after that returns *subsequent_response* (fixed).
+    The revision step and the Layer B drift-check step share one llm
+    instance, so this is how a test gives them different content without
+    the fake having to parse prompts to tell them apart."""
+
+    def __init__(self, first_response: str, subsequent_response: str) -> None:
+        self.first_response = first_response
+        self.subsequent_response = subsequent_response
+        self.call_count = 0
+
+    def chat(self, messages: list[dict[str, str]], **kwargs: object) -> Any:
+        from berb.llm.client import LLMResponse
+
+        self.call_count += 1
+        text = self.first_response if self.call_count == 1 else self.subsequent_response
+        return LLMResponse(content=text, model="fake-model")
 
 
 def _rc_config(tmp_path: Path) -> RCConfig:
@@ -128,3 +148,71 @@ def test_no_llm_means_revised_equals_draft_no_findings(run_dir: Path, tmp_path: 
     )
     assert result.status is StageStatus.DONE
     assert "revision_findings.json" not in result.artifacts
+
+
+def _claim_drift_run_dir(tmp_path: Path) -> Path:
+    d = tmp_path / "run" / "stage-17"
+    d.mkdir(parents=True)
+    (d / "paper_draft.md").write_text(
+        "# Paper\n\nThe treatment is associated with improved outcomes.\n", encoding="utf-8"
+    )
+    (tmp_path / "run" / "stage-18").mkdir()
+    (tmp_path / "run" / "stage-18" / "reviews.md").write_text(
+        "Please tighten the wording.", encoding="utf-8"
+    )
+    return d.parent
+
+
+def test_claim_strength_drift_produces_advisory_finding(tmp_path: Path) -> None:
+    run_dir = _claim_drift_run_dir(tmp_path)
+    llm = _SequencedFakeLLMClient(
+        first_response="# Paper\n\nThe treatment causes improved outcomes.\n",
+        subsequent_response=json.dumps(
+            {"drifted": True, "direction": "strengthened", "rationale": "correlation became causal"}
+        ),
+    )
+    result = rc_executor._execute_paper_revision(
+        _stage_dir(run_dir), run_dir, _rc_config(tmp_path), AdapterBundle(), llm=llm
+    )
+    assert result.status is StageStatus.DONE
+    assert "revision_findings.json" in result.artifacts
+    payload = json.loads((_stage_dir(run_dir) / "revision_findings.json").read_text())
+    drift_entries = [f for f in payload if f["check"] == "claim_strength_drift"]
+    assert len(drift_entries) == 1
+    assert drift_entries[0]["severity"] == "advisory"
+
+
+def test_claim_strength_drift_no_finding_when_llm_reports_no_drift(tmp_path: Path) -> None:
+    run_dir = _claim_drift_run_dir(tmp_path)
+    llm = _SequencedFakeLLMClient(
+        first_response="# Paper\n\nThe treatment correlates with improved outcomes.\n",
+        subsequent_response=json.dumps(
+            {"drifted": False, "direction": "none", "rationale": "same strength"}
+        ),
+    )
+    result = rc_executor._execute_paper_revision(
+        _stage_dir(run_dir), run_dir, _rc_config(tmp_path), AdapterBundle(), llm=llm
+    )
+    assert result.status is StageStatus.DONE
+    assert "revision_findings.json" not in result.artifacts
+
+
+def test_claim_strength_drift_check_exception_does_not_crash_stage(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def _boom(*_a: Any, **_k: Any) -> None:
+        raise RuntimeError("simulated drift-check failure")
+
+    monkeypatch.setattr(
+        "berb.pipeline.stage_impls._review.find_claim_drift_candidates", _boom
+    )
+    run_dir = _claim_drift_run_dir(tmp_path)
+    llm = _SequencedFakeLLMClient(
+        first_response="# Paper\n\nThe treatment causes improved outcomes.\n",
+        subsequent_response=json.dumps({"drifted": True, "direction": "strengthened", "rationale": "x"}),
+    )
+    result = rc_executor._execute_paper_revision(
+        _stage_dir(run_dir), run_dir, _rc_config(tmp_path), AdapterBundle(), llm=llm
+    )
+    assert result.status is StageStatus.DONE
+    assert (_stage_dir(run_dir) / "paper_revised.md").exists()

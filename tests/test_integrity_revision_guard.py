@@ -1,11 +1,16 @@
-"""Tests for berb.integrity.revision_guard (tasks/ars_integration_plan.md W6, Layer A)."""
+"""Tests for berb.integrity.revision_guard (tasks/ars_integration_plan.md W6)."""
 
 from __future__ import annotations
 
+import json
 import time
 
 from berb.integrity.findings import CheckId, Severity, gates
-from berb.integrity.revision_guard import conserved_tokens
+from berb.integrity.revision_guard import (
+    conserved_tokens,
+    find_claim_drift_candidates,
+    strength_advisory,
+)
 
 
 def test_no_change_is_clean() -> None:
@@ -140,3 +145,143 @@ def test_bounded_runtime_on_large_input() -> None:
     conserved_tokens(huge_before, huge_after)
     elapsed = time.monotonic() - start
     assert elapsed < 2.0
+
+
+# ---------------------------------------------------------------------------
+# Layer B — find_claim_drift_candidates
+# ---------------------------------------------------------------------------
+
+
+def test_identical_text_yields_no_candidates() -> None:
+    text = "The treatment is associated with improved outcomes."
+    assert find_claim_drift_candidates(text, text) == ()
+
+
+def test_pure_reordering_yields_no_candidates() -> None:
+    # Same two sentences, swapped order, verb/hedges unchanged -- not a move.
+    before = "First, accuracy improved. Second, latency is associated with load."
+    after = "Second, latency is associated with load. First, accuracy improved."
+    assert find_claim_drift_candidates(before, after) == ()
+
+
+def test_changed_sentence_yields_one_candidate() -> None:
+    before = "The treatment is associated with improved outcomes."
+    after = "The treatment causes improved outcomes."
+    candidates = find_claim_drift_candidates(before, after)
+    assert len(candidates) == 1
+    assert "associated with" in candidates[0].before_text
+    assert "causes" in candidates[0].after_text
+
+
+def test_unrelated_new_sentence_is_not_a_candidate() -> None:
+    # A wholly new, unrelated sentence has no similar match above the
+    # similarity floor -- it's an addition, not a drifted claim.
+    before = "The treatment is associated with improved outcomes."
+    after = (
+        "The treatment is associated with improved outcomes. "
+        "Unrelated: funding was provided by a private foundation."
+    )
+    assert find_claim_drift_candidates(before, after) == ()
+
+
+def test_empty_inputs_yield_no_candidates() -> None:
+    assert find_claim_drift_candidates("", "") == ()
+    assert find_claim_drift_candidates("Some claim.", "") == ()
+    assert find_claim_drift_candidates("", "Some claim.") == ()
+
+
+def test_candidates_bounded_and_most_changed_first() -> None:
+    before = " ".join(f"Sentence {i} is associated with outcome {i}." for i in range(30))
+    after = " ".join(f"Sentence {i} absolutely causes outcome {i} without question." for i in range(30))
+    candidates = find_claim_drift_candidates(before, after)
+    assert len(candidates) <= 20
+
+
+# ---------------------------------------------------------------------------
+# Layer B — strength_advisory
+# ---------------------------------------------------------------------------
+
+
+def test_llm_none_returns_empty_and_never_calls() -> None:
+    candidates = find_claim_drift_candidates(
+        "X is associated with Y.", "X causes Y."
+    )
+    assert strength_advisory(candidates, None) == ()
+
+
+def test_drifted_verdict_produces_advisory_finding() -> None:
+    candidates = find_claim_drift_candidates(
+        "X is associated with Y.", "X causes Y."
+    )
+
+    def fake_llm(prompt: str) -> str:
+        return json.dumps(
+            {"drifted": True, "direction": "strengthened", "rationale": "correlation became causal"}
+        )
+
+    findings = strength_advisory(candidates, fake_llm)
+    assert len(findings) == 1
+    assert findings[0].check is CheckId.CLAIM_STRENGTH_DRIFT
+    assert findings[0].severity is Severity.ADVISORY
+    assert "strengthened" in findings[0].message
+
+
+def test_not_drifted_verdict_produces_no_finding() -> None:
+    candidates = find_claim_drift_candidates(
+        "X is associated with Y.", "X correlates with Y."
+    )
+
+    def fake_llm(prompt: str) -> str:
+        return json.dumps({"drifted": False, "direction": "none", "rationale": "same strength"})
+
+    assert strength_advisory(candidates, fake_llm) == ()
+
+
+def test_unparseable_response_is_skipped_not_raised() -> None:
+    candidates = find_claim_drift_candidates(
+        "X is associated with Y.", "X causes Y."
+    )
+    assert strength_advisory(candidates, lambda prompt: "not json at all") == ()
+
+
+def test_llm_exception_is_skipped_not_raised() -> None:
+    candidates = find_claim_drift_candidates(
+        "X is associated with Y.", "X causes Y."
+    )
+
+    def raising_llm(prompt: str) -> str:
+        raise RuntimeError("simulated provider failure")
+
+    assert strength_advisory(candidates, raising_llm) == ()
+
+
+def test_injection_payload_in_response_is_inert_data() -> None:
+    # Same class of regression as berb.llm.cross_model's verdict parsing --
+    # JSON-only, never eval/exec (commit 334c7a0).
+    candidates = find_claim_drift_candidates(
+        "X is associated with Y.", "X causes Y."
+    )
+
+    def malicious_llm(prompt: str) -> str:
+        return '{"drifted": true, "direction": "__import__(\'os\').system(\'echo pwned\')", "rationale": "x"}'
+
+    findings = strength_advisory(candidates, malicious_llm)
+    assert len(findings) == 1
+    # The malicious "direction" value is not one of the two known values,
+    # so it is replaced with the generic label, not executed or echoed raw.
+    assert "changed strength" in findings[0].message
+    assert "__import__" not in findings[0].message
+
+
+def test_advisory_finding_never_gates_below_strict() -> None:
+    candidates = find_claim_drift_candidates(
+        "X is associated with Y.", "X causes Y."
+    )
+
+    def fake_llm(prompt: str) -> str:
+        return json.dumps({"drifted": True, "direction": "strengthened", "rationale": "x"})
+
+    findings = strength_advisory(candidates, fake_llm)
+    assert gates(findings, "draft") == ()
+    assert gates(findings, "submission") == ()
+    assert gates(findings, "strict") == findings

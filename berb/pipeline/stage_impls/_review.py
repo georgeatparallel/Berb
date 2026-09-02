@@ -11,7 +11,11 @@ import yaml  # noqa: F401 — available for downstream use
 
 from berb.adapters import AdapterBundle
 from berb.config import RCConfig
-from berb.integrity.revision_guard import conserved_tokens
+from berb.integrity.revision_guard import (
+    conserved_tokens,
+    find_claim_drift_candidates,
+    strength_advisory,
+)
 from berb.llm.client import LLMClient
 from berb.pipeline._domain import _detect_domain  # noqa: F401
 from berb.pipeline._helpers import (
@@ -397,12 +401,13 @@ def _execute_paper_revision(
         except Exception:  # noqa: BLE001
             pass
 
-    # tasks/ars_integration_plan.md W6 Layer A: deterministic token
-    # conservation. Advisory only — WARN is high-precision but not
-    # certainty (the known false-positive shape is legitimate rewording
-    # that happens to touch a number's neighborhood), so this never fails
-    # the stage. Layer B (semantic claim-strength drift) is not
-    # implemented — see revision_guard.py's module docstring.
+    # tasks/ars_integration_plan.md W6: Layer A (deterministic token
+    # conservation, WARN) plus Layer B (LLM-advisory claim-strength
+    # drift, ADVISORY). Neither ever fails the stage -- Layer A's known
+    # false-positive shape is legitimate rewording that happens to touch
+    # a number's neighborhood; Layer B is a judgment call by design (see
+    # revision_guard.py's module docstring) and skips itself entirely
+    # when no llm is available for this run.
     artifacts = ["paper_revised.md"]
     evidence_refs = ["stage-19/paper_revised.md"]
     if draft and revised:
@@ -411,6 +416,21 @@ def _execute_paper_revision(
         except Exception:  # noqa: BLE001 - advisory check must never fail the stage
             logger.debug("Revision token-conservation check failed", exc_info=True)
             revision_findings = ()
+
+        if llm is not None:
+            _drift_llm = llm
+            try:
+                drift_candidates = find_claim_drift_candidates(draft, revised)
+                drift_findings = strength_advisory(
+                    drift_candidates,
+                    lambda prompt: _chat_with_prompt(
+                        _drift_llm, "", prompt, json_mode=True, max_tokens=256
+                    ).content,
+                )
+                revision_findings = revision_findings + drift_findings
+            except Exception:  # noqa: BLE001 - advisory check must never fail the stage
+                logger.debug("Claim-strength drift check failed", exc_info=True)
+
         if revision_findings:
             (stage_dir / "revision_findings.json").write_text(
                 json.dumps([f.to_dict() for f in revision_findings], indent=2),
