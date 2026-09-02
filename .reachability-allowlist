@@ -38,3 +38,17 @@ berb.pipeline.optimization_integration   # Parked — revisit 2026-12-01 (strike
 # These are reachable as tools/utilities but not called from pipeline entry points.
 berb.hardware           # Hardware detection; health.py may call this
 berb.writing_guide      # Documentation aid, not pipeline-reachable
+
+# D-06: W2 untested + unreachable modules (tasks/w2_untested_triage.md,
+# 2026-09-02). Same rules as D-05: each names its un-park trigger, and a module
+# still without a consumer at its second review is deleted then.
+berb.writing.traceable_citations     # Parked — revisit 2026-12-01 (strike 1). Un-park: citation-provenance rendering beyond the wired integrity/anchors.py.
+berb.writing.citation_engine         # Parked — revisit 2026-12-01 (strike 1). Un-park: page-level citation generation reaching a writing stage; literature/models.py covers the wired bibtex path.
+berb.integrations                    # Parked — revisit 2026-12-01 (strike 1). Un-park: a scite.ai API key becoming a supported configuration.
+berb.optimization                    # Parked — revisit 2026-12-01 (strike 1). Un-park: cost/quality routing adopted beyond the wired nadirclaw_router.
+berb.learning                        # Parked — revisit 2026-12-01 (strike 1). Un-park: multi-project runs; berb/evolution.py covers within-project lessons today.
+berb.audit                           # Parked — revisit 2026-12-01 (strike 1). Un-park: a reproducibility-package deliverable; pipeline/packaging.py collects artifacts but emits no environment.yml/Dockerfile.
+berb.llm.speculative_router          # Parked — revisit 2026-12-01 (strike 1). Un-park: speculative execution adopted. Duplicates the also-dead llm/speculative_gen.py — at most one should ever be un-parked.
+berb.voice.synthesizer               # Parked — revisit 2026-12-01 (strike 1). Un-park: voice output becoming a product feature.
+berb.llm.deepmind_client             # Parked — revisit 2026-12-01 (strike 1). Referenced from deep_query_client.py:21, so parked rather than deleted.
+

@@ -1,6 +1,6 @@
 # Dead-Code Research & Wiring Plan
 
-**Status:** IN PROGRESS — W0 complete, W1 triaged (2026-09-02). Approved — disposal default, W0 scope and wave order settled 2026-09-02 (§8). Ready to execute from W0.
+**Status:** IN PROGRESS — W0 complete, W1 and W2 triaged (2026-09-02). Approved — disposal default, W0 scope and wave order settled 2026-09-02 (§8). Ready to execute from W0.
 **Date:** 2026-09-02
 **Scope:** the 119 modules / 30,763 loc that `scripts/check_reachability.py` reports
 as unreachable from `berb run` / `berb serve`.
@@ -269,12 +269,28 @@ Two findings are defects rather than debt:
 - [ ] 3 WIREs identified with seams; `plot_verdict` is a drop-in, `split_policy`
       needs a producer, `react_agent` waits on the candidate-generator work
 
-**W2 — Free wins (~2h).** The 25 untested + unreachable modules (6,917 loc).
-Highest confidence, lowest analysis cost. Under default-PARK most will park with
-a 2026-12-01 revisit; the ones that fail the import smoke test are DELETE now.
-Biggest: `compute_guard` (728), `traceable_citations` (693), `citation_engine`
-(673), `scite_mcp` (606), `cost_quality` (581), `progress` (562),
-`cross_project_learning` (542), `reproducibility` (498).
+**W2 — Untested + unreachable. ✅ TRIAGED 2026-09-02**
+(`tasks/w2_untested_triage.md`). 24 modules / 13,608 loc.
+
+The "free wins" framing held for about half. Two findings cut against it:
+
+- **A quarter of the whole decision surface is exported public API.** Ten
+  modules / 6,316 loc sit behind names in `berb.literature.__all__` or
+  `berb.llm.__all__`; all 83 exported names across both packages resolve.
+  Unreachable from the *pipeline*, live from the *package's published surface* —
+  a distinction this taxonomy lacked. `README.md:352-368` documents only three
+  programmatic symbols, all already reachable, so the surface is maintained but
+  unadvertised. Left untouched pending a product decision (see that doc, §4).
+- `llm.openrouter_models_data` (3,528, the largest module in the surface) is
+  transitively public through the exported `openrouter_adapter`.
+
+- [x] 9 PARK entries applied as allowlist group D-06
+- [x] 2 DELETEs applied: `config/wizard.py` (344) duplicates
+      `berb/wizard/quickstart.py`, which `cli.py:657` actually calls, and
+      `llm/retry_utils.py` (118) duplicates `LLMClient._call_with_retry`
+      (`client.py:721`). Neither had a single reference in `berb/` or `tests/`.
+- [x] CI ratchet tightened 24,966 → **20,378**
+- [ ] Public-API group (10 mods / 6,316 loc) awaiting the `__all__` decision
 
 **W3 — Capability packages (~10h).** `reasoning` (2,188), `literature` (2,181),
 `memory` (1,147), `knowledge` (765), `modes` (753), `self_evolve` (687).
