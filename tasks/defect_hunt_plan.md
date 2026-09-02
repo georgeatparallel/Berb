@@ -1,6 +1,6 @@
 # Sequential defect-hunt plan — running V7 over the Berb codebase
 
-**Status:** plan only. No hunt has been run against this plan yet.
+**Status:** Pass 1 complete — see `tasks/defect_hunt/pass-01-sandbox-boundary.md`. One CRITICAL defect (D1: SSH/Colab sandboxes skipped the documented security scan) confirmed and fixed. Passes 2-9 not yet run.
 **Protocol:** AUTONOMOUS DEFECT-HUNT PROTOCOL — V7 (PROACTIVE).
 **Written:** 2026-09-02.
 
