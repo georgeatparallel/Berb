@@ -26,7 +26,12 @@ import uuid
 from pathlib import Path
 
 from berb.config import ColabDriveConfig
-from berb.experiment.sandbox import SandboxResult, parse_metrics
+from berb.experiment.sandbox import (
+    SandboxResult,
+    _scan_project_inputs,
+    check_code_security,
+    parse_metrics,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -139,6 +144,25 @@ class ColabDriveSandbox:
     # ------------------------------------------------------------------
 
     def run(self, code: str, *, timeout_sec: int = 300) -> SandboxResult:
+        # check_code_security is documented (sandbox.py) as "the single
+        # enforcement point for every sandbox backend". This backend writes
+        # code into a synced Drive folder that an unattended Colab worker
+        # notebook then runs via a bare subprocess.run with no container and
+        # no restricted env (see COLAB_WORKER_TEMPLATE above) — the weakest
+        # isolation of any backend, which makes skipping the scan here the
+        # worst place to skip it.
+        security_err = check_code_security(code, label="experiment code")
+        if security_err:
+            logger.error("Colab sandbox rejected code: %s", security_err)
+            return SandboxResult(
+                returncode=-1,
+                stdout="",
+                stderr=security_err,
+                elapsed_sec=0.0,
+                metrics={},
+                rejected_reason=security_err,
+            )
+
         self._run_counter += 1
         task_id = f"rc-{uuid.uuid4().hex[:8]}"
 
@@ -170,6 +194,21 @@ class ColabDriveSandbox:
                 stderr=err,
                 elapsed_sec=0.0,
                 metrics={},
+            )
+
+        # AST security scan of every .py file, same as the subprocess and
+        # Docker backends. Run before anything is written to the synced
+        # Drive folder, not after.
+        rejection = _scan_project_inputs(project_dir)
+        if rejection:
+            logger.error("Colab sandbox rejected project: %s", rejection)
+            return SandboxResult(
+                returncode=-1,
+                stdout="",
+                stderr=rejection,
+                elapsed_sec=0.0,
+                metrics={},
+                rejected_reason=rejection,
             )
 
         self._run_counter += 1

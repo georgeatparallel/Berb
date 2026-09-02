@@ -19,6 +19,8 @@ from pathlib import Path
 from berb.config import SshRemoteConfig
 from berb.experiment.sandbox import (
     SandboxResult,
+    _scan_project_inputs,
+    check_code_security,
     parse_metrics,
     validate_entry_point,
     validate_entry_point_resolved,
@@ -54,6 +56,25 @@ class SshRemoteSandbox:
 
     def run(self, code: str, *, timeout_sec: int = 300) -> SandboxResult:
         """Run a single Python code string on the remote host."""
+        # check_code_security is documented (sandbox.py) as "the single
+        # enforcement point for every sandbox backend — each run()/
+        # run_project() implementation calls this before spawning a
+        # subprocess". This backend uploads code to, and executes it on, a
+        # real remote host over SSH — skipping the scan here means malicious
+        # code reaches a live machine with real credentials, not a disposable
+        # container.
+        security_err = check_code_security(code, label="experiment code")
+        if security_err:
+            logger.error("SSH sandbox rejected code: %s", security_err)
+            return SandboxResult(
+                returncode=-1,
+                stdout="",
+                stderr=security_err,
+                elapsed_sec=0.0,
+                metrics={},
+                rejected_reason=security_err,
+            )
+
         self._run_counter += 1
         staging = self.workdir / f"_ssh_run_{self._run_counter}"
         staging.mkdir(parents=True, exist_ok=True)
@@ -88,6 +109,21 @@ class SshRemoteSandbox:
                 stderr=err,
                 elapsed_sec=0.0,
                 metrics={},
+            )
+
+        # AST security scan of every .py file, same as the subprocess and
+        # Docker backends (sandbox.py, docker_sandbox.py). Run before any
+        # file is uploaded to the remote host, not after.
+        rejection = _scan_project_inputs(project_dir)
+        if rejection:
+            logger.error("SSH sandbox rejected project: %s", rejection)
+            return SandboxResult(
+                returncode=-1,
+                stdout="",
+                stderr=rejection,
+                elapsed_sec=0.0,
+                metrics={},
+                rejected_reason=rejection,
             )
 
         self._inject_harness(staging)

@@ -93,16 +93,19 @@ KB_SUBDIRS = (
 )
 PROJECT_MODES = {"docs-first", "semi-auto", "full-auto"}
 KB_BACKENDS = {"markdown", "obsidian"}
+# Every entry here must have a branch in experiment/factory.py::create_sandbox
+# (or, for "simulated", in the Stage 12 dispatch). A mode accepted here but not
+# implemented there passes validation, survives eleven stages of work, and then
+# dies with an unhandled RuntimeError from create_sandbox's terminal raise —
+# strictly worse than being rejected at load. "agentic" was exactly that until
+# 2026-09-02; see tasks/agentic_sandbox_wiring_research.md (defect A1).
 EXPERIMENT_MODES = {
     "simulated",
     "sandbox",
     "docker",
     "ssh_remote",
     "colab_drive",
-    "agentic",
 }
-CLI_AGENT_PROVIDERS = {"llm", "claude_code", "codex"}
-
 # Config sections that parse into a dataclass but that no code reads. Setting
 # them has no effect, which is worse than an unknown key: the pipeline reports
 # success and silently does nothing. Warn instead of failing, so existing
@@ -147,6 +150,30 @@ class ProjectConfig:
 
 
 @dataclass(frozen=True)
+class DiscoveryConfig:
+    """Cyclic discovery loop over the stage 7-15 slice.
+
+    Off by default. Enabling it re-runs nine stages ``max_cycles × width``
+    times, so the cost multiplier is large and deliberate. What it buys is the
+    one thing the pipeline could not do: iterate on *which* research direction
+    to pursue, rather than only on how the eventual result is written up
+    (`pipeline/iterative.py` covers stages 16-22).
+
+    See berb/pipeline/discovery.py and berb/research/discovery_loop.py.
+    """
+
+    enabled: bool = False
+    max_cycles: int = 3
+    width: int = 3
+    """Tasks run concurrently per cycle."""
+    reflect_every: int = 2
+    """Synthesise fresh guidance every N cycles; 0 disables REFLECT."""
+    budget_usd: float = 0.0
+    """Hard cap across the whole loop; 0 = unlimited."""
+    min_established_for_convergence: int = 3
+
+
+@dataclass(frozen=True)
 class ResearchConfig:
     topic: str
     domains: tuple[str, ...] = ()
@@ -155,6 +182,8 @@ class ResearchConfig:
     graceful_degradation: bool = True
     uploaded_file_paths: tuple[str, ...] = ()
     """Absolute paths to user-uploaded PDFs/data files for ingestion."""
+
+    discovery: DiscoveryConfig = field(default_factory=DiscoveryConfig)
 
 
 @dataclass(frozen=True)
@@ -444,27 +473,6 @@ class DockerSandboxConfig:
 
 
 @dataclass(frozen=True)
-class AgenticConfig:
-    """Configuration for the agentic experiment mode.
-
-    Launches a coding agent (e.g. Claude Code) inside a Docker container
-    with full shell access so it can run arbitrary CLI commands, write code,
-    and iteratively complete the experiment.
-    """
-
-    image: str = "berb/experiment:latest"
-    agent_cli: str = "claude"
-    agent_install_cmd: str = "npm install -g @anthropic-ai/claude-code"
-    network_policy: str = "full"  # Agent needs network access
-    timeout_sec: int = 1800  # 30 min per session
-    memory_limit_mb: int = 8192
-    gpu_enabled: bool = False
-    mount_skills: bool = True
-    allow_shell_commands: bool = True
-    max_turns: int = 50
-
-
-@dataclass(frozen=True)
 class CodeAgentConfig:
     """Configuration for the advanced multi-phase code generation agent."""
 
@@ -549,6 +557,10 @@ class FigureAgentConfig:
     nano_banana_enabled: bool = True  # enable/disable Gemini image generation
     # Critic
     strict_mode: bool = False
+    # Vision model used to look at rendered figures during search (Stage 12).
+    # Empty = pixel analysis only, no image is sent anywhere. A model the
+    # OpenRouter catalogue marks supports_vision=False is refused at call time.
+    vision_model: str = ""
     # Output
     dpi: int = 300
 
@@ -571,26 +583,6 @@ class ExperimentRepairConfig:
     min_conditions: int = 2  # At least 2 conditions for a valid experiment
     use_opencode: bool = True  # Use OpenCode agent for repairs (vs LLM prompt)
     timeout_sec_per_cycle: int = 600  # Max time per repair cycle
-
-
-@dataclass(frozen=True)
-class CliAgentConfig:
-    """CLI-based code generation backend for Stages 10 & 13.
-
-    provider: "llm"          — use existing LLM chat API (default, backward-compatible)
-              "claude_code"  — Claude Code CLI (``claude -p``)
-              "codex"        — OpenAI Codex CLI (``codex exec``)
-
-    Auth for claude_code: ANTHROPIC_AUTH_TOKEN + ANTHROPIC_BASE_URL env vars.
-    Auth for codex:       OPENAI_API_KEY env var.
-    """
-
-    provider: str = "llm"
-    binary_path: str = ""  # auto-detected via PATH if empty
-    model: str = ""  # model override for the CLI agent
-    max_budget_usd: float = 5.0
-    timeout_sec: int = 600
-    extra_args: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -626,7 +618,6 @@ class ExperimentConfig:
     keep_threshold: float = 0.0
     sandbox: SandboxConfig = field(default_factory=SandboxConfig)
     docker: DockerSandboxConfig = field(default_factory=DockerSandboxConfig)
-    agentic: AgenticConfig = field(default_factory=AgenticConfig)
     ssh_remote: SshRemoteConfig = field(default_factory=SshRemoteConfig)
     colab_drive: ColabDriveConfig = field(default_factory=ColabDriveConfig)
     code_agent: CodeAgentConfig = field(default_factory=CodeAgentConfig)
@@ -635,7 +626,6 @@ class ExperimentConfig:
     figure_agent: FigureAgentConfig = field(default_factory=FigureAgentConfig)
     search: ExperimentSearchConfig = field(default_factory=ExperimentSearchConfig)
     repair: ExperimentRepairConfig = field(default_factory=ExperimentRepairConfig)
-    cli_agent: CliAgentConfig = field(default_factory=CliAgentConfig)
 
 
 @dataclass(frozen=True)
@@ -915,6 +905,37 @@ class CalendarConfig:
 
 
 @dataclass(frozen=True)
+class CascadeStepConfig:
+    """One rung of the LLM cost cascade (see berb/llm/model_cascade.py)."""
+
+    model: str = ""
+    min_score: float = 0.0
+    max_tokens: int | None = None
+    temperature: float = 0.7
+
+
+@dataclass(frozen=True)
+class LlmCascadeConfig:
+    """Sequential model cascading: try a cheap model, escalate if it is not good enough.
+
+    Off by default. A cascade only saves money when its quality evaluator is
+    calibrated for the workload — an over-strict evaluator escalates every call
+    and costs *more* than not cascading. Enable it, then read
+    ``CascadingLLMClient.get_stats()["cascade_exits"]`` to see whether the
+    cheap rung is actually being accepted.
+
+    The final step should carry ``min_score: 0.0`` — the always-accept
+    backstop. Without one, a run of low scores falls through to
+    ``fallback_model`` or raises.
+    """
+
+    enabled: bool = False
+    steps: tuple[CascadeStepConfig, ...] = ()
+    quick_eval_enabled: bool = True
+    fallback_model: str = ""
+
+
+@dataclass(frozen=True)
 class RCConfig:
     project: ProjectConfig
     research: ResearchConfig
@@ -948,6 +969,7 @@ class RCConfig:
     copilot: CoPilotConfig = field(default_factory=CoPilotConfig)
     quality_assessor: QualityAssessorConfig = field(default_factory=QualityAssessorConfig)
     calendar: CalendarConfig = field(default_factory=CalendarConfig)
+    cascade: LlmCascadeConfig = field(default_factory=LlmCascadeConfig)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -1007,6 +1029,7 @@ class RCConfig:
         copilot_data = data.get("copilot") or {}
         quality_assessor_data = data.get("quality_assessor") or {}
         calendar_data = data.get("calendar") or {}
+        cascade_data = data.get("cascade") or {}
 
         return cls(
             project=ProjectConfig(name=project["name"], mode=project.get("mode", "docs-first")),
@@ -1017,6 +1040,7 @@ class RCConfig:
                 quality_threshold=float(research.get("quality_threshold", 0.0)),
                 graceful_degradation=bool(research.get("graceful_degradation", True)),
                 uploaded_file_paths=tuple(research.get("uploaded_file_paths") or ()),
+                discovery=_parse_discovery_config(research.get("discovery") or {}),
             ),
             runtime=RuntimeConfig(
                 timezone=runtime["timezone"],
@@ -1122,6 +1146,7 @@ class RCConfig:
             copilot=_parse_copilot_config(copilot_data),
             quality_assessor=_parse_quality_assessor_config(quality_assessor_data),
             calendar=_parse_calendar_config(calendar_data),
+            cascade=_parse_cascade_config(cascade_data),
         )
 
     @classmethod
@@ -1276,10 +1301,6 @@ def validate_config(
     if not _is_blank(exp_direction) and exp_direction not in ("minimize", "maximize"):
         errors.append(f"Invalid experiment.metric_direction: {exp_direction}")
 
-    cli_agent_provider = _get_by_path(data, "experiment.cli_agent.provider")
-    if not _is_blank(cli_agent_provider) and cli_agent_provider not in CLI_AGENT_PROVIDERS:
-        errors.append(f"Invalid experiment.cli_agent.provider: {cli_agent_provider}")
-
     for section, reason in UNWIRED_CONFIG_SECTIONS.items():
         if isinstance(data.get(section), dict) and data[section]:
             warnings.append(
@@ -1330,23 +1351,6 @@ def _parse_llm_config(data: dict[str, Any]) -> LlmConfig:
             session_name=acp_data.get("session_name", "berb"),
             timeout_sec=int(acp_data.get("timeout_sec", 1800)),
         ),
-    )
-
-
-def _parse_agentic_config(data: dict[str, Any]) -> AgenticConfig:
-    if not data:
-        return AgenticConfig()
-    return AgenticConfig(
-        image=data.get("image", "berb/experiment:latest"),
-        agent_cli=data.get("agent_cli", "claude"),
-        agent_install_cmd=data.get("agent_install_cmd", "npm install -g @anthropic-ai/claude-code"),
-        network_policy=data.get("network_policy", "full"),
-        timeout_sec=int(data.get("timeout_sec", 1800)),
-        memory_limit_mb=int(data.get("memory_limit_mb", 8192)),
-        gpu_enabled=bool(data.get("gpu_enabled", False)),
-        mount_skills=bool(data.get("mount_skills", True)),
-        allow_shell_commands=bool(data.get("allow_shell_commands", True)),
-        max_turns=int(data.get("max_turns", 50)),
     )
 
 
@@ -1416,14 +1420,12 @@ def _parse_experiment_config(data: dict[str, Any]) -> ExperimentConfig:
             timeout_sec=_safe_int(colab_data.get("timeout_sec"), 3600),
             setup_script=colab_data.get("setup_script", ""),
         ),
-        agentic=_parse_agentic_config(data.get("agentic") or {}),
         code_agent=_parse_code_agent_config(data.get("code_agent") or {}),
         opencode=_parse_opencode_config(data.get("opencode") or {}),
         benchmark_agent=_parse_benchmark_agent_config(data.get("benchmark_agent") or {}),
         figure_agent=_parse_figure_agent_config(data.get("figure_agent") or {}),
         search=_parse_search_config(data.get("search") or {}),
         repair=_parse_experiment_repair_config(data.get("repair") or {}),
-        cli_agent=_parse_cli_agent_config(data.get("cli_agent") or {}),
     )
 
 
@@ -1479,6 +1481,7 @@ def _parse_figure_agent_config(data: dict[str, Any]) -> FigureAgentConfig:
         gemini_model=data.get("gemini_model", "gemini-2.5-flash-image"),
         nano_banana_enabled=bool(data.get("nano_banana_enabled", True)),
         strict_mode=bool(data.get("strict_mode", False)),
+        vision_model=str(data.get("vision_model", "") or ""),
         dpi=_safe_int(data.get("dpi"), 300),
     )
 
@@ -1493,19 +1496,6 @@ def _parse_experiment_repair_config(data: dict[str, Any]) -> ExperimentRepairCon
         min_conditions=_safe_int(data.get("min_conditions"), 2),
         use_opencode=bool(data.get("use_opencode", True)),
         timeout_sec_per_cycle=_safe_int(data.get("timeout_sec_per_cycle"), 600),
-    )
-
-
-def _parse_cli_agent_config(data: dict[str, Any]) -> CliAgentConfig:
-    if not data:
-        return CliAgentConfig()
-    return CliAgentConfig(
-        provider=data.get("provider", "llm"),
-        binary_path=data.get("binary_path", ""),
-        model=data.get("model", ""),
-        max_budget_usd=_safe_float(data.get("max_budget_usd"), 5.0),
-        timeout_sec=_safe_int(data.get("timeout_sec"), 600),
-        extra_args=tuple(data.get("extra_args") or ()),
     )
 
 
@@ -1749,6 +1739,45 @@ def _parse_quality_assessor_config(data: dict[str, Any]) -> QualityAssessorConfi
         dimensions=dimensions,
         venue_recommendation=bool(data.get("venue_recommendation", True)),
         score_history=bool(data.get("score_history", True)),
+    )
+
+
+def _parse_discovery_config(data: dict[str, Any]) -> DiscoveryConfig:
+    if not data:
+        return DiscoveryConfig()
+    return DiscoveryConfig(
+        enabled=bool(data.get("enabled", False)),
+        max_cycles=max(1, _safe_int(data.get("max_cycles"), 3)),
+        width=max(1, _safe_int(data.get("width"), 3)),
+        reflect_every=max(0, _safe_int(data.get("reflect_every"), 2)),
+        budget_usd=_safe_float(data.get("budget_usd"), 0.0),
+        min_established_for_convergence=max(
+            1, _safe_int(data.get("min_established_for_convergence"), 3)
+        ),
+    )
+
+
+def _parse_cascade_config(data: dict[str, Any]) -> LlmCascadeConfig:
+    if not data:
+        return LlmCascadeConfig()
+    steps: list[CascadeStepConfig] = []
+    for raw in data.get("steps") or ():
+        if not isinstance(raw, dict) or not raw.get("model"):
+            continue  # a rung without a model cannot be called
+        max_tokens = raw.get("max_tokens")
+        steps.append(
+            CascadeStepConfig(
+                model=str(raw["model"]),
+                min_score=_safe_float(raw.get("min_score"), 0.0),
+                max_tokens=(None if max_tokens is None else _safe_int(max_tokens, 0) or None),
+                temperature=_safe_float(raw.get("temperature"), 0.7),
+            )
+        )
+    return LlmCascadeConfig(
+        enabled=bool(data.get("enabled", False)),
+        steps=tuple(steps),
+        quick_eval_enabled=bool(data.get("quick_eval_enabled", True)),
+        fallback_model=str(data.get("fallback_model", "") or ""),
     )
 
 

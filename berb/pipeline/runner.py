@@ -272,6 +272,57 @@ async def _execute_single_stage(
 # ============================================================================
 
 
+async def _maybe_run_discovery(
+    *,
+    run_dir: Path,
+    run_id: str,
+    config: RCConfig,
+    adapters: AdapterBundle,
+    from_stage: Stage,
+    auto_approve_gates: bool,
+    kb_root: Path | None,
+) -> str:
+    """Run the discovery loop if configured, and promote its winning slice.
+
+    Returns the promoted task directory's name, or ``""`` when the loop is
+    disabled, out of window, or admitted nothing — in which case the caller
+    runs stages 7-15 normally. Never raises into the pipeline: a discovery
+    failure degrades to a single-pass run rather than losing the whole run.
+    """
+    discovery_cfg = getattr(config.research, "discovery", None)
+    if discovery_cfg is None or not discovery_cfg.enabled:
+        return ""
+    if int(from_stage) > int(Stage.SYNTHESIS):
+        logger.info(
+            "Discovery loop skipped: run starts at %s, past the 7-15 slice", from_stage.name
+        )
+        return ""
+
+    from berb.pipeline.discovery import promote_best_task, run_discovery
+
+    try:
+        result = await run_discovery(
+            run_dir=run_dir,
+            run_id=run_id,
+            config=config,
+            adapters=adapters,
+            auto_approve_gates=auto_approve_gates,
+            kb_root=kb_root,
+        )
+    except Exception:  # noqa: BLE001
+        logger.exception("Discovery loop failed — falling back to a single-pass run")
+        return ""
+
+    print(
+        f"[{run_id}] Discovery: {result.total_cycles} cycle(s), "
+        f"{len(result.admitted_findings)} finding(s), stop={result.stop_reason}"
+    )
+    promoted = promote_best_task(run_dir, maximize=config.experiment.metric_direction != "minimize")
+    if not promoted:
+        logger.warning("Discovery admitted nothing — running stages 7-15 normally")
+    return promoted
+
+
 async def execute_pipeline(
     *,
     run_dir: Path,
@@ -279,6 +330,7 @@ async def execute_pipeline(
     config: RCConfig,
     adapters: AdapterBundle,
     from_stage: Stage = Stage.TOPIC_INIT,
+    to_stage: Stage | None = None,
     auto_approve_gates: bool = False,
     stop_on_gate: bool = False,
     skip_noncritical: bool = False,
@@ -289,6 +341,12 @@ async def execute_pipeline(
 
     Stages whose dependencies are satisfied run concurrently via
     ``asyncio.gather()`` when multiple are eligible in the same DAG level.
+
+    Args:
+        to_stage: Last stage to run, inclusive. ``None`` runs to the end.
+            A bound lets a caller execute a slice of the pipeline — the
+            discovery loop (berb/pipeline/discovery.py) re-runs stages 7-15
+            this way, which is not expressible with `from_stage` alone.
     """
     event_store_path = run_dir / "event_log.json" if run_dir else None
     event_store = EventStore(run_id=run_id, storage_path=str(event_store_path))
@@ -332,7 +390,42 @@ async def execute_pipeline(
     # Build DAG levels for concurrent execution
     # Each level is a set of stages whose dependencies are met
     # Levels are processed sequentially; stages within a level run concurrently
+    # Discovery loop (research.discovery.enabled, default off). It re-runs the
+    # stage 7-15 slice across several candidate directions and promotes the
+    # winner's artifacts here, so writing continues from the best direction
+    # rather than the only one. Skipped on a PIVOT recursion (_pivot_depth > 0)
+    # and when the slice is not in this run's window — a --from-stage of
+    # PAPER_OUTLINE is resuming a decided run, not choosing a direction.
+    skip_slice: set[Stage] = set()
+    if _pivot_depth == 0 and to_stage is None:
+        promoted = await _maybe_run_discovery(
+            run_dir=run_dir,
+            run_id=run_id,
+            config=config,
+            adapters=adapters,
+            from_stage=from_stage,
+            auto_approve_gates=auto_approve_gates,
+            kb_root=kb_root,
+        )
+        if promoted:
+            skip_slice = {
+                st
+                for st in Stage
+                if int(Stage.SYNTHESIS) <= int(st) <= int(Stage.RESEARCH_DECISION)
+            }
+
     levels = _build_dag_levels(resolve_stage_order(from_stage))
+    if skip_slice:
+        levels = [
+            remaining for remaining in ((level - skip_slice) for level in levels) if remaining
+        ]
+    if to_stage is not None:
+        # Drop stages past the bound, then drop levels emptied by that.
+        levels = [
+            bounded
+            for bounded in ({s for s in level if int(s) <= int(to_stage)} for level in levels)
+            if bounded
+        ]
 
     for level_stages in levels:
         # Run all stages in this level — they're eligible by construction

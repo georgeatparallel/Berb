@@ -63,7 +63,11 @@ def nadirclaw_router() -> NadirClawRouter:
 def mock_llm_client():
     """Create mock LLM client for SmartLLMClient tests."""
     client = MagicMock()
-    client.complete = AsyncMock(
+    # The real base clients (LLMClient, MultiProviderLLMClient, ACPClient) are
+    # synchronous and expose chat(). This fixture used to mock an async
+    # complete(), which no base client has — that invented method is why the
+    # AttributeError in SmartLLMClient went unnoticed.
+    client.chat = MagicMock(
         return_value=MagicMock(
             content="Test response",
             model="test-model",

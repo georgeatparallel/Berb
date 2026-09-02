@@ -477,11 +477,19 @@ def _execute_experiment_run_with_search(
     # only demonstrably degenerate output (a blank chart from a run that
     # otherwise exited 0), so it is safe to enable by default alongside the
     # rest of the figure agent.
+    #
+    # With figure_agent.vision_model set and an LLM client available, the
+    # critic upgrades to VLMPlotCritic: same pixel check first, then the model
+    # is shown the image for the semantic judgement pixels cannot make.
     figure_critic = None
     if ec.figure_agent.enabled:
-        from berb.experiment.plot_verdict import PixelPlotCritic
+        from berb.experiment.plot_verdict import PixelPlotCritic, VLMPlotCritic
 
-        figure_critic = PixelPlotCritic()
+        vision_model = ec.figure_agent.vision_model
+        if vision_model and llm is not None:
+            figure_critic = VLMPlotCritic(llm, model=vision_model)
+        else:
+            figure_critic = PixelPlotCritic()
 
     runner = SearchRunner(
         config=search_cfg,

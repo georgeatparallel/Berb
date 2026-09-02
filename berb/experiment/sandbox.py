@@ -140,11 +140,11 @@ def safe_subprocess_env() -> dict[str, str]:
     """Return a sanitised copy of os.environ safe to pass to experiment subprocesses.
 
     Strips all credentials (API keys, tokens, secrets, passwords) to prevent
-    experiment code from exfiltrating host secrets. Public (not `_`-prefixed)
-    because it's a shared security utility, used by both this module's own
-    sandbox subprocess calls and by `code_agent.py`'s CLI-agent subprocess
-    (S0-8, tasks/arch_hardening_plan.md) — a leading underscore would signal
-    "module-private" for something that's deliberately a cross-module seam.
+    experiment code from exfiltrating host secrets (S0-8,
+    tasks/arch_hardening_plan.md). Public (not `_`-prefixed) because it is a
+    security utility any module spawning an experiment subprocess must use;
+    `experiment/code_agent.py` was its other caller until that module was
+    deleted (2026-09-02, D-09).
     """
     safe: dict[str, str] = {}
     for key, value in os.environ.items():
