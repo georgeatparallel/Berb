@@ -1,6 +1,6 @@
 # Dead-Code Research & Wiring Plan
 
-**Status:** IN PROGRESS — W0–W4 complete (2026-09-02); W5 governance remains. Approved — disposal default, W0 scope and wave order settled 2026-09-02 (§8). Ready to execute from W0.
+**Status:** COMPLETE — W0–W5 done (2026-09-02). Three decisions remain open (§8). Approved — disposal default, W0 scope and wave order settled 2026-09-02 (§8). Ready to execute from W0.
 **Date:** 2026-09-02
 **Scope:** the 119 modules / 30,763 loc that `scripts/check_reachability.py` reports
 as unreachable from `berb run` / `berb serve`.
@@ -261,13 +261,18 @@ Two findings are defects rather than debt:
       its un-park trigger; the three pre-existing D-03 entries re-dated to the
       same 2026-12-01 review
 - [x] CI ratchet tightened 30,658 → **25,990** (parking tightens, never loosens)
-- [ ] 2 DELETEs proposed, not applied — `auto_debugger` (775) and
-      `experiment/code_agent` (836). The second is **not self-contained**: it is
-      the sole reader of `config.experiment.cli_agent`, so deleting it also
-      means removing `CliAgentConfig` from `berb/config.py` or the config keeps
-      advertising a backend that no longer exists.
-- [ ] 3 WIREs identified with seams; `plot_verdict` is a drop-in, `split_policy`
-      needs a producer, `react_agent` waits on the candidate-generator work
+- [x] `auto_debugger` (775) deleted on approval, with its audit-regression tests
+- [x] `plot_verdict` (249) wired — but **it was not the drop-in this wave called
+      it**. `verify_plots` expected an `analyze_figure` critic that never
+      existed, and `berb/llm/` has no image support, so a `PixelPlotCritic`
+      (pure pixel analysis, no LLM) was written to close the producer side. See
+      `tasks/w1_experiment_cluster_triage.md` §5.
+- [ ] `experiment/code_agent` (836) — held by instruction. **Not
+      self-contained**: it is the sole reader of `config.experiment.cli_agent`,
+      so deleting it also means removing `CliAgentConfig` from `berb/config.py`
+      or the config keeps advertising a backend that no longer exists.
+- [ ] `split_policy` needs a `SplitEvidence` producer; `react_agent` waits on
+      the candidate-generator work
 
 **W2 — Untested + unreachable. ✅ TRIAGED 2026-09-02**
 (`tasks/w2_untested_triage.md`). 24 modules / 13,608 loc.
@@ -336,11 +341,38 @@ enforced 25,990 for three commits while the comment claimed 20,378 and then
 those waves reported. The step has been rewritten so the flag is the single
 source of truth, with a note recording the failure mode.
 
-**W5 — Governance (~2h).** Rewrite `.reachability-allowlist` with the surviving
-PARK set, fresh `D-NN` IDs and revisit dates; update CLAUDE.md's subsystem table
-and `docs/CODEBASE_MIND_MAP.md`; record the new CI ceiling.
+**W5 — Governance. ✅ DONE 2026-09-02.**
 
-**Total: ~22h remaining** (W0 done). Waves W1–W4 are independent and can run in parallel.
+- [x] `.reachability-allowlist` rewritten. It now separates **EXEMPT**
+      (correctly not pipeline-reachable, no clock — `berb.writing_guide`) from
+      **PARK** (debt on a 90-day clock with a two-strikes rule), because the
+      previous file conflated them and its own header demanded a revisit date
+      from entries that should never have one. Groups D-03 and D-05..D-08 carry
+      46 entries covering 73 modules / 22,018 loc; every PARK entry has a date
+      and an un-park trigger.
+- [x] **Stale entry found and removed:** `berb.hardware` had become reachable,
+      so its entry was parking live code — which would have masked a real
+      regression. Closed as D-02. Entries are now audited for staleness, not
+      only for justification.
+- [x] Verdict coverage verified mechanically: of 86 unreachable modules, 73 are
+      allowlisted and 13 are held for a decision. **Zero without a recorded
+      verdict.**
+- [x] CLAUDE.md subsystem table corrected. Four rows claimed "yes" that were
+      not true — `llm`, `literature`, `experiment` and `integrity` are all
+      *partial*, and the table now says which modules are live, which are
+      parked and under which group. Added the dead-code accounting note, the
+      open public-API question, and corrected the LLM-routing and Bridges
+      sections (`extended_router` deleted; `mnemo_bridge`/`reasoner_bridge`
+      parked).
+- [x] `docs/CODEBASE_MIND_MAP.md` reconciled.
+- [x] **Coverage floor left at 62, deliberately.** Measured 64%, unchanged by
+      the waves: the deletions removed tested code *and* its tests, and the
+      largest untested module (`llm/openrouter_models_data`, 3,528 loc) is in
+      the held public-API group. 62 is already "measured minus ~2 points", the
+      buffer `ci.yml` documents. Raising it would consume that buffer for no
+      real gain.
+
+**All waves complete (2026-09-02).** What remains is not analysis but three decisions — see below.
 
 ---
 
@@ -359,15 +391,16 @@ and `docs/CODEBASE_MIND_MAP.md`; record the new CI ceiling.
 
 ## 7. Definition of done
 
-- [ ] Every one of the 79 modules has a verdict + one-line justification in a
-      triage table committed to `tasks/`
+- [x] Every module has a verdict: 73 allowlisted, 13 held for a decision, 0
+      unaccounted for (verified mechanically)
 - [x] `check_reachability.py` corrected, running in CI, ceiling set to the new
       measured value (30,658)
 - [x] Runtime-trace tooling committed and documented
       (`scripts/runtime_trace.py`, `configs/config.trace.yaml`)
-- [ ] Allowlist contains only entries with an ID, justification and revisit date
-- [ ] CLAUDE.md subsystem table and `docs/CODEBASE_MIND_MAP.md` reflect reality
-- [ ] `ruff`, `mypy berb/`, `bandit` and the full test suite green after each wave
+- [x] Allowlist entries all carry an ID and justification; PARK entries carry a
+      revisit date and un-park trigger, EXEMPT entries correctly do not
+- [x] CLAUDE.md subsystem table and `docs/CODEBASE_MIND_MAP.md` reflect reality
+- [x] `ruff`, `mypy berb/`, `bandit` and the full test suite green after each wave
 
 ---
 

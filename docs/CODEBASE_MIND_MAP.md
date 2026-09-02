@@ -77,7 +77,6 @@ berb/
 │   ├── model_router.py        ← Route by cost/latency
 │   ├── model_cascade.py       ← Cascade: try cheap → escalate
 │   ├── nadirclaw_router.py    ← NadirClaw 3-tier routing
-│   ├── extended_router.py     ← Extended routing logic
 │   ├── speculative_router.py  ← Speculative decoding routing
 │   ├── openrouter_adapter.py  ← OpenRouter adapter
 │   ├── anthropic_adapter.py   ← Anthropic adapter

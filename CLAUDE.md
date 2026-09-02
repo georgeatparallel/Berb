@@ -46,33 +46,50 @@ Wired = reachable from `berb run` / `berb serve`. Verify with
 
 | Module | Responsibility | Wired |
 |--------|---------------|-------|
-| `berb/llm/` | LLM providers, model routing, cost optimization (caching, batching, cascading) | yes |
-| `berb/literature/` | arXiv, OpenAlex, Semantic Scholar, novelty scoring, PDF ingestion, Zotero | yes |
-| `berb/experiment/` | Sandboxed code execution (local, Docker, SSH, Colab), tree search, validation | yes |
+| `berb/llm/` | LLM providers, model routing, cost optimization | partial — `client`, `smart_client`, `nadirclaw_router`, `cost_tracker`, `prompt_cache` are live. Batching (`batch_api`), speculative execution (`speculative_gen`), `adaptive_temp`, `structured_outputs` and `eval_dataset` are parked (D-08), so "caching, batching, cascading" overstates what runs |
+| `berb/literature/` | arXiv, OpenAlex, Semantic Scholar, novelty scoring, PDF ingestion, Zotero | partial — those six are live. Seven further modules (citation graph, structured notes, section analysis, evidence map, multimodal search, citation classifier, recency filter) are exported via `berb.literature.__all__` but reached by nothing internal; see the public-API question below |
+| `berb/experiment/` | Sandboxed code execution (local, Docker, SSH, Colab), tree search, validation | partial — sandboxes, `search/` (Stage 12) and `validator` are live, and `plot_verdict` now feeds the figure gate. `compute_guard`, `progress`, `evolutionary_search`, `self_correcting`, `harness_template` and `evaluators/` are parked (D-05); `react_agent` and `split_policy` await wiring |
 | `berb/agents/` | Benchmark agent, code searcher, figure critique agent | yes |
 | `berb/review/` | 5-reviewer + Area Chair peer review ensemble | yes |
-| `berb/integrity/` | Claim manifests, evidence tracking, citation anchors, revision guards | yes |
-| `berb/memory/` | Embeddings, retrieval, shared memory coordination | partial — `memory.embeddings`/`memory.retriever` are used by `review/ensemble.py` (review-diversity scoring); `memory.shared_memory` has no wired caller |
+| `berb/integrity/` | Claim manifests, evidence tracking, citation anchors, revision guards | partial — those are live; `integrity/eval/hidden_eval.py` (HCE) is parked (D-05) |
+| `berb/memory/` | Embeddings, retrieval, shared memory coordination | partial — `embeddings`/`retriever` are used by `review/ensemble.py` for review-diversity scoring. `shared_memory` and the three per-stage memories are parked (D-07); `shared_memory`'s only importer was the parked `experiment/self_correcting.py` |
+
+**Dead-code accounting.** `scripts/check_reachability.py` runs in CI as a
+ratchet (`.github/workflows/ci.yml`, Lint job). Modules that are intentionally
+unreachable live in `.reachability-allowlist`, split into EXEMPT (correctly not
+pipeline-reachable) and PARK (debt on a 90-day clock, two strikes then delete).
+Never raise the ceiling to make a build pass. Method and per-module verdicts:
+`tasks/dead_code_wiring_plan.md` and the `tasks/w*_triage.md` docs.
+
+**Open: is `from berb.literature import ...` a public contract?** Ten modules
+(6,316 loc, ~3,500 more transitively) are exported through package `__all__`
+lists and resolve correctly, but nothing internal imports them and
+`README.md`'s "Programmatic API" documents only `RCConfig`, `execute_pipeline`
+and `AdapterBundle`. Until that is settled they are neither parked nor deleted.
+See `tasks/w2_untested_triage.md` §4.
 
 Unwired capabilities that the docs used to claim as live: SearXNG
 (`literature/searxng_client.py`), grey literature (`literature/grey_search.py`),
 multimodal figure extraction (`literature/multimodal_search.py`) and
-self-correcting simulation (`experiment/self_correcting.py`). These are present
+self-correcting simulation (`experiment/self_correcting.py`). All are present
 and tested but have no importer on any pipeline path — they do not run, and are
 parked in `.reachability-allowlist` with a revisit date.
 
-`experiment/auto_debugger.py` was deleted (2026-09-02, W1): post-failure repair
-is owned by the wired `pipeline/experiment_diagnosis.py` +
-`pipeline/experiment_repair.py`, which do classification, fix generation, re-run
-and re-assessment. `experiment/plot_verdict.py` is now wired — it produces the
-`is_buggy_plots` verdict that `experiment/search/scoring.py` gates on.
+`experiment/auto_debugger.py`, `config/wizard.py`, `llm/retry_utils.py`,
+`llm/extended_router.py` and `pipeline/asyncio_utils.py` were deleted
+(2026-09-02, W1/W2/W4): each duplicated a seam already occupied by wired code —
+respectively `pipeline/experiment_repair.py`, `wizard/quickstart.py`,
+`LLMClient._call_with_retry`, `llm/nadirclaw_router.py`, and `runner.py`'s own
+`asyncio.gather`/`to_thread` handling. `experiment/plot_verdict.py` is now wired:
+it produces the `is_buggy_plots` verdict that `experiment/search/scoring.py`
+gates on, which nothing had been setting.
 
 ### Bridges (External Integrations)
 
-- `berb/mnemo_bridge/` — Mnemo Cortex memory
-- `berb/metaclaw_bridge/` — MetaClaw skill injection
-- `berb/reasoner_bridge/` — ARA reasoning patterns
-- `berb/mcp/` — MCP server interface
+- `berb/metaclaw_bridge/` — MetaClaw skill injection (wired)
+- `berb/mcp/` — MCP server interface (wired)
+- `berb/mnemo_bridge/` — Mnemo Cortex memory — **parked** (D-08), no in-repo consumer
+- `berb/reasoner_bridge/` — ARA reasoning patterns — **parked** (D-08), no in-repo consumer
 
 ### Configuration
 
@@ -85,7 +102,7 @@ LLM prompts are centralized in `prompts.default.yaml` (~150 KB).
 
 ### LLM Routing
 
-`berb/llm/nadirclaw_router.py` (used by `berb/llm/smart_client.py` when `config.nadirclaw.enabled`) optimizes model selection and context by cost. `berb/llm/extended_router.py` defines a role-based `ExtendedRouter`, but its provider creation is a stub (`_MockProvider`, per its own docstring) and it is not imported anywhere under `berb/pipeline/` — it is not live infrastructure (verified via `python scripts/check_reachability.py`; see `tasks/ars_integration_plan.md` W5 for the finding that motivated this correction). Supported providers, via `berb.llm.create_llm_client()`: OpenAI, Anthropic, DeepSeek, Perplexity, xAI, OpenRouter, MiniMax.
+`berb/llm/nadirclaw_router.py` (used by `berb/llm/smart_client.py` when `config.nadirclaw.enabled`) optimizes model selection and context by cost — it is the only live router. `berb/llm/extended_router.py` was deleted on 2026-09-02 (W4): its `_create_provider` returned a `_MockProvider` ("In production, this would create the actual provider instance"), nothing under `berb/pipeline/` imported it, and its only real consumer was a test mocking against it. Supported providers, via `berb.llm.create_llm_client()`: OpenAI, Anthropic, DeepSeek, Perplexity, xAI, OpenRouter, MiniMax.
 
 ### Testing Conventions
 

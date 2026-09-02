@@ -1,21 +1,56 @@
-# .reachability-allowlist — modules that are intentionally unreachable
-# Each entry must be a dotted module name followed by a # justification.
-# Parked modules are acknowledged debt; revisit each within 2 quarters.
+# .reachability-allowlist — modules intentionally excluded from the dead-code gate
+#
+# Read by scripts/check_reachability.py --allowlist. An entry covers the named
+# module AND everything beneath it.
+#
+# Two kinds of entry, and the difference matters:
+#
+#   EXEMPT  Correctly never reachable from `berb run`. Not debt, no clock.
+#   PARK    Acknowledged debt on a 90-day clock. Every PARK entry carries a
+#           revisit date and names what would un-park it. A module still
+#           without a consumer at its SECOND review is deleted then, not
+#           parked again — that is the two-strikes rule.
+#
+# Never add an entry to make CI pass. The gate exists to stop the surface
+# growing silently; parking is how you account for something, not how you hide
+# it. Full method and verdicts: tasks/dead_code_wiring_plan.md and the
+# per-wave triage docs beside it.
+#
+# Groups are numbered D-NN. Closed groups are kept as a record.
 
+# ---------------------------------------------------------------------------
+# EXEMPT — correctly not pipeline-reachable
+# ---------------------------------------------------------------------------
+berb.writing_guide      # EXEMPT — documentation aid for authors, not pipeline code. No clock: it is not debt.
+
+# ---------------------------------------------------------------------------
+# CLOSED — kept as a record; do not re-add without a caller
+# ---------------------------------------------------------------------------
 # D-01: CLOSED 2026-08-04 — berb.domains.physics and berb.domains.chaos were
-# deleted along with their test suites. Do not re-add without a caller.
+# deleted along with their test suites.
+#
+# D-02: CLOSED 2026-09-02 (W5) — berb.hardware became reachable and its entry
+# was removed. A stale entry parks live code and would mask a real regression,
+# so entries are audited for staleness, not only for justification.
+#
+# D-04: CLOSED 2026-09-01 — berb.integrity.eval.finding_reproduction deleted.
+# W7 (tasks/ars_integration_plan.md) resolved its parked status: the module's
+# "reproduction" was a random.random() coin flip against a hardcoded difficulty
+# table, never real execution, and its known-finding corpus measured something
+# unrelated to W7's actual need. Deleted rather than curated a corpus for; see
+# tests/fixtures/seeded_defects.py for the corpus W7 actually built.
 
-# D-03: Parked modules. No active roadmap evidence.
-# Re-dated 2026-09-02: the plan's PARK policy is a 90-day horizon with a
-# two-strikes rule, so the whole list moves together on one review date rather
-# than some entries hiding behind a longer clock.
+# ---------------------------------------------------------------------------
+# D-03 — PARK. Pre-existing parked packages, re-dated 2026-09-02 so the whole
+# list reviews together rather than some entries hiding behind a longer clock.
+# ---------------------------------------------------------------------------
 berb.hyperagent         # Parked — 2026-07-19; revisit 2026-12-01 (strike 1)
 berb.i18n               # Parked — 2026-07-19; revisit 2026-12-01 (strike 1)
 berb.experimental       # Parked — 2026-07-19; revisit 2026-12-01 (strike 1)
 
-# D-05: W1 experiment-cluster triage (tasks/w1_experiment_cluster_triage.md,
-# 2026-09-02). Each entry names what would un-park it; a module still without a
-# consumer at its second review is deleted then, not parked again.
+# ---------------------------------------------------------------------------
+# D-05 — PARK. W1 experiment cluster (tasks/w1_experiment_cluster_triage.md).
+# ---------------------------------------------------------------------------
 berb.experiment.self_correcting          # Parked — revisit 2026-12-01 (strike 1). Un-park: a domain needing plan-act-reflect-revise beyond experiment_repair + physics_guards.
 berb.experiment.compute_guard            # Parked — revisit 2026-12-01 (strike 1). Un-park: a paid-compute/GPU mode needing pre-flight affordability checks; BudgetGovernor + cost_tracker cover the wired path today.
 berb.integrity.eval.hidden_eval          # Parked — revisit 2026-12-01 (strike 1). Un-park: HCE adopted for Stage-12 selection. Today its only importers are themselves dead.
@@ -25,23 +60,9 @@ berb.experiment.evaluators.convergence   # Parked — revisit 2026-12-01 (strike
 berb.experiment.harness_template         # Parked — revisit 2026-12-01 (strike 1). Un-park: used only by the parked cluster above.
 berb.pipeline.optimization_integration   # Parked — revisit 2026-12-01 (strike 1). The AIRA2 shims wire modules that are themselves parked, so they park as a group and un-park with whichever they serve.
 
-# D-04: CLOSED 2026-09-01 — berb.integrity.eval.finding_reproduction deleted.
-# W7 (tasks/ars_integration_plan.md) resolved its parked status: the module's
-# "reproduction" was a random.random() coin flip against a hardcoded
-# difficulty table, never real execution, and its known-finding corpus
-# (KRAS mutations, Huntington's, ResNet, Transformer) measured something
-# unrelated to W7's actual need (recall of Berb's own defect-catching
-# checks). Deleted rather than curated a corpus for; see
-# tests/fixtures/seeded_defects.py for the corpus W7 actually built.
-
-# Other naturally unreachable or infrastructure modules.
-# These are reachable as tools/utilities but not called from pipeline entry points.
-berb.hardware           # Hardware detection; health.py may call this
-berb.writing_guide      # Documentation aid, not pipeline-reachable
-
-# D-06: W2 untested + unreachable modules (tasks/w2_untested_triage.md,
-# 2026-09-02). Same rules as D-05: each names its un-park trigger, and a module
-# still without a consumer at its second review is deleted then.
+# ---------------------------------------------------------------------------
+# D-06 — PARK. W2 untested + unreachable (tasks/w2_untested_triage.md).
+# ---------------------------------------------------------------------------
 berb.writing.traceable_citations     # Parked — revisit 2026-12-01 (strike 1). Un-park: citation-provenance rendering beyond the wired integrity/anchors.py.
 berb.writing.citation_engine         # Parked — revisit 2026-12-01 (strike 1). Un-park: page-level citation generation reaching a writing stage; literature/models.py covers the wired bibtex path.
 berb.integrations                    # Parked — revisit 2026-12-01 (strike 1). Un-park: a scite.ai API key becoming a supported configuration.
@@ -52,9 +73,9 @@ berb.llm.speculative_router          # Parked — revisit 2026-12-01 (strike 1).
 berb.voice.synthesizer               # Parked — revisit 2026-12-01 (strike 1). Un-park: voice output becoming a product feature.
 berb.llm.deepmind_client             # Parked — revisit 2026-12-01 (strike 1). Referenced from deep_query_client.py:21, so parked rather than deleted.
 
-# D-07: W3 capability packages (tasks/w3_capability_triage.md, 2026-09-02).
-# All tested, none with a consumer; three of four sit beside a seam the pipeline
-# already occupies. Same two-strikes rule as D-05/D-06.
+# ---------------------------------------------------------------------------
+# D-07 — PARK. W3 capability packages (tasks/w3_capability_triage.md).
+# ---------------------------------------------------------------------------
 berb.memory.shared_memory        # Parked — revisit 2026-12-01 (strike 1). Un-park: a wired consumer for cross-agent shared memory. Its only importer, experiment/self_correcting.py, is itself parked — un-park together or not at all.
 berb.memory.experiment_memory    # Parked — revisit 2026-12-01 (strike 1). Un-park: a stage retaining state across runs beyond what berb/evolution.py records.
 berb.memory.ideation_memory      # Parked — revisit 2026-12-01 (strike 1). Un-park: as above.
@@ -63,8 +84,9 @@ berb.knowledge.graph             # Parked — revisit 2026-12-01 (strike 1). Un-
 berb.self_evolve                 # Parked — revisit 2026-12-01 (strike 1). Un-park: Hyperagents adopted. Tied to berb.hyperagent (D-03) — same paper (arXiv:2603.19461), same decision. berb/evolution.py occupies the wired lessons-to-prompt-overlay seam today.
 berb.assessor                    # Parked — revisit 2026-12-01 (strike 1). Un-park: a venue-recommendation or paper-comparison stage. No pipeline stage references a venue or assessor today; multi-dimensional scoring alone is occupied by review/ensemble.py.
 
-# D-08: W4 infrastructure (tasks/w4_infrastructure_triage.md, 2026-09-02).
-# Same two-strikes rule as D-05..D-07.
+# ---------------------------------------------------------------------------
+# D-08 — PARK. W4 infrastructure (tasks/w4_infrastructure_triage.md).
+# ---------------------------------------------------------------------------
 berb.literature.grey_search      # Parked — revisit 2026-12-01 (strike 1). Un-park: grey-literature search becoming a supported source. Documented as unwired in CLAUDE.md.
 berb.literature.searxng_client   # Parked — revisit 2026-12-01 (strike 1). Un-park: a SearXNG instance becoming a supported backend (docker-compose.searxng.yml exists but nothing imports the client).
 berb.literature.full_text        # Parked — revisit 2026-12-01 (strike 1). Un-park: full-text retrieval beyond the wired pdf_ingestor path.
@@ -83,4 +105,3 @@ berb.writing.reporting_guidelines # Parked — revisit 2026-12-01 (strike 1). Un
 berb.voice.commands              # Parked — revisit 2026-12-01 (strike 1). Un-park: voice input becoming a product feature. Pairs with the parked voice/synthesizer.py.
 berb.integrity.eval              # Parked — revisit 2026-12-01 (strike 1). Package shim; its only submodule hidden_eval.py is parked under D-05.
 berb.experiment.evaluators       # Parked — revisit 2026-12-01 (strike 1). Package shim; its only submodule convergence.py is parked under D-05.
-
