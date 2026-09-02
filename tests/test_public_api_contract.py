@@ -1,7 +1,7 @@
 """The declared public API must actually resolve.
 
-`from berb.literature import ...` was confirmed as a supported contract on
-2026-09-02, and scripts/check_reachability.py now treats the modules behind that
+`from berb.literature import ...` and `from berb.llm import ...` were confirmed
+supported contracts on 2026-09-02, and scripts/check_reachability.py now treats the modules behind that
 package's ``__all__`` as entry points — so the dead-code gate no longer notices
 if one of them rots.
 
@@ -20,7 +20,7 @@ import importlib
 import pytest
 
 # Kept in step with PUBLIC_API_PACKAGES in scripts/check_reachability.py.
-PUBLIC_API_PACKAGES = ("berb.literature",)
+PUBLIC_API_PACKAGES = ("berb.literature", "berb.llm")
 
 
 def _exported_names(package: str) -> list[str]:

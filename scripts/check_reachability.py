@@ -112,9 +112,10 @@ def public_api_modules(all_mods, is_pkg):
     resolves, so the contract cannot rot quietly now that it is exempt from the
     dead-code gate.
     """
-    # Approved contracts. `from berb.literature import ...` was confirmed as a
-    # supported public API on 2026-09-02; see tasks/w2_untested_triage.md #4.
-    PUBLIC_API_PACKAGES = ("berb.literature",)
+    # Approved contracts. `from berb.literature import ...` and
+    # `from berb.llm import ...` were confirmed supported public APIs on
+    # 2026-09-02; see tasks/w2_untested_triage.md #4.
+    PUBLIC_API_PACKAGES = ("berb.literature", "berb.llm")
 
     roots = set()
     for m, p in all_mods.items():

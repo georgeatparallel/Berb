@@ -46,7 +46,7 @@ Wired = reachable from `berb run` / `berb serve`. Verify with
 
 | Module | Responsibility | Wired |
 |--------|---------------|-------|
-| `berb/llm/` | LLM providers, model routing, cost optimization | partial — `client`, `smart_client`, `nadirclaw_router`, `cost_tracker`, `prompt_cache` are live. Batching (`batch_api`), speculative execution (`speculative_gen`), `adaptive_temp`, `structured_outputs` and `eval_dataset` are parked (D-08), so "caching, batching, cascading" overstates what runs |
+| `berb/llm/` | LLM providers, model routing, cost optimization | partial, plus a public API surface (`berb.llm.__all__`) that is a supported contract — `client`, `smart_client`, `nadirclaw_router`, `cost_tracker`, `prompt_cache` are live. Batching (`batch_api`), speculative execution (`speculative_gen`), `adaptive_temp`, `structured_outputs` and `eval_dataset` are parked (D-08), so "caching, batching, cascading" overstates what runs |
 | `berb/literature/` | arXiv, OpenAlex, Semantic Scholar, novelty scoring, PDF ingestion, Zotero | yes — plus a public API surface (`berb.literature.__all__`) that is a supported contract, covered by `tests/test_public_api_contract.py` rather than by internal callers |
 | `berb/experiment/` | Sandboxed code execution (local, Docker, SSH, Colab), tree search, validation | partial — sandboxes, `search/` (Stage 12) and `validator` are live, and `plot_verdict` now feeds the figure gate. `compute_guard`, `progress`, `evolutionary_search`, `self_correcting`, `harness_template` and `evaluators/` are parked (D-05); `react_agent` and `split_policy` await wiring |
 | `berb/agents/` | Benchmark agent, code searcher, figure critique agent | yes |
@@ -69,9 +69,17 @@ name resolves — the contract is exempt from the dead-code gate, so that test i
 what stops it rotting. Adding a package to `PUBLIC_API_PACKAGES` is a product
 decision, not a way to quieten the gate.
 
-Still open: whether `from berb.llm import ...` is the same kind of contract.
-`presets`, `openrouter_adapter` and `openrouter_models_data` (4,366 loc) hang on
-that answer.
+`from berb.llm import ...` is a supported contract on the same terms (decided
+2026-09-02). Both packages are in `PUBLIC_API_PACKAGES` and both are covered by
+the contract test.
+
+**Vision models are catalogued but unusable.** `openrouter_models_data.py`
+declares `supports_vision=True` on 173 of 335 models, and nothing reads the flag:
+`berb/llm/` has no image support in any adapter — no `image_url`, no base64 media
+block. Adding it is the prerequisite for a real VLM figure critic (see
+`experiment/plot_verdict.py`) and for anything else image-shaped. Refresh the
+catalogue against OpenRouter with `scripts/refresh_openrouter_models.py --diff`;
+the model list should be fetched, not hand-edited.
 
 Unwired capabilities that the docs used to claim as live: SearXNG
 (`literature/searxng_client.py`), grey literature (`literature/grey_search.py`),
