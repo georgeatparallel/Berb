@@ -341,6 +341,76 @@
     `python -m pytest tests/ -k "revision or integrity or review" -q`
     (broader regression sweep) → `277 passed`; mypy/ruff clean on all
     four changed files.
+- 2026-09-01 — W7 (`tests/fixtures/seeded_defects.py`,
+  `tests/test_eval_seeded_defects.py`) landed **as a scoped slice**, plus
+  the parked-module disposition this workstream's definition of done
+  requires:
+  - **Design correction, found the same way as W5's `ExtendedRouter`
+    finding**: this plan's original W7 section pointed at wiring the
+    seeded corpus into `berb/integrity/eval/hidden_eval.py`'s "test
+    tier". Reading that module's actual implementation shows it scores a
+    *single* paper's overall quality across three visibility-tiered LLM
+    dimensions for the pipeline's own search/selection optimization loop
+    — unrelated to measuring `berb/review/ensemble.py`'s reviewer
+    recall, and partly a stub itself (`claim_validity`/
+    `citation_correctness` are hardcoded `0.5`, pending a "TODO(E8)"
+    integration that never landed). The plan section was written without
+    reading `hidden_eval.py` closely enough. Corrected design instead
+    exercises Berb's own existing deterministic checks directly
+    (`verify_anchors`, `detect_uncited`) for the no-LLM tier, and the
+    real `AutomatedReviewerEnsemble` for the LLM tier — see
+    `tests/fixtures/seeded_defects.py`'s module docstring for the full
+    correction.
+  - **`finding_reproduction.py` disposition, resolved per this
+    workstream's own rule ("wire it or delete it, do not leave it parked
+    for a third quarter")**: deleted. Its `_run_reproduction` was a
+    `random.random()` coin flip against a hardcoded per-difficulty
+    success-probability table — never real experiment execution — and
+    its known-finding corpus (KRAS mutations, Huntington's CAG repeats,
+    ResNet, "Attention Is All You Need") measured reproduction of
+    historical results, not recall on injected paper-draft defects. Not
+    W7's corpus. `.reachability-allowlist`'s D-04 entry closed with a
+    note (matching the existing D-01 closure pattern); doc mentions
+    corrected in `berb/integrity/__init__.py`, `berb/integrity/eval/
+    __init__.py`, `.claude/skills/berb-integrity/SKILL.md`, and
+    `CLAUDE.md`'s module table (`berb/integrity/` moved from "partial" to
+    "yes" — deletion was the only remaining unwired reason cited).
+  - **Scoped, not the full 5-defect-type corpus** the plan originally
+    sketched. Deterministic tier covers two defect types that map onto
+    an *existing* Berb check with zero new detection logic:
+    `FABRICATED_CITATION` (`verify_anchors`, `ANCHOR_QUOTE_MISMATCH` /
+    `BLOCK`) and `UNCITED_EMPIRICAL_CLAIM` (`detect_uncited`,
+    `UNCITED_ASSERTION` / `WARN`); each paired with a clean control
+    fixture so the same run also checks for false positives. LLM tier
+    covers one fixture (`UNSUPPORTED_COMPARATIVE_CLAIM`) run through the
+    real `AutomatedReviewerEnsemble`, `@pytest.mark.llm` +
+    `skipif(not os.environ.get("ANTHROPIC_API_KEY"))` (same pattern as
+    `tests/test_minimax_provider.py`), reporting per-persona recall
+    rather than asserting pass/fail — the plan's own design note says an
+    LLM's judgment should not gate CI. **Explicitly not covered**: "a
+    number that contradicts the results table," "a dropped ablation,"
+    and "a p-value with no test behind it" — none has an existing
+    deterministic checker in this codebase, and building three new ones
+    was out of scope for this pass. Named here rather than silently
+    dropped.
+  - `python -m pytest tests/test_eval_seeded_defects.py -v -rs` (via
+    `rtk proxy` to see the real skip line, not the token-saving summary)
+    → `4 passed, 1 skipped` — `SKIPPED [1]
+    tests\test_eval_seeded_defects.py:66: ANTHROPIC_API_KEY not set`, the
+    LLM-tier test correctly self-skipping with no key present, never
+    executed against a real provider in this pass.
+    `python -m pytest tests/test_integrity.py tests/test_eval_seeded_defects.py
+    tests/optimization/ -q` → `144 passed`. `python scripts/
+    check_reachability.py` → `[OK] Reachability check passed.` after the
+    deletion. mypy/ruff clean on all changed files.
+  - Spawned a separate follow-up task (not part of this commit) for an
+    unrelated, pre-existing finding surfaced while updating docs:
+    `docs/CODEBASE_MIND_MAP.md` (and `TODO.md`) describe an entire
+    `berb/validation/` package (`claim_tracker.py`,
+    `manuscript_self_check.py`, etc.) that does not exist anywhere in
+    the repo — the real code lives in `berb/integrity/` with a different
+    file list. Out of scope for W7 itself; flagged because the mind map
+    is read every turn by the `berb-arch` hook.
 - 2026-09-01 — W8.2 (`berb/writing/disclosure.py`: `DisclosureFacts`,
   `generate_disclosure_statement`) landed **and wired**:
   - Generic, factual AI-usage disclosure statement built from what the
