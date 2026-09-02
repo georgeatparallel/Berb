@@ -243,10 +243,7 @@ def score_complexity(
         reason = (
             f"Complexity {final_score:.2f} >= threshold {threshold:.2f}: "
             f"top signals: "
-            + ", ".join(
-                f"{k}={v:.2f}"
-                for k, v in sorted(signals.items(), key=lambda x: -x[1])[:3]
-            )
+            + ", ".join(f"{k}={v:.2f}" for k, v in sorted(signals.items(), key=lambda x: -x[1])[:3])
         )
     else:
         recommendation = "code_agent"
@@ -363,10 +360,7 @@ class OpenCodeBridge:
         time_budget_sec: int,
     ) -> Path:
         """Create a temporary workspace directory with context files."""
-        ws = (
-            stage_dir
-            / f"opencode_beast_{int(time.time())}_{time.monotonic_ns() % 100000}"
-        )
+        ws = stage_dir / f"opencode_beast_{int(time.time())}_{time.monotonic_ns() % 100000}"
         ws.mkdir(parents=True, exist_ok=True)
 
         # Write experiment plan
@@ -470,9 +464,7 @@ class OpenCodeBridge:
                 "openai": {
                     "options": {
                         "baseURL": self._llm_base_url,
-                        "apiKey": (
-                            f"{{env:{self._api_key_env}}}" if self._api_key_env else ""
-                        ),
+                        "apiKey": (f"{{env:{self._api_key_env}}}" if self._api_key_env else ""),
                     },
                     "models": {},
                 }
@@ -605,9 +597,7 @@ class OpenCodeBridge:
             basename = rel.name
             if basename not in files:
                 try:
-                    files[basename] = py_file.read_text(
-                        encoding="utf-8", errors="replace"
-                    )
+                    files[basename] = py_file.read_text(encoding="utf-8", errors="replace")
                 except OSError as exc:
                     logger.warning("Beast mode: failed to read %s: %s", py_file, exc)
 
@@ -711,9 +701,7 @@ class OpenCodeBridge:
             )
             new_files = dict(files)
             new_files["main.py"] = (
-                main_code.rstrip()
-                + '\n\n\nif __name__ == "__main__":\n'
-                + f"    {entry_func}()\n"
+                main_code.rstrip() + '\n\n\nif __name__ == "__main__":\n' + f"    {entry_func}()\n"
             )
             return new_files
 

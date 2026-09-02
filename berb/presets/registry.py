@@ -41,9 +41,7 @@ class PresetRegistry:
         Args:
             catalog_path: Path to preset catalog directory
         """
-        self.catalog_path = (
-            Path(catalog_path) if catalog_path else self.DEFAULT_CATALOG_PATH
-        )
+        self.catalog_path = Path(catalog_path) if catalog_path else self.DEFAULT_CATALOG_PATH
         self.presets: dict[str, PipelinePreset] = {}
         self._load_all()
 
@@ -53,9 +51,7 @@ class PresetRegistry:
             logger.warning(f"Preset catalog not found at {self.catalog_path}")
             return
 
-        yaml_files = list(self.catalog_path.glob("*.yaml")) + list(
-            self.catalog_path.glob("*.yml")
-        )
+        yaml_files = list(self.catalog_path.glob("*.yaml")) + list(self.catalog_path.glob("*.yml"))
 
         for yaml_file in yaml_files:
             try:
@@ -144,9 +140,7 @@ class PresetRegistry:
         Returns:
             List of (name, description) tuples
         """
-        return [
-            (name, preset.description) for name, preset in sorted(self.presets.items())
-        ]
+        return [(name, preset.description) for name, preset in sorted(self.presets.items())]
 
     def get_preset_tags(self, name: str) -> list[str]:
         """Get tags for a preset.
@@ -261,11 +255,7 @@ class PresetRegistry:
         result = base.copy()
 
         for key, value in override.items():
-            if (
-                key in result
-                and isinstance(result[key], dict)
-                and isinstance(value, dict)
-            ):
+            if key in result and isinstance(result[key], dict) and isinstance(value, dict):
                 result[key] = self._deep_merge(result[key], value)
             else:
                 result[key] = value

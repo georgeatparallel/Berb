@@ -23,9 +23,7 @@ class Intent(StrEnum):
 _INTENT_PATTERNS: list[tuple[Intent, re.Pattern[str]]] = [
     (
         Intent.HELP,
-        re.compile(
-            r"(?:^\s*help\s*$|\bhow\s+to\b|\busage\b|帮助|怎么用)", re.IGNORECASE
-        ),
+        re.compile(r"(?:^\s*help\s*$|\bhow\s+to\b|\busage\b|帮助|怎么用)", re.IGNORECASE),
     ),
     (
         Intent.START_PIPELINE,

@@ -37,9 +37,7 @@ def _tmp_path() -> Path:
 
 class TestTaskResult:
     def test_to_dict_success(self):
-        result = TaskResult(
-            task_id="t1", success=True, output="done", metrics={"quality": 0.9}
-        )
+        result = TaskResult(task_id="t1", success=True, output="done", metrics={"quality": 0.9})
         d = result.to_dict()
         assert d["task_id"] == "t1"
         assert d["success"] is True
@@ -86,9 +84,7 @@ class TestImprovementResult:
             affected_component="task_agent",
             expected_benefit="better",
         )
-        r = ImprovementResult(
-            iteration=2, improvements_made=[imp], performance_delta=0.05
-        )
+        r = ImprovementResult(iteration=2, improvements_made=[imp], performance_delta=0.05)
         d = r.to_dict()
         assert len(d["improvements_made"]) == 1
         assert d["performance_delta"] == 0.05
@@ -116,9 +112,7 @@ class TestHyperagentState:
             affected_component="ta",
             expected_benefit="e",
         )
-        result = ImprovementResult(
-            iteration=1, improvements_made=[imp], performance_delta=0.1
-        )
+        result = ImprovementResult(iteration=1, improvements_made=[imp], performance_delta=0.1)
         state.record_improvement(result)
         assert state.iteration == 1
         assert state.total_improvements == 1
@@ -280,9 +274,7 @@ class TestPersistentMemory:
             source_domain="ml",
         )
         mem.improvements = [imp_transferable, imp_non_transferable]
-        transferred = mem.transfer_improvements(
-            source_domain="ml", target_domain="biology"
-        )
+        transferred = mem.transfer_improvements(source_domain="ml", target_domain="biology")
         # Returns copies, so check IDs
         transferred_ids = {i.improvement_id for i in transferred}
         assert any("t1" in tid for tid in transferred_ids)
@@ -387,9 +379,7 @@ class TestMetaAgent:
         agent = MetaAgent(config=cfg)
         assert agent.state.variant_id == "v0"
 
-    def test_generate_error_handling_improvement_falls_back_on_llm_failure(
-        self, tmp_path
-    ):
+    def test_generate_error_handling_improvement_falls_back_on_llm_failure(self, tmp_path):
         # With a MagicMock config, the real LLM call inside _get_llm() /
         # llm.chat() fails to produce compilable Python, so the method
         # falls back to returning the original code unchanged rather than
@@ -399,9 +389,7 @@ class TestMetaAgent:
         result = agent._generate_error_handling_improvement("some code")
         assert result == "some code"
 
-    def test_generate_performance_optimization_falls_back_on_llm_failure(
-        self, tmp_path
-    ):
+    def test_generate_performance_optimization_falls_back_on_llm_failure(self, tmp_path):
         cfg = MagicMock()
         agent = MetaAgent(config=cfg)
         result = agent._generate_performance_optimization("some code")

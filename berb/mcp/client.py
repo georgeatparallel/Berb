@@ -26,9 +26,7 @@ class MCPClient:
 
     async def connect(self) -> None:
         """Establish connection to the MCP server."""
-        logger.info(
-            "Connecting to MCP server: %s (transport=%s)", self.uri, self.transport
-        )
+        logger.info("Connecting to MCP server: %s (transport=%s)", self.uri, self.transport)
         self._connected = True
 
     async def disconnect(self) -> None:
@@ -58,9 +56,7 @@ class MCPClient:
         """Call a tool on the remote MCP server."""
         if not self._connected:
             raise ConnectionError("Not connected to MCP server")
-        return await self._send_request(
-            "tools/call", {"name": name, "arguments": arguments}
-        )
+        return await self._send_request("tools/call", {"name": name, "arguments": arguments})
 
     # ── resource access ───────────────────────────────────────────
 
@@ -83,9 +79,7 @@ class MCPClient:
 
     # ── transport layer ───────────────────────────────────────────
 
-    async def _send_request(
-        self, method: str, params: dict[str, Any]
-    ) -> dict[str, Any]:
+    async def _send_request(self, method: str, params: dict[str, Any]) -> dict[str, Any]:
         """Send a JSON-RPC request to the MCP server.
 
         This is a stub — real implementation delegates to transport.py.

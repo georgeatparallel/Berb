@@ -52,7 +52,9 @@ class ExperimentMemory:
             The generated memory entry ID.
         """
         hp_str = json.dumps(hyperparams, indent=2, default=str)
-        content = f"Task: {task_type}\nHyperparameters:\n{hp_str}\nResult: {metric_name}={metric:.4f}"
+        content = (
+            f"Task: {task_type}\nHyperparameters:\n{hp_str}\nResult: {metric_name}={metric:.4f}"
+        )
         metadata = {
             "type": "hyperparams",
             "task_type": task_type,

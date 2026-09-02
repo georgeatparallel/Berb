@@ -31,7 +31,8 @@ llm:
   provider: openai-compatible
   base_url: http://localhost:1234/v1
   api_key_env: TEST_KEY
-""".strip() + "\n",
+""".strip()
+        + "\n",
         encoding="utf-8",
     )
 
@@ -80,9 +81,7 @@ def test_cmd_run_missing_config_returns_one(
 def test_cmd_validate_missing_config_returns_one(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    args = argparse.Namespace(
-        config=str(tmp_path / "missing.yaml"), no_check_paths=False
-    )
+    args = argparse.Namespace(config=str(tmp_path / "missing.yaml"), no_check_paths=False)
     code = rc_cli.cmd_validate(args)
     assert code == 1
     assert "config file not found" in capsys.readouterr().err
@@ -234,9 +233,7 @@ def test_cmd_init_creates_config(
     monkeypatch.chdir(tmp_path)
     _write_example_config(tmp_path / "config.berb.example.yaml")
     # Simulate non-TTY (stdin not a tty) → defaults to openrouter
-    monkeypatch.setattr(
-        "sys.stdin", type("FakeStdin", (), {"isatty": lambda self: False})()
-    )
+    monkeypatch.setattr("sys.stdin", type("FakeStdin", (), {"isatty": lambda self: False})())
     args = argparse.Namespace(force=False)
     code = rc_cli.cmd_init(args)
     assert code == 0
@@ -260,15 +257,11 @@ def test_cmd_init_refuses_overwrite(
     assert (tmp_path / "config.arc.yaml").read_text() == "existing\n"
 
 
-def test_cmd_init_force_overwrites(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_cmd_init_force_overwrites(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
     _write_example_config(tmp_path / "config.berb.example.yaml")
     (tmp_path / "config.arc.yaml").write_text("old\n")
-    monkeypatch.setattr(
-        "sys.stdin", type("FakeStdin", (), {"isatty": lambda self: False})()
-    )
+    monkeypatch.setattr("sys.stdin", type("FakeStdin", (), {"isatty": lambda self: False})())
     args = argparse.Namespace(force=True)
     code = rc_cli.cmd_init(args)
     assert code == 0

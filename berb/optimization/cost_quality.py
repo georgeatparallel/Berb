@@ -461,11 +461,7 @@ class CostQualityOptimizer:
         if records:
             # Use data-driven recommendation
             correlation = next(
-                (
-                    c
-                    for c in self.analyze_cost_quality_correlations()
-                    if c.stage_name == stage_name
-                ),
+                (c for c in self.analyze_cost_quality_correlations() if c.stage_name == stage_name),
                 None,
             )
 
@@ -499,9 +495,7 @@ class CostQualityOptimizer:
             "importance": importance,
             "data_driven": len(records) > 0,
             "historical_avg_quality": (
-                sum(r.quality_score for r in records) / len(records)
-                if records
-                else None
+                sum(r.quality_score for r in records) / len(records) if records else None
             ),
             "historical_avg_cost": (
                 sum(r.cost_usd for r in records) / len(records) if records else None

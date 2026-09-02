@@ -240,9 +240,7 @@ class TestOpportunityFinder:
     def test_heuristic_empty_trends(self):
         finder = OpportunityFinder()
         result = asyncio.run(
-            finder.find_opportunities(
-                {"rising_keywords": [], "method_trends": []}, ["ml"]
-            )
+            finder.find_opportunities({"rising_keywords": [], "method_trends": []}, ["ml"])
         )
         assert result == []
 
@@ -280,9 +278,7 @@ class TestOpportunityFinder:
         finder = OpportunityFinder()
         trend_analysis = {
             "rising_keywords": [{"keyword": f"kw{i}", "count": 10} for i in range(10)],
-            "method_trends": [
-                {"method": f"method{i}", "mention_count": 5} for i in range(10)
-            ],
+            "method_trends": [{"method": f"method{i}", "mention_count": 5} for i in range(10)],
         }
         result = asyncio.run(finder.find_opportunities(trend_analysis, ["ml"]))
         assert len(result) <= 5
@@ -341,9 +337,7 @@ class TestDailyDigest:
             digest = DailyDigest(fm)
             result_path = asyncio.run(digest.generate_and_save(tmp_path, ["ml"]))
         assert result_path.exists()
-        assert result_path.read_text(encoding="utf-8").startswith(
-            "## Daily Paper Digest"
-        )
+        assert result_path.read_text(encoding="utf-8").startswith("## Daily Paper Digest")
 
     def test_author_formatting_dict(self):
         fm = FeedManager(sources=("arxiv",))

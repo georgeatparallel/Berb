@@ -165,15 +165,11 @@ class MockLLMClient:
         user_message = messages[-1]["content"].lower() if messages else ""
 
         # Stage-specific responses
-        if "topic" in user_message and (
-            "init" in user_message or "goal" in user_message
-        ):
+        if "topic" in user_message and ("init" in user_message or "goal" in user_message):
             return self._topic_init_response()
         elif "problem decompose" in user_message or "sub-problems" in user_message:
             return self._problem_decompose_response()
-        elif "search" in user_message and (
-            "plan" in user_message or "strategy" in user_message
-        ):
+        elif "search" in user_message and ("plan" in user_message or "strategy" in user_message):
             return self._search_strategy_response()
         elif "collect" in user_message and "literature" in user_message:
             return self._literature_collect_response()
@@ -207,9 +203,7 @@ class MockLLMClient:
             return self._peer_review_response()
         elif "revision" in user_message:
             return self._paper_revision_response()
-        elif "quality" in user_message and (
-            "gate" in user_message or "assess" in user_message
-        ):
+        elif "quality" in user_message and ("gate" in user_message or "assess" in user_message):
             return self._quality_gate_response()
         elif "archive" in user_message or "knowledge archive" in user_message:
             return self._knowledge_archive_response()
@@ -627,9 +621,7 @@ class TestPhaseA_ResearchScoping:
         # Setup: Create prior artifact from Stage 1
         stage1_dir = run_dir / f"stage-{Stage.TOPIC_INIT:02d}"
         stage1_dir.mkdir(parents=True, exist_ok=True)
-        (stage1_dir / "goal.md").write_text(
-            "# Research Goal\n\nTest goal", encoding="utf-8"
-        )
+        (stage1_dir / "goal.md").write_text("# Research Goal\n\nTest goal", encoding="utf-8")
 
         stage_dir = run_dir / f"stage-{Stage.PROBLEM_DECOMPOSE:02d}"
         stage_dir.mkdir(parents=True, exist_ok=True)
@@ -713,9 +705,7 @@ class TestPhaseB_LiteratureDiscovery:
         self._setup_prior_stages(run_dir, 4)
         stage3_dir = run_dir / "stage-03"
         stage3_dir.mkdir(parents=True, exist_ok=True)
-        (stage3_dir / "search_plan.yaml").write_text(
-            "queries: [test]", encoding="utf-8"
-        )
+        (stage3_dir / "search_plan.yaml").write_text("queries: [test]", encoding="utf-8")
 
         stage_dir = run_dir / f"stage-{Stage.LITERATURE_COLLECT:02d}"
         stage_dir.mkdir(parents=True, exist_ok=True)
@@ -745,9 +735,7 @@ class TestPhaseB_LiteratureDiscovery:
         self._setup_prior_stages(run_dir, 5)
         stage4_dir = run_dir / "stage-04"
         stage4_dir.mkdir(parents=True, exist_ok=True)
-        (stage4_dir / "candidates.jsonl").write_text(
-            '{"title": "test"}\n', encoding="utf-8"
-        )
+        (stage4_dir / "candidates.jsonl").write_text('{"title": "test"}\n', encoding="utf-8")
 
         stage_dir = run_dir / f"stage-{Stage.LITERATURE_SCREEN:02d}"
         stage_dir.mkdir(parents=True, exist_ok=True)
@@ -774,9 +762,7 @@ class TestPhaseB_LiteratureDiscovery:
         self._setup_prior_stages(run_dir, 6)
         stage5_dir = run_dir / "stage-05"
         stage5_dir.mkdir(parents=True, exist_ok=True)
-        (stage5_dir / "shortlist.jsonl").write_text(
-            '{"title": "test"}\n', encoding="utf-8"
-        )
+        (stage5_dir / "shortlist.jsonl").write_text('{"title": "test"}\n', encoding="utf-8")
 
         stage_dir = run_dir / f"stage-{Stage.KNOWLEDGE_EXTRACT:02d}"
         stage_dir.mkdir(parents=True, exist_ok=True)
@@ -818,13 +804,9 @@ class TestPhaseC_KnowledgeSynthesis:
             if i == 6:
                 cards_dir = stage_dir / "cards"
                 cards_dir.mkdir(parents=True, exist_ok=True)
-                (cards_dir / "card-1.json").write_text(
-                    '{"title": "test"}', encoding="utf-8"
-                )
+                (cards_dir / "card-1.json").write_text('{"title": "test"}', encoding="utf-8")
             else:
-                (stage_dir / f"artifact-{i}.md").write_text(
-                    f"# Artifact {i}", encoding="utf-8"
-                )
+                (stage_dir / f"artifact-{i}.md").write_text(f"# Artifact {i}", encoding="utf-8")
 
     def test_stage_07_synthesis(
         self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
@@ -898,13 +880,9 @@ class TestPhaseD_ExperimentDesign:
             stage_dir = run_dir / f"stage-{i:02d}"
             stage_dir.mkdir(parents=True, exist_ok=True)
             if i == 8:
-                (stage_dir / "hypotheses.md").write_text(
-                    "# Hypotheses", encoding="utf-8"
-                )
+                (stage_dir / "hypotheses.md").write_text("# Hypotheses", encoding="utf-8")
             else:
-                (stage_dir / f"artifact-{i}.md").write_text(
-                    f"# Artifact {i}", encoding="utf-8"
-                )
+                (stage_dir / f"artifact-{i}.md").write_text(f"# Artifact {i}", encoding="utf-8")
 
     def test_stage_09_experiment_design(
         self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
@@ -1007,16 +985,12 @@ class TestPhaseE_ExperimentExecution:
             stage_dir = run_dir / f"stage-{i:02d}"
             stage_dir.mkdir(parents=True, exist_ok=True)
             if i == 11:
-                (stage_dir / "schedule.json").write_text(
-                    '{"trials": []}', encoding="utf-8"
-                )
+                (stage_dir / "schedule.json").write_text('{"trials": []}', encoding="utf-8")
                 exp_dir = stage_dir / "experiment"
                 exp_dir.mkdir(parents=True, exist_ok=True)
                 (exp_dir / "main.py").write_text("print('test')", encoding="utf-8")
             else:
-                (stage_dir / f"artifact-{i}.md").write_text(
-                    f"# Artifact {i}", encoding="utf-8"
-                )
+                (stage_dir / f"artifact-{i}.md").write_text(f"# Artifact {i}", encoding="utf-8")
 
     def test_stage_12_experiment_run(
         self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
@@ -1054,9 +1028,7 @@ class TestPhaseE_ExperimentExecution:
         stage12_dir.mkdir(parents=True, exist_ok=True)
         runs_dir = stage12_dir / "runs"
         runs_dir.mkdir(parents=True, exist_ok=True)
-        (runs_dir / "run-1.json").write_text(
-            '{"status": "completed"}', encoding="utf-8"
-        )
+        (runs_dir / "run-1.json").write_text('{"status": "completed"}', encoding="utf-8")
 
         stage_dir = run_dir / f"stage-{Stage.ITERATIVE_REFINE:02d}"
         stage_dir.mkdir(parents=True, exist_ok=True)
@@ -1097,9 +1069,7 @@ class TestPhaseF_AnalysisDecision:
             if i == 12:
                 runs_dir = stage_dir / "runs"
                 runs_dir.mkdir(parents=True, exist_ok=True)
-                (runs_dir / "run-1.json").write_text(
-                    '{"status": "completed"}', encoding="utf-8"
-                )
+                (runs_dir / "run-1.json").write_text('{"status": "completed"}', encoding="utf-8")
             elif i == 13:
                 # RESULT_ANALYSIS requires selection_bias.json as an input
                 # (produced by ITERATIVE_REFINE — see contracts.py).
@@ -1118,9 +1088,7 @@ class TestPhaseF_AnalysisDecision:
                     encoding="utf-8",
                 )
             else:
-                (stage_dir / f"artifact-{i}.md").write_text(
-                    f"# Artifact {i}", encoding="utf-8"
-                )
+                (stage_dir / f"artifact-{i}.md").write_text(f"# Artifact {i}", encoding="utf-8")
 
     def test_stage_14_result_analysis(
         self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
@@ -1203,14 +1171,10 @@ class TestPhaseG_PaperWriting:
                     encoding="utf-8",
                 )
             elif i == 15:
-                (stage_dir / "decision.md").write_text(
-                    "# Decision: PROCEED", encoding="utf-8"
-                )
+                (stage_dir / "decision.md").write_text("# Decision: PROCEED", encoding="utf-8")
                 (stage_dir / "analysis.md").write_text("# Analysis", encoding="utf-8")
             else:
-                (stage_dir / f"artifact-{i}.md").write_text(
-                    f"# Artifact {i}", encoding="utf-8"
-                )
+                (stage_dir / f"artifact-{i}.md").write_text(f"# Artifact {i}", encoding="utf-8")
 
     def test_stage_16_paper_outline(
         self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
@@ -1355,13 +1319,9 @@ class TestPhaseH_Finalization:
                     encoding="utf-8",
                 )
             elif i == 19:
-                (stage_dir / "paper_revised.md").write_text(
-                    "# Revised Paper", encoding="utf-8"
-                )
+                (stage_dir / "paper_revised.md").write_text("# Revised Paper", encoding="utf-8")
             else:
-                (stage_dir / f"artifact-{i}.md").write_text(
-                    f"# Artifact {i}", encoding="utf-8"
-                )
+                (stage_dir / f"artifact-{i}.md").write_text(f"# Artifact {i}", encoding="utf-8")
 
     def test_stage_20_quality_gate(
         self, run_dir: Path, mock_config: RCConfig, adapters: AdapterBundle
@@ -1418,9 +1378,7 @@ class TestPhaseH_Finalization:
         self._setup_prior_stages(run_dir)
         stage19_dir = run_dir / "stage-19"
         stage19_dir.mkdir(parents=True, exist_ok=True)
-        (stage19_dir / "paper_revised.md").write_text(
-            "# Revised Paper", encoding="utf-8"
-        )
+        (stage19_dir / "paper_revised.md").write_text("# Revised Paper", encoding="utf-8")
 
         stage_dir = run_dir / f"stage-{Stage.EXPORT_PUBLISH:02d}"
         stage_dir.mkdir(parents=True, exist_ok=True)

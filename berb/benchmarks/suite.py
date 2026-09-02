@@ -228,9 +228,7 @@ class BerbBenchmarkSuite:
         # Calculate statistics
         avg_score = sum(all_scores) / len(all_scores) if all_scores else 0.0
         success_rate = (
-            sum(1 for s in all_scores if s >= 7.0) / len(all_scores)
-            if all_scores
-            else 0.0
+            sum(1 for s in all_scores if s >= 7.0) / len(all_scores) if all_scores else 0.0
         )
 
         return QualityReport(

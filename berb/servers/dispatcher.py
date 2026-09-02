@@ -64,9 +64,7 @@ class TaskDispatcher:
             "task": task,
         }
         self._busy_servers.add(server.name)
-        logger.info(
-            "Dispatched task %s to %s (%s)", task_id, server.name, server.server_type
-        )
+        logger.info("Dispatched task %s to %s (%s)", task_id, server.name, server.server_type)
         return task_id
 
     async def execute_task(self, task_id: str) -> dict[str, Any]:

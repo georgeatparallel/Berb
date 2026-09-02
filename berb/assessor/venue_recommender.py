@@ -87,9 +87,7 @@ class VenueRecommender:
         recommendations.sort(
             key=lambda r: (
                 -r["match_score"],
-                {"tier_1": 0, "tier_2": 1, "tier_3": 2, "workshop": 3}.get(
-                    r["tier"], 4
-                ),
+                {"tier_1": 0, "tier_2": 1, "tier_3": 2, "workshop": 3}.get(r["tier"], 4),
             )
         )
         return recommendations
@@ -120,9 +118,7 @@ class VenueRecommender:
 
         lines = ["Venue Recommendations:", ""]
         for rec in recommendations:
-            lines.append(
-                f"  {rec['venue']} ({rec['tier']}) — score {rec['match_score']}/10"
-            )
+            lines.append(f"  {rec['venue']} ({rec['tier']}) — score {rec['match_score']}/10")
             lines.append(f"    {rec['suggestion']}")
             lines.append("")
         return "\n".join(lines)

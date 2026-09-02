@@ -256,9 +256,7 @@ def strength_advisory(
             before=wrap_untrusted(
                 candidate.before_text[:_MAX_DRIFT_PROMPT_CHARS], "before sentence"
             ),
-            after=wrap_untrusted(
-                candidate.after_text[:_MAX_DRIFT_PROMPT_CHARS], "after sentence"
-            ),
+            after=wrap_untrusted(candidate.after_text[:_MAX_DRIFT_PROMPT_CHARS], "after sentence"),
         )
         try:
             raw = llm(prompt)

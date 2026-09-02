@@ -37,9 +37,7 @@ def graph() -> KnowledgeGraphBuilder:
 def populated_graph(graph: KnowledgeGraphBuilder) -> KnowledgeGraphBuilder:
     # Papers
     graph.add_paper("p1", "ResNet: Deep Residual Learning", year=2016, authors=["He"])
-    graph.add_paper(
-        "p2", "ViT: An Image is Worth 16x16 Words", year=2021, authors=["Dosovitskiy"]
-    )
+    graph.add_paper("p2", "ViT: An Image is Worth 16x16 Words", year=2021, authors=["Dosovitskiy"])
     graph.add_paper(
         "p3",
         "DeiT: Training Data-efficient Image Transformers",
@@ -48,15 +46,9 @@ def populated_graph(graph: KnowledgeGraphBuilder) -> KnowledgeGraphBuilder:
     )
 
     # Methods
-    graph.add_method(
-        "m1", "ResNet", description="Residual connections for deep networks"
-    )
-    graph.add_method(
-        "m2", "Vision Transformer", description="Transformer for image classification"
-    )
-    graph.add_method(
-        "m3", "Knowledge Distillation", description="Teacher-student learning"
-    )
+    graph.add_method("m1", "ResNet", description="Residual connections for deep networks")
+    graph.add_method("m2", "Vision Transformer", description="Transformer for image classification")
+    graph.add_method("m3", "Knowledge Distillation", description="Teacher-student learning")
 
     # Datasets
     graph.add_dataset("d1", "ImageNet", domain="computer vision")
@@ -73,9 +65,7 @@ def populated_graph(graph: KnowledgeGraphBuilder) -> KnowledgeGraphBuilder:
     graph.add_relation(Relation("m2", "d2", RelationType.USES_DATASET))
     graph.add_relation(Relation("p1", "m1", RelationType.APPLIES_METHOD))
     graph.add_relation(Relation("p2", "m2", RelationType.APPLIES_METHOD))
-    graph.add_relation(
-        Relation("m2", "m1", RelationType.OUTPERFORMS, {"dataset": "ImageNet"})
-    )
+    graph.add_relation(Relation("m2", "m1", RelationType.OUTPERFORMS, {"dataset": "ImageNet"}))
 
     return graph
 
@@ -192,9 +182,7 @@ class TestKnowledgeGraphBuilder:
 
 
 class TestGraphPersistence:
-    def test_save_and_load(
-        self, populated_graph: KnowledgeGraphBuilder, tmp_path: Path
-    ) -> None:
+    def test_save_and_load(self, populated_graph: KnowledgeGraphBuilder, tmp_path: Path) -> None:
         path = tmp_path / "graph.json"
         populated_graph.save(path)
         assert path.exists()
@@ -204,9 +192,7 @@ class TestGraphPersistence:
         assert loaded == populated_graph.entity_count
         assert new_graph.relation_count == populated_graph.relation_count
 
-    def test_load_nonexistent(
-        self, graph: KnowledgeGraphBuilder, tmp_path: Path
-    ) -> None:
+    def test_load_nonexistent(self, graph: KnowledgeGraphBuilder, tmp_path: Path) -> None:
         assert graph.load(tmp_path / "nope.json") == 0
 
     def test_load_malformed(self, graph: KnowledgeGraphBuilder, tmp_path: Path) -> None:
@@ -225,32 +211,24 @@ class TestKnowledgeGraphQuery:
         # CIFAR-100 has no methods using it
         assert any("CIFAR-100" in g for g in gaps)
 
-    def test_find_research_gaps_with_domain(
-        self, populated_graph: KnowledgeGraphBuilder
-    ) -> None:
+    def test_find_research_gaps_with_domain(self, populated_graph: KnowledgeGraphBuilder) -> None:
         query = KnowledgeGraphQuery(populated_graph)
         gaps = query.find_research_gaps(domain="computer vision")
         assert isinstance(gaps, list)
 
-    def test_find_trending_methods(
-        self, populated_graph: KnowledgeGraphBuilder
-    ) -> None:
+    def test_find_trending_methods(self, populated_graph: KnowledgeGraphBuilder) -> None:
         query = KnowledgeGraphQuery(populated_graph)
         trending = query.find_trending_methods(min_citations=1)
         assert len(trending) > 0
 
-    def test_get_method_comparison(
-        self, populated_graph: KnowledgeGraphBuilder
-    ) -> None:
+    def test_get_method_comparison(self, populated_graph: KnowledgeGraphBuilder) -> None:
         query = KnowledgeGraphQuery(populated_graph)
         comparison = query.get_method_comparison("ResNet", "Vision Transformer")
         assert "method_a" in comparison
         assert "method_b" in comparison
         assert "shared_datasets" in comparison
 
-    def test_get_method_comparison_not_found(
-        self, populated_graph: KnowledgeGraphBuilder
-    ) -> None:
+    def test_get_method_comparison_not_found(self, populated_graph: KnowledgeGraphBuilder) -> None:
         query = KnowledgeGraphQuery(populated_graph)
         comparison = query.get_method_comparison("NonexistentA", "NonexistentB")
         assert "error" in comparison
@@ -260,9 +238,7 @@ class TestKnowledgeGraphQuery:
         topics = query.suggest_topics(["transformer", "vision"], top_k=3)
         assert isinstance(topics, list)
 
-    def test_suggest_topics_empty_interests(
-        self, populated_graph: KnowledgeGraphBuilder
-    ) -> None:
+    def test_suggest_topics_empty_interests(self, populated_graph: KnowledgeGraphBuilder) -> None:
         query = KnowledgeGraphQuery(populated_graph)
         topics = query.suggest_topics([])
         assert isinstance(topics, list)
@@ -272,9 +248,7 @@ class TestKnowledgeGraphQuery:
 
 
 class TestVisualizer:
-    def test_export_dot(
-        self, populated_graph: KnowledgeGraphBuilder, tmp_path: Path
-    ) -> None:
+    def test_export_dot(self, populated_graph: KnowledgeGraphBuilder, tmp_path: Path) -> None:
         path = tmp_path / "graph.dot"
         export_to_dot(populated_graph, path)
         assert path.exists()
@@ -282,9 +256,7 @@ class TestVisualizer:
         assert "digraph" in content
         assert "ResNet" in content
 
-    def test_export_cytoscape(
-        self, populated_graph: KnowledgeGraphBuilder, tmp_path: Path
-    ) -> None:
+    def test_export_cytoscape(self, populated_graph: KnowledgeGraphBuilder, tmp_path: Path) -> None:
         path = tmp_path / "graph.json"
         export_to_json_cytoscape(populated_graph, path)
         assert path.exists()

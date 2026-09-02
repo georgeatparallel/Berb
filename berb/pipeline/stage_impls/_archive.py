@@ -104,9 +104,7 @@ Generated: {_utcnow_iso()}
         "artifact_count": len(files),
         "artifacts": files,
     }
-    (stage_dir / "bundle_index.json").write_text(
-        json.dumps(index, indent=2), encoding="utf-8"
-    )
+    (stage_dir / "bundle_index.json").write_text(json.dumps(index, indent=2), encoding="utf-8")
     return StageResult(
         stage=Stage.KNOWLEDGE_ARCHIVE,
         status=StageStatus.DONE,
@@ -361,9 +359,7 @@ def _sanitize_fabricated_data(
 
         # Check if this looks like a results/experiment table
         # (heuristic: has a separator row with dashes)
-        has_separator = any(
-            _re_san.match(r"^[ \t]*\|[\s:|-]+\|[ \t]*$", line) for line in lines
-        )
+        has_separator = any(_re_san.match(r"^[ \t]*\|[\s:|-]+\|[ \t]*$", line) for line in lines)
         if not has_separator:
             return table_text
 
@@ -717,9 +713,7 @@ def _sanitize_fabricated_data(
                 if _is_verified(val):
                     return m.group(0)
                 prose_numbers_replaced += 1
-                return m.group(0).replace(
-                    num_str + (m.group(2) or ""), "[value removed]"
-                )
+                return m.group(0).replace(num_str + (m.group(2) or ""), "[value removed]")
 
             _line = _prose_pattern.sub(_replace_prose_num, _line)
         _sanitized_lines.append(_line)

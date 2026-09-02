@@ -42,9 +42,7 @@ def _fake_response(content: str) -> dict:
 
 
 class _FakeAnthropicAdapter:
-    def __init__(
-        self, *, statuses=None, results=None, fail_submit=False, fail_status=False
-    ):
+    def __init__(self, *, statuses=None, results=None, fail_submit=False, fail_status=False):
         self.fail_submit = fail_submit
         self.fail_status = fail_status
         self._statuses = list(statuses or [])
@@ -71,9 +69,7 @@ class _FakeAnthropicAdapter:
 def _make_llm_client(anthropic=None, primary_model="claude-sonnet-4-5"):
     return SimpleNamespace(
         _anthropic=anthropic,
-        config=SimpleNamespace(
-            primary_model=primary_model, max_tokens=4096, temperature=0.7
-        ),
+        config=SimpleNamespace(primary_model=primary_model, max_tokens=4096, temperature=0.7),
     )
 
 
@@ -94,21 +90,16 @@ class TestReviewPaperBatch:
 
     def test_submits_one_request_per_persona(self) -> None:
         adapter = _FakeAnthropicAdapter(
-            statuses=[
-                {"processing_status": "ended", "results_url": "https://x/results"}
-            ],
+            statuses=[{"processing_status": "ended", "results_url": "https://x/results"}],
             results={
-                persona.id: _fake_response(_VALID_REVIEW_JSON)
-                for persona in REVIEWER_PERSONAS
+                persona.id: _fake_response(_VALID_REVIEW_JSON) for persona in REVIEWER_PERSONAS
             },
         )
         client = _make_llm_client(anthropic=adapter)
         ensemble = AutomatedReviewerEnsemble(llm_client=client)
 
         reviews = asyncio.run(
-            ensemble._review_paper_batch(
-                "paper text", poll_interval_sec=0.01, max_wait_sec=0.5
-            )
+            ensemble._review_paper_batch("paper text", poll_interval_sec=0.01, max_wait_sec=0.5)
         )
 
         assert reviews is not None
@@ -121,12 +112,9 @@ class TestReviewPaperBatch:
 
     def test_applies_cached_prefix_and_system_per_persona(self) -> None:
         adapter = _FakeAnthropicAdapter(
-            statuses=[
-                {"processing_status": "ended", "results_url": "https://x/results"}
-            ],
+            statuses=[{"processing_status": "ended", "results_url": "https://x/results"}],
             results={
-                persona.id: _fake_response(_VALID_REVIEW_JSON)
-                for persona in REVIEWER_PERSONAS
+                persona.id: _fake_response(_VALID_REVIEW_JSON) for persona in REVIEWER_PERSONAS
             },
         )
         client = _make_llm_client(anthropic=adapter)
@@ -158,9 +146,7 @@ class TestReviewPaperBatch:
         ensemble = AutomatedReviewerEnsemble(llm_client=client)
 
         result = asyncio.run(
-            ensemble._review_paper_batch(
-                "paper text", poll_interval_sec=0.01, max_wait_sec=0.5
-            )
+            ensemble._review_paper_batch("paper text", poll_interval_sec=0.01, max_wait_sec=0.5)
         )
         assert result is None
 
@@ -171,9 +157,7 @@ class TestReviewPaperBatch:
         ensemble = AutomatedReviewerEnsemble(llm_client=client)
 
         result = asyncio.run(
-            ensemble._review_paper_batch(
-                "paper text", poll_interval_sec=0.02, max_wait_sec=0.05
-            )
+            ensemble._review_paper_batch("paper text", poll_interval_sec=0.02, max_wait_sec=0.05)
         )
         assert result is None
 
@@ -182,22 +166,17 @@ class TestReviewPaperBatch:
         # (e.g. it errored server-side) — that persona gets the honest
         # "unavailable" placeholder instead of the whole batch failing.
         partial_results = {
-            persona.id: _fake_response(_VALID_REVIEW_JSON)
-            for persona in REVIEWER_PERSONAS[:-1]
+            persona.id: _fake_response(_VALID_REVIEW_JSON) for persona in REVIEWER_PERSONAS[:-1]
         }
         adapter = _FakeAnthropicAdapter(
-            statuses=[
-                {"processing_status": "ended", "results_url": "https://x/results"}
-            ],
+            statuses=[{"processing_status": "ended", "results_url": "https://x/results"}],
             results=partial_results,
         )
         client = _make_llm_client(anthropic=adapter)
         ensemble = AutomatedReviewerEnsemble(llm_client=client)
 
         reviews = asyncio.run(
-            ensemble._review_paper_batch(
-                "paper text", poll_interval_sec=0.01, max_wait_sec=0.5
-            )
+            ensemble._review_paper_batch("paper text", poll_interval_sec=0.01, max_wait_sec=0.5)
         )
 
         assert reviews is not None
@@ -220,9 +199,7 @@ class TestReviewPaperUsesBatchFlag:
         with tempfile.TemporaryDirectory() as tmp:
             paper_path = Path(tmp) / "paper.md"
             paper_path.write_text("# Paper", encoding="utf-8")
-            asyncio.run(
-                ensemble.review_paper(paper_path, paper_text="text", use_batch=False)
-            )
+            asyncio.run(ensemble.review_paper(paper_path, paper_text="text", use_batch=False))
 
         ensemble._review_paper_batch.assert_not_called()
 

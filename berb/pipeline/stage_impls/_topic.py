@@ -49,9 +49,7 @@ def _execute_topic_init(
 ) -> StageResult:
     topic = config.research.topic
     _original_topic = topic  # Store for auto-refine replacement
-    domains = (
-        ", ".join(config.research.domains) if config.research.domains else "general"
-    )
+    domains = ", ".join(config.research.domains) if config.research.domains else "general"
     if llm is not None:
         _pm = prompts or PromptManager()
         _overlay = _get_evolution_overlay(run_dir, "topic_init")
@@ -115,15 +113,11 @@ Investigate the topic with emphasis on reproducible methods and measurable outco
 
     # --- Optionally ensure PyTorch is available ---
     if hw.has_gpu and config.experiment.mode == "sandbox":
-        torch_ok = ensure_torch_available(
-            config.experiment.sandbox.python_path, hw.gpu_type
-        )
+        torch_ok = ensure_torch_available(config.experiment.sandbox.python_path, hw.gpu_type)
         if torch_ok:
             logger.info("PyTorch is available for sandbox experiments")
         else:
-            logger.warning(
-                "PyTorch could not be installed; sandbox will use CPU-only packages"
-            )
+            logger.warning("PyTorch could not be installed; sandbox will use CPU-only packages")
     elif hw.has_gpu and config.experiment.mode == "docker":
         logger.info("Docker sandbox: PyTorch pre-installed in container image")
 
@@ -240,9 +234,7 @@ Derived from `goal.md` for topic: {config.research.topic}
                         _goal_path = run_dir / "goal.md"
                         if _goal_path.exists():
                             _goal_content = _goal_path.read_text(encoding="utf-8")
-                            _goal_content = _goal_content.replace(
-                                _original_topic, _suggestion
-                            )
+                            _goal_content = _goal_content.replace(_original_topic, _suggestion)
                             _goal_path.write_text(_goal_content, encoding="utf-8")
                 else:
                     logger.info("IMP-35: Topic quality score %s/10", overall)

@@ -250,9 +250,7 @@ Be conservative with confidence scores. Only assign high confidence (>0.8) when 
                 reasoning=f"Classification failed: {e}",
             )
 
-    def _parse_response(
-        self, response: LLMResponse, context: str
-    ) -> CitationClassification:
+    def _parse_response(self, response: LLMResponse, context: str) -> CitationClassification:
         """Parse LLM response into CitationClassification.
 
         Args:
@@ -347,9 +345,7 @@ Be conservative with confidence scores. Only assign high confidence (>0.8) when 
 
     async def classify_batch(
         self,
-        citations: list[
-            tuple[str, str, str, str]
-        ],  # (context, claim, citing_id, cited_id)
+        citations: list[tuple[str, str, str, str]],  # (context, claim, citing_id, cited_id)
         model: str | None = None,
     ) -> list[CitationClassification]:
         """Classify multiple citations in batch.
@@ -414,22 +410,13 @@ Be conservative with confidence scores. Only assign high confidence (>0.8) when 
             PaperCitationProfile with aggregate statistics
         """
         classifications = await self.classify_batch(
-            [
-                (context, claim, paper_id, cited_id)
-                for context, claim, cited_id in citations
-            ]
+            [(context, claim, paper_id, cited_id) for context, claim, cited_id in citations]
         )
 
         # Count by intent
-        supporting = sum(
-            1 for c in classifications if c.intent == CitationIntent.SUPPORTING
-        )
-        contrasting = sum(
-            1 for c in classifications if c.intent == CitationIntent.CONTRASTING
-        )
-        mentioning = sum(
-            1 for c in classifications if c.intent == CitationIntent.MENTIONING
-        )
+        supporting = sum(1 for c in classifications if c.intent == CitationIntent.SUPPORTING)
+        contrasting = sum(1 for c in classifications if c.intent == CitationIntent.CONTRASTING)
+        mentioning = sum(1 for c in classifications if c.intent == CitationIntent.MENTIONING)
 
         # Compute Berb confidence score
         total = len(classifications)

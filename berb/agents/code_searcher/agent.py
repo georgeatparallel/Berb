@@ -149,9 +149,7 @@ class CodeSearchAgent:
         -------
         CodeSearchResult
         """
-        logger.info(
-            "Code search started for: %.60s (domain=%s)", topic, domain.domain_id
-        )
+        logger.info("Code search started for: %.60s (domain=%s)", topic, domain.domain_id)
 
         # 1. Check cache
         cached = self._cache.get(domain.domain_id, topic)

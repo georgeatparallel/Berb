@@ -203,13 +203,13 @@ def test_claim_strength_drift_check_exception_does_not_crash_stage(
     def _boom(*_a: Any, **_k: Any) -> None:
         raise RuntimeError("simulated drift-check failure")
 
-    monkeypatch.setattr(
-        "berb.pipeline.stage_impls._review.find_claim_drift_candidates", _boom
-    )
+    monkeypatch.setattr("berb.pipeline.stage_impls._review.find_claim_drift_candidates", _boom)
     run_dir = _claim_drift_run_dir(tmp_path)
     llm = _SequencedFakeLLMClient(
         first_response="# Paper\n\nThe treatment causes improved outcomes.\n",
-        subsequent_response=json.dumps({"drifted": True, "direction": "strengthened", "rationale": "x"}),
+        subsequent_response=json.dumps(
+            {"drifted": True, "direction": "strengthened", "rationale": "x"}
+        ),
     )
     result = rc_executor._execute_paper_revision(
         _stage_dir(run_dir), run_dir, _rc_config(tmp_path), AdapterBundle(), llm=llm

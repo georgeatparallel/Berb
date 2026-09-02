@@ -82,9 +82,7 @@ def main() -> None:
 
         project = Path(tmp) / "project"
         project.mkdir()
-        (project / "utils.py").write_text(
-            "def add(a, b): return a + b\n", encoding="utf-8"
-        )
+        (project / "utils.py").write_text("def add(a, b): return a + b\n", encoding="utf-8")
         (project / "main.py").write_text(
             "from utils import add\nresult = add(3, 4)\nprint(f'primary_metric: {result}')\n",
             encoding="utf-8",
@@ -128,9 +126,7 @@ def main() -> None:
         )
         r = sandbox.run(code, timeout_sec=30)
         network_blocked = "NETWORK_ACCESS: no" in r.stdout
-        check(
-            "Network blocked (--network=none)", network_blocked, r.stdout.strip()[:200]
-        )
+        check("Network blocked (--network=none)", network_blocked, r.stdout.strip()[:200])
 
     # ── Test 5: GPU visibility ─────────────────────────────────
     print("\n--- Test 5: GPU visibility ---")
@@ -148,16 +144,12 @@ def main() -> None:
             "    print('primary_metric: 0.0')\n"
         )
         r = sandbox.run(code, timeout_sec=60)
-        gpu_visible = (
-            "primary_metric" in r.metrics and r.metrics["primary_metric"] == 1.0
-        )
+        gpu_visible = "primary_metric" in r.metrics and r.metrics["primary_metric"] == 1.0
         if gpu_visible:
             check("GPU visible in container", True, r.stdout.strip()[:200])
         else:
             # Not a hard failure — might not have NVIDIA runtime
-            print(
-                f"  [{SKIP}] GPU not visible (NVIDIA Container Toolkit may not be installed)"
-            )
+            print(f"  [{SKIP}] GPU not visible (NVIDIA Container Toolkit may not be installed)")
             print(f"         stdout: {r.stdout.strip()[:200]}")
             print(f"         stderr: {r.stderr.strip()[:200]}")
 
@@ -165,9 +157,7 @@ def main() -> None:
     print("\n--- Test 6: Memory limit enforcement ---")
     with tempfile.TemporaryDirectory(prefix="rc_e2e_") as tmp:
         # Set a very low memory limit to trigger OOM
-        cfg = DockerSandboxConfig(
-            gpu_enabled=False, network_policy="none", memory_limit_mb=64
-        )
+        cfg = DockerSandboxConfig(gpu_enabled=False, network_policy="none", memory_limit_mb=64)
         sandbox = DockerSandbox(cfg, Path(tmp) / "work")
         code = (
             "import numpy as np\n"
@@ -186,9 +176,7 @@ def main() -> None:
     # ── Test 7: Factory integration ────────────────────────────
     print("\n--- Test 7: Factory integration ---")
     with tempfile.TemporaryDirectory(prefix="rc_e2e_") as tmp:
-        config = ExperimentConfig(
-            mode="docker", docker=DockerSandboxConfig(gpu_enabled=False)
-        )
+        config = ExperimentConfig(mode="docker", docker=DockerSandboxConfig(gpu_enabled=False))
         sandbox = create_sandbox(config, Path(tmp) / "work")
         check("Factory returns DockerSandbox", isinstance(sandbox, DockerSandbox))
         r = sandbox.run("print('primary_metric: 42.0')", timeout_sec=30)

@@ -104,9 +104,7 @@ class TestEvalDatasetBuilder:
     @pytest.mark.asyncio
     async def test_load_nonexistent_dataset(self):
         """Test loading from nonexistent dataset."""
-        builder = EvalDatasetBuilder(
-            dataset_path="/nonexistent/path.jsonl", auto_create=False
-        )
+        builder = EvalDatasetBuilder(dataset_path="/nonexistent/path.jsonl", auto_create=False)
 
         records = await builder.load_test_cases()
         assert records == []

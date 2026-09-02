@@ -42,9 +42,7 @@ class RateLimiter:
         max_jitter_sec: float | None = None,
     ) -> None:
         self._interval = min_interval_sec
-        self._jitter = (
-            max_jitter_sec if max_jitter_sec is not None else min_interval_sec * 0.1
-        )
+        self._jitter = max_jitter_sec if max_jitter_sec is not None else min_interval_sec * 0.1
         # None (not 0.0) sentinels "never called yet". time.monotonic() is
         # anchored to an arbitrary reference point (often system boot), not
         # epoch 0 — on a freshly booted machine with a low monotonic clock
@@ -126,9 +124,7 @@ class RateLimiter:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def backoff_delay(
-        attempt: int, base: float = 2.0, max_delay: float = 60.0
-    ) -> float:
+    def backoff_delay(attempt: int, base: float = 2.0, max_delay: float = 60.0) -> float:
         """Return exponential backoff delay with ±20 % jitter."""
         delay = min(base**attempt, max_delay)
         return delay + random.uniform(0.0, delay * 0.2)

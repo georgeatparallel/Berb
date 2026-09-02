@@ -158,9 +158,7 @@ def _write_stage_meta(
         "ts": _utcnow_iso(),
         "next_stage": int(next_stage) if next_stage is not None else None,
     }
-    (stage_dir / "decision.json").write_text(
-        json.dumps(meta, indent=2), encoding="utf-8"
-    )
+    (stage_dir / "decision.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
 
 
 __all__ = [

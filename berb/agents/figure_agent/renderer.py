@@ -176,8 +176,7 @@ class RendererAgent(BaseAgent):
         """Render a single figure script."""
         figure_id = sanitize_figure_id(figure_id)
         output_filename = (
-            sanitize_figure_id(output_filename.replace(".png", ""), fallback="figure")
-            + ".png"
+            sanitize_figure_id(output_filename.replace(".png", ""), fallback="figure") + ".png"
         )
         result: dict[str, Any] = {
             "figure_id": figure_id,
@@ -206,9 +205,7 @@ class RendererAgent(BaseAgent):
             script_code = script_code.replace(_host_out, "/workspace/output")
             # Also catch any other absolute paths pointing to output_dir parent
             script_code = _re_path.sub(
-                r'savefig\(["\'](?:/[^"\']*/)('
-                + _re_path.escape(output_filename)
-                + r')["\']',
+                r'savefig\(["\'](?:/[^"\']*/)(' + _re_path.escape(output_filename) + r')["\']',
                 r'savefig("/workspace/output/\1"',
                 script_code,
             )
@@ -231,9 +228,7 @@ class RendererAgent(BaseAgent):
 
         if proc_result["error"]:
             result["error"] = proc_result["error"]
-            self.logger.warning(
-                "Render failed for %s: %s", figure_id, result["error"][:200]
-            )
+            self.logger.warning("Render failed for %s: %s", figure_id, result["error"][:200])
             return result
 
         # Verify output file exists
@@ -252,17 +247,13 @@ class RendererAgent(BaseAgent):
         file_size = output_path.stat().st_size
         if file_size < _MIN_FILE_SIZE:
             result["error"] = f"Output file too small ({file_size} bytes)"
-            self.logger.warning(
-                "Output too small for %s: %d bytes", figure_id, file_size
-            )
+            self.logger.warning("Output too small for %s: %d bytes", figure_id, file_size)
             return result
 
         result["success"] = True
         result["output_path"] = str(output_path)
         result["file_size"] = file_size
-        self.logger.info(
-            "Rendered %s: %s (%d bytes)", figure_id, output_path, file_size
-        )
+        self.logger.info("Rendered %s: %s (%d bytes)", figure_id, output_path, file_size)
         return result
 
     # ------------------------------------------------------------------
@@ -321,9 +312,7 @@ class RendererAgent(BaseAgent):
         """
         import uuid as _uuid_renderer
 
-        container_name = (
-            f"rc-viz-{figure_id}-{os.getpid()}-{_uuid_renderer.uuid4().hex[:8]}"
-        )
+        container_name = f"rc-viz-{figure_id}-{os.getpid()}-{_uuid_renderer.uuid4().hex[:8]}"
 
         cmd = [
             "docker",

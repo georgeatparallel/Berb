@@ -151,9 +151,7 @@ class AsyncExperimentPool:
         # P1 2026-04-02: Bulkhead isolation - separate semaphore per worker
         self._bulkhead_enabled = bulkhead_enabled
         self._worker_semaphores: list[asyncio.Semaphore] = (
-            [asyncio.Semaphore(1) for _ in range(self.max_workers)]
-            if bulkhead_enabled
-            else []
+            [asyncio.Semaphore(1) for _ in range(self.max_workers)] if bulkhead_enabled else []
         )
 
         self._workers: list[ExperimentWorker] = []
@@ -211,8 +209,7 @@ class AsyncExperimentPool:
 
         # Dispatch workers
         tasks = [
-            asyncio.create_task(self._worker_loop(worker, timeout))
-            for worker in self._workers
+            asyncio.create_task(self._worker_loop(worker, timeout)) for worker in self._workers
         ]
 
         logger.info(f"Started {len(tasks)} worker tasks")
@@ -269,9 +266,7 @@ class AsyncExperimentPool:
             timeout: Timeout per experiment in seconds
         """
         worker_name = worker.worker_id
-        worker_idx = (
-            int(worker_name.split("-")[-1]) if worker_name.count("-") > 0 else 0
-        )
+        worker_idx = int(worker_name.split("-")[-1]) if worker_name.count("-") > 0 else 0
 
         while self._running or not self._queue.empty():
             design = None
@@ -298,9 +293,7 @@ class AsyncExperimentPool:
                             worker, design, timeout, worker_name
                         )
                 else:
-                    result = await self._execute_with_timeout(
-                        worker, design, timeout, worker_name
-                    )
+                    result = await self._execute_with_timeout(worker, design, timeout, worker_name)
 
                 self._result_db[design.id] = result
                 status.completed_count += 1

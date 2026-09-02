@@ -158,9 +158,7 @@ class ResearchMethod(ReasoningMethod):
 
             # Iterative research loop
             for i in range(self.max_iterations):
-                iteration = await self._research_iteration(
-                    topic, i, remaining_gaps, context
-                )
+                iteration = await self._research_iteration(topic, i, remaining_gaps, context)
                 iterations.append(iteration)
                 all_findings.extend(iteration.findings)
                 remaining_gaps = iteration.gaps
@@ -236,8 +234,7 @@ class ResearchMethod(ReasoningMethod):
             query=query,
             findings=findings,
             gaps=new_gaps,
-            confidence=0.6
-            + (iteration_num * 0.1),  # Confidence increases with iterations
+            confidence=0.6 + (iteration_num * 0.1),  # Confidence increases with iterations
         )
 
     async def _formulate_query(

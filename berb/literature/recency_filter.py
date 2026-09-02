@@ -310,9 +310,7 @@ class RecencyAwareRanker:
 
             # Combined ranking score
             recency = paper.get("recency_score", 0.5)
-            combined = (
-                1 - self.recency_weight
-            ) * relevance + self.recency_weight * recency
+            combined = (1 - self.recency_weight) * relevance + self.recency_weight * recency
 
             paper["ranking_score"] = combined
 

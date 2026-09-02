@@ -117,9 +117,7 @@ def _trim_plan_to_condition_budget(
 
     if len(proposed) > proposed_count:
         plan["proposed_methods"] = proposed[:proposed_count]
-        logger.info(
-            "Stage 9: Trimmed proposed methods %d → %d", len(proposed), proposed_count
-        )
+        logger.info("Stage 9: Trimmed proposed methods %d → %d", len(proposed), proposed_count)
 
     if len(baselines) > baseline_budget:
         plan["baselines"] = baselines[:baseline_budget]
@@ -131,9 +129,7 @@ def _trim_plan_to_condition_budget(
         )
     if len(ablations) > ablation_budget:
         plan["ablations"] = ablations[:ablation_budget]
-        logger.info(
-            "Stage 9: Trimmed ablations %d → %d", len(ablations), ablation_budget
-        )
+        logger.info("Stage 9: Trimmed ablations %d → %d", len(ablations), ablation_budget)
 
     return plan
 
@@ -160,9 +156,7 @@ def _execute_experiment_design(
     prompts: PromptManager | None = None,
 ) -> StageResult:
     hypotheses = _read_prior_artifact(run_dir, "hypotheses.md") or ""
-    preamble = _build_context_preamble(
-        config, run_dir, include_goal=True, include_hypotheses=True
-    )
+    preamble = _build_context_preamble(config, run_dir, include_goal=True, include_hypotheses=True)
 
     # P2-03: feed the corpus Berb itself retrieved into the baseline choice.
     # Previously this context preamble loaded only goal.md + hypotheses.md —
@@ -206,9 +200,7 @@ def _execute_experiment_design(
                 _hs_err,
             )
     else:
-        logger.info(
-            "E1: No hypothesis_state.json found, gate passes open (backward compat)"
-        )
+        logger.info("E1: No hypothesis_state.json found, gate passes open (backward compat)")
 
     plan: dict[str, Any] | None = None
 
@@ -300,7 +292,9 @@ def _execute_experiment_design(
         except Exception:  # noqa: BLE001
             pass
         # Improvement A: Compute hardware profile + per-condition budget
-        _hw_profile_str = "- GPU: NVIDIA RTX 6000 Ada (49140 MB VRAM)\n- GPU count: 1\n- CPU: shared server"
+        _hw_profile_str = (
+            "- GPU: NVIDIA RTX 6000 Ada (49140 MB VRAM)\n- GPU count: 1\n- CPU: shared server"
+        )
         _per_condition_sec = int(config.experiment.time_budget_sec * 0.7 / 6)
         _tier1 = "CIFAR-10, CIFAR-100, MNIST, FashionMNIST, STL-10, SVHN"
 
@@ -425,8 +419,7 @@ def _execute_experiment_design(
                     "generated": _utcnow_iso(),
                     "objectives": ["Evaluate hypotheses with controlled experiments"],
                     "datasets": ["primary_dataset"],
-                    "baselines": _baseline_candidates[:3]
-                    or ["baseline_1", "baseline_2"],
+                    "baselines": _baseline_candidates[:3] or ["baseline_1", "baseline_2"],
                     "proposed_methods": _method_candidates[:3] or ["proposed_method"],
                     "ablations": ["without_key_component", "simplified_version"],
                     "metrics": [config.experiment.metric_key, "secondary_metric"],
@@ -436,9 +429,7 @@ def _execute_experiment_design(
 
     if plan is None:
         # BUG-12: Use domain-aware names instead of fully generic placeholders
-        _topic_prefix = (
-            config.research.topic.split()[0] if config.research.topic else "method"
-        )
+        _topic_prefix = config.research.topic.split()[0] if config.research.topic else "method"
         logger.warning(
             "Stage 09: LLM failed to produce valid experiment plan YAML. "
             "Using topic-derived fallback."
@@ -527,8 +518,7 @@ def _execute_experiment_design(
             # Inject BenchmarkAgent selections into experiment plan
             if isinstance(plan, dict) and _benchmark_plan.selected_benchmarks:
                 plan["datasets"] = [
-                    b.get("name", "Unknown")
-                    for b in _benchmark_plan.selected_benchmarks
+                    b.get("name", "Unknown") for b in _benchmark_plan.selected_benchmarks
                 ]
                 # Normalize existing baselines to list of strings
                 # BUG-35: LLM may emit baselines as dict, list of dicts,
@@ -544,8 +534,7 @@ def _execute_experiment_design(
                 else:
                     _baselines_from_plan = []
                 plan["baselines"] = [
-                    bl.get("name", "Unknown")
-                    for bl in _benchmark_plan.selected_baselines
+                    bl.get("name", "Unknown") for bl in _benchmark_plan.selected_baselines
                 ] + _baselines_from_plan
                 # Deduplicate baselines
                 plan["baselines"] = list(dict.fromkeys(plan["baselines"]))

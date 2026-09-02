@@ -152,8 +152,7 @@ class SelectorAgent(BaseAgent):
             for b in benchmarks[:15]
         )
         base_summary = "\n".join(
-            f"- {bl.get('name', 'Unknown')}: {bl.get('paper', 'N/A')}"
-            for bl in baselines[:10]
+            f"- {bl.get('name', 'Unknown')}: {bl.get('paper', 'N/A')}" for bl in baselines[:10]
         )
 
         system = (

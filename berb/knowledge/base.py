@@ -36,9 +36,7 @@ def _utcnow_iso() -> str:
 class KBEntry:
     """A single knowledge-base entry to be written."""
 
-    category: (
-        str  # questions | literature | experiments | findings | decisions | reviews
-    )
+    category: str  # questions | literature | experiments | findings | decisions | reviews
     entry_id: str  # Unique ID (e.g. "goal-define-run-abc")
     title: str
     content: str  # Markdown body
@@ -68,9 +66,7 @@ def _markdown_frontmatter(entry: KBEntry) -> str:
     if entry.evidence_refs:
         meta["evidence"] = entry.evidence_refs
     return (
-        "---\n"
-        + yaml.dump(meta, default_flow_style=False, allow_unicode=True).rstrip()
-        + "\n---\n"
+        "---\n" + yaml.dump(meta, default_flow_style=False, allow_unicode=True).rstrip() + "\n---\n"
     )
 
 
@@ -269,9 +265,7 @@ def generate_weekly_report(
 
     report_lines.extend(["", "## Recommendations"])
     if total_failed > 0:
-        report_lines.append(
-            f"- ⚠️ {total_failed} stage failures detected. Review error logs."
-        )
+        report_lines.append(f"- ⚠️ {total_failed} stage failures detected. Review error logs.")
     if total_blocked > 0:
         report_lines.append(f"- 🔒 {total_blocked} stages awaiting gate approval.")
     if total_failed == 0 and total_blocked == 0:

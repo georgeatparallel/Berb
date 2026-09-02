@@ -143,9 +143,7 @@ class ValidationIntegration:
 
         best_paper, result = await self.hce.evaluate_for_selection(papers)
 
-        logger.info(
-            f"Selection evaluation: {best_paper.id} score={result.overall_score:.2f}"
-        )
+        logger.info(f"Selection evaluation: {best_paper.id} score={result.overall_score:.2f}")
 
         return best_paper, result
 
@@ -177,9 +175,7 @@ class ValidationIntegration:
 
         result = await self.hce.evaluate_hidden(paper)
 
-        logger.info(
-            f"Hidden evaluation: score={result.overall_score:.2f} (TRUE QUALITY)"
-        )
+        logger.info(f"Hidden evaluation: score={result.overall_score:.2f} (TRUE QUALITY)")
 
         return result
 
@@ -220,9 +216,7 @@ class ValidationIntegration:
         if search_result.overall_score >= threshold:
             recommendation = "PASS - Proceed to publication"
         else:
-            recommendation = (
-                f"FAIL - Score {search_result.overall_score:.2f} < {threshold}"
-            )
+            recommendation = f"FAIL - Score {search_result.overall_score:.2f} < {threshold}"
 
         logger.info(f"Quality gate: {recommendation}")
 
@@ -256,12 +250,8 @@ async def evaluate_with_hce(
     integration = ValidationIntegration()
 
     if stage_id == "QUALITY_GATE":
-        return await integration.evaluate_quality_gate(
-            paper_content, title, abstract, threshold
-        )
+        return await integration.evaluate_quality_gate(paper_content, title, abstract, threshold)
     elif stage_id == "IMPROVEMENT":
-        return await integration.evaluate_for_improvement(
-            paper_content, title, abstract
-        )
+        return await integration.evaluate_for_improvement(paper_content, title, abstract)
     else:
         raise ValueError(f"Unknown HCE stage: {stage_id}")

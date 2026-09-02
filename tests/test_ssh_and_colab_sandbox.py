@@ -207,9 +207,7 @@ class TestSshSandboxRun:
 
         fake_results = [
             mock.Mock(returncode=0, stdout="", stderr=""),  # mkdir
-            mock.Mock(
-                returncode=0, stdout="accuracy: 0.95\nloss: 0.05", stderr=""
-            ),  # exec
+            mock.Mock(returncode=0, stdout="accuracy: 0.95\nloss: 0.05", stderr=""),  # exec
             mock.Mock(returncode=0, stdout="", stderr=""),  # cleanup
         ]
         call_count = [0]

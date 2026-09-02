@@ -28,16 +28,12 @@ class BerbMCPServer:
         """Return the list of available MCP tools."""
         return TOOL_DEFINITIONS
 
-    async def handle_tool_call(
-        self, name: str, arguments: dict[str, Any]
-    ) -> dict[str, Any]:
+    async def handle_tool_call(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         """Handle an incoming MCP tool call."""
         if name not in list_tool_names():
             return {"error": f"Unknown tool: {name}", "success": False}
 
-        logger.info(
-            "MCP tool call: %s(%s)", name, json.dumps(arguments, default=str)[:200]
-        )
+        logger.info("MCP tool call: %s(%s)", name, json.dumps(arguments, default=str)[:200])
 
         try:
             if name == "run_pipeline":

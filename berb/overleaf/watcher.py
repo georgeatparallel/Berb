@@ -13,9 +13,7 @@ logger = logging.getLogger(__name__)
 class FileWatcher:
     """Watch a directory for file changes (poll-based)."""
 
-    def __init__(
-        self, watch_dir: Path, extensions: tuple[str, ...] = (".tex", ".bib")
-    ) -> None:
+    def __init__(self, watch_dir: Path, extensions: tuple[str, ...] = (".tex", ".bib")) -> None:
         self.watch_dir = watch_dir
         self.extensions = extensions
         self._snapshot: dict[str, float] = {}
@@ -59,9 +57,7 @@ class FileWatcher:
 
         This is meant to be run in a background thread.
         """
-        logger.info(
-            "Starting file watcher on %s (interval=%ds)", self.watch_dir, interval_sec
-        )
+        logger.info("Starting file watcher on %s (interval=%ds)", self.watch_dir, interval_sec)
         while True:
             time.sleep(interval_sec)
             changes = self.check_changes()

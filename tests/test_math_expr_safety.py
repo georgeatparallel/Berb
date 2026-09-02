@@ -76,16 +76,12 @@ class TestSafeEvalStillEvaluatesMath:
     def test_evaluate_expression_survives_hostile_input(self) -> None:
         """The public path returns NaN rather than raising or executing."""
         verifier = VerifiableMathContent()
-        result = verifier._evaluate_expression(
-            "().__class__.__base__.__subclasses__()", {}
-        )
+        result = verifier._evaluate_expression("().__class__.__base__.__subclasses__()", {})
         assert math.isnan(result)
 
     def test_evaluate_expression_computes_real_equations(self) -> None:
         verifier = VerifiableMathContent()
-        result = verifier._evaluate_expression(
-            "sqrt(a**2 + b**2)", {"a": 3.0, "b": 4.0}
-        )
+        result = verifier._evaluate_expression("sqrt(a**2 + b**2)", {"a": 3.0, "b": 4.0})
         assert result == pytest.approx(5.0)
 
 

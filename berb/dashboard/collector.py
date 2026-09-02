@@ -111,11 +111,7 @@ class DashboardCollector:
 
         # --- stage directories ---
         snap.stages_completed = sorted(
-            [
-                d.name
-                for d in run_dir.iterdir()
-                if d.is_dir() and d.name.startswith("stage-")
-            ]
+            [d.name for d in run_dir.iterdir() if d.is_dir() and d.name.startswith("stage-")]
         )
 
         # --- experiment metrics (results.json) ---

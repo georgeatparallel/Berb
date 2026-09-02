@@ -37,18 +37,14 @@ class PaperScorer:
             if rubric is None:
                 logger.warning("Unknown rubric dimension: %s", dim)
                 continue
-            score, detail = await self._score_dimension(
-                paper_md, experiment_results, rubric
-            )
+            score, detail = await self._score_dimension(paper_md, experiment_results, rubric)
             scores[dim] = score
             details[dim] = detail
 
         if scores:
             total_weight = sum(RUBRICS[d].weight for d in scores if d in RUBRICS)
             if total_weight > 0:
-                weighted_sum = sum(
-                    scores[d] * RUBRICS[d].weight for d in scores if d in RUBRICS
-                )
+                weighted_sum = sum(scores[d] * RUBRICS[d].weight for d in scores if d in RUBRICS)
                 overall = round(weighted_sum / total_weight, 2)
             else:
                 overall = round(sum(scores.values()) / len(scores), 2)

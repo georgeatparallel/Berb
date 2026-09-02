@@ -29,9 +29,7 @@ def test_no_omissions_when_corpus_empty() -> None:
 
 
 def test_no_omissions_when_all_covered() -> None:
-    result = find_omitted_baselines(
-        ["ResNet-50", "ViT-B/16"], ["ResNet-50", "ViT-B/16"]
-    )
+    result = find_omitted_baselines(["ResNet-50", "ViT-B/16"], ["ResNet-50", "ViT-B/16"])
     assert result.missing == ()
 
 

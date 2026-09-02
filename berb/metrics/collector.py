@@ -35,15 +35,9 @@ class MetricsCollector:
     def __init__(self) -> None:
         self._lock = threading.Lock()
         # Metric storage: name -> labels -> values
-        self._counters: dict[str, dict[str, float]] = defaultdict(
-            lambda: defaultdict(float)
-        )
-        self._gauges: dict[str, dict[str, float]] = defaultdict(
-            lambda: defaultdict(float)
-        )
-        self._histograms: dict[str, dict[str, list[float]]] = defaultdict(
-            lambda: defaultdict(list)
-        )
+        self._counters: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
+        self._gauges: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
+        self._histograms: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
         # Metric metadata
         self._metric_types: dict[str, str] = {}  # name -> "counter"|"gauge"|"histogram"
         self._metric_descriptions: dict[str, str] = {}
@@ -154,9 +148,7 @@ class MetricsCollector:
                 "gauges": dict(self._gauges),
                 "histograms": {
                     name: {
-                        label_key: self.get_histogram_stats(
-                            name, self._key_to_labels(label_key)
-                        )
+                        label_key: self.get_histogram_stats(name, self._key_to_labels(label_key))
                         for label_key in values
                     }
                     for name, values in self._histograms.items()

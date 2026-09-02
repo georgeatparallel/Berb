@@ -24,9 +24,7 @@ class TestRender:
         assert _render("Hello {name}!", {"name": "World"}) == "Hello World!"
 
     def test_multiple_variables(self) -> None:
-        result = _render(
-            "Topic: {topic}, Domain: {domain}", {"topic": "RL", "domain": "ML"}
-        )
+        result = _render("Topic: {topic}, Domain: {domain}", {"topic": "RL", "domain": "ML"})
         assert result == "Topic: RL, Domain: ML"
 
     def test_missing_variable_left_untouched(self) -> None:
@@ -173,9 +171,7 @@ class TestPromptManagerDefaults:
 
     def test_sub_prompt_iterative_repair(self) -> None:
         pm = PromptManager()
-        irp = pm.sub_prompt(
-            "iterative_repair", issue_text="import error", all_files_ctx="..."
-        )
+        irp = pm.sub_prompt("iterative_repair", issue_text="import error", all_files_ctx="...")
         assert "import error" in irp.user
 
 

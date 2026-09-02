@@ -157,12 +157,8 @@ class FigureDecisionAgent(BaseAgent):
                     True,
                     data={
                         "decisions": decisions,
-                        "code_figures": [
-                            d for d in decisions if d["backend"] == "code"
-                        ],
-                        "image_figures": [
-                            d for d in decisions if d["backend"] == "image"
-                        ],
+                        "code_figures": [d for d in decisions if d["backend"] == "code"],
+                        "image_figures": [d for d in decisions if d["backend"] == "image"],
                         "total": len(decisions),
                     },
                 )

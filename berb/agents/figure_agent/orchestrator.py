@@ -111,11 +111,7 @@ class FigurePlan:
 
     def get_chart_files(self) -> list[str]:
         """Return list of chart filenames from manifest."""
-        return [
-            Path(entry["file_path"]).name
-            for entry in self.manifest
-            if entry.get("file_path")
-        ]
+        return [Path(entry["file_path"]).name for entry in self.manifest if entry.get("file_path")]
 
 
 # ---------------------------------------------------------------------------
@@ -267,9 +263,7 @@ class FigureOrchestrator(AgentOrchestrator):
             )
 
         # ── Phase C: Integrate all figures ────────────────────────────
-        self.logger.info(
-            "Phase C: Integrating %d figures into paper", len(all_rendered)
-        )
+        self.logger.info("Phase C: Integrating %d figures into paper", len(all_rendered))
         integrate_result = self._integrator.execute(
             {
                 "rendered": all_rendered,
@@ -402,9 +396,7 @@ class FigureOrchestrator(AgentOrchestrator):
                 # Replace entries for re-rendered figures, keep previously passed ones
                 re_rendered_ids = {r.get("figure_id") for r in rendered}
                 final_rendered = [
-                    r
-                    for r in final_rendered
-                    if r.get("figure_id") not in re_rendered_ids
+                    r for r in final_rendered if r.get("figure_id") not in re_rendered_ids
                 ] + rendered
 
             # Critic
