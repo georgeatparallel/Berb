@@ -1,6 +1,6 @@
 # Dead-Code Research & Wiring Plan
 
-**Status:** APPROVED — disposal default, W0 scope and wave order settled 2026-09-02 (§8). Ready to execute from W0.
+**Status:** IN PROGRESS — W0 complete (2026-09-02). Approved — disposal default, W0 scope and wave order settled 2026-09-02 (§8). Ready to execute from W0.
 **Date:** 2026-09-02
 **Scope:** the 119 modules / 30,763 loc that `scripts/check_reachability.py` reports
 as unreachable from `berb run` / `berb serve`.
@@ -15,25 +15,43 @@ the number from silently growing again.
 This plan is not starting from zero. The following was measured before drafting,
 because a plan built on an unvalidated instrument is a plan to chase artifacts.
 
-### 0.1 The instrument is ~97% trustworthy
+### 0.1 The instrument was wrong in both directions — W0 fixed it
 
-`check_reachability.py` is pure-AST static import reachability. Four
-false-positive mechanisms were tested:
+`check_reachability.py` is pure-AST static import reachability. Five
+false-verdict mechanisms were tested; four were real and are now fixed.
 
-| Mechanism | Result | Impact |
+| Mechanism | Finding | Effect |
 |---|---|---|
-| Lazy `__getattr__` + `importlib` re-exports (`berb/_lazy.py`) | **0 false-dead.** Parsed all 5 `lazy_exports` maps, resolved every `from <pkg> import Name` in reachable code — none resolved to an unreachable submodule. | 0 loc |
-| Parent-package `__init__.py` not credited when a submodule is reachable | **20 packages affected.** Python executes `berb/experiment/__init__.py` whenever `berb.experiment.factory` is imported, but the tool never adds that edge. | **723 loc** false-dead |
-| Literal-string `importlib.import_module("...")` | **1 confirmed false-dead:** `berb.quality` (187 loc) is imported from reachable `berb/pipeline/summary.py:78`. 4 other sites resolve to already-reachable modules. | **187 loc** false-dead |
-| Plugin-registry dynamic loading (`berb/plugins/__init__.py:314`, computed name) | Not yet checked — genuinely dynamic, needs a registry-manifest cross-check. | UNKNOWN |
+| Parent-package `__init__.py` not credited when a submodule is reachable | **Real.** Python executes `berb/experiment/__init__.py` whenever `berb.experiment.factory` is imported, but no import statement names it. | reclaimed as live |
+| Literal `importlib.import_module("...")` | **Real.** `berb.quality` (185 loc) is imported from reachable `berb/pipeline/summary.py:78`. | reclaimed as live |
+| `if TYPE_CHECKING:` imports counted as real edges | **Real, and the big one.** Five package `__init__.py` files list their PEP 562 lazy exports a second time under `TYPE_CHECKING` so type checkers can see them. Those imports never execute. Crediting them made lazily-exported submodules look live merely because the parent package was imported — the exact inverse of how `berb/_lazy.py` works. | exposed as dead |
+| PEP 562 lazy re-exports (`berb/_lazy.py`) | **Real but currently empty.** Now modelled: `from berb.llm import X` resolves through the package's export map to the submodule. No module is currently reached only this way, but with `TYPE_CHECKING` credit removed this became load-bearing and had to be modelled rather than spot-checked. | no change today |
+| Plugin-registry dynamic loading (`berb/plugins/__init__.py:314`) | **Not real.** The loader scans runtime-supplied directories for `plugin.json`; no such manifest exists in-repo, so it cannot reach any `berb.*` module. | none |
 
-**Corrected figure: ~29,853 loc genuinely unreachable** (30,763 − 910), of which
-4,614 loc across 13 modules is already allowlisted as parked.
-**Decision surface: ~25,239 loc / 106 modules.**
+Net effect of the corrections:
+
+- **+37 modules / 4,611 loc** were never dead (ancestor packages, literal `import_module`)
+- **−10 modules / 9,455 loc** were never live (`TYPE_CHECKING`-only credit) — led by
+  `berb.llm.openrouter_models_data` (3,528), `berb.literature.citation_graph` (1,076),
+  `structured_notes` (897), `section_analysis` (865), `evidence_map` (790)
+- **Net: 4,844 loc more dead code than `main` reported**, not less
+
+A sixth bug, in the allowlist rather than the graph: `load_allowlist` matched
+exact module names, so the three parked package entries covered only their
+`__init__` — 156 loc of the ~4.6k intended. Entries now cover a module and
+everything beneath it, which is what the file's own comments describe.
+
+**Corrected figures (2026-09-02):**
+
+| | modules | loc |
+|---|---:|---:|
+| Unreachable | 92 | 35,212 (24%) |
+| — allowlisted (parked) | 13 | 4,554 |
+| **Decision surface** | **79** | **30,658** |
 
 The instrument's entry set is generous — 17 package prefixes (`berb.mcp`,
-`berb.dashboard`, `berb.copilot`, `berb.plugins`, `berb.skills`, …) plus 6 exact
-modules — so unreachability is a *strong* signal, not a coverage gap.
+`berb.dashboard`, `berb.copilot`, `berb.plugins`, `berb.skills`, …) plus 6
+exact modules — so unreachability is a *strong* signal, not a coverage gap.
 
 ### 0.2 Git archaeology is unusable here — do not plan around it
 
@@ -46,37 +64,37 @@ touched nearly every file, so last-modified dates carry no signal either.
 answered from history. Triage must be answered from *capability analysis*, which
 is the expensive path. Plan the budget accordingly.
 
-### 0.3 The dead code is mostly tested, which changes the triage
+### 0.3 The dead code is half tested, half not
 
 | Bucket | Modules | LOC |
 |---|---:|---:|
-| Allowlisted (parked) | 13 | 4,614 |
-| Not allowlisted, **has test references** | 81 | 19,232 |
-| Not allowlisted, **no test references** | 25 | 6,917 |
+| Allowlisted (parked) | 13 | 4,554 |
+| Decision surface, **has test references** | 50 | 15,204 |
+| Decision surface, **no test references** | 29 | 15,454 |
 
-81 tested-but-unwired modules means this is not accumulated sloppiness — it is
-capability built to spec and never connected. Tests prove *intent*, not *value*:
-they raise the cost of deletion but are not an argument for wiring.
+Before W0 this read 81 tested / 25 untested; the `TYPE_CHECKING` correction
+moved several large, untested modules into the dead set (`openrouter_models_data`
+alone is 3,528 loc). Tests prove *intent*, not value: they raise the cost of
+deleting but are not an argument for wiring.
 
 ### 0.4 Per-package decision surface (non-allowlisted)
 
 ```
-  5718  13 mods (2 untested, 1290 loc)  berb.experiment
-  2838   9 mods (3 untested,  537 loc)  berb.llm
-  2188   5 mods (0 untested)            berb.reasoning
-  2181   5 mods (0 untested)            berb.literature
-  1783   9 mods (3 untested,  589 loc)  berb.pipeline
-  1532   4 mods (2 untested, 1366 loc)  berb.writing
-  1147   5 mods (0 untested)            berb.memory
-   765   7 mods (0 untested)            berb.knowledge
-   753   2 mods (0 untested)            berb.modes
-   687   1 mods                         berb.self_evolve
-   638   2 mods (2 untested,  638 loc)  berb.integrations
-   612 · 611 · 603 · 571 · 514 · 452 · 404 …  (bridges, integrity, optimization,
-                                               learning, audit, assessor, mnemo)
+  7257  berb.literature
+  7174  berb.llm
+  5484  berb.experiment
+  1664  berb.pipeline
+  1497  berb.writing
+  1125  berb.memory
+   736  berb.knowledge
+   672  berb.self_evolve
 ```
 
----
+Note the reordering: `berb.literature` and `berb.llm` are now the two largest
+surfaces, ahead of `berb.experiment`, because the `TYPE_CHECKING` correction
+exposed their lazily-exported modules. The wave order below still leads with
+`berb.experiment` — that is a deliberate choice about unblocking downstream
+work, not a claim that it is the biggest pile.
 
 ## 1. The two questions that actually decide each module
 
@@ -91,10 +109,16 @@ mechanisms**, four of them dead:
 | Mechanism | State |
 |---|---|
 | `berb.experiment.search.SearchRunner` | **wired** (Stage 12, behind `experiment.search.enabled`) |
-| `berb.experiment.evolutionary_search.DesignProposalEvolver` | dead |
-| `berb.pipeline.code_agent` tree search | dead (self-documented as deprecated) |
-| `berb.experiment.self_correcting` | dead |
-| `berb.experiment.auto_debugger` | dead |
+| `berb.experiment.evolutionary_search.DesignProposalEvolver` | dead (confirmed after W0) |
+| `berb.pipeline.code_agent` tree search | module reachable, but its tree-search and evaluation methods are self-documented deprecated stubs that raise |
+| `berb.experiment.self_correcting` | dead (confirmed after W0) |
+| `berb.experiment.auto_debugger` | dead (confirmed after W0) |
+
+Also still dead after W0, and named here because they are the strongest WIRE
+candidates in the repo: `berb.experiment.split_policy` (selection-bias
+correction), `berb.integrity.eval.hidden_eval` (HCE), `berb.experiment.react_agent`,
+`berb.experiment.compute_guard`, and all five
+`berb.pipeline.optimization_integration.*` modules.
 
 Wiring all of these would be actively harmful: five overlapping search paths is
 worse than one. The de-duplication pass must run **before** any wiring design.
@@ -109,7 +133,7 @@ that they do not get today.
 
 ## 2. Triage taxonomy
 
-Every one of the 106 modules lands in exactly one bucket, with a written
+Every one of the 79 modules lands in exactly one bucket, with a written
 one-line justification.
 
 - **FIX-INSTRUMENT** — not actually dead. Fix the checker, not the code.
@@ -138,7 +162,7 @@ To keep PARK from becoming an indefinite holding pen, it carries a ratchet:
   config flag whose arrival would make it live. "Might be useful" is not a
   trigger and does not qualify for PARK; that is a DELETE.
 
-Trade-off accepted with this choice: the ~25,239 loc decision surface will not
+Trade-off accepted with this choice: the 30,658 loc decision surface will not
 shrink much in this pass — most of it moves from *undocumented* dead code to
 *documented, dated* dead code. That is a real gain in legibility and a deferred
 gain in size; the 2026-12-01 review is where the size gain lands.
@@ -163,7 +187,7 @@ Mechanical, so it can be batched and parallelised across packages.
    vocabulary already in the repo). Undefined failure semantics → not WIRE-ready.
 6. **Verdict + one-line justification**, appended to a triage table.
 
-Estimated ~15 min/module → **~26h across 106 modules**, batched by package.
+Estimated ~15 min/module → **~20h across 79 modules**, batched by package.
 
 ---
 
@@ -185,21 +209,32 @@ A module is not wired because an `import` exists. All five must hold:
 
 ## 5. Execution waves
 
-**W0 — Instrument (do first, ~4h).** Everything downstream reads these outputs.
-- [ ] Fix parent-package edges in `check_reachability.py` (−723 loc of noise)
-- [ ] Resolve literal-string `import_module("...")` calls (−187 loc; unblocks `berb.quality`)
-- [ ] Cross-check the plugin registry for dynamically loaded modules
-- [ ] **Add a runtime trace**: `coverage.py` over `berb run`, emitting
-      *executed* modules. Confirmed available (decision, 2026-09-02). No
-      dedicated CPU config exists in `configs/` today — use a copy of
-      `configs/config.berb.example.yaml` with `experiment.mode: sandbox`
-      (CPU-local, no Docker/GPU) and a narrow topic, and commit it as
-      `configs/config.trace.yaml` so the trace is reproducible. API keys come
-      from the operator's environment, not the repo. Static reachability cannot
-      see reachable-but-never-invoked code — expect this to reveal a *second*
-      dead set hiding inside the 292 "reachable" modules
-- [ ] Wire `check_reachability.py` into `.github/workflows/ci.yml` with the
-      corrected LOC ceiling — **it is not in CI today**, which is why this grew
+**W0 — Instrument. ✅ DONE 2026-09-02.** Everything downstream reads these outputs.
+- [x] Credit ancestor packages in `check_reachability.py`
+- [x] Resolve literal `import_module("...")` calls (unblocks `berb.quality`)
+- [x] **Ignore `if TYPE_CHECKING:` imports** — not in the original plan; found
+      while verifying the first two fixes, and the single largest correction
+- [x] **Model PEP 562 lazy re-exports** — also unplanned; became load-bearing
+      once `TYPE_CHECKING` credit was removed
+- [x] **Fix allowlist prefix matching** — entries now cover submodules
+- [x] Cross-check the plugin registry — no in-repo manifests, no false dead
+- [x] Runtime trace: `scripts/runtime_trace.py` (coverage.py) plus
+      `configs/config.trace.yaml` (CPU-only `experiment.mode: sandbox`).
+      Classifies every module EXECUTED / EXECUTED-BUT-UNREACHABLE /
+      IMPORTED-NOT-RUN / UNREACHABLE. **IMPORTED-NOT-RUN is the second dead
+      set** static analysis cannot see; EXECUTED-BUT-UNREACHABLE flags a
+      missed edge or a test-only caller. Smoke-tested against
+      `tests/test_experiment_search.py`: 11 executed, 1
+      executed-but-unreachable (`berb.experiment.plot_verdict`, imported by
+      that test — a test caller, so the static verdict stands), 308
+      imported-not-run.
+- [x] `check_reachability.py` wired into `.github/workflows/ci.yml` as a
+      ratchet at `--max-unreachable-loc 30658`, verified exact: passes at
+      30658, fails at 30657
+
+**Caveat on the trace:** a single run exercises one path, so *absence of
+execution is weaker evidence than absence of an import*. Run several configs
+before deleting anything on the trace's say-so alone.
 
 **W1 — De-duplicate the experiment cluster (~6h).** *Promoted ahead of the
 free wins by decision, 2026-09-02.* `berb.experiment` is the largest surface
@@ -234,7 +269,7 @@ DELETE candidate.
 PARK set, fresh `D-NN` IDs and revisit dates; update CLAUDE.md's subsystem table
 and `docs/CODEBASE_MIND_MAP.md`; record the new CI ceiling.
 
-**Total: ~28h.** Waves W1–W4 are independent after W0 and can run in parallel.
+**Total: ~22h remaining** (W0 done). Waves W1–W4 are independent and can run in parallel.
 
 ---
 
@@ -253,11 +288,12 @@ and `docs/CODEBASE_MIND_MAP.md`; record the new CI ceiling.
 
 ## 7. Definition of done
 
-- [ ] Every one of the 106 modules has a verdict + one-line justification in a
+- [ ] Every one of the 79 modules has a verdict + one-line justification in a
       triage table committed to `tasks/`
-- [ ] `check_reachability.py` corrected, running in CI, ceiling set to the new
-      measured value
-- [ ] Runtime-trace tooling committed and documented
+- [x] `check_reachability.py` corrected, running in CI, ceiling set to the new
+      measured value (30,658)
+- [x] Runtime-trace tooling committed and documented
+      (`scripts/runtime_trace.py`, `configs/config.trace.yaml`)
 - [ ] Allowlist contains only entries with an ID, justification and revisit date
 - [ ] CLAUDE.md subsystem table and `docs/CODEBASE_MIND_MAP.md` reflect reality
 - [ ] `ruff`, `mypy berb/`, `bandit` and the full test suite green after each wave

@@ -1,0 +1,41 @@
+# Runtime-trace config — W0 of tasks/dead_code_wiring_plan.md.
+#
+# Purpose: give `scripts/runtime_trace.py` a cheap, reproducible `berb run` so
+# the trace measures which modules actually EXECUTE. Static reachability
+# (scripts/check_reachability.py) can only prove a module is imported; it
+# cannot see code that is imported and then never called.
+#
+# CPU-only by design: experiment.mode "sandbox" runs generated code locally
+# with no Docker and no GPU. Budgets are deliberately small — the point is to
+# exercise the pipeline's import and call graph, not to produce a good paper.
+#
+# API keys come from the environment (OPENAI_API_KEY / ANTHROPIC_API_KEY /
+# whichever provider is selected below). Never commit keys here.
+
+project:
+  name: "reachability-trace"
+  mode: "full-auto"
+
+research:
+  topic: "A minimal reproducible study of learning-rate warmup on a small tabular classifier"
+  domains:
+    - "machine-learning"
+  daily_paper_count: 3
+  quality_threshold: 1.0
+
+runtime:
+  timezone: "UTC"
+  max_parallel_tasks: 1
+  approval_timeout_hours: 1
+  retry_limit: 0
+
+notifications:
+  channel: "console"
+  target: ""
+
+experiment:
+  mode: "sandbox"
+  time_budget_sec: 60
+  max_iterations: 1
+  metric_key: "primary_metric"
+  metric_direction: "minimize"
