@@ -9,6 +9,7 @@ Features:
   - Streaming disabled (sync only)
   - Stage-based output token limits (15-25% cost reduction)
   - Circuit breaker for cascading failure prevention (P0 2026-04-02)
+  - Image input on vision models (see berb.llm.vision)
 """
 
 from __future__ import annotations
@@ -23,6 +24,14 @@ import urllib.request
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
+
+from berb.llm.vision import (
+    content_to_text,
+    ensure_vision_capable,
+    messages_have_images,
+    to_openai_content,
+    to_responses_content,
+)
 
 if TYPE_CHECKING:
     from berb.llm.anthropic_adapter import AnthropicAdapter
@@ -560,7 +569,7 @@ class LLMClient:
 
     def chat(
         self,
-        messages: list[dict[str, str]],
+        messages: list[dict[str, Any]],
         *,
         model: str | None = None,
         max_tokens: int | None = None,
@@ -577,7 +586,11 @@ class LLMClient:
         SECURITY FIX #6: Includes rate limiting to prevent quota exhaustion.
 
         Args:
-            messages: List of {role, content} dicts.
+            messages: List of {role, content} dicts. `content` is a plain
+                string, or — for multimodal calls — a list of neutral
+                content parts built by berb.llm.vision.image_message().
+                A message carrying an image is refused for any model the
+                OpenRouter catalogue marks supports_vision=False.
             model: Override model (skips fallback chain).
             max_tokens: Override max token count.
             temperature: Override temperature.
@@ -614,7 +627,7 @@ class LLMClient:
         if self._rate_limiter:
             # Estimate tokens from message content (rough estimate)
             estimated_tokens = sum(
-                len(m.get("content", "")) // 4
+                len(content_to_text(m.get("content", ""))) // 4
                 for m in messages  # ~4 chars per token
             )
             estimated_tokens += max_tokens or self.config.max_tokens
@@ -650,10 +663,17 @@ class LLMClient:
         max_tok = max_tokens or self.config.max_tokens
         temp = temperature if temperature is not None else self.config.temperature
 
+        has_images = messages_have_images(messages)
+
         last_error: Exception | None = None
 
         for m in models:
             try:
+                # Sending an image to a text-only model wastes the call and
+                # returns a confidently wrong answer about a figure the model
+                # never saw. Refuse before spending it.
+                if has_images:
+                    ensure_vision_capable(m)
                 resp = self._call_with_retry(
                     m, messages, max_tok, temp, json_mode, cached_prefix, cache_ttl
                 )
@@ -721,7 +741,7 @@ class LLMClient:
     def _call_with_retry(
         self,
         model: str,
-        messages: list[dict[str, str]],
+        messages: list[dict[str, Any]],
         max_tokens: int,
         temperature: float,
         json_mode: bool,
@@ -841,7 +861,7 @@ class LLMClient:
     def _raw_call(
         self,
         model: str,
-        messages: list[dict[str, str]],
+        messages: list[dict[str, Any]],
         max_tokens: int,
         temperature: float,
         json_mode: bool,
@@ -867,6 +887,14 @@ class LLMClient:
             # retries and model-fallback — each attempt must start from the
             # original, un-modified messages).
             msgs = [dict(m) for m in messages]
+
+            # Neutral image parts -> OpenAI/OpenRouter `image_url` blocks.
+            # A no-op for text-only content, so it is safe unconditionally.
+            # The "responses" wire API has its own part shape and is encoded
+            # in _messages_to_responses_input instead.
+            if self._normalize_wire_api(self.config.wire_api) != "responses":
+                for msg in msgs:
+                    msg["content"] = to_openai_content(msg.get("content"))
 
             # Provider-side prompt caching: mark the stable cached_prefix
             # with a cache_control breakpoint (Claude/Qwen) or plainly
@@ -1072,7 +1100,7 @@ class LLMClient:
     def _build_responses_body(
         self,
         model: str,
-        messages: list[dict[str, str]],
+        messages: list[dict[str, Any]],
         max_tokens: int,
         temperature: float,
     ) -> dict[str, Any]:
@@ -1085,15 +1113,14 @@ class LLMClient:
         body["max_output_tokens"] = max_tokens
         return body
 
-    def _messages_to_responses_input(self, messages: list[dict[str, str]]) -> list[dict[str, Any]]:
+    def _messages_to_responses_input(self, messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
         items: list[dict[str, Any]] = []
         for message in messages:
             role = str(message.get("role", "user") or "user")
-            content = str(message.get("content", "") or "")
             items.append(
                 {
                     "role": role,
-                    "content": [{"type": "input_text", "text": content}],
+                    "content": to_responses_content(message.get("content", "")),
                 }
             )
         return items
@@ -1331,7 +1358,7 @@ class MultiProviderLLMClient:
 
     def chat(
         self,
-        messages: list[dict[str, str]],
+        messages: list[dict[str, Any]],
         *,
         model: str | None = None,
         max_tokens: int | None = None,

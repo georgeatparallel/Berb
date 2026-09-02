@@ -120,3 +120,84 @@ asserted. `idea_scorer` and `open_ended_discovery` overlap each other and Stage 
 
 Restoring anything re-adds unreachable code, so each should land wired, in its own change,
 not restored en masse.
+
+
+---
+
+## Outcome — 2026-09-02
+
+All four follow-ups from this document were executed. What was actually built
+diverges from the recommendations above in three places, each recorded here so
+the divergence is not silent.
+
+### 1. Image support — done, `berb/llm/vision.py`
+
+Built as recommended: a provider-neutral content-part shape, per-provider
+encoders (`to_openai_content` / `to_anthropic_content` / `to_responses_content`),
+and `ensure_vision_capable()` as the first reader of `supports_vision`.
+
+**Divergence:** the Responses wire API needed a third encoder. The plan above
+said "Anthropic / OpenAI / OpenRouter adapters"; `_messages_to_responses_input`
+stringifies content, so a part list sent through it would have been serialised
+as a Python repr and shipped as garbage. Caught before it shipped.
+
+Consumers: `experiment/plot_verdict.VLMPlotCritic` is now buildable and is
+selected over `PixelPlotCritic` when `experiment.figure_agent.vision_model` is
+set. `vision/figure_generator.py` remains unrestored — see §4.
+
+### 2. `discovery_loop` + `world_model` — done, but rewritten not restored
+
+`world_model.py` came back verbatim; it was complete.
+
+**Divergence:** `discovery_loop.py` did **not** come back verbatim, because its
+task-execution step was a stub that recorded a dead end per task with the
+reason "Task execution not yet wired into pipeline (E2 stub)". Restoring it
+as-written would have added 326 lines that spin for `max_cycles` producing
+nothing while looking like work. The stub is replaced by an injected
+`TaskExecutor`; without one the loop returns `stop_reason="no_executor"`
+immediately rather than pretending.
+
+The pipeline-facing executor is new: `berb/pipeline/discovery.py`, which
+re-runs stages 7-15 per candidate direction (needing a new `to_stage` bound on
+`execute_pipeline`), reads each slice's stage-15 decision back as a
+`TaskOutcome`, and promotes the winner's artifacts into the parent run so
+stages 16-23 continue normally.
+
+### 3. `model_cascade.py` — done, trimmed
+
+Restored alone, as recommended; `model_router.py` stays deleted.
+
+**Divergence from caution #1.** The plan said "reuse the wired
+`prompt_cache.py`" instead of the cascade's own cache. That is not possible:
+`prompt_cache.py` is a *provider-side* cache-control helper, a different object
+from an in-process response cache. The stronger reading is that this repo had
+already built an in-process response cache (`PromptCache`), judged it useless
+because byte-identical repeat calls do not occur on the live path, and deleted
+it — so the cascade's cache was dropped outright rather than swapped.
+
+Also dropped: `MODEL_COSTS` (duplicated `pricing.py`, read by nothing) and
+`cost_saved_estimate` (never computed, so `get_stats()["estimated_savings"]`
+reported `0.0` as though it were a measurement). `chat` is synchronous, because
+the original awaited a `base_client.chat` that no client in this repo has.
+
+Caution #2 was honoured: cascading is off by default, and `get_stats()` reports
+the per-rung exit distribution, which is the measurement that says whether the
+evaluator is calibrated.
+
+### 4. Still not restored, deliberately
+
+`model_router.py` (strict subset of the cascade), `berb/research/gap_analysis.py`,
+`idea_scorer.py`, `open_ended_discovery.py` (all need a measured case, not an
+assertion), and `berb/vision/figure_generator.py`. The last is now *unblocked*
+by §1 but was left out of scope: restoring 793 loc of figure-generation on the
+same change as four other pieces of work would make none of them reviewable.
+It is the natural next candidate.
+
+### 5. Defects found on the way
+
+Fixing the seam the cascade had to plug into surfaced six confirmed defects in
+`berb/llm/` and its neighbours; they are inventoried in
+`tasks/defect_hunt_plan.md` §5. One of them — `RCConfig` carries no `nadirclaw`
+or `token_tracking` field, so `SmartLLMClient` is unreachable from config while
+the example config advertises it — is **still open**, because switching that
+subsystem on is a product decision rather than a bug fix.

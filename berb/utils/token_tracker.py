@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import logging
 import sqlite3
+import threading
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -159,6 +160,8 @@ class TokenTracker:
         self.project_path = project_path or Path.cwd()
         self.db_path = db_path or self._get_default_db_path()
         self._conn: sqlite3.Connection | None = None
+        # Serialises every use of the shared connection; see `connection`.
+        self._db_lock = threading.RLock()
         self._init_db()
 
     @staticmethod
@@ -179,11 +182,22 @@ class TokenTracker:
 
     @property
     def connection(self) -> sqlite3.Connection:
-        """Get database connection (lazy initialization)."""
-        if self._conn is None:
-            self._conn = sqlite3.connect(str(self.db_path))
-            self._conn.row_factory = sqlite3.Row
-        return self._conn
+        """Get database connection (lazy initialization).
+
+        `check_same_thread=False` because the tracker is constructed once (on
+        the main thread, by create_llm_client) and then written to from
+        whichever thread runs a stage — runner.py dispatches stages through
+        asyncio.to_thread, so the writing thread is never the creating one.
+        The default `True` raises sqlite3.ProgrammingError there. Every access
+        is serialised by `_db_lock`, which is what makes disabling sqlite's own
+        thread check safe rather than merely quiet.
+        """
+        with self._db_lock:
+            if self._conn is None:
+                conn = sqlite3.connect(str(self.db_path), check_same_thread=False)
+                conn.row_factory = sqlite3.Row
+                self._conn = conn
+            return self._conn
 
     # Increment when DDL changes to trigger migration.
     _SCHEMA_VERSION: int = 1
@@ -254,9 +268,10 @@ class TokenTracker:
 
     def close(self) -> None:
         """Close database connection."""
-        if self._conn:
-            self._conn.close()
-            self._conn = None
+        with self._db_lock:
+            if self._conn:
+                self._conn.close()
+                self._conn = None
 
     def __enter__(self) -> TokenTracker:
         """Context manager entry."""
@@ -341,26 +356,30 @@ class TokenTracker:
             project_path=str(self.project_path),
         )
 
-        # Persist to database
-        self.connection.execute(
-            """
-            INSERT INTO token_usage
-            (timestamp, project_path, command, input_tokens, output_tokens,
-             saved_tokens, savings_pct, execution_time_ms)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                usage.timestamp.isoformat(),
-                usage.project_path,
-                usage.command,
-                usage.input_tokens,
-                usage.output_tokens,
-                saved_tokens,
-                savings_pct,
-                execution_time_ms,
-            ),
-        )
-        self.connection.commit()
+        # Persist to database. INSERT and commit are one critical section so a
+        # concurrent write from another stage thread cannot interleave between
+        # them (see `connection` for why the connection is shared).
+        conn = self.connection
+        with self._db_lock:
+            conn.execute(
+                """
+                INSERT INTO token_usage
+                (timestamp, project_path, command, input_tokens, output_tokens,
+                 saved_tokens, savings_pct, execution_time_ms)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    usage.timestamp.isoformat(),
+                    usage.project_path,
+                    usage.command,
+                    usage.input_tokens,
+                    usage.output_tokens,
+                    saved_tokens,
+                    savings_pct,
+                    execution_time_ms,
+                ),
+            )
+            conn.commit()
 
         logger.debug(
             f"Tracked {command}: {input_tokens}→{output_tokens} tokens "
@@ -427,8 +446,8 @@ class TokenTracker:
         WHERE project_path = ? {where_clause}
         """
 
-        cursor = conn.execute(query, params)
-        row = cursor.fetchone()
+        with self._db_lock:
+            row = conn.execute(query, params).fetchone()
 
         if row is None or row["total_commands"] == 0:
             return TokenSummary(
@@ -488,7 +507,8 @@ class TokenTracker:
         ORDER BY date DESC
         """
 
-        cursor = conn.execute(query, [str(self.project_path), f"-{days} days"])
+        with self._db_lock:
+            rows = conn.execute(query, [str(self.project_path), f"-{days} days"]).fetchall()
 
         return [
             DailyTokenStats(
@@ -499,7 +519,7 @@ class TokenTracker:
                 saved_tokens=row["saved_tokens"],
                 savings_pct=row["savings_pct"],
             )
-            for row in cursor.fetchall()
+            for row in rows
         ]
 
     def get_commands_by_type(
@@ -542,10 +562,11 @@ class TokenTracker:
         ORDER BY total_saved DESC
         """
 
-        cursor = conn.execute(query, params)
+        with self._db_lock:
+            rows = conn.execute(query, params).fetchall()
 
         result = {}
-        for row in cursor.fetchall():
+        for row in rows:
             total_commands = row["total_commands"]
             total_time_ms = row["total_time_ms"] or 0
 

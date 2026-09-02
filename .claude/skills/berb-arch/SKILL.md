@@ -46,6 +46,6 @@ top-level dirs (`repo-tests`, `repo-docs`). Index of all of them: root `CLAUDE.m
 - Stage impls: `berb/pipeline/stage_impls/_*.py` (one file per phase)
 - LLM cascade: NadirClaw (simple→mid→complex)
 - Literature: OpenAlex → Semantic Scholar → arXiv → grey search
-- Experiment modes: sandbox / docker / ssh_remote / colab / agentic
+- Experiment modes: sandbox / docker / ssh_remote / colab_drive / simulated
 - Presets: `berb/presets/catalog/*.yaml` loaded via `load_preset("name")`
 - Full architecture: `docs/CODEBASE_MIND_MAP.md`

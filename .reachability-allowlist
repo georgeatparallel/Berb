@@ -39,6 +39,49 @@ berb.writing_guide      # EXEMPT — documentation aid for authors, not pipeline
 # table, never real execution, and its known-finding corpus measured something
 # unrelated to W7's actual need. Deleted rather than curated a corpus for; see
 # tests/fixtures/seeded_defects.py for the corpus W7 actually built.
+#
+# D-09: CLOSED 2026-09-02 — berb.experiment.code_agent (836 loc) deleted, with
+# its config.experiment.cli_agent section and CLI_AGENT_PROVIDERS. It was the
+# sole reader of that config and had no importer on any pipeline path; the
+# occupied seam is berb/pipeline/code_agent.py, which reads
+# config.experiment.code_agent. Its S0-8 env-stripping test was not dropped —
+# tests/test_sandbox_security_gate.py now asserts the property against
+# sandbox.safe_subprocess_env itself, which is where it actually lives.
+# The ratchet moved 1522 -> 686 as a result; 686 is react_agent (389) plus
+# split_policy (297), the only two modules outside this file. split_policy
+# awaits a SplitEvidence producer; react_agent is dead *and* broken — it
+# calls get_llm_client() and LocalSandbox, neither of which exists, so
+# wiring it is a rewrite, not a rewiring (established 2026-09-02).
+#
+# D-10: CLOSED 2026-09-02 — berb.experiment.agentic_sandbox (360 loc) deleted,
+# with factory.create_agentic_sandbox, config.experiment.agentic (AgenticConfig
+# and its parser) and the "agentic" entry in EXPERIMENT_MODES. Evidence:
+# tasks/agentic_sandbox_wiring_research.md. The D-09 criteria all held —
+# no importer (git log -S shows create_agentic_sandbox never had a caller),
+# no tests, seam already occupied by pipeline/code_agent.py and
+# experiment/search/ — plus a fourth: its primary path had never been able to
+# run, since neither _start_container nor _docker_exec passed any -e flag, so
+# the agent CLI it launched had no credential. The ratchet is unchanged at 686:
+# factory.py's function-local import made the module count as reachable, and
+# both sides went together.
+#
+# Wiring it was rejected rather than deferred. The container was weaker than
+# DockerSandbox's (no --user, no --cpus, no staged egress, network_policy
+# defaulting to "full") while the executor inside it was strictly more capable,
+# and check_code_security cannot cover an agent with a shell — it scans a source
+# string, and there is none. Fixing the credential gap the obvious way would put
+# an account-wide key inside that boundary, reachable from prompts partly
+# derived from third-party abstracts and PDF text. If the capability is wanted
+# later, §4 Option 3 of the research doc lists the five preconditions; the
+# load-bearing one (credential scoping) has no mechanism in this repo today.
+#
+# Also 2026-09-02, restored from deletion and wired rather than parked:
+#   berb.llm.model_cascade         (from 9d026a1) — behind config.cascade
+#   berb.research.world_model      (from 24eefec) — pure typed state
+#   berb.research.discovery_loop   (from 24eefec) — behind research.discovery
+# Each is reachable, so none appears in this file. berb.llm.model_router and
+# berb/vision/, berb/research/{gap_analysis,idea_scorer,open_ended_discovery}
+# were deliberately NOT restored — see tasks/recovered_modules_research.md.
 
 # ---------------------------------------------------------------------------
 # D-03 — PARK. Pre-existing parked packages, re-dated 2026-09-02 so the whole

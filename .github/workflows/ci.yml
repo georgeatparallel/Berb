@@ -113,7 +113,7 @@ jobs:
           # CI enforced 25990 for three commits. The flag is what runs.
           python scripts/check_reachability.py \
             --allowlist .reachability-allowlist \
-            --max-unreachable-loc 1522
+            --max-unreachable-loc 686
 
   type-check:
     name: Type Check
