@@ -93,13 +93,18 @@ KB_SUBDIRS = (
 )
 PROJECT_MODES = {"docs-first", "semi-auto", "full-auto"}
 KB_BACKENDS = {"markdown", "obsidian"}
+# Every entry here must have a branch in experiment/factory.py::create_sandbox
+# (or, for "simulated", in the Stage 12 dispatch). A mode accepted here but not
+# implemented there passes validation, survives eleven stages of work, and then
+# dies with an unhandled RuntimeError from create_sandbox's terminal raise —
+# strictly worse than being rejected at load. "agentic" was exactly that until
+# 2026-09-02; see tasks/agentic_sandbox_wiring_research.md (defect A1).
 EXPERIMENT_MODES = {
     "simulated",
     "sandbox",
     "docker",
     "ssh_remote",
     "colab_drive",
-    "agentic",
 }
 # Config sections that parse into a dataclass but that no code reads. Setting
 # them has no effect, which is worse than an unknown key: the pipeline reports

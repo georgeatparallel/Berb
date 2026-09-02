@@ -194,6 +194,48 @@ def test_validate_config_rejects_invalid_experiment_mode(tmp_path: Path):
     assert "Invalid experiment.mode: kubernetes" in result.errors
 
 
+def test_validate_config_rejects_agentic_mode(tmp_path: Path):
+    """Defect A1 (tasks/agentic_sandbox_wiring_research.md).
+
+    "agentic" used to be in EXPERIMENT_MODES while create_sandbox had no branch
+    for it, so a config naming it loaded cleanly and then died at Stage 12 with
+    an unhandled RuntimeError — after scoping, literature, synthesis, design and
+    code generation had all been paid for.
+    """
+    data = _valid_config_data()
+    data["experiment"]["mode"] = "agentic"
+
+    result = validate_config(data, project_root=tmp_path, check_paths=False)
+
+    assert result.ok is False
+    assert "Invalid experiment.mode: agentic" in result.errors
+
+
+def test_every_accepted_experiment_mode_has_a_sandbox_backend(tmp_path: Path):
+    """The invariant A1 violated: EXPERIMENT_MODES must not over-promise.
+
+    A mode may still fail for environmental reasons (no Docker daemon, no SSH
+    host) — that is a runtime problem the user can fix. What it must never do is
+    reach create_sandbox's terminal "unsupported mode" raise, which means the
+    backend does not exist at all and no amount of user action will help.
+    """
+    import dataclasses
+
+    from berb.config import EXPERIMENT_MODES, ExperimentConfig
+    from berb.experiment.factory import create_sandbox
+
+    # "simulated" never constructs a sandbox; Stage 12 handles it inline.
+    for mode in sorted(EXPERIMENT_MODES - {"simulated"}):
+        config = dataclasses.replace(ExperimentConfig(), mode=mode)
+        try:
+            create_sandbox(config, tmp_path / mode)
+        except Exception as exc:  # noqa: BLE001 — any failure but *that* one is fine
+            assert "Unsupported experiment mode" not in str(exc), (
+                f"{mode!r} is accepted by EXPERIMENT_MODES but create_sandbox "
+                f"has no branch for it: {exc}"
+            )
+
+
 def test_validate_config_accepts_docker_mode(tmp_path: Path):
     data = _valid_config_data()
     data["experiment"]["mode"] = "docker"
