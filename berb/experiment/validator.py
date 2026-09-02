@@ -13,6 +13,8 @@ import sys
 from dataclasses import dataclass, field
 from typing import Any
 
+from berb.experiment.science_check import check_science
+
 # ---------------------------------------------------------------------------
 # Data types
 # ---------------------------------------------------------------------------
@@ -716,6 +718,7 @@ def validate_code(
     available_packages: set[str] | None = None,
     skip_security: bool = False,
     skip_imports: bool = False,
+    skip_science: bool = False,
     import_policy: str = "denylist",
     extra_allowed_imports: frozenset[str] = frozenset(),
 ) -> CodeValidation:
@@ -725,6 +728,11 @@ def validate_code(
     2. Security scan (unless *skip_security*) — *import_policy*/
        *extra_allowed_imports* are forwarded to :func:`validate_security`.
     3. Import availability (unless *skip_imports*)
+    4. Domain correctness (unless *skip_science*) — see
+       :mod:`berb.experiment.science_check`. These issues carry
+       ``category="science"``, which drives Stage 10's repair loop but is
+       outside the category set that blocks the stage, so a false
+       positive costs a repair round-trip and never a failed run.
     """
     combined = CodeValidation()
 
@@ -748,6 +756,10 @@ def validate_code(
     if not skip_imports:
         imp = validate_imports(code, available=available_packages)
         combined.issues.extend(imp.issues)
+
+    # 4. Domain correctness
+    if not skip_science:
+        combined.issues.extend(check_science(code))
 
     return combined
 
