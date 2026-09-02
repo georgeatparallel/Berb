@@ -14,7 +14,7 @@ Berb is a **23-stage autonomous research pipeline** that transforms a single res
 - 23-stage pipeline with checkpoint/resume capability
 - Multi-provider LLM routing (13+ providers, cost-optimized)
 - Multi-source literature search (OpenAlex, Semantic Scholar, arXiv, SearXNG)
-- Sandboxed experiment execution (5 backends: sandbox, docker, ssh, colab, agentic)
+- Sandboxed experiment execution (4 backends: sandbox, docker, ssh, colab)
 - Self-correcting simulation with physics-aware error diagnosis
 - Automated peer review (5-reviewer ensemble + Area Chair)
 - Multi-language support (13 languages with auto-detection)
@@ -123,7 +123,6 @@ berb/
 │   ├── docker_sandbox.py      ← Docker container (Windows-safe)
 │   ├── ssh_sandbox.py         ← Remote SSH sandbox
 │   ├── colab_sandbox.py       ← Google Colab
-│   ├── agentic_sandbox.py     ← OpenCode multi-file agent
 │   ├── self_correcting.py     ← Detect error → LLM fix → re-run
 │   ├── experiment_repair.py   ← Experiment repair
 │   ├── validator.py           ← Code validation
@@ -622,7 +621,7 @@ Modes (config experiment.mode):
   docker        → isolated container (reproducible, Windows-safe)
   ssh_remote    → GPU cluster
   colab_drive   → Google Colab
-  agentic       → OpenCode multi-file agent
+  (agentic      → deleted 2026-09-02; see tasks/agentic_sandbox_wiring_research.md)
 
 Self-correction loop (self_correcting.py; auto_debugger.py deleted 2026-09-02, W1 — superseded by pipeline/experiment_repair.py):
   run code → capture stderr → detect error type →

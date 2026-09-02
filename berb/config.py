@@ -473,27 +473,6 @@ class DockerSandboxConfig:
 
 
 @dataclass(frozen=True)
-class AgenticConfig:
-    """Configuration for the agentic experiment mode.
-
-    Launches a coding agent (e.g. Claude Code) inside a Docker container
-    with full shell access so it can run arbitrary CLI commands, write code,
-    and iteratively complete the experiment.
-    """
-
-    image: str = "berb/experiment:latest"
-    agent_cli: str = "claude"
-    agent_install_cmd: str = "npm install -g @anthropic-ai/claude-code"
-    network_policy: str = "full"  # Agent needs network access
-    timeout_sec: int = 1800  # 30 min per session
-    memory_limit_mb: int = 8192
-    gpu_enabled: bool = False
-    mount_skills: bool = True
-    allow_shell_commands: bool = True
-    max_turns: int = 50
-
-
-@dataclass(frozen=True)
 class CodeAgentConfig:
     """Configuration for the advanced multi-phase code generation agent."""
 
@@ -639,7 +618,6 @@ class ExperimentConfig:
     keep_threshold: float = 0.0
     sandbox: SandboxConfig = field(default_factory=SandboxConfig)
     docker: DockerSandboxConfig = field(default_factory=DockerSandboxConfig)
-    agentic: AgenticConfig = field(default_factory=AgenticConfig)
     ssh_remote: SshRemoteConfig = field(default_factory=SshRemoteConfig)
     colab_drive: ColabDriveConfig = field(default_factory=ColabDriveConfig)
     code_agent: CodeAgentConfig = field(default_factory=CodeAgentConfig)
@@ -1376,23 +1354,6 @@ def _parse_llm_config(data: dict[str, Any]) -> LlmConfig:
     )
 
 
-def _parse_agentic_config(data: dict[str, Any]) -> AgenticConfig:
-    if not data:
-        return AgenticConfig()
-    return AgenticConfig(
-        image=data.get("image", "berb/experiment:latest"),
-        agent_cli=data.get("agent_cli", "claude"),
-        agent_install_cmd=data.get("agent_install_cmd", "npm install -g @anthropic-ai/claude-code"),
-        network_policy=data.get("network_policy", "full"),
-        timeout_sec=int(data.get("timeout_sec", 1800)),
-        memory_limit_mb=int(data.get("memory_limit_mb", 8192)),
-        gpu_enabled=bool(data.get("gpu_enabled", False)),
-        mount_skills=bool(data.get("mount_skills", True)),
-        allow_shell_commands=bool(data.get("allow_shell_commands", True)),
-        max_turns=int(data.get("max_turns", 50)),
-    )
-
-
 def _parse_experiment_config(data: dict[str, Any]) -> ExperimentConfig:
     sandbox_data = data.get("sandbox") or {}
     docker_data = data.get("docker") or {}
@@ -1459,7 +1420,6 @@ def _parse_experiment_config(data: dict[str, Any]) -> ExperimentConfig:
             timeout_sec=_safe_int(colab_data.get("timeout_sec"), 3600),
             setup_script=colab_data.get("setup_script", ""),
         ),
-        agentic=_parse_agentic_config(data.get("agentic") or {}),
         code_agent=_parse_code_agent_config(data.get("code_agent") or {}),
         opencode=_parse_opencode_config(data.get("opencode") or {}),
         benchmark_agent=_parse_benchmark_agent_config(data.get("benchmark_agent") or {}),

@@ -297,7 +297,15 @@ Carried in as pre-seeded Phase 2 candidates, not as findings:
    rather than changed silently.
 2. **`react_agent.py` (389 loc) and `split_policy.py` (297 loc)** are the whole
    remaining non-allowlisted dead surface. `split_policy` needs a
-   `SplitEvidence` producer; `react_agent` waits on candidate-generator work.
+   `SplitEvidence` producer. `react_agent` is **dead *and* broken**, not
+   merely awaiting wiring (corrected 2026-09-02, evidence in
+   `tasks/agentic_sandbox_wiring_research.md` §4 Option 4): `_reason`,
+   `_act` and `_analyze_error` all call `get_llm_client` from
+   `berb.llm.client`, which does not exist, and `_observe` imports
+   `LocalSandbox` from `berb.experiment.sandbox` and calls
+   `sandbox.execute(...)` — neither the class nor the method exists. All
+   four are function-local imports, so the module imports cleanly and the
+   first ReAct iteration raises `ImportError`. Wiring it is a rewrite.
    Both are DEAD-reachability regions: low hunt priority, not zero.
 3. **`_candidate_generator` in `_execution.py` is a stub** returning one static
    copy of `main.py`, and `SearchRunner._expand_one` takes `candidates[0]`.

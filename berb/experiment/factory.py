@@ -4,13 +4,9 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from berb.config import ExperimentConfig
 from berb.experiment.sandbox import ExperimentSandbox, SandboxProtocol
-
-if TYPE_CHECKING:
-    from berb.experiment.agentic_sandbox import AgenticSandbox
 
 logger = logging.getLogger(__name__)
 
@@ -109,26 +105,3 @@ def create_sandbox(config: ExperimentConfig, workdir: Path) -> SandboxProtocol:
         raise RuntimeError(f"Unsupported experiment mode for create_sandbox(): {config.mode}")
 
     return ExperimentSandbox(config.sandbox, workdir)
-
-
-def create_agentic_sandbox(
-    config: ExperimentConfig,
-    workdir: Path,
-    skills_dir: Path | None = None,
-) -> AgenticSandbox:  # noqa: F821
-    """Return an :class:`AgenticSandbox` for agentic experiment mode.
-
-    Validates that Docker is available before returning.
-    """
-    from berb.experiment.agentic_sandbox import AgenticSandbox
-
-    if not AgenticSandbox.check_docker_available():
-        raise RuntimeError(
-            "Docker daemon is not reachable. Agentic mode requires Docker. Start Docker first."
-        )
-
-    agentic_cfg = config.agentic
-    if agentic_cfg.gpu_enabled:
-        logger.info("Agentic sandbox: GPU passthrough enabled")
-
-    return AgenticSandbox(agentic_cfg, workdir, skills_dir=skills_dir)

@@ -5,6 +5,11 @@
 `berb/experiment/agentic_sandbox.py` + `factory.create_agentic_sandbox` as DEAD
 and deferred the wire/park/delete decision. This is that decision's evidence.
 
+**Status:** DECIDED 2026-09-02 — Option 1 (delete), with A1 fixed separately.
+A1 landed in `cc067b5`; the deletion follows it. Recorded in
+`.reachability-allowlist` as D-10. §4 Option 3's preconditions stand as the
+entry criteria should the capability ever be wanted.
+
 **Scope:** whether this specific factory can be given a caller without
 regressing the sandbox trust boundary that Pass 1 just repaired. Not a general
 review of agentic experiment execution as a capability.
