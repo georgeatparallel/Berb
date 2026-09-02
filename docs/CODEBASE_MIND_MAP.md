@@ -77,7 +77,6 @@ berb/
 │   ├── model_router.py        ← Route by cost/latency
 │   ├── model_cascade.py       ← Cascade: try cheap → escalate
 │   ├── nadirclaw_router.py    ← NadirClaw 3-tier routing
-│   ├── extended_router.py     ← Extended routing logic
 │   ├── speculative_router.py  ← Speculative decoding routing
 │   ├── openrouter_adapter.py  ← OpenRouter adapter
 │   ├── anthropic_adapter.py   ← Anthropic adapter
@@ -126,7 +125,6 @@ berb/
 │   ├── colab_sandbox.py       ← Google Colab
 │   ├── agentic_sandbox.py     ← OpenCode multi-file agent
 │   ├── self_correcting.py     ← Detect error → LLM fix → re-run
-│   ├── auto_debugger.py       ← Automated debugging loop
 │   ├── experiment_repair.py   ← Experiment repair
 │   ├── validator.py           ← Code validation
 │   ├── physics_guards.py      ← Physics-specific guards
@@ -626,7 +624,7 @@ Modes (config experiment.mode):
   colab_drive   → Google Colab
   agentic       → OpenCode multi-file agent
 
-Self-correction loop (self_correcting.py + auto_debugger.py):
+Self-correction loop (self_correcting.py; auto_debugger.py deleted 2026-09-02, W1 — superseded by pipeline/experiment_repair.py):
   run code → capture stderr → detect error type →
   LLM generates fix → apply → re-run (up to 3 retries)
   ↑ repeated in Stage 13 up to 10 cycles

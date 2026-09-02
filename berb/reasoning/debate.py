@@ -18,8 +18,8 @@ Usage:
 
     # Option 2: With router (recommended for cost optimization)
     from berb.reasoning import DebateMethod
-    from berb.llm.extended_router import ExtendedNadirClawRouter
-    router = ExtendedNadirClawRouter(...)
+    from berb.llm.smart_client import SmartLLMClient
+    router = SmartLLMClient(...)
     method = DebateMethod(router=router)
     result = await method.execute(context)
 
@@ -92,7 +92,7 @@ class DebateMethod(ReasoningMethod):
 
     def __init__(
         self,
-        router: Any = None,  # NEW: Primary (ExtendedNadirClawRouter)
+        router: Any = None,  # Primary: a cost-optimising router
         llm_client: Any = None,  # DEPRECATED: Fallback only
         num_arguments: int = 3,
         **kwargs: Any,

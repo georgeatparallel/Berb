@@ -11,10 +11,12 @@ import logging
 import time
 import uuid
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+from pathlib import Path
 from typing import Any
 
 from berb.experiment.journal import ExperimentJournal, JournalNode
+from berb.experiment.plot_verdict import is_verdict_gating, verify_plots
 from berb.experiment.search.policy import SearchConfig, SearchPolicy
 from berb.experiment.search.scoring import ScoreBreakdown, score_node
 from berb.llm.cost_tracker import CostTracker, get_cost_tracker
@@ -23,6 +25,10 @@ logger = logging.getLogger(__name__)
 
 # Type alias for a sandbox factory callable
 SandboxFactory = Callable[[], Any]
+
+# Raster formats the figure verdict can inspect. SVG and PDF are excluded
+# deliberately: the pixel checks behind PixelPlotCritic need a rasterised image.
+_PLOT_SUFFIXES = (".png", ".jpg", ".jpeg")
 
 
 @dataclass
@@ -118,6 +124,7 @@ class SearchRunner:
         metric_key: str = "",
         metric_maximize: bool = True,
         semaphore: asyncio.Semaphore | None = None,
+        figure_critic: Any | None = None,
     ) -> None:
         """Initialize SearchRunner.
 
@@ -133,6 +140,10 @@ class SearchRunner:
             metric_maximize: True if higher metric is better.
             semaphore: Optional concurrency limiter. Uses
                 asyncio.Semaphore(config.num_workers) if None.
+            figure_critic: Optional critic exposing
+                ``async analyze_figure(figure_path=..., paper_context=...)``.
+                When None, figures are not evaluated and ``is_buggy_plots``
+                stays None, which scoring treats as "skip the gate".
         """
         self._config = config
         self._policy = policy
@@ -142,6 +153,7 @@ class SearchRunner:
         self._metric_key = metric_key
         self._metric_maximize = metric_maximize
         self._semaphore = semaphore or asyncio.Semaphore(config.num_workers)
+        self._figure_critic = figure_critic
 
         self._journal = ExperimentJournal()
         self._governor = BudgetGovernor(config, self._cost_tracker)
@@ -314,6 +326,7 @@ class SearchRunner:
             )
             return node
 
+        sandbox: Any | None = None
         try:
             sandbox = self._sandbox_factory()
             # Execute the code — exact sandbox interface depends on the
@@ -366,6 +379,10 @@ class SearchRunner:
             node.is_buggy = True
             logger.error("Node %s evaluation failed: %s", node.node_id[:8], e)
 
+        # Figure verdict. scoring.score_node hard-gates on is_buggy_plots, so
+        # without a producer here that gate can never fire.
+        await self._verify_node_plots(node, sandbox)
+
         # Score the node
         all_nodes = self._journal.good_nodes() + [node]
         node.score = score_node(
@@ -386,6 +403,54 @@ class SearchRunner:
         )
 
         return node
+
+    async def _verify_node_plots(self, node: JournalNode, sandbox: Any | None) -> None:
+        """Populate ``node.is_buggy_plots`` from a figure verdict.
+
+        ``search.scoring.score_node`` zeroes any candidate whose figures are
+        invalid, but nothing ever set the field, so that hard gate was inert:
+        a candidate could exit with status 0 having rendered an empty chart and
+        still score normally. This closes the loop.
+
+        Fail-open at every step — no critic, no sandbox workdir, no image files,
+        or any error leaves ``is_buggy_plots`` as None, which scoring reads as
+        "not evaluated, skip the gate". The only outcome that can change a score
+        is a critic actively judging a figure invalid.
+
+        Args:
+            node: The evaluated node, mutated in place.
+            sandbox: The sandbox the candidate ran in, or None if it was never
+                created.
+        """
+        if self._figure_critic is None or sandbox is None:
+            return
+
+        workdir = getattr(sandbox, "workdir", None)
+        if workdir is None:
+            return
+
+        paths = sorted(
+            p for suffix in _PLOT_SUFFIXES for p in Path(workdir).rglob(f"*{suffix}") if p.is_file()
+        )
+        if not paths:
+            return
+
+        node.plot_paths = tuple(paths)
+        try:
+            verdict = await verify_plots(
+                paths,
+                research_context=node.plan or "",
+                critic=self._figure_critic,
+            )
+        except Exception as exc:  # never let figure review fail an evaluation
+            logger.warning("Figure verdict failed for node %s: %s", node.node_id[:8], exc)
+            return
+
+        node.is_buggy_plots = is_verdict_gating(verdict)
+        node.vlm_feedback_summary = verdict.summary
+        node.plot_analyses = tuple(asdict(a) for a in verdict.per_plot)
+        if node.is_buggy_plots:
+            logger.info("Node %s gated on figures: %s", node.node_id[:8], verdict.summary)
 
     async def _run_in_sandbox(self, sandbox: Any, files: dict[str, str]) -> Any:
         """Run candidate code in a sandbox.

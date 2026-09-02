@@ -1,4 +1,4 @@
-"""Integration tests for all 9 reasoning methods with ExtendedNadirClawRouter.
+"""Integration tests for all 9 reasoning methods with a mock router.
 
 Tests verify:
 - Router integration works correctly
@@ -15,7 +15,6 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from berb.llm.extended_router import ExtendedNadirClawRouter
 from berb.reasoning.base import ReasoningContext
 from berb.reasoning.bayesian import BayesianMethod
 from berb.reasoning.debate import DebateMethod
@@ -101,7 +100,13 @@ class MockProvider:
 @pytest.fixture
 def mock_router():
     """Create mock router with test configuration."""
-    router = MagicMock(spec=ExtendedNadirClawRouter)
+    # Unspecced deliberately. This was `spec=ExtendedNadirClawRouter` until
+    # that module was deleted (W4): it was a stub whose _create_provider
+    # returned a _MockProvider, so speccing against it guaranteed nothing about
+    # the wired berb/llm/nadirclaw_router.py. The fixture below defines every
+    # attribute these tests exercise. Re-speccing against the real router is
+    # the worthwhile follow-up, and is a larger change than this deletion.
+    router = MagicMock()
     router.role_models = {
         "constructive": "xiaomi/mimo-v2-pro",
         "destructive": "qwen/qwen3.5-397b-a17b",

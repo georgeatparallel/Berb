@@ -86,6 +86,35 @@ jobs:
       - name: Ruff format check
         run: ruff format --check berb/ tests/
 
+      - name: Reachability (dead-code ratchet)
+        run: |
+          # RATCHET ONLY. Never raise --max-unreachable-loc to make a build
+          # pass — wire the module, delete it, or park it in
+          # .reachability-allowlist with an ID and a revisit date
+          # (tasks/dead_code_wiring_plan.md).
+          #
+          # 1522 = 23540 unreachable LOC minus 22018 allowlisted, measured
+          # 2026-09-02. `from berb.literature import ...` and
+          # `from berb.llm import ...` are supported contracts, so the modules
+          # behind those packages' __all__ are entry points
+          # (PUBLIC_API_PACKAGES in the script).
+          # tests/test_public_api_contract.py is what watches those APIs now
+          # that this gate does not.
+          #
+          # What is left is exactly three modules, all blocked on a decision
+          # rather than on analysis: experiment/code_agent.py (held),
+          # react_agent.py and split_policy.py (both pending wiring).
+          #
+          # Trajectory: 30658 (W0 corrected the checker) -> 25990 -> 24966 (W1)
+          # -> 20378 (W2) -> 17403 (W3) -> 10977 (W4) -> 5888 -> 1522.
+          #
+          # Keep the flag and this comment in step. They drifted once already:
+          # W1 set the flag to 25990, then W2 and W3 edited only the comment, so
+          # CI enforced 25990 for three commits. The flag is what runs.
+          python scripts/check_reachability.py \
+            --allowlist .reachability-allowlist \
+            --max-unreachable-loc 1522
+
   type-check:
     name: Type Check
     runs-on: ubuntu-latest

@@ -247,3 +247,138 @@ def is_verdict_gating(verdict: PlotVerdict, min_confidence: float = 0.6) -> bool
     if any(not a.is_valid for a in verdict.per_plot if a.confidence >= min_confidence):
         return True
     return False
+
+
+# ---------------------------------------------------------------------------
+# Pixel-level figure defects
+# ---------------------------------------------------------------------------
+#
+# verify_plots() above was written against a critic exposing
+# ``async analyze_figure(figure_path=..., paper_context=...)``. No such critic
+# ever existed in this repository — the only one, agents/figure_agent CriticAgent,
+# is synchronous and reviews figure *metadata* (scripts, metrics, rendered dicts)
+# rather than taking an image path. That missing implementation is why
+# ``JournalNode.is_buggy_plots`` was never set and the hard gate in
+# search/scoring.py has been inert.
+#
+# PixelPlotCritic below closes that gap without inventing a vision model: the
+# LLM client has no image support, so a genuine VLM critic is not buildable
+# here. What IS buildable, and catches the failure that matters most during
+# search, is pixel analysis of the rendered file — a candidate that "succeeds"
+# while emitting a blank chart. That logic already existed inside CriticAgent;
+# it now lives here and CriticAgent delegates to it, so the two cannot diverge.
+
+
+def detect_pixel_defects(image_path: Path | str) -> list[dict[str, str]]:
+    """Inspect a rendered image for visual defects. Pure pixel analysis, no LLM.
+
+    Detects:
+      - Near-blank images (>95% white), i.e. degenerate or empty charts — critical
+      - Non-white content touching an edge, i.e. possible label clipping — warning
+
+    Fails open: a missing PIL/numpy, an unreadable file, or any unexpected error
+    yields an empty list, never a false "this figure is broken" verdict.
+
+    Args:
+        image_path: Path to a rendered raster image.
+
+    Returns:
+        Zero or more issue dicts with keys ``type``, ``severity`` and ``message``.
+    """
+    issues: list[dict[str, str]] = []
+    try:
+        import numpy as np
+        from PIL import Image
+
+        img = Image.open(str(image_path)).convert("RGB")
+        arr = np.array(img)
+
+        white_ratio = float(np.mean(np.all(arr > 250, axis=2)))
+        if white_ratio > 0.95:
+            issues.append(
+                {
+                    "type": "rendered_quality",
+                    "severity": "critical",
+                    "message": (
+                        f"Image is {white_ratio:.0%} white — likely degenerate or empty chart"
+                    ),
+                }
+            )
+
+        margin = 3  # pixels
+        for edge_name, edge_slice in [
+            ("top", arr[:margin, :]),
+            ("bottom", arr[-margin:, :]),
+            ("left", arr[:, :margin]),
+            ("right", arr[:, -margin:]),
+        ]:
+            dark_ratio = float(np.mean(np.any(edge_slice < 80, axis=-1)))
+            if dark_ratio > 0.05:
+                issues.append(
+                    {
+                        "type": "rendered_quality",
+                        "severity": "warning",
+                        "message": (
+                            f"Content touching {edge_name} edge ({dark_ratio:.0%} "
+                            f"dark pixels) — possible label/title clipping"
+                        ),
+                    }
+                )
+    except ImportError:
+        logger.debug("PIL/numpy not available — skipping pixel defect checks")
+    except Exception as exc:
+        logger.debug("Pixel defect check failed for %s: %s", image_path, exc)
+
+    return issues
+
+
+@dataclass(frozen=True)
+class _PixelCritique:
+    """The subset of a critique that :func:`verify_plots` reads."""
+
+    is_acceptable: bool
+    overall_score: float
+    issues: tuple[str, ...]
+    confidence: float
+
+
+class PixelPlotCritic:
+    """A critic for :func:`verify_plots` backed by pixel analysis, not a VLM.
+
+    Deliberately narrow. It answers one question — "did this candidate render a
+    real figure, or an empty canvas?" — and abstains on everything else by
+    reporting a passing critique. That keeps the search gate honest: it can
+    reject a candidate whose figures are demonstrably degenerate, and never
+    rejects one on aesthetic grounds it cannot actually judge.
+
+    Only ``critical`` defects make a figure unacceptable; warnings are reported
+    but do not gate, because edge-touching content is frequently a false
+    positive on dense plots.
+    """
+
+    def __init__(self, *, min_confidence: float = 0.9) -> None:
+        self._confidence = min_confidence
+
+    async def analyze_figure(
+        self,
+        figure_path: Path | str,
+        paper_context: str = "",
+    ) -> _PixelCritique:
+        """Return a critique of one rendered figure.
+
+        Args:
+            figure_path: Path to the rendered image.
+            paper_context: Unused — kept for protocol compatibility with the
+                VLM critic signature verify_plots() expects.
+
+        Returns:
+            A critique carrying the attributes verify_plots() reads.
+        """
+        defects = detect_pixel_defects(figure_path)
+        critical = [d for d in defects if d.get("severity") == "critical"]
+        return _PixelCritique(
+            is_acceptable=not critical,
+            overall_score=2.0 if critical else 8.0,
+            issues=tuple(d["message"] for d in defects),
+            confidence=self._confidence,
+        )

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import asyncio
 
+import pytest
+
 from berb.experiment.journal import ExperimentJournal, JournalNode
 from berb.experiment.plot_verdict import verify_plots
 from berb.experiment.search.policy import (
@@ -270,3 +272,158 @@ def test_plot_verdict_fail_open() -> None:
     )
     assert verdict.is_buggy is None
     assert verdict.confidence == 0.0
+
+
+# ---------------------------------------------------------------------------
+# Figure gate (E2): is_buggy_plots producer
+# ---------------------------------------------------------------------------
+#
+# search/scoring.py hard-gates on JournalNode.is_buggy_plots, but nothing set
+# the field, so the gate was inert. These cover the producer wired into
+# SearchRunner._verify_node_plots.
+
+
+class _StubCritic:
+    """Critic matching the analyze_figure protocol verify_plots expects."""
+
+    def __init__(self, acceptable: bool) -> None:
+        self._acceptable = acceptable
+        self.calls: list[str] = []
+
+    async def analyze_figure(self, figure_path, paper_context: str = ""):
+        from berb.experiment.plot_verdict import _PixelCritique
+
+        self.calls.append(str(figure_path))
+        return _PixelCritique(
+            is_acceptable=self._acceptable,
+            overall_score=8.0 if self._acceptable else 2.0,
+            issues=() if self._acceptable else ("blank chart",),
+            confidence=0.9,
+        )
+
+
+class _StubSandbox:
+    def __init__(self, workdir) -> None:
+        self.workdir = workdir
+
+
+def _runner_with_critic(tmp_path, critic):
+    from berb.experiment.search.policy import BestFirstDiversePolicy
+    from berb.experiment.search.runner import SearchRunner
+
+    return SearchRunner(
+        config=SearchConfig(enabled=True),
+        policy=BestFirstDiversePolicy(seed=0),
+        sandbox_factory=lambda: _StubSandbox(tmp_path),
+        generator=lambda **_: [],
+        cost_tracker=CostTracker(),
+        metric_key="acc",
+        figure_critic=critic,
+    )
+
+
+def _node() -> JournalNode:
+    return JournalNode(node_id="n1", plan="study the thing")
+
+
+def test_figure_gate_marks_node_buggy_when_critic_rejects(tmp_path) -> None:
+    (tmp_path / "fig1.png").write_bytes(b"not-a-real-png")
+    critic = _StubCritic(acceptable=False)
+    runner = _runner_with_critic(tmp_path, critic)
+    node = _node()
+
+    asyncio.run(runner._verify_node_plots(node, _StubSandbox(tmp_path)))
+
+    assert node.is_buggy_plots is True
+    assert node.plot_paths and node.plot_paths[0].name == "fig1.png"
+    assert critic.calls, "critic should have been consulted"
+
+
+def test_figure_gate_passes_valid_figures(tmp_path) -> None:
+    (tmp_path / "fig1.png").write_bytes(b"not-a-real-png")
+    runner = _runner_with_critic(tmp_path, _StubCritic(acceptable=True))
+    node = _node()
+
+    asyncio.run(runner._verify_node_plots(node, _StubSandbox(tmp_path)))
+
+    assert node.is_buggy_plots is False
+
+
+def test_figure_gate_fails_open_without_critic(tmp_path) -> None:
+    """No critic configured must leave the verdict unset, not guess."""
+    (tmp_path / "fig1.png").write_bytes(b"not-a-real-png")
+    runner = _runner_with_critic(tmp_path, None)
+    node = _node()
+
+    asyncio.run(runner._verify_node_plots(node, _StubSandbox(tmp_path)))
+
+    assert node.is_buggy_plots is None
+    assert node.plot_paths == ()
+
+
+def test_figure_gate_fails_open_with_no_images(tmp_path) -> None:
+    runner = _runner_with_critic(tmp_path, _StubCritic(acceptable=False))
+    node = _node()
+
+    asyncio.run(runner._verify_node_plots(node, _StubSandbox(tmp_path)))
+
+    assert node.is_buggy_plots is None
+
+
+def test_figure_gate_fails_open_when_critic_raises(tmp_path) -> None:
+    """A broken critic must never fail the candidate's evaluation."""
+
+    class _Exploding:
+        async def analyze_figure(self, figure_path, paper_context: str = ""):
+            raise RuntimeError("critic exploded")
+
+    (tmp_path / "fig1.png").write_bytes(b"not-a-real-png")
+    runner = _runner_with_critic(tmp_path, _Exploding())
+    node = _node()
+
+    asyncio.run(runner._verify_node_plots(node, _StubSandbox(tmp_path)))
+
+    assert node.is_buggy_plots is None
+
+
+def test_buggy_plots_verdict_zeroes_the_score() -> None:
+    """The gate the producer feeds: an invalid figure costs the candidate."""
+    node = JournalNode(node_id="n2", metrics={"acc": 0.99}, returncode=0)
+    node.is_buggy_plots = True
+
+    breakdown = score_node(node, "acc", maximize=True)
+
+    assert breakdown.total == 0.0
+    assert "figures" in breakdown.reason.lower()
+
+
+def test_pixel_critic_rejects_a_blank_chart(tmp_path) -> None:
+    """End-to-end through the real critic — requires Pillow (ships with [all])."""
+    pytest.importorskip("PIL")
+    from PIL import Image
+
+    from berb.experiment.plot_verdict import PixelPlotCritic
+
+    blank = tmp_path / "blank.png"
+    Image.new("RGB", (64, 64), (255, 255, 255)).save(blank)
+
+    critique = asyncio.run(PixelPlotCritic().analyze_figure(blank))
+
+    assert critique.is_acceptable is False
+    assert any("white" in issue for issue in critique.issues)
+
+
+def test_pixel_critic_accepts_a_drawn_chart(tmp_path) -> None:
+    pytest.importorskip("PIL")
+    from PIL import Image, ImageDraw
+
+    from berb.experiment.plot_verdict import PixelPlotCritic
+
+    drawn = tmp_path / "drawn.png"
+    img = Image.new("RGB", (64, 64), (255, 255, 255))
+    ImageDraw.Draw(img).rectangle([10, 10, 54, 54], fill=(10, 10, 200))
+    img.save(drawn)
+
+    critique = asyncio.run(PixelPlotCritic().analyze_figure(drawn))
+
+    assert critique.is_acceptable is True

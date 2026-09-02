@@ -197,7 +197,7 @@ LLM: gpt-4o (Mid tier)
 Tokens: ~2,000 output limit per iteration
 Max Iterations: 10
 Special:
-  - Αν failure → Automated Debugger (berb/experiment/auto_debugger.py)
+  - Αν failure → Experiment Repair loop (berb/pipeline/experiment_diagnosis.py + experiment_repair.py)
   - Error classification (syntax/runtime/logic/resource)
   - Pattern-based fixes από knowledge base
 ```
@@ -504,7 +504,6 @@ berb/
 ├── experiment/
 │   ├── sandbox.py              # Local sandbox execution
 │   ├── self_correcting.py      # MCP-SIM inspired self-healing
-│   └── auto_debugger.py        # Automated debugging
 └── review/
     └── ensemble.py             # 5-reviewer + Area Chair
 ```

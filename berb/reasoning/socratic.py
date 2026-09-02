@@ -16,11 +16,10 @@ Usage:
     method = SocraticMethod(llm_client)
     result = await method.execute(context)
 
-    # Option 2: With router (recommended for cost optimization)
+    # Option 2: With a cost-optimising router
     from berb.reasoning import SocraticMethod
-    from berb.llm.extended_router import ExtendedNadirClawRouter
-    router = ExtendedNadirClawRouter(...)
-    method = SocraticMethod(router=router)
+    from berb.llm.smart_client import SmartLLMClient
+    method = SocraticMethod(router=SmartLLMClient(...))
     result = await method.execute(context)
 
     # Option 3: Registry singleton (recommended)
@@ -97,7 +96,7 @@ class SocraticMethod(ReasoningMethod):
 
     def __init__(
         self,
-        router: Any = None,  # NEW: Primary (ExtendedNadirClawRouter)
+        router: Any = None,  # Primary: a cost-optimising router
         llm_client: Any = None,  # DEPRECATED: Fallback only
         depth: int = 2,  # Questions per category
         **kwargs: Any,
