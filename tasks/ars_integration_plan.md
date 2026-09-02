@@ -1,6 +1,6 @@
 # ARS Integration Plan — Research-Integrity Capabilities for Berb
 
-**Status:** in progress. W0, W1 (fully, including producer), W2, W3, W4, W5 (fully, including stage 22 wiring), W6 Layer A done and wired. W8.2 (AI disclosure) done and wired. W8.1 (reporting checklists) mechanism done, stage-20 auto-selection deliberately deferred.
+**Status:** in progress. W0, W1 (fully, including producer), W2, W3, W4, W5 (fully, including stage 22 wiring), W6 (fully, Layer A + Layer B, both wired into stage 19) done. W8.2 (AI disclosure) done and wired. W8.1 (reporting checklists) mechanism done, stage-20 auto-selection deliberately deferred.
 **Author:** planning pass, 2026-08-31
 **Source of ideas:** [academic-research-skills](https://github.com/Imbad0202/academic-research-skills) (ARS) v3.21.1 by Cheng-I Wu
 **Supersedes:** nothing. Complements `tasks/hardening_plan_2026-08-13.md` and `tasks/arch_hardening_plan.md`.
@@ -302,6 +302,45 @@
     `python -m pytest tests/ -k "export or cross_model" -q` (broader
     regression sweep) → `96 passed`; mypy and ruff clean on both changed
     files.
+- 2026-09-01 — W6 Layer B (`berb/integrity/revision_guard.py`:
+  `ClaimDriftCandidate`, `find_claim_drift_candidates`,
+  `strength_advisory`) landed **and wired into stage 19**:
+  - LLM-advisory only (`Severity.ADVISORY`, never blocks); the LLM is
+    injected as a plain `Callable[[str], str]`, never imported — keeps
+    `revision_guard.py` dependency-free of `berb.pipeline`/`berb.llm` and
+    fully skippable via `llm=None`, exactly per the plan's design note.
+  - `find_claim_drift_candidates()`: two-pass sentence alignment (reuses
+    W3's `split_sentences`). Pass 1 matches identical-normalized-text
+    sentences regardless of position and drops them — this is what makes
+    pure reordering never a candidate, per the plan's explicit
+    requirement. Pass 2 greedily pairs the remainder by `difflib`
+    similarity, discarding pairs below `_MIN_DRIFT_SIMILARITY = 0.4`
+    (unrelated additions/removals, not drift). Bounded to
+    `_MAX_DRIFT_CANDIDATES = 20` and `_MAX_SENTENCES_FOR_ALIGNMENT = 200`
+    so the O(n·m) pairing step can't blow up on a large revision.
+  - `strength_advisory()`: JSON-only verdict parse, same
+    never-`eval`/`exec` discipline as `berb.llm.cross_model`'s verdict
+    parsing (commit 334c7a0); a call exception or unparseable response
+    for one candidate is skipped, never raised — matches this module's
+    must-never-fail-the-stage discipline.
+  - **Stage 19** (`_review.py`, `_execute_paper_revision`): wired
+    alongside the existing Layer A check, reusing the *same* `llm` client
+    already used to generate the revision. Deliberately no new consent
+    gate here (unlike W5): Layer B sends the paper's own before/after
+    sentences to the already-authorized primary provider, not a second
+    vendor — the plan's design note calls this "skippable by
+    configuration" via the `llm=None` injection, not a new attack
+    surface requiring its own opt-in.
+  - 19 new unit tests (incl. an injection-payload-is-inert-data
+    regression, mirroring the cross-model verdict-parsing test) + 3 new
+    stage-19 wiring tests (`tests/test_stage_paper_revision_guard.py`,
+    using a `_SequencedFakeLLMClient` so the shared llm instance can
+    return revision prose on the first call and a JSON verdict on
+    later calls). `python -m pytest tests/test_integrity_revision_guard.py
+    tests/test_stage_paper_revision_guard.py -q` → `40 passed`;
+    `python -m pytest tests/ -k "revision or integrity or review" -q`
+    (broader regression sweep) → `277 passed`; mypy/ruff clean on all
+    four changed files.
 - 2026-09-01 — W8.2 (`berb/writing/disclosure.py`: `DisclosureFacts`,
   `generate_disclosure_statement`) landed **and wired**:
   - Generic, factual AI-usage disclosure statement built from what the
@@ -355,14 +394,14 @@
   (named two files that never existed, `model_router.py`/
   `model_cascade.py`; corrected to name the real routers and record that
   `extended_router.py` is not live infrastructure per the W5 finding).
-- Remaining: W6 Layer B (claim-strength drift), W7 (seeded-defect eval),
-  W8.1 stage-20 wiring (needs validated domain-aware guideline selection
-  first), dual-license email (needs the user to send it, not something an
-  agent can dispatch), `finding_reproduction` disposition (stays parked,
-  depends on W7's corpus), plus the plan's original stage-20
-  (`QUALITY_GATE`) blocking touchpoint for uncited-assertion (stage 17
-  only ships advisory, as asked) and the W1 producer's own open question
-  above (unverified against a real LLM).
+- Remaining: W7 (seeded-defect eval), W8.1 stage-20 wiring (needs
+  validated domain-aware guideline selection first), dual-license email
+  (needs the user to send it, not something an agent can dispatch),
+  `finding_reproduction` disposition (stays parked, depends on W7's
+  corpus), plus the plan's original stage-20 (`QUALITY_GATE`) blocking
+  touchpoint for uncited-assertion (stage 17 only ships advisory, as
+  asked) and the W1 producer's own open question above (unverified
+  against a real LLM).
 
 ---
 
