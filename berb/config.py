@@ -941,6 +941,26 @@ class LlmCascadeConfig:
 
 
 @dataclass(frozen=True)
+class NadirClawConfig:
+    """Prompt-complexity model routing (see berb/llm/nadirclaw_router.py).
+
+    Off by default. Model defaults are empty here and resolved from the
+    registry (fast/literature/writing tasks) by NadirClawRouter itself, so
+    this config never needs updating when the registry's defaults change.
+    """
+
+    enabled: bool = False
+    simple_model: str = ""
+    mid_model: str = ""
+    complex_model: str = ""
+    tier_thresholds: tuple[float, float] = (0.3, 0.7)
+    cache_enabled: bool = True
+    cache_ttl: int = 3600
+    cache_max_size: int = 1000
+    context_optimize_mode: str = "safe"
+
+
+@dataclass(frozen=True)
 class RCConfig:
     project: ProjectConfig
     research: ResearchConfig
@@ -976,6 +996,7 @@ class RCConfig:
     quality_assessor: QualityAssessorConfig = field(default_factory=QualityAssessorConfig)
     calendar: CalendarConfig = field(default_factory=CalendarConfig)
     cascade: LlmCascadeConfig = field(default_factory=LlmCascadeConfig)
+    nadirclaw: NadirClawConfig = field(default_factory=NadirClawConfig)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -1037,6 +1058,7 @@ class RCConfig:
         quality_assessor_data = data.get("quality_assessor") or {}
         calendar_data = data.get("calendar") or {}
         cascade_data = data.get("cascade") or {}
+        nadirclaw_data = data.get("nadirclaw") or {}
 
         return cls(
             project=ProjectConfig(name=project["name"], mode=project.get("mode", "docs-first")),
@@ -1155,6 +1177,7 @@ class RCConfig:
             quality_assessor=_parse_quality_assessor_config(quality_assessor_data),
             calendar=_parse_calendar_config(calendar_data),
             cascade=_parse_cascade_config(cascade_data),
+            nadirclaw=_parse_nadirclaw_config(nadirclaw_data),
         )
 
     @classmethod
@@ -1812,6 +1835,23 @@ def _parse_cascade_config(data: dict[str, Any]) -> LlmCascadeConfig:
         steps=tuple(steps),
         quick_eval_enabled=bool(data.get("quick_eval_enabled", True)),
         fallback_model=str(data.get("fallback_model", "") or ""),
+    )
+
+
+def _parse_nadirclaw_config(data: dict[str, Any]) -> NadirClawConfig:
+    if not data:
+        return NadirClawConfig()
+    thresholds = data.get("tier_thresholds") or (0.3, 0.7)
+    return NadirClawConfig(
+        enabled=bool(data.get("enabled", False)),
+        simple_model=str(data.get("simple_model", "") or ""),
+        mid_model=str(data.get("mid_model", "") or ""),
+        complex_model=str(data.get("complex_model", "") or ""),
+        tier_thresholds=(_safe_float(thresholds[0], 0.3), _safe_float(thresholds[1], 0.7)),
+        cache_enabled=bool(data.get("cache_enabled", True)),
+        cache_ttl=max(0, _safe_int(data.get("cache_ttl"), 3600)),
+        cache_max_size=max(1, _safe_int(data.get("cache_max_size"), 1000)),
+        context_optimize_mode=str(data.get("context_optimize_mode", "safe") or "safe"),
     )
 
 

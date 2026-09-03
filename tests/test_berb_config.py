@@ -318,6 +318,45 @@ def test_rcconfig_from_dict_batch_review_enabled_defaults_false(tmp_path: Path):
     assert config.llm.batch_review_enabled is False
 
 
+def test_rcconfig_from_dict_nadirclaw_defaults_off(tmp_path: Path):
+    config = RCConfig.from_dict(
+        _valid_config_data(),
+        project_root=tmp_path,
+        check_paths=False,
+    )
+
+    assert config.nadirclaw.enabled is False
+    assert config.nadirclaw.simple_model == ""
+    assert config.nadirclaw.tier_thresholds == (0.3, 0.7)
+
+
+def test_rcconfig_from_dict_parses_nadirclaw_block(tmp_path: Path):
+    data = _valid_config_data()
+    data["nadirclaw"] = {
+        "enabled": True,
+        "simple_model": "google/gemini-2.5-flash-lite",
+        "mid_model": "openai/gpt-4o-mini",
+        "complex_model": "anthropic/claude-opus-5",
+        "tier_thresholds": [0.2, 0.8],
+        "cache_enabled": False,
+        "cache_ttl": 60,
+        "cache_max_size": 10,
+        "context_optimize_mode": "aggressive",
+    }
+
+    config = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False)
+
+    assert config.nadirclaw.enabled is True
+    assert config.nadirclaw.simple_model == "google/gemini-2.5-flash-lite"
+    assert config.nadirclaw.mid_model == "openai/gpt-4o-mini"
+    assert config.nadirclaw.complex_model == "anthropic/claude-opus-5"
+    assert config.nadirclaw.tier_thresholds == (0.2, 0.8)
+    assert config.nadirclaw.cache_enabled is False
+    assert config.nadirclaw.cache_ttl == 60
+    assert config.nadirclaw.cache_max_size == 10
+    assert config.nadirclaw.context_optimize_mode == "aggressive"
+
+
 def test_rcconfig_from_dict_missing_fields_raises_value_error(tmp_path: Path):
     data = _valid_config_data()
     del data["runtime"]

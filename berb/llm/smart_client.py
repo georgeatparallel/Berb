@@ -87,10 +87,20 @@ class SmartLLMClient:
 
         # Initialize NadirClaw router if enabled
         if nadirclaw_config and nadirclaw_config.enabled:
+            # Empty string means "use the router's registry-derived default"
+            # (same convention as ModelsConfig) -- passing "" through would
+            # override a good default with an unusable empty model id.
+            model_overrides = {
+                name: value
+                for name, value in (
+                    ("simple_model", nadirclaw_config.simple_model),
+                    ("mid_model", nadirclaw_config.mid_model),
+                    ("complex_model", nadirclaw_config.complex_model),
+                )
+                if value
+            }
             self._router = NadirClawRouter(
-                simple_model=nadirclaw_config.simple_model,
-                mid_model=nadirclaw_config.mid_model,
-                complex_model=nadirclaw_config.complex_model,
+                **model_overrides,
                 tier_thresholds=nadirclaw_config.tier_thresholds,
                 cache_enabled=nadirclaw_config.cache_enabled,
                 cache_ttl=nadirclaw_config.cache_ttl,

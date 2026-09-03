@@ -223,3 +223,67 @@ def test_cascade_config_defaults_to_off() -> None:
 
     assert _parse_cascade_config({}) == LlmCascadeConfig()
     assert LlmCascadeConfig().enabled is False
+
+
+# ---------------------------------------------------------------------------
+# NadirClaw: config.nadirclaw was previously unreadable (RCConfig had no such
+# field), so create_llm_client's `hasattr(config, "nadirclaw")` check always
+# failed and the router never engaged through the standard client path.
+# ---------------------------------------------------------------------------
+
+
+def test_nadirclaw_config_parses_overrides() -> None:
+    from berb.config import _parse_nadirclaw_config
+
+    cfg = _parse_nadirclaw_config(
+        {
+            "enabled": True,
+            "simple_model": "google/gemini-2.5-flash-lite",
+            "tier_thresholds": [0.2, 0.8],
+            "cache_max_size": 10,
+        }
+    )
+    assert cfg.enabled is True
+    assert cfg.simple_model == "google/gemini-2.5-flash-lite"
+    assert cfg.tier_thresholds == (0.2, 0.8)
+    assert cfg.cache_max_size == 10
+
+
+def test_nadirclaw_config_defaults_to_off() -> None:
+    from berb.config import NadirClawConfig, _parse_nadirclaw_config
+
+    assert _parse_nadirclaw_config({}) == NadirClawConfig()
+    assert NadirClawConfig().enabled is False
+
+
+def test_create_llm_client_wires_nadirclaw_when_enabled(tmp_path) -> None:
+    """The regression this seam exists for: enabling nadirclaw in config must
+    actually produce a routing SmartLLMClient, not a plain LLMClient."""
+    from berb.config import RCConfig
+    from berb.llm import create_llm_client
+
+    from .test_berb_config import _valid_config_data
+
+    data = _valid_config_data()
+    data["nadirclaw"] = {"enabled": True}
+    config = RCConfig.from_dict(data, project_root=tmp_path, check_paths=False)
+
+    client = create_llm_client(config)
+
+    assert isinstance(client, SmartLLMClient)
+    assert client._nadirclaw_enabled is True
+    assert client._router is not None
+
+
+def test_create_llm_client_stays_plain_when_nadirclaw_disabled(tmp_path) -> None:
+    from berb.config import RCConfig
+    from berb.llm import create_llm_client
+    from berb.llm.client import LLMClient
+
+    from .test_berb_config import _valid_config_data
+
+    config = RCConfig.from_dict(_valid_config_data(), project_root=tmp_path, check_paths=False)
+
+    client = create_llm_client(config)
+
+    assert isinstance(client, LLMClient)

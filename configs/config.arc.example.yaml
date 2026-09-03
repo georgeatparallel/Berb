@@ -88,12 +88,13 @@ cascade:
 
 nadirclaw:
   enabled: true
-  
-  # Model tiers (cheapest to most expensive)
-  simple_model: "gemini/gemini-2.5-flash"      # ~$0.0002/1K tokens
-  mid_model: "openai/gpt-4o-mini"              # ~$0.015/1K tokens
-  complex_model: "anthropic/claude-sonnet-4-5-20250929"  # ~$0.03/1K tokens
-  
+
+  # Model tiers (cheapest to most expensive). Empty = use the registry's
+  # fast/literature/writing defaults (see berb/llm/nadirclaw_router.py).
+  simple_model: ""
+  mid_model: ""
+  complex_model: ""
+
   # Tier thresholds (0-1 scale)
   # simple: score < 0.3, mid: 0.3-0.7, complex: > 0.7
   tier_thresholds: [0.3, 0.7]
