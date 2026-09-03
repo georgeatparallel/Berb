@@ -9,7 +9,10 @@ from typing import Any
 
 import yaml
 
-from berb.llm.registry import ModelsConfig
+from berb.llm.registry import ModelsConfig, bare, resolve
+
+# Nano Banana talks to Google's GenAI API, which wants the unprefixed id.
+_DEFAULT_IMAGE_MODEL = bare(resolve("image_gen"))
 
 DEFAULT_PYTHON_PATH = ".venv/Scripts/python.exe" if sys.platform == "win32" else ".venv/bin/python3"
 
@@ -555,7 +558,7 @@ class FigureAgentConfig:
     output_format: str = "python"  # "python" (matplotlib) or "latex" (TikZ/PGFPlots)
     # Nano Banana (Gemini image generation)
     gemini_api_key: str = ""  # or set GEMINI_API_KEY / GOOGLE_API_KEY env var
-    gemini_model: str = "gemini-2.5-flash-image"
+    gemini_model: str = _DEFAULT_IMAGE_MODEL
     nano_banana_enabled: bool = True  # enable/disable Gemini image generation
     # Critic
     strict_mode: bool = False
@@ -1509,7 +1512,7 @@ def _parse_figure_agent_config(data: dict[str, Any]) -> FigureAgentConfig:
         docker_image=data.get("docker_image", "berb/experiment:latest"),
         output_format=data.get("output_format", "python"),
         gemini_api_key=data.get("gemini_api_key", ""),
-        gemini_model=data.get("gemini_model", "gemini-2.5-flash-image"),
+        gemini_model=data.get("gemini_model") or _DEFAULT_IMAGE_MODEL,
         nano_banana_enabled=bool(data.get("nano_banana_enabled", True)),
         strict_mode=bool(data.get("strict_mode", False)),
         vision_model=str(data.get("vision_model", "") or ""),

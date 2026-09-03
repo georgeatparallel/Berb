@@ -46,6 +46,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
+from berb.llm.registry import price_sorted_chain, resolve
+
 logger = logging.getLogger(__name__)
 
 __all__ = [
@@ -343,6 +345,26 @@ _WRITING_STAGES = frozenset({"PAPER_OUTLINE", "PAPER_DRAFT"})
 _CRITICAL_STAGES = frozenset({"PEER_REVIEW", "QUALITY_GATE", "CITATION_VERIFY"})
 
 
+def _two_rung(task: str, *, first_min_score: float) -> CascadeConfig:
+    """Cheapest model in *task*'s chain, escalating to that task's primary.
+
+    Both ends come from the registry: the ordering uses catalogue prices, the
+    membership uses the task profile. Nothing here names a model. When the
+    cheapest model *is* the primary the cascade collapses to a single
+    always-accept rung, which is the honest result — there is nothing to save.
+    """
+    cheapest = price_sorted_chain(task)[0]
+    primary = resolve(task)
+    if cheapest == primary:
+        return CascadeConfig(cascade=(CascadeStep(primary, min_score=0.0),))
+    return CascadeConfig(
+        cascade=(
+            CascadeStep(cheapest, min_score=first_min_score),
+            CascadeStep(primary, min_score=0.0),
+        )
+    )
+
+
 def get_cascade_for_stage(stage_name: str) -> CascadeConfig:
     """Return a suggested cascade shape for a pipeline stage.
 
@@ -355,33 +377,14 @@ def get_cascade_for_stage(stage_name: str) -> CascadeConfig:
     """
     name = stage_name.upper()
 
-    if name in _SIMPLE_STAGES:
-        return CascadeConfig(
-            cascade=(
-                CascadeStep("deepseek/deepseek-v3.2", min_score=0.70),
-                CascadeStep("anthropic/claude-sonnet-4.6", min_score=0.0),
-            )
-        )
-    if name in _REASONING_STAGES:
-        return CascadeConfig(
-            cascade=(
-                CascadeStep("anthropic/claude-sonnet-4.6", min_score=0.80),
-                CascadeStep("anthropic/claude-opus-4.6", min_score=0.0),
-            )
-        )
-    if name in _WRITING_STAGES:
-        return CascadeConfig(
-            cascade=(
-                CascadeStep("deepseek/deepseek-v3.2", min_score=0.75),
-                CascadeStep("anthropic/claude-sonnet-4.6", min_score=0.0),
-            )
-        )
     if name in _CRITICAL_STAGES:
-        return CascadeConfig(cascade=(CascadeStep("anthropic/claude-sonnet-4.6", min_score=0.0),))
-
-    return CascadeConfig(
-        cascade=(
-            CascadeStep("deepseek/deepseek-v3.2", min_score=0.75),
-            CascadeStep("anthropic/claude-sonnet-4.6", min_score=0.0),
-        )
-    )
+        # One premium rung, no cascade: escalating a peer review to save
+        # cents is a bad trade.
+        return CascadeConfig(cascade=(CascadeStep(resolve("review"), min_score=0.0),))
+    if name in _SIMPLE_STAGES:
+        return _two_rung("literature", first_min_score=0.70)
+    if name in _REASONING_STAGES:
+        return _two_rung("reasoning", first_min_score=0.80)
+    if name in _WRITING_STAGES:
+        return _two_rung("writing", first_min_score=0.75)
+    return _two_rung("writing", first_min_score=0.75)

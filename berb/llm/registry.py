@@ -78,7 +78,10 @@ TASK_PROFILES: dict[str, TaskProfile] = {
     ),
     "image_gen": TaskProfile(
         primary="google/gemini-2.5-flash-image",
-        fallbacks=(),
+        fallbacks=(
+            "google/gemini-3.1-flash-image-preview",
+            "google/gemini-3-pro-image-preview",
+        ),
         temperature=1.0,
     ),
 }
@@ -88,10 +91,33 @@ TASK_PROFILES: dict[str, TaskProfile] = {
 # the reasoning family, NOT of the vendor: openai/gpt-4o accepts temperature
 # normally. Matched by pattern so newly-added o-series and reasoning
 # variants are covered without editing this list.
+# The ``openai/`` prefix is optional throughout: OpenRouter uses the slug
+# form, while a direct OpenAI base_url takes the bare id ("o3"). Both reach
+# the same model and both must be recognised.
 _FIXED_TEMPERATURE_PATTERNS: tuple[re.Pattern[str], ...] = (
-    re.compile(r"^openai/o\d"),  # o1, o3, o3-mini, o4-mini, ...
-    re.compile(r"^openai/gpt-5.*(-pro|-codex)"),  # gpt-5 reasoning variants
+    re.compile(r"^(?:openai/)?o\d"),  # o1, o3, o3-mini, o4-mini, ...
+    re.compile(r"^(?:openai/)?gpt-5.*(-pro|-codex)"),  # gpt-5 reasoning variants
 )
+
+# Reasoning models also renamed the output-budget field: they take
+# ``max_completion_tokens`` and reject ``max_tokens``.
+_MAX_COMPLETION_TOKENS_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(r"^(?:openai/)?o\d"),
+    re.compile(r"^(?:openai/)?gpt-5"),
+)
+
+
+def bare(model_id: str) -> str:
+    """Strip the ``provider/`` slug prefix from *model_id*.
+
+    Registry ids are OpenRouter slugs. Callers that talk to a vendor's own
+    API (Google GenAI, for one) need the unprefixed id the vendor expects.
+    """
+    return model_id.split("/", 1)[-1]
+
+
+def _normalize(model_id: str) -> str:
+    return model_id.split(":", 1)[0]  # drop :batch / :free variant suffix
 
 
 def model_pins_temperature(model_id: str) -> bool:
@@ -100,8 +126,14 @@ def model_pins_temperature(model_id: str) -> bool:
     Callers must omit the field entirely for these models; sending even the
     model's own effective value is rejected by the API.
     """
-    base = model_id.split(":", 1)[0]  # drop :batch / :free variant suffix
+    base = _normalize(model_id)
     return any(p.search(base) for p in _FIXED_TEMPERATURE_PATTERNS)
+
+
+def model_uses_max_completion_tokens(model_id: str) -> bool:
+    """True when *model_id* wants ``max_completion_tokens``, not ``max_tokens``."""
+    base = _normalize(model_id)
+    return any(p.search(base) for p in _MAX_COMPLETION_TOKENS_PATTERNS)
 
 
 @dataclass(frozen=True)
@@ -158,6 +190,23 @@ def resolve_chain(task: str, cfg: RCConfig | None = None) -> tuple[str, ...]:
     return profile.chain
 
 
+def price_sorted_chain(task: str, cfg: RCConfig | None = None) -> tuple[str, ...]:
+    """*task*'s chain reordered cheapest-input-price first.
+
+    Prices come from the catalogue, which is their SSOT — this function adds
+    no price data of its own. Models the catalogue does not list sort last
+    rather than being dropped, so an unknown id never silently disappears
+    from a chain.
+    """
+    from berb.llm.openrouter_models_data import OPENROUTER_MODELS
+
+    def key(model_id: str) -> tuple[int, float]:
+        entry = OPENROUTER_MODELS.get(model_id)
+        return (1, 0.0) if entry is None else (0, entry.input_price)
+
+    return tuple(sorted(resolve_chain(task, cfg), key=key))
+
+
 def temperature_for(task: str, model_id: str, cfg: RCConfig | None = None) -> float | None:
     """Sampling temperature for *task*, or None if *model_id* forbids one.
 
@@ -177,7 +226,10 @@ __all__ = [
     "TASK_PROFILES",
     "ModelsConfig",
     "TaskProfile",
+    "bare",
     "model_pins_temperature",
+    "model_uses_max_completion_tokens",
+    "price_sorted_chain",
     "resolve",
     "resolve_chain",
     "temperature_for",

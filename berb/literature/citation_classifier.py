@@ -22,6 +22,12 @@ from enum import StrEnum
 from pydantic import BaseModel, Field
 
 from berb.llm.client import LLMProvider, LLMResponse
+from berb.llm.registry import resolve
+
+# Citation classification is high-volume, low-judgement extraction — the
+# "literature" profile's throughput model. Resolved once at import so the
+# three defaults below cannot drift apart.
+_DEFAULT_MODEL = resolve("literature")
 
 logger = logging.getLogger(__name__)
 
@@ -153,7 +159,7 @@ Be conservative with confidence scores. Only assign high confidence (>0.8) when 
     def __init__(
         self,
         llm_provider: LLMProvider | None = None,
-        model: str = "gemini-2.5-flash",  # Budget model for throughput
+        model: str = _DEFAULT_MODEL,
         min_confidence: float = 0.7,
     ):
         """Initialize citation classifier.
@@ -472,7 +478,7 @@ class CitationClassifierConfig(BaseModel):
     """
 
     enabled: bool = True
-    classifier_model: str = "gemini-2.5-flash"
+    classifier_model: str = _DEFAULT_MODEL
     min_confidence: float = 0.7
     classify_top_n_papers: int = 50
     inject_into_writing: bool = True
@@ -481,7 +487,7 @@ class CitationClassifierConfig(BaseModel):
 async def classify_citations(
     citations: list[tuple[str, str, str, str]],
     llm_provider: LLMProvider | None = None,
-    model: str = "gemini-2.5-flash",
+    model: str = _DEFAULT_MODEL,
 ) -> list[CitationClassification]:
     """Convenience function to classify citations.
 

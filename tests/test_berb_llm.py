@@ -11,12 +11,13 @@ from typing import Any
 import pytest
 
 from berb.llm.client import (
-    _NEW_PARAM_MODELS,
-    _NO_TEMPERATURE_MODELS,
     LLMClient,
     LLMConfig,
     LLMResponse,
+    _default_fallbacks,
+    _default_model,
 )
+from berb.llm.registry import model_uses_max_completion_tokens
 
 
 class _DummyHTTPResponse:
@@ -76,7 +77,9 @@ def _capture_raw_call(
 
 def test_llm_config_defaults():
     config = LLMConfig(base_url="https://api.example.com/v1", api_key="k")
-    assert config.primary_model == "gpt-4o"
+    # Not a literal: the bare default is whatever the registry's "writing"
+    # profile resolves to. See test_client_defaults_come_from_the_registry.
+    assert config.primary_model == _default_model()
     assert config.max_tokens == 4096
     assert config.temperature == 0.7
 
@@ -127,13 +130,11 @@ def test_llm_client_model_chain_is_primary_plus_fallbacks():
 
 
 def test_needs_max_completion_tokens_for_new_models():
-    model = "gpt-5.2"
-    assert any(model.startswith(prefix) for prefix in _NEW_PARAM_MODELS)
+    assert model_uses_max_completion_tokens("gpt-5.2")
 
 
 def test_needs_max_completion_tokens_false_for_old_models():
-    model = "gpt-4o"
-    assert not any(model.startswith(prefix) for prefix in _NEW_PARAM_MODELS)
+    assert not model_uses_max_completion_tokens("gpt-4o")
 
 
 def test_build_request_body_structure_via_raw_call(monkeypatch: pytest.MonkeyPatch):
@@ -677,13 +678,33 @@ def test_acp_windows_cmd_wrapper_uses_lower_inline_limit(
     assert limit == ACPClient._MAX_CMD_WRAPPER_PROMPT_BYTES
 
 
-def test_new_param_models_contains_expected_models():
-    expected = {"gpt-5", "gpt-5.1", "gpt-5.2", "gpt-5.4", "o3", "o3-mini", "o4-mini"}
-    assert expected.issubset(_NEW_PARAM_MODELS)
+@pytest.mark.parametrize(
+    "model", ["gpt-5", "gpt-5.1", "gpt-5.2", "gpt-5.4", "o3", "o3-mini", "o4-mini"]
+)
+def test_new_param_models_contains_expected_models(model: str):
+    """The literal set this replaced; the registry must still cover all of it."""
+    assert model_uses_max_completion_tokens(model)
 
 
-def test_no_temperature_models_only_contains_o_series_models():
-    assert _NO_TEMPERATURE_MODELS == frozenset({"o3", "o3-mini", "o4-mini"})
+@pytest.mark.parametrize("model", ["o3", "o3-mini", "o4-mini"])
+def test_o_series_models_reject_temperature(model: str):
+    assert not LLMClient._supports_temperature(model)
+
+
+@pytest.mark.parametrize("model", ["gpt-4o", "gpt-4.1", "anthropic/claude-sonnet-5"])
+def test_chat_models_accept_temperature(model: str):
+    """The temperature pin is reasoning-family, not vendor-wide."""
+    assert LLMClient._supports_temperature(model)
+
+
+def test_client_defaults_come_from_the_registry():
+    """LLMConfig's bare defaults must be the registry's, not a private literal."""
+    from berb.llm.registry import resolve_chain
+
+    chain = resolve_chain("writing")
+    config = LLMConfig(base_url="https://example.invalid/v1", api_key="k")
+    assert config.primary_model == chain[0] == _default_model()
+    assert config.fallback_models == list(chain[1:]) == _default_fallbacks()
 
 
 def test_raw_call_adds_json_mode_response_format(monkeypatch: pytest.MonkeyPatch):

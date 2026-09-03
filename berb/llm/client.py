@@ -25,6 +25,11 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
+from berb.llm.registry import (
+    model_pins_temperature,
+    model_uses_max_completion_tokens,
+    resolve_chain,
+)
 from berb.llm.vision import (
     content_to_text,
     ensure_vision_capable,
@@ -124,26 +129,26 @@ def validate_model_for_provider(model: str, provider: LLMProvider) -> bool:
     return extracted == provider
 
 
-# Models that require max_completion_tokens instead of max_tokens
-_NEW_PARAM_MODELS = frozenset(
-    {
-        "o3",
-        "o3-mini",
-        "o4-mini",
-        "gpt-5",
-        "gpt-5.1",
-        "gpt-5.2",
-        "gpt-5.4",
-    }
-)
+# Which models take max_completion_tokens instead of max_tokens, and which
+# reject an explicit temperature, are reasoning-family traits owned by
+# berb.llm.registry. They were duplicated here as literal id sets; the
+# registry matches by pattern, so a newly-released o-series or gpt-5 variant
+# is handled without editing a list.
 
-_NO_TEMPERATURE_MODELS = frozenset(
-    {
-        "o3",
-        "o3-mini",
-        "o4-mini",
-    }
-)
+# The client's own default is general-purpose prose work, so it borrows the
+# "writing" profile — matching LLMConfig.temperature's 0.7. Reached only when
+# neither the config file nor the caller names a model.
+_DEFAULT_TASK = "writing"
+
+
+def _default_model() -> str:
+    """Model used when no configuration supplies one."""
+    return resolve_chain(_DEFAULT_TASK)[0]
+
+
+def _default_fallbacks() -> list[str]:
+    """Fallback chain used when no configuration supplies one."""
+    return list(resolve_chain(_DEFAULT_TASK)[1:])
 
 _DEFAULT_USER_AGENT = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -174,8 +179,8 @@ class LLMConfig:
     base_url: str
     api_key: str
     wire_api: str = "chat_completions"
-    primary_model: str = "gpt-4o"
-    fallback_models: list[str] = field(default_factory=lambda: ["gpt-4.1", "gpt-4o-mini"])
+    primary_model: str = field(default_factory=_default_model)
+    fallback_models: list[str] = field(default_factory=_default_fallbacks)
     max_tokens: int = 4096
     temperature: float = 0.7
     max_retries: int = 3
@@ -487,7 +492,7 @@ class LLMClient:
 
     @staticmethod
     def _supports_temperature(model: str) -> bool:
-        return not any(model.startswith(prefix) for prefix in _NO_TEMPERATURE_MODELS)
+        return not model_pins_temperature(model)
 
     @classmethod
     def from_rc_config(cls, rc_config: Any, circuit_breaker_enabled: bool = True) -> LLMClient:
@@ -547,7 +552,7 @@ class LLMClient:
             base_url=base_url,
             api_key=api_key,
             wire_api=getattr(rc_config.llm, "wire_api", "chat_completions"),
-            primary_model=rc_config.llm.primary_model or "gpt-4o",
+            primary_model=rc_config.llm.primary_model or _default_model(),
             fallback_models=model_chain_fallbacks,
             fallback_url=fallback_url,
             fallback_api_key=fallback_api_key,
@@ -704,7 +709,7 @@ class LLMClient:
         Distinguishes: 401 (bad key), 403 (model forbidden),
                        404 (bad endpoint), 429 (rate limited), timeout.
         """
-        is_reasoning = any(self.config.primary_model.startswith(p) for p in _NEW_PARAM_MODELS)
+        is_reasoning = model_uses_max_completion_tokens(self.config.primary_model)
         min_tokens = 64 if is_reasoning else 1
         try:
             _ = self.chat(
@@ -920,7 +925,7 @@ class LLMClient:
                     body["temperature"] = _temp
 
                 # Use correct token parameter based on model
-                if any(model.startswith(prefix) for prefix in _NEW_PARAM_MODELS):
+                if model_uses_max_completion_tokens(model):
                     reasoning_min = 32768
                     body["max_completion_tokens"] = max(max_tokens, reasoning_min)
                 else:
@@ -1237,8 +1242,8 @@ def create_client_from_yaml(yaml_path: str | None = None) -> LLMClient:
             base_url=llm_section.get("base_url", "https://api.openai.com/v1"),
             api_key=api_key,
             wire_api=llm_section.get("wire_api", "chat_completions"),
-            primary_model=llm_section.get("primary_model", "gpt-4o"),
-            fallback_models=llm_section.get("fallback_models", ["gpt-4.1", "gpt-4o-mini"]),
+            primary_model=llm_section.get("primary_model") or _default_model(),
+            fallback_models=llm_section.get("fallback_models") or _default_fallbacks(),
             max_retries=int(llm_section.get("max_retries", 3)),
         )
     )
@@ -1326,7 +1331,7 @@ class MultiProviderLLMClient:
                 model_overrides.get(fallback_provider)
                 or preset.get("default_model")
                 or rc_config.llm.primary_model
-                or "gpt-4o"
+                or _default_model()
             )
             # OpenRouter-style fallback_models (e.g. "qwen/qwen3.5-flash") only
             # resolve against OpenRouter's own model catalog — reusing them

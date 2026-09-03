@@ -80,32 +80,12 @@ OPENROUTER_MODELS: dict[str, OpenRouterModel] = {
         supports_vision=True,
         tier="premium",
     ),
-    "anthropic/claude-opus-4.7-fast": OpenRouterModel(
-        id="anthropic/claude-opus-4.7-fast",
-        name="Claude Opus 4.7 Fast",
-        provider="anthropic",
-        input_price=30.00,
-        output_price=150.00,
-        context_length=1_000_000,
-        supports_vision=True,
-        tier="premium",
-    ),
     "anthropic/claude-opus-4.8": OpenRouterModel(
         id="anthropic/claude-opus-4.8",
         name="Claude Opus 4.8",
         provider="anthropic",
         input_price=5.00,
         output_price=25.00,
-        context_length=1_000_000,
-        supports_vision=True,
-        tier="premium",
-    ),
-    "anthropic/claude-opus-4.8-fast": OpenRouterModel(
-        id="anthropic/claude-opus-4.8-fast",
-        name="Claude Opus 4.8 Fast",
-        provider="anthropic",
-        input_price=10.00,
-        output_price=50.00,
         context_length=1_000_000,
         supports_vision=True,
         tier="premium",
@@ -1065,15 +1045,6 @@ OPENROUTER_MODELS: dict[str, OpenRouterModel] = {
     # ===========================================================================
     # AI21
     # ===========================================================================
-    "ai21/jamba-large-1.7": OpenRouterModel(
-        id="ai21/jamba-large-1.7",
-        name="Jamba Large 1.7",
-        provider="ai21",
-        input_price=2.0,
-        output_price=8.0,
-        context_length=256000,
-        tier="mid",
-    ),
     # ===========================================================================
     # AION LABS
     # ===========================================================================
@@ -1117,15 +1088,6 @@ OPENROUTER_MODELS: dict[str, OpenRouterModel] = {
     # ===========================================================================
     # ALLENAI
     # ===========================================================================
-    "allenai/olmo-3-32b-think": OpenRouterModel(
-        id="allenai/olmo-3-32b-think",
-        name="Olmo 3 32B Think",
-        provider="allenai",
-        input_price=0.15,
-        output_price=0.5,
-        context_length=65536,
-        tier="budget",
-    ),
     # ===========================================================================
     # AMAZON
     # ===========================================================================
@@ -1197,16 +1159,6 @@ OPENROUTER_MODELS: dict[str, OpenRouterModel] = {
         supports_vision=True,
         tier="premium",
     ),
-    "anthropic/claude-opus-5-fast": OpenRouterModel(
-        id="anthropic/claude-opus-5-fast",
-        name="Claude Opus 5 (Fast)",
-        provider="anthropic",
-        input_price=10.0,
-        output_price=50.0,
-        context_length=1000000,
-        supports_vision=True,
-        tier="premium",
-    ),
     "anthropic/claude-sonnet-4": OpenRouterModel(
         id="anthropic/claude-sonnet-4",
         name="Claude Sonnet 4",
@@ -1239,16 +1191,6 @@ OPENROUTER_MODELS: dict[str, OpenRouterModel] = {
         output_price=0.85,
         context_length=262144,
         tier="budget",
-    ),
-    "arcee-ai/virtuoso-large": OpenRouterModel(
-        id="arcee-ai/virtuoso-large",
-        name="Virtuoso Large",
-        provider="arcee-ai",
-        input_price=0.75,
-        output_price=1.2,
-        context_length=131072,
-        supports_json=False,
-        tier="mid",
     ),
     # ===========================================================================
     # BAIDU
@@ -1365,15 +1307,6 @@ OPENROUTER_MODELS: dict[str, OpenRouterModel] = {
     # ===========================================================================
     # DEEPCOGITO
     # ===========================================================================
-    "deepcogito/cogito-v2.1-671b": OpenRouterModel(
-        id="deepcogito/cogito-v2.1-671b",
-        name="Cogito v2.1 671B",
-        provider="deepcogito",
-        input_price=1.25,
-        output_price=1.25,
-        context_length=128000,
-        tier="mid",
-    ),
     # ===========================================================================
     # DEEPSEEK
     # ===========================================================================
@@ -1613,15 +1546,6 @@ OPENROUTER_MODELS: dict[str, OpenRouterModel] = {
         supports_vision=True,
         tier="budget",
     ),
-    "google/gemma-3n-e4b-it": OpenRouterModel(
-        id="google/gemma-3n-e4b-it",
-        name="Gemma 3n 4B",
-        provider="google",
-        input_price=0.06,
-        output_price=0.12,
-        context_length=32768,
-        tier="budget",
-    ),
     "google/gemma-4-26b-a4b-it:free": OpenRouterModel(
         id="google/gemma-4-26b-a4b-it:free",
         name="Gemma 4 26B A4B  (free)",
@@ -1710,55 +1634,9 @@ OPENROUTER_MODELS: dict[str, OpenRouterModel] = {
     # ===========================================================================
     # INCLUSIONAI
     # ===========================================================================
-    "inclusionai/ling-2.6-1t": OpenRouterModel(
-        id="inclusionai/ling-2.6-1t",
-        name="Ling-2.6-1T",
-        provider="inclusionai",
-        input_price=0.075,
-        output_price=0.625,
-        context_length=262144,
-        tier="budget",
-    ),
-    "inclusionai/ling-2.6-flash": OpenRouterModel(
-        id="inclusionai/ling-2.6-flash",
-        name="Ling-2.6-flash",
-        provider="inclusionai",
-        input_price=0.01,
-        output_price=0.03,
-        context_length=262144,
-        tier="budget",
-    ),
-    "inclusionai/ling-3.0-flash:free": OpenRouterModel(
-        id="inclusionai/ling-3.0-flash:free",
-        name="Ling-3.0-flash (free)",
-        provider="inclusionai",
-        input_price=0.0,
-        output_price=0.0,
-        context_length=262144,
-        supports_json=False,
-        tier="budget",
-    ),
-    "inclusionai/ring-2.6-1t": OpenRouterModel(
-        id="inclusionai/ring-2.6-1t",
-        name="Ring-2.6-1T",
-        provider="inclusionai",
-        input_price=0.075,
-        output_price=0.625,
-        context_length=262144,
-        tier="budget",
-    ),
     # ===========================================================================
     # KWAIPILOT
     # ===========================================================================
-    "kwaipilot/kat-coder-air-v2.5": OpenRouterModel(
-        id="kwaipilot/kat-coder-air-v2.5",
-        name="KAT-Coder-Air V2.5",
-        provider="kwaipilot",
-        input_price=0.15,
-        output_price=0.6,
-        context_length=256000,
-        tier="budget",
-    ),
     "kwaipilot/kat-coder-pro-v2": OpenRouterModel(
         id="kwaipilot/kat-coder-pro-v2",
         name="KAT-Coder-Pro V2",
@@ -2212,16 +2090,6 @@ OPENROUTER_MODELS: dict[str, OpenRouterModel] = {
         context_length=262144,
         tier="budget",
     ),
-    "nvidia/nemotron-3-nano-30b-a3b:free": OpenRouterModel(
-        id="nvidia/nemotron-3-nano-30b-a3b:free",
-        name="Nemotron 3 Nano 30B A3B (free)",
-        provider="nvidia",
-        input_price=0.0,
-        output_price=0.0,
-        context_length=256000,
-        supports_json=False,
-        tier="budget",
-    ),
     "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free": OpenRouterModel(
         id="nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
         name="Nemotron 3 Nano Omni (free)",
@@ -2270,26 +2138,6 @@ OPENROUTER_MODELS: dict[str, OpenRouterModel] = {
         context_length=128000,
         supports_vision=True,
         supports_json=False,
-        tier="budget",
-    ),
-    "nvidia/nemotron-nano-12b-v2-vl:free": OpenRouterModel(
-        id="nvidia/nemotron-nano-12b-v2-vl:free",
-        name="Nemotron Nano 12B 2 VL (free)",
-        provider="nvidia",
-        input_price=0.0,
-        output_price=0.0,
-        context_length=128000,
-        supports_vision=True,
-        supports_json=False,
-        tier="budget",
-    ),
-    "nvidia/nemotron-nano-9b-v2:free": OpenRouterModel(
-        id="nvidia/nemotron-nano-9b-v2:free",
-        name="Nemotron Nano 9B V2 (free)",
-        provider="nvidia",
-        input_price=0.0,
-        output_price=0.0,
-        context_length=128000,
         tier="budget",
     ),
     # ===========================================================================
@@ -2479,16 +2327,6 @@ OPENROUTER_MODELS: dict[str, OpenRouterModel] = {
         supports_vision=True,
         tier="premium",
     ),
-    "openai/gpt-5.3-chat": OpenRouterModel(
-        id="openai/gpt-5.3-chat",
-        name="GPT-5.3 Chat",
-        provider="openai",
-        input_price=1.75,
-        output_price=14.0,
-        context_length=128000,
-        supports_vision=True,
-        tier="mid",
-    ),
     "openai/gpt-5.3-codex": OpenRouterModel(
         id="openai/gpt-5.3-codex",
         name="GPT-5.3-Codex",
@@ -2612,15 +2450,6 @@ OPENROUTER_MODELS: dict[str, OpenRouterModel] = {
         provider="openai",
         input_price=0.03,
         output_price=0.13,
-        context_length=131072,
-        tier="budget",
-    ),
-    "openai/gpt-oss-20b:free": OpenRouterModel(
-        id="openai/gpt-oss-20b:free",
-        name="gpt-oss-20b (free)",
-        provider="openai",
-        input_price=0.0,
-        output_price=0.0,
         context_length=131072,
         tier="budget",
     ),
@@ -2837,15 +2666,6 @@ OPENROUTER_MODELS: dict[str, OpenRouterModel] = {
         provider="qwen",
         input_price=0.26,
         output_price=0.78,
-        context_length=1000000,
-        tier="budget",
-    ),
-    "qwen/qwen-plus-2025-07-28:thinking": OpenRouterModel(
-        id="qwen/qwen-plus-2025-07-28:thinking",
-        name="Qwen Plus 0728 (thinking)",
-        provider="qwen",
-        input_price=0.4,
-        output_price=1.2,
         context_length=1000000,
         tier="budget",
     ),
@@ -3236,15 +3056,6 @@ OPENROUTER_MODELS: dict[str, OpenRouterModel] = {
         input_price=0.3,
         output_price=0.5,
         context_length=131072,
-        tier="budget",
-    ),
-    "thedrummer/rocinante-12b": OpenRouterModel(
-        id="thedrummer/rocinante-12b",
-        name="Rocinante 12B",
-        provider="thedrummer",
-        input_price=0.25,
-        output_price=0.5,
-        context_length=65536,
         tier="budget",
     ),
     "thedrummer/skyfall-36b-v2": OpenRouterModel(

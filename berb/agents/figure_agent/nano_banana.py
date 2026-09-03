@@ -33,6 +33,7 @@ from pathlib import Path
 from typing import Any
 
 from berb.agents.base import AgentStepResult, BaseAgent
+from berb.llm.registry import bare, resolve_chain
 from berb.utils.sanitize import sanitize_figure_id
 
 logger = logging.getLogger(__name__)
@@ -41,12 +42,12 @@ logger = logging.getLogger(__name__)
 # Default config
 # ---------------------------------------------------------------------------
 
-_DEFAULT_MODEL = "gemini-2.5-flash-image"
-_FALLBACK_MODELS = [
-    "gemini-3.1-flash-image-preview",
-    "gemini-3-pro-image-preview",
-    "gemini-2.5-flash-image",
-]
+# This agent calls Google's GenAI API directly, which takes the unprefixed
+# model id — hence bare() over the registry's OpenRouter slugs. The chain
+# itself (which image model, in what order) is the registry's to own.
+_IMAGE_CHAIN = [bare(m) for m in resolve_chain("image_gen")]
+_DEFAULT_MODEL = _IMAGE_CHAIN[0]
+_FALLBACK_MODELS = _IMAGE_CHAIN[1:]
 
 _ACADEMIC_STYLE_PROMPT = (
     "The image should be in a clean, professional ACADEMIC style suitable "

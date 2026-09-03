@@ -23,6 +23,7 @@ from berb.agents.figure_agent.codegen import CodeGenAgent
 from berb.agents.figure_agent.critic import CriticAgent
 from berb.agents.figure_agent.decision import FigureDecisionAgent
 from berb.agents.figure_agent.integrator import IntegratorAgent
+from berb.agents.figure_agent.nano_banana import _DEFAULT_MODEL as _DEFAULT_IMAGE_MODEL
 from berb.agents.figure_agent.nano_banana import NanoBananaAgent
 from berb.agents.figure_agent.planner import PlannerAgent
 from berb.agents.figure_agent.renderer import RendererAgent
@@ -53,7 +54,8 @@ class FigureAgentConfig:
     output_format: str = "python"  # "python" or "latex"
     # Nano Banana (Gemini image generation)
     gemini_api_key: str = ""  # or set GEMINI_API_KEY env var
-    gemini_model: str = "gemini-2.5-flash-image"
+    # Bare (unprefixed) id: Nano Banana calls Google's GenAI API directly.
+    gemini_model: str = _DEFAULT_IMAGE_MODEL
     nano_banana_enabled: bool = True  # enable/disable image generation
     # Critic
     strict_mode: bool = False  # if True, any issue = fail

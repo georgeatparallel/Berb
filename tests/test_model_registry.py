@@ -14,7 +14,10 @@ from berb.llm.openrouter_models_data import OPENROUTER_MODELS
 from berb.llm.registry import (
     TASK_PROFILES,
     ModelsConfig,
+    bare,
     model_pins_temperature,
+    model_uses_max_completion_tokens,
+    price_sorted_chain,
     resolve,
     resolve_chain,
     temperature_for,
@@ -37,10 +40,8 @@ def test_vision_tasks_use_vision_capable_models(task: str) -> None:
         )
 
 
-def test_every_task_has_a_fallback_except_image_gen() -> None:
+def test_every_task_has_a_fallback() -> None:
     for task, profile in TASK_PROFILES.items():
-        if task == "image_gen":
-            continue
         assert profile.fallbacks, f"{task!r} has no fallback chain"
 
 
@@ -122,6 +123,54 @@ def test_parse_models_config_reads_yaml_block() -> None:
     assert cfg.fast == "openai/gpt-4o-mini"
     assert cfg.temperature_for("fast") == pytest.approx(0.25)
     assert cfg.literature == ""
+
+
+@pytest.mark.parametrize(
+    ("model_id", "expected"),
+    [
+        ("google/gemini-2.5-flash-image", "gemini-2.5-flash-image"),
+        ("gemini-2.5-flash-image", "gemini-2.5-flash-image"),  # already bare
+        ("openrouter/anthropic/claude-sonnet-5", "anthropic/claude-sonnet-5"),
+    ],
+)
+def test_bare_strips_one_provider_prefix(model_id: str, expected: str) -> None:
+    assert bare(model_id) == expected
+
+
+@pytest.mark.parametrize(
+    "model_id", ["o1", "o3", "o4-mini", "gpt-5", "gpt-5.4", "openai/o3", "openai/gpt-5.2"]
+)
+def test_reasoning_family_uses_max_completion_tokens(model_id: str) -> None:
+    assert model_uses_max_completion_tokens(model_id)
+
+
+@pytest.mark.parametrize("model_id", ["gpt-4o", "gpt-4.1", "anthropic/claude-opus-5"])
+def test_chat_models_use_max_tokens(model_id: str) -> None:
+    assert not model_uses_max_completion_tokens(model_id)
+
+
+def test_prefixed_and_bare_ids_agree_on_capabilities() -> None:
+    """A direct-OpenAI base_url passes bare ids; both forms must match."""
+    for bare_id in ("o3", "gpt-5-pro"):
+        assert model_pins_temperature(bare_id) == model_pins_temperature(f"openai/{bare_id}")
+
+
+@pytest.mark.parametrize("task", sorted(TASK_PROFILES))
+def test_price_sorted_chain_is_a_permutation_ordered_by_price(task: str) -> None:
+    from berb.llm.openrouter_models_data import OPENROUTER_MODELS
+
+    ordered = price_sorted_chain(task)
+    assert sorted(ordered) == sorted(TASK_PROFILES[task].chain)
+    prices = [OPENROUTER_MODELS[m].input_price for m in ordered]
+    assert prices == sorted(prices)
+
+
+def test_price_sorted_chain_keeps_uncatalogued_models_last() -> None:
+    """An unknown id must sort last, never vanish from the chain."""
+    cfg = _Cfg(ModelsConfig(fast="not-a-real/model"))
+    ordered = price_sorted_chain("fast", cfg)  # type: ignore[arg-type]
+    assert ordered[-1] == "not-a-real/model"
+    assert set(ordered) == {"not-a-real/model", *TASK_PROFILES["fast"].chain}
 
 
 def test_parse_models_config_ignores_unknown_task() -> None:

@@ -26,7 +26,18 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
+from berb.llm.registry import resolve
+
 logger = logging.getLogger(__name__)
+
+# Tier defaults come from the registry rather than literals. The complex tier
+# borrows "writing" (a capable general model), NOT "reasoning": this is a cost
+# router, and topping it out at the most expensive model in the catalogue
+# would defeat the point. Peer review reaches the premium tier through its own
+# task profile, not through here.
+_SIMPLE_DEFAULT = resolve("fast")
+_MID_DEFAULT = resolve("literature")
+_COMPLEX_DEFAULT = resolve("writing")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -443,9 +454,9 @@ class NadirClawRouter:
 
     def __init__(
         self,
-        simple_model: str = "qwen/qwen3.7-flash",
-        mid_model: str = "openai/gpt-4o-mini",
-        complex_model: str = "anthropic/claude-sonnet-4.6",
+        simple_model: str = _SIMPLE_DEFAULT,
+        mid_model: str = _MID_DEFAULT,
+        complex_model: str = _COMPLEX_DEFAULT,
         tier_thresholds: tuple[float, float] = (0.3, 0.7),
         cache_enabled: bool = True,
         cache_ttl: int = 3600,
