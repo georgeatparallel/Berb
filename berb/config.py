@@ -9,6 +9,8 @@ from typing import Any
 
 import yaml
 
+from berb.llm.registry import ModelsConfig
+
 DEFAULT_PYTHON_PATH = ".venv/Scripts/python.exe" if sys.platform == "win32" else ".venv/bin/python3"
 
 CONFIG_SEARCH_ORDER: tuple[str, ...] = ("config.arc.yaml", "config.yaml")
@@ -944,6 +946,7 @@ class RCConfig:
     knowledge_base: KnowledgeBaseConfig
     openclaw_bridge: OpenClawBridgeConfig
     llm: LlmConfig
+    models: ModelsConfig = field(default_factory=ModelsConfig)
     security: SecurityConfig = field(default_factory=SecurityConfig)
     integrity: IntegrityConfig = field(default_factory=IntegrityConfig)
     experiment: ExperimentConfig = field(default_factory=ExperimentConfig)
@@ -1008,6 +1011,7 @@ class RCConfig:
         knowledge_base = data["knowledge_base"]
         bridge = data.get("openclaw_bridge") or {}
         llm = data["llm"]
+        models_data = data.get("models") or {}
         security = data.get("security") or {}
         integrity = data.get("integrity") or {}
         experiment = data.get("experiment") or {}
@@ -1069,6 +1073,7 @@ class RCConfig:
                 use_browser=bool(bridge.get("use_browser", False)),
             ),
             llm=_parse_llm_config(llm),
+            models=_parse_models_config(models_data),
             security=SecurityConfig(
                 hitl_required_stages=tuple(
                     int(s) for s in security.get("hitl_required_stages", (5, 9, 20))
@@ -1321,6 +1326,32 @@ def validate_config(
                     warnings.append(f"Missing recommended kb subdir: {candidate}")
 
     return ValidationResult(ok=not errors, errors=tuple(errors), warnings=tuple(warnings))
+
+
+def _parse_models_config(data: dict[str, Any]) -> ModelsConfig:
+    """Parse the ``models:`` block into per-task model/temperature overrides."""
+    from berb.llm.registry import TASK_PROFILES
+
+    unknown = set(data) - set(TASK_PROFILES) - {"temperatures"}
+    if unknown:
+        import logging as _cfg_log
+
+        _cfg_log.getLogger(__name__).warning(
+            "Ignoring unknown models.* task(s): %s. Known tasks: %s",
+            ", ".join(sorted(unknown)),
+            ", ".join(sorted(TASK_PROFILES)),
+        )
+
+    temps_raw = data.get("temperatures") or {}
+    temps = tuple(
+        (task, _safe_float(value, TASK_PROFILES[task].temperature))
+        for task, value in temps_raw.items()
+        if task in TASK_PROFILES
+    )
+    return ModelsConfig(
+        **{task: str(data.get(task, "") or "") for task in TASK_PROFILES},
+        temperatures=temps,
+    )
 
 
 def _parse_llm_config(data: dict[str, Any]) -> LlmConfig:

@@ -128,6 +128,45 @@ llm:
     - "openai/gpt-4o-mini"
 
 # =============================================================================
+# Model Registry (SSOT for task-specific models)
+# =============================================================================
+# Override default VFM models per task. Leave empty to use pipeline defaults.
+# All models must exist in berb/llm/openrouter_models_data.py.
+# See tasks/vfm_model_research.md for cost/capability analysis.
+
+# Overriding a task replaces its primary model but KEEPS the curated
+# fallback chain behind it, so a task is never left without a safety net.
+# Defaults and fallback chains live in berb/llm/registry.py (TASK_PROFILES).
+
+models:
+  fast: ""            # default qwen/qwen3.7-flash        -> gemini-2.5-flash-lite, mistral-nemo
+  literature: ""      # default google/gemini-2.5-flash   -> qwen3.7-flash, gpt-4o-mini
+  reasoning: ""       # default anthropic/claude-opus-5   -> gpt-5.4, gemini-2.5-pro
+  code: ""            # default anthropic/claude-sonnet-5 -> gpt-4.1, qwen3.7-flash
+  writing: ""         # default anthropic/claude-sonnet-5 -> gpt-4.1, gemini-2.5-pro
+  review: ""          # default anthropic/claude-opus-5   -> gpt-5.4, claude-sonnet-5
+  vision: ""          # default google/gemini-2.5-flash   -> qwen3.7-flash, gemini-2.5-pro
+  image_gen: ""       # default google/gemini-2.5-flash-image
+
+  # Sampling temperature per task. Deterministic work (labels, code,
+  # extraction) sits near 0 because a resampled answer that differs is a bug;
+  # prose sits at 0.7; review sits at 0.6 because the ensemble WANTS its
+  # reviewers to disagree.
+  #
+  # Ignored for models that pin sampling internally: the OpenAI reasoning
+  # family (o1/o3/o4-mini, gpt-5 pro/codex) rejects the parameter outright,
+  # so Berb omits it for those. Note this is a reasoning-family trait, not an
+  # OpenAI-wide one -- openai/gpt-4o takes a temperature normally.
+  temperatures:
+    fast: 0.0
+    literature: 0.2
+    reasoning: 0.3
+    code: 0.1
+    writing: 0.7
+    review: 0.6
+    vision: 0.2
+
+# =============================================================================
 # Mnemo Cortex Memory Integration (NEW!)
 # =============================================================================
 
