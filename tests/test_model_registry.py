@@ -92,7 +92,9 @@ def test_reasoning_family_pins_temperature(model_id: str) -> None:
     assert temperature_for("reasoning", model_id) is None
 
 
-@pytest.mark.parametrize("model_id", ["openai/gpt-4o", "anthropic/claude-opus-5", "qwen/qwen3.7-flash"])
+@pytest.mark.parametrize(
+    "model_id", ["openai/gpt-4o", "anthropic/claude-opus-5", "qwen/qwen3.7-flash"]
+)
 def test_chat_models_accept_temperature(model_id: str) -> None:
     """The pin is a reasoning-family trait, not a vendor-wide one."""
     assert not model_pins_temperature(model_id)
@@ -117,9 +119,7 @@ def test_pinned_model_ignores_config_temperature_override() -> None:
 
 
 def test_parse_models_config_reads_yaml_block() -> None:
-    cfg = _parse_models_config(
-        {"fast": "openai/gpt-4o-mini", "temperatures": {"fast": 0.25}}
-    )
+    cfg = _parse_models_config({"fast": "openai/gpt-4o-mini", "temperatures": {"fast": 0.25}})
     assert cfg.fast == "openai/gpt-4o-mini"
     assert cfg.temperature_for("fast") == pytest.approx(0.25)
     assert cfg.literature == ""

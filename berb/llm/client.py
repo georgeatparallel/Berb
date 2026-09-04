@@ -150,6 +150,7 @@ def _default_fallbacks() -> list[str]:
     """Fallback chain used when no configuration supplies one."""
     return list(resolve_chain(_DEFAULT_TASK)[1:])
 
+
 _DEFAULT_USER_AGENT = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
     "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
