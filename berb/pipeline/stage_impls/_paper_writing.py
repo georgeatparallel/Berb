@@ -16,6 +16,7 @@ from berb.integrity import (
     ClaimRecord,
     ClaimType,
     ClaimVerdict,
+    check_causal_overclaim,
     detect_uncited,
     make_anchor,
     split_sentences,
@@ -2400,7 +2401,8 @@ Generated: {_utcnow_iso()}
     artifacts = ["paper_draft.md"]
     evidence_refs = ["stage-17/paper_draft.md"]
     try:
-        uncited_findings = detect_uncited(split_sentences(draft, source_label="paper_draft.md"))
+        _draft_sentences = split_sentences(draft, source_label="paper_draft.md")
+        uncited_findings = detect_uncited(_draft_sentences)
         if uncited_findings:
             (stage_dir / "uncited_findings.json").write_text(
                 json.dumps([f.to_dict() for f in uncited_findings], indent=2),
@@ -2412,8 +2414,23 @@ Generated: {_utcnow_iso()}
                 "Stage 17: %d uncited empirical assertion(s) flagged (advisory)",
                 len(uncited_findings),
             )
+
+        # Association-vs-causation overclaim screening. Advisory only —
+        # never fails the draft. See berb/integrity/causal_overclaim.py.
+        causal_findings = check_causal_overclaim(_draft_sentences)
+        if causal_findings:
+            (stage_dir / "causal_overclaim_findings.json").write_text(
+                json.dumps([f.to_dict() for f in causal_findings], indent=2),
+                encoding="utf-8",
+            )
+            artifacts.append("causal_overclaim_findings.json")
+            evidence_refs.append("stage-17/causal_overclaim_findings.json")
+            logger.info(
+                "Stage 17: %d causal-overclaim sentence(s) flagged (advisory)",
+                len(causal_findings),
+            )
     except Exception:
-        logger.debug("Could not run uncited-assertion screening", exc_info=True)
+        logger.debug("Could not run uncited-assertion/causal-overclaim screening", exc_info=True)
 
     # Validate draft quality (section balance + bullet density)
     _validate_draft_quality(draft, stage_dir=stage_dir)

@@ -9,6 +9,7 @@ from typing import Any
 
 from berb.adapters import AdapterBundle
 from berb.config import RCConfig
+from berb.integrity import check_hypothesis_lock
 from berb.llm.client import LLMClient
 from berb.pipeline._helpers import (
     StageResult,
@@ -644,6 +645,28 @@ Generated: {_utcnow_iso()}
     artifacts = ["analysis.md", "experiment_summary.json"]
     if (stage_dir / "results_table.tex").exists():
         artifacts.append("results_table.tex")
+
+    # Hypothesis-lock: advisory check that the analysis actually engages
+    # with the Stage 8 hypothesis. Never fails the stage — see
+    # berb/integrity/hypothesis_lock.py.
+    try:
+        _hypothesis_text = _read_prior_artifact(run_dir, "hypotheses.md") or ""
+        lock_findings = check_hypothesis_lock(
+            _hypothesis_text,
+            analysis,
+            tuple(exp_data["metrics_summary"].keys()),
+        )
+        if lock_findings:
+            (stage_dir / "hypothesis_lock_findings.json").write_text(
+                json.dumps([f.to_dict() for f in lock_findings], indent=2),
+                encoding="utf-8",
+            )
+            artifacts.append("hypothesis_lock_findings.json")
+            logger.warning(
+                "Stage 14: analysis shares no vocabulary with the stated hypothesis (advisory)"
+            )
+    except Exception:
+        logger.debug("Could not run hypothesis-lock screening", exc_info=True)
 
     # IMP-6 + FA: Generate charts early (Stage 14) so paper draft can reference them
     # Try FigureAgent first (multi-agent intelligent charts), fall back to visualize.py

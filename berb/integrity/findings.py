@@ -28,6 +28,17 @@ if TYPE_CHECKING:
 # text a downstream consumer could re-inject into a prompt.
 MAX_EVIDENCE_SPAN_CHARS = 300
 
+# The epistemic output contract: every screening check here is a heuristic
+# (see Severity docstrings) — a clean run means no configured check fired,
+# never that the paper is correct. Attach this wherever a run's final
+# checks-passed state reaches a human, so a clean report is never read as a
+# correctness proof. See berb/pipeline/packaging.py's deliverables manifest
+# for the current attachment point.
+EPISTEMIC_DISCLAIMER = (
+    "Absence of findings is not a guarantee of correctness. These are "
+    "heuristic screening checks, not a proof that the paper is correct."
+)
+
 
 class Severity(StrEnum):
     """How strongly a finding should be treated once surfaced.
@@ -68,6 +79,8 @@ class CheckId(StrEnum):
     CLAIM_STRENGTH_DRIFT = "claim_strength_drift"
     CROSS_MODEL_UNVERIFIED = "cross_model_unverified"
     REPORTING_GUIDELINE = "reporting_guideline"
+    CAUSAL_OVERCLAIM = "causal_overclaim"
+    HYPOTHESIS_LOCK = "hypothesis_lock"
 
 
 def _capped(spans: tuple[str, ...]) -> tuple[str, ...]:

@@ -15,6 +15,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from berb.config import RCConfig
+from berb.integrity import EPISTEMIC_DISCLAIMER
 
 logger = logging.getLogger(__name__)
 
@@ -241,12 +242,23 @@ def package_deliverables(
         dest.rmdir()
         return None
 
+    # --- 10. Reproducibility metadata (environment.yml, Dockerfile, git SHA) ---
+    try:
+        from dataclasses import asdict
+
+        from berb.audit.reproducibility import write_reproducibility_files
+
+        packaged.extend(write_reproducibility_files(dest, run_id, asdict(config)))
+    except Exception:
+        logger.debug("Reproducibility metadata generation skipped", exc_info=True)
+
     # --- Write manifest ---
     manifest = {
         "run_id": run_id,
         "target_conference": config.export.target_conference,
         "files": packaged,
         "generated": _utcnow_iso(),
+        "disclaimer": EPISTEMIC_DISCLAIMER,
     }
     (dest / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 

@@ -111,7 +111,6 @@ berb.writing.citation_engine         # Parked — revisit 2026-12-01 (strike 1).
 berb.integrations                    # Parked — revisit 2026-12-01 (strike 1). Un-park: a scite.ai API key becoming a supported configuration.
 berb.optimization                    # Parked — revisit 2026-12-01 (strike 1). Un-park: cost/quality routing adopted beyond the wired nadirclaw_router.
 berb.learning                        # Parked — revisit 2026-12-01 (strike 1). Un-park: multi-project runs; berb/evolution.py covers within-project lessons today.
-berb.audit                           # Parked — revisit 2026-12-01 (strike 1). Un-park: a reproducibility-package deliverable; pipeline/packaging.py collects artifacts but emits no environment.yml/Dockerfile.
 berb.llm.speculative_router          # Parked — revisit 2026-12-01 (strike 1). Un-park: speculative execution adopted. Duplicates the also-dead llm/speculative_gen.py — at most one should ever be un-parked.
 berb.voice.synthesizer               # Parked — revisit 2026-12-01 (strike 1). Un-park: voice output becoming a product feature.
 berb.llm.deepmind_client             # Parked — revisit 2026-12-01 (strike 1). Referenced from deep_query_client.py:21, so parked rather than deleted.
