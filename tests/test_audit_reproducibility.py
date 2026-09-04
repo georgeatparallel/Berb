@@ -15,7 +15,9 @@ from berb.audit.reproducibility import git_commit_sha, write_reproducibility_fil
 
 
 def test_write_reproducibility_files_writes_expected_set(tmp_path) -> None:
-    written = write_reproducibility_files(tmp_path, "run-123", {"export": {"target_conference": "neurips"}})
+    written = write_reproducibility_files(
+        tmp_path, "run-123", {"export": {"target_conference": "neurips"}}
+    )
 
     assert set(written) == {
         "environment.yml",

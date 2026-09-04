@@ -16,7 +16,9 @@ def test_causal_claim_over_correlational_evidence_fires() -> None:
 
 
 def test_causal_claim_over_association_wording_fires() -> None:
-    assert is_causal_overclaim("These results show that X causes Y, which is strongly associated with Z.")
+    assert is_causal_overclaim(
+        "These results show that X causes Y, which is strongly associated with Z."
+    )
 
 
 def test_causal_language_alone_is_silent() -> None:

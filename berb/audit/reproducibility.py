@@ -107,9 +107,7 @@ COPY . .
         "git_commit": git_commit_sha() or "unknown",
         "config": json.loads(json.dumps(config, default=str)),
     }
-    (output_dir / "metadata.json").write_text(
-        json.dumps(metadata, indent=2), encoding="utf-8"
-    )
+    (output_dir / "metadata.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
     written.append("metadata.json")
 
     return written

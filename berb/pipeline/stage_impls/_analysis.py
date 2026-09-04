@@ -663,8 +663,7 @@ Generated: {_utcnow_iso()}
             )
             artifacts.append("hypothesis_lock_findings.json")
             logger.warning(
-                "Stage 14: analysis shares no vocabulary with the stated "
-                "hypothesis (advisory)"
+                "Stage 14: analysis shares no vocabulary with the stated hypothesis (advisory)"
             )
     except Exception:
         logger.debug("Could not run hypothesis-lock screening", exc_info=True)
