@@ -1,0 +1,13 @@
+#!/bin/sh
+# Pre-commit hook: block plaintext API keys.
+#
+# core.hooksPath points here, which means .git/hooks/ is ignored entirely.
+# Keep the real logic in this directory, not there.
+
+if command -v python >/dev/null 2>&1; then
+    PY=python
+else
+    PY=python3
+fi
+
+exec "$PY" .githooks/pre-commit-api-key-scan.py
