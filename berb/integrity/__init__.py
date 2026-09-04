@@ -22,6 +22,10 @@ from .anchors import (
     strip_markers,
     verify_anchors,
 )
+from .causal_overclaim import (
+    check_causal_overclaim,
+    is_causal_overclaim,
+)
 from .claims import (
     ClaimManifest,
     ClaimRecord,
@@ -34,10 +38,14 @@ from .evidence import (
     EvidenceType,
 )
 from .findings import (
+    EPISTEMIC_DISCLAIMER,
     CheckId,
     Finding,
     Severity,
     gates,
+)
+from .hypothesis_lock import (
+    check_hypothesis_lock,
 )
 from .registry import (
     VerifiedEvidenceRegistry,
@@ -56,6 +64,7 @@ from .uncited import (
 )
 
 __all__ = [
+    "EPISTEMIC_DISCLAIMER",
     "MAX_ANCHOR_VALUE_CHARS",
     "Anchor",
     "AnchorKind",
@@ -73,10 +82,13 @@ __all__ = [
     "SentenceRef",
     "Severity",
     "VerifiedEvidenceRegistry",
+    "check_causal_overclaim",
+    "check_hypothesis_lock",
     "conserved_tokens",
     "detect_uncited",
     "find_claim_drift_candidates",
     "gates",
+    "is_causal_overclaim",
     "is_uncited_assertion",
     "make_anchor",
     "parse_markers",

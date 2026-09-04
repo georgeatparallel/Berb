@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import logging
+import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -27,6 +28,91 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
+
+
+def git_commit_sha() -> str | None:
+    """Best-effort git SHA of the Berb checkout that produced a run.
+
+    Returns None outside a git checkout or if git isn't on PATH — reproducibility
+    metadata should say "unknown" rather than fail the run over this.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            cwd=Path(__file__).resolve().parent,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return result.stdout.strip() if result.returncode == 0 else None
+
+
+def write_reproducibility_files(
+    output_dir: Path,
+    run_id: str,
+    config: dict[str, Any],
+) -> list[str]:
+    """Write environment.yml, requirements.txt, Dockerfile and metadata.json
+    into an existing deliverables directory.
+
+    Scoped to what's actually knowable at packaging time: Berb's own runtime
+    dependencies, the run's config, and the git commit that produced it.
+    Unlike :class:`ReproducibilityGenerator`, this does not fabricate cost,
+    trace or decision data package_deliverables has no real values for —
+    the real cost_report.json is written separately from the cost tracker
+    (see ``pipeline/runner.py``).
+
+    Returns the list of filenames written, relative to ``output_dir``.
+    """
+    written: list[str] = []
+
+    env_content = """name: berb-reproduction
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - pip:
+    - pyyaml>=6.0
+    - rich>=13.0
+    - pydantic>=2.0
+    - numpy>=1.24
+    - httpx>=0.24
+"""
+    (output_dir / "environment.yml").write_text(env_content, encoding="utf-8")
+    written.append("environment.yml")
+
+    req_content = "pyyaml>=6.0\nrich>=13.0\npydantic>=2.0\nnumpy>=1.24\nhttpx>=0.24\n"
+    (output_dir / "requirements.txt").write_text(req_content, encoding="utf-8")
+    written.append("requirements.txt")
+
+    dockerfile_content = """FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+"""
+    (output_dir / "Dockerfile").write_text(dockerfile_content, encoding="utf-8")
+    written.append("Dockerfile")
+
+    metadata = {
+        "run_id": run_id,
+        "generated": datetime.now(UTC).isoformat(timespec="seconds"),
+        "git_commit": git_commit_sha() or "unknown",
+        "config": json.loads(json.dumps(config, default=str)),
+    }
+    (output_dir / "metadata.json").write_text(
+        json.dumps(metadata, indent=2), encoding="utf-8"
+    )
+    written.append("metadata.json")
+
+    return written
 
 
 class ReproducibilityPackage(BaseModel):
