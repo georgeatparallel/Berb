@@ -27,14 +27,20 @@ VENDOR_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("Slack token", re.compile(r"xox[baprs]-[0-9A-Za-z\-]{10,}")),
 )
 
-# key = "value" / key: "value", quoted or bare.
+# key = "value" / key: "value". The quotes are REQUIRED: an unquoted value is
+# an identifier or expression (api_key=config.api_key, os.environ.get(...)),
+# never a plaintext secret. Matching bare values produced 133 false positives
+# against this repo's own history and would have blocked ordinary commits.
 ASSIGNMENT = re.compile(
     r"""(?ix)
     \b (?P<key> [a-z0-9_\-]* (?: api[_\-]?key | secret | token | password | passwd ) )
     \s* [:=] \s*
-    (?P<quote>['"]?) (?P<value> [^'"\s,}\]]{16,}) (?P=quote)
+    (?P<quote>['"]) (?P<value> [^'"]{16,}) (?P=quote)
     """
 )
+
+# Words a real credential does not contain, but a fixture does.
+FAKE_MARKER = re.compile(r"(?i)fake|dummy|example|placeholder|redacted|notreal|invalid")
 
 # Values that look like a secret by length but are not one.
 ENV_VAR_NAME = re.compile(r"^[A-Z][A-Z0-9_]{5,}$")
@@ -55,6 +61,7 @@ def is_placeholder(value: str) -> bool:
         not value
         or ENV_VAR_NAME.match(value)
         or PLACEHOLDER.search(value)
+        or FAKE_MARKER.search(value)
         or set(value) <= {"x", "X", "0", "*", "."}
     )
 
@@ -88,6 +95,8 @@ def findings(additions: list[tuple[str, str]]) -> list[tuple[str, str, str]]:
         vendor_hit = False
         for vendor, pattern in VENDOR_PATTERNS:
             if match := pattern.search(line):
+                if FAKE_MARKER.search(match.group(0)):
+                    continue  # sk-fake-test-key and friends
                 hits.append((path, f"{vendor} key", redact(match.group(0))))
                 vendor_hit = True
 
@@ -143,6 +152,13 @@ def _self_check() -> None:
         ("config.yaml", 'api_key: "your-key-here-goes-in-this-slot"'),
         ("s.py", 'token = os.environ["GITHUB_TOKEN"]'),
         ("s.py", 'password = "hunter2-' + 'correct-horse"  # ' + ALLOWLIST_PRAGMA),
+        # Real lines from this repo's history that the first version wrongly
+        # flagged: an unquoted value is an expression, not a secret.
+        ("novelty.py", "topic, hypotheses_text, api_key=perplexity_api_key"),
+        ("_literature.py", "s2_api_key=config.llm.s2_api_key,"),
+        ("_literature.py", 'perplexity_api_key=os.environ.get(_pplx.api_key_env, ""),'),
+        ("client.py", "api_key=str(config.llm.api_key)"),
+        ("t.py", '"OPENAI_API_KEY": "sk-' + 'fake-test-key-should-not-leak",'),
     ]
     for path, line in blocked:
         assert findings([(path, line)]), f"should have blocked: {line}"
