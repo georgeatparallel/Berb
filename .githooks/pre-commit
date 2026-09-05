@@ -10,4 +10,7 @@ else
     PY=python3
 fi
 
-exec "$PY" .githooks/pre-commit-api-key-scan.py
+# Resolve the scanner next to this script, not relative to the working
+# directory: a linked worktree commits with its own root as cwd, and the
+# relative path made the hook die with "can't open file" and block the commit.
+exec "$PY" "$(dirname "$0")/pre-commit-api-key-scan.py"
