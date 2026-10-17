@@ -44,6 +44,7 @@
 - **[NadirClaw Summary](NADIRCLAW_INTEGRATION_SUMMARY.md)** — Implementation summary
 
 ### Literature & Search
+- **[Parallel Search MCP](PARALLEL_SEARCH_GUIDE.md)** — Discover and review seed papers in Claude Code, then upload PDFs to Berb
 - **[Grey Literature Search](GREY_LITERATURE_SEARCH.md)** — 20+ grey literature sources
 - **[Comprehensive Integration Summary](COMPREHENSIVE_INTEGRATION_SUMMARY.md)** — All integrations overview
 
